@@ -171,7 +171,7 @@ final class LoopMetadataTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Unknown loop property: invalid');
 
-        $loop->invalid;
+        $loop->invalid; // @phpstan-ignore property.notFound, expr.resultUnused
     }
 
     public function testNestedLoopsPreserveIndependentState(): void
@@ -232,6 +232,9 @@ final class LoopMetadataTest extends TestCase
     public function testWorksWithIteratorAggregate(): void
     {
         $iteratorAggregate = new class implements IteratorAggregate, Countable {
+            /**
+             * @var list<string>
+             */
             private array $data = ['one', 'two', 'three'];
 
             public function getIterator(): Traversable

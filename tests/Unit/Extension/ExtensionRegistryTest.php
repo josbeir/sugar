@@ -98,6 +98,7 @@ final class ExtensionRegistryTest extends TestCase
 
     public function testGetDirectiveThrowsForNonExistentClass(): void
     {
+        /** @phpstan-ignore argument.type */
         $this->registry->registerDirective('invalid', 'NonExistentClass');
 
         $this->expectException(RuntimeException::class);
@@ -109,6 +110,7 @@ final class ExtensionRegistryTest extends TestCase
     public function testGetDirectiveThrowsForInvalidInterface(): void
     {
         // Register a class that doesn't implement DirectiveCompilerInterface
+        /** @phpstan-ignore argument.type */
         $this->registry->registerDirective('invalid', stdClass::class);
 
         $this->expectException(RuntimeException::class);

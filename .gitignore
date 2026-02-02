@@ -8,3 +8,5 @@ tmp/*
 docs/*
 spec/*
 .phpunit.result.cache
+composer.lock
+.github/**/*.instructions.md

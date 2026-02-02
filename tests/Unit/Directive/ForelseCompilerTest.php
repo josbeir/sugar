@@ -42,7 +42,6 @@ final class ForelseCompilerTest extends TestCase
 
         $result = $this->compiler->compile($forelse);
 
-        $this->assertIsArray($result);
         // Should have: if (!empty), loop setup, foreach, content, loop end, endforeach, else, none content, endif
         $this->assertGreaterThan(5, count($result));
 
@@ -54,6 +53,7 @@ final class ForelseCompilerTest extends TestCase
                 break;
             }
         }
+
         $this->assertTrue($hasEmptyCheck, 'Should have !empty check');
     }
 
@@ -71,7 +71,6 @@ final class ForelseCompilerTest extends TestCase
         // Should compile like regular foreach (no empty fallback)
         $result = $this->compiler->compile($forelse);
 
-        $this->assertIsArray($result);
         // Check it still generates loop structure
         $this->assertGreaterThan(3, count($result));
     }
@@ -141,6 +140,7 @@ final class ForelseCompilerTest extends TestCase
                 break;
             }
         }
+
         $this->assertTrue($hasCollectionCheck);
     }
 }

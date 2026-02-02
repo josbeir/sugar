@@ -6,6 +6,7 @@ namespace Sugar\Directive;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Runtime\AttributeHelper;
 
 /**
  * Compiler for s:class directive (dynamic CSS classes)
@@ -43,7 +44,7 @@ final readonly class ClassCompiler implements DirectiveCompilerInterface
         return [
             new RawPhpNode(
                 sprintf(
-                    'class="<?= \\Sugar\\Runtime\\AttributeHelper::classNames(%s) ?>"',
+                    'class="<?= ' . AttributeHelper::class . '::classNames(%s) ?>"',
                     $node->expression,
                 ),
                 $node->line,

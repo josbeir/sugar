@@ -42,11 +42,9 @@ final class AttributeHelper
                 if (!empty($value) && is_string($value)) {
                     $result[] = $value;
                 }
-            } else {
+            } elseif ($value) {
                 // Associative key: include key if value is truthy
-                if ($value) {
-                    $result[] = $key;
-                }
+                $result[] = $key;
             }
         }
 

@@ -96,6 +96,7 @@ final class SwitchCompilerTest extends TestCase
                 break;
             }
         }
+
         $this->assertTrue($hasDefault);
     }
 
@@ -181,7 +182,7 @@ final class SwitchCompilerTest extends TestCase
 
         // Should ignore non-directive children between cases
         $result = $this->compiler->compile($switch);
-        $this->assertIsArray($result);
+        $this->assertGreaterThan(1, count($result));
     }
 
     public function testCaseWithoutExpression(): void

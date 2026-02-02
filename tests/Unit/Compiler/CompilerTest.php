@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
@@ -27,7 +26,7 @@ final class CompilerTest extends TestCase
         $this->compiler = new Compiler(
             new Parser(),
             new ContextAnalysisPass(),
-            new CodeGenerator(new Escaper()),
+            new Escaper(),
         );
     }
 

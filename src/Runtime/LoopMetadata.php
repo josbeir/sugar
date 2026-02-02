@@ -29,10 +29,22 @@ use RuntimeException;
  * Note: Generators and non-countable iterators are NOT materialized into arrays,
  * preserving memory efficiency. Use arrays or Countable objects if you need
  * count/last/remaining properties.
+ *
+ * @property-read int $index
+ * @property-read int $iteration
+ * @property-read bool $first
+ * @property-read bool $odd
+ * @property-read bool $even
+ * @property-read int $depth
+ * @property-read self|null $parent
+ * @property-read int|null $count
+ * @property-read bool|null $last
+ * @property-read int|null $remaining
  */
 final class LoopMetadata
 {
     private int $index = 0;
+
     private readonly ?int $count;
 
     /**
@@ -79,13 +91,13 @@ final class LoopMetadata
             'first' => $this->index === 0,
             'odd' => ($this->index + 1) % 2 === 1,
             'even' => ($this->index + 1) % 2 === 0,
-            'depth' => $this->parent ? $this->parent->depth + 1 : 1,
+            'depth' => $this->parent instanceof LoopMetadata ? $this->parent->depth + 1 : 1,
             'parent' => $this->parent,
             // Count-dependent properties: return null if count unknown
             'count' => $this->count,
             'last' => $this->count !== null ? $this->index === $this->count - 1 : null,
             'remaining' => $this->count !== null ? $this->count - $this->index - 1 : null,
-            default => throw new RuntimeException("Unknown loop property: $name"),
+            default => throw new RuntimeException('Unknown loop property: ' . $name),
         };
     }
 }

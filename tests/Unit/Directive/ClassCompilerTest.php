@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ClassCompiler;
+use Sugar\Runtime\AttributeHelper;
 
 final class ClassCompilerTest extends TestCase
 {
@@ -32,7 +33,7 @@ final class ClassCompilerTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('\\Sugar\\Runtime\\AttributeHelper::classNames', $result[0]->code);
+        $this->assertStringContainsString(AttributeHelper::class . '::classNames', $result[0]->code);
         $this->assertStringContainsString("['btn', 'active' => \$isActive]", $result[0]->code);
     }
 
@@ -49,6 +50,8 @@ final class ClassCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
+        $this->assertCount(1, $result);
+        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('class="', $result[0]->code);
         $this->assertStringContainsString('<?=', $result[0]->code);
         $this->assertStringContainsString('?>"', $result[0]->code);

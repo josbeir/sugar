@@ -59,12 +59,14 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
                 if (trim($child->expression) === '') {
                     throw new RuntimeException('Case directive requires a value expression');
                 }
+
                 $cases[] = $child;
                 $hasValidCases = true;
             } elseif ($child->name === 'default') {
-                if ($default !== null) {
+                if ($default instanceof DirectiveNode) {
                     throw new RuntimeException('Switch directive can only have one default case');
                 }
+
                 $default = $child;
                 $hasValidCases = true;
             }
@@ -99,7 +101,7 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
         }
 
         // Compile default case if present
-        if ($default !== null) {
+        if ($default instanceof DirectiveNode) {
             $parts[] = new RawPhpNode('default:', $default->line, $default->column);
             array_push($parts, ...$default->children);
             // No break needed after default (it's the last case)

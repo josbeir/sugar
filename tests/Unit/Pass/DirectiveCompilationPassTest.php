@@ -18,6 +18,7 @@ use Sugar\Pass\Directive\DirectiveCompilationPass;
 final class DirectiveCompilationPassTest extends TestCase
 {
     private ExtensionRegistry $registry;
+
     private DirectiveCompilationPass $pass;
 
     protected function setUp(): void
@@ -211,7 +212,7 @@ final class DirectiveCompilationPassTest extends TestCase
             public function compile(Node $node): array
             {
                 return [
-                    new RawPhpNode("<?php // {$node->expression} ?>", 1, 0),
+                    new RawPhpNode(sprintf('<?php // %s ?>', $node->expression), 1, 0),
                     ...$node->children,
                 ];
             }

@@ -31,7 +31,6 @@ final class WhileCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(3, $result); // while, content, endwhile
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('while ($counter < 10):', $result[0]->code);

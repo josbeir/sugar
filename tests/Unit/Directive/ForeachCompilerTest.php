@@ -31,7 +31,6 @@ final class ForeachCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         // Should contain: loopStack push, LoopMetadata creation, foreach, content, next(), endforeach, loopStack pop
         $this->assertCount(7, $result);
 
@@ -72,7 +71,6 @@ final class ForeachCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(7, $result);
 
         // Check LoopMetadata uses correct collection

@@ -31,7 +31,6 @@ final class IfCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(3, $result); // if, content, endif
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('if ($showContent):', $result[0]->code);
@@ -52,7 +51,6 @@ final class IfCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(2, $result); // elseif, content (no endif for elseif)
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('elseif ($otherCondition):', $result[0]->code);
@@ -71,7 +69,6 @@ final class IfCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(2, $result); // else, content (no endif for else)
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('else:', $result[0]->code);
@@ -90,7 +87,6 @@ final class IfCompilerTest extends TestCase
 
         $result = $this->compiler->compile($node);
 
-        $this->assertIsArray($result);
         $this->assertCount(5, $result); // if, true content, else, false content, endif
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('if ($condition):', $result[0]->code);

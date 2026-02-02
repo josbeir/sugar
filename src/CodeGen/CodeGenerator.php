@@ -23,9 +23,13 @@ final class CodeGenerator
      * Constructor
      *
      * @param \Sugar\Escape\Escaper $escaper Escaper instance
+     * @param bool $debug Enable debug comments with line numbers (default: false)
+     * @param string|null $sourceFile Source template filename for debug comments
      */
     public function __construct(
         private readonly Escaper $escaper,
+        private readonly bool $debug = false,
+        private readonly ?string $sourceFile = null,
     ) {
     }
 
@@ -43,7 +47,15 @@ final class CodeGenerator
         $buffer->writeln('<?php');
         $buffer->writeln('declare(strict_types=1);');
         $buffer->writeln('// Compiled Sugar template');
-        $buffer->writeln('// DO NOT EDIT - auto-generated');
+
+        if ($this->debug && $this->sourceFile !== null) {
+            $buffer->writeln('// Source: ' . $this->sourceFile);
+            $buffer->writeln('// Compiled: ' . date('Y-m-d H:i:s'));
+            $buffer->writeln('// Debug mode: enabled');
+        } else {
+            $buffer->writeln('// DO NOT EDIT - auto-generated');
+        }
+
         $buffer->writeln('?>');
 
         // Generate code for each node
@@ -94,10 +106,10 @@ final class CodeGenerator
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
             $escapedCode = $this->escaper->generateEscapeCode($node->expression, $node->context);
-            $buffer->write(sprintf('<?php echo %s; ?>', $escapedCode));
+            $buffer->write(sprintf('<?php echo %s;%s ?>', $escapedCode, $this->debugComment($node, 's:text')));
         } else {
             // Raw output
-            $buffer->write(sprintf('<?php echo %s; ?>', $node->expression));
+            $buffer->write(sprintf('<?php echo %s;%s ?>', $node->expression, $this->debugComment($node, 's:html')));
         }
     }
 
@@ -110,7 +122,14 @@ final class CodeGenerator
     private function generateRawPhp(RawPhpNode $node, OutputBuffer $buffer): void
     {
         // Pass through trimmed code (removes excess whitespace from token parsing)
-        $buffer->write(sprintf('<?php %s ?>', trim($node->code)));
+        $trimmedCode = trim($node->code);
+
+        if ($this->debug) {
+            // Add debug comment before closing tag
+            $buffer->write(sprintf('<?php %s%s ?>', $trimmedCode, $this->debugComment($node)));
+        } else {
+            $buffer->write(sprintf('<?php %s ?>', $trimmedCode));
+        }
     }
 
     /**
@@ -132,8 +151,18 @@ final class CodeGenerator
         // Close opening tag
         if ($node->selfClosing) {
             $buffer->write(' />');
+
+            // Add debug comment after self-closing tag
+            if ($this->debug) {
+                $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
+            }
         } else {
             $buffer->write('>');
+
+            // Add debug comment after opening tag
+            if ($this->debug) {
+                $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
+            }
 
             // Children
             foreach ($node->children as $child) {
@@ -180,5 +209,27 @@ final class CodeGenerator
     {
         // For now, output as comment - full directive support comes in next phase
         $buffer->write('<!-- Directive: ' . $node->name . ' = ' . htmlspecialchars($node->expression) . ' -->');
+    }
+
+    /**
+     * Generate debug comment for a node
+     *
+     * @param \Sugar\Ast\Node $node AST node
+     * @param string $context Optional context info (e.g., 's:if', 's:text')
+     * @return string Debug comment or empty string if debug disabled
+     */
+    private function debugComment(Node $node, string $context = ''): string
+    {
+        if (!$this->debug) {
+            return '';
+        }
+
+        $location = sprintf('L%d:C%d', $node->line, $node->column);
+
+        if ($context !== '') {
+            return sprintf(' /* %s %s */', $location, $context);
+        }
+
+        return sprintf(' /* %s */', $location);
     }
 }

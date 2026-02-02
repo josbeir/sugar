@@ -22,9 +22,13 @@ final class CodeGeneratorTest extends TestCase
 
     private CodeGenerator $generator;
 
+    private CodeGenerator $debugGenerator;
+
     protected function setUp(): void
     {
-        $this->generator = new CodeGenerator(new Escaper());
+        $escaper = new Escaper();
+        $this->generator = new CodeGenerator($escaper);
+        $this->debugGenerator = new CodeGenerator($escaper, debug: true, sourceFile: 'test.sugar.php');
     }
 
     public function testGenerateSimpleTextNode(): void
@@ -171,5 +175,79 @@ final class CodeGeneratorTest extends TestCase
 
         $this->assertStringContainsString('<?php $greeting = "Hello"; ?>', $code);
         $this->assertStringContainsString('htmlspecialchars((string)($greeting)', $code);
+    }
+
+    public function testDebugModeAddsSourceInfo(): void
+    {
+        $ast = new DocumentNode([
+            new TextNode('Hello', 1, 0),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('// Source: test.sugar.php', $code);
+        $this->assertStringContainsString('// Debug mode: enabled', $code);
+        $this->assertStringContainsString('// Compiled: ', $code);
+    }
+
+    public function testDebugModeDisabledShowsDefaultHeader(): void
+    {
+        $ast = new DocumentNode([
+            new TextNode('Hello', 1, 0),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('// DO NOT EDIT - auto-generated', $code);
+        $this->assertStringNotContainsString('// Source:', $code);
+        $this->assertStringNotContainsString('// Debug mode:', $code);
+    }
+
+    public function testDebugCommentOnRawPhpNode(): void
+    {
+        $ast = new DocumentNode([
+            new RawPhpNode('if ($user):', 2, 4),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('/* L2:C4 */', $code);
+        $this->assertStringContainsString('<?php if ($user): /* L2:C4 */ ?>', $code);
+    }
+
+    public function testDebugCommentOnOutputNode(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$user->name', true, OutputContext::HTML, 3, 8),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('/* L3:C8 s:text */', $code);
+    }
+
+    public function testDebugCommentOnRawOutputNode(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$html', false, OutputContext::RAW, 4, 10),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('/* L4:C10 s:html */', $code);
+    }
+
+    public function testNoDebugCommentsWhenDisabled(): void
+    {
+        $ast = new DocumentNode([
+            new RawPhpNode('if ($user):', 2, 4),
+            new OutputNode('$user->name', true, OutputContext::HTML, 3, 8),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringNotContainsString('/* L', $code);
+        $this->assertStringNotContainsString('s:text', $code);
+        $this->assertStringNotContainsString('<!-- L', $code);
     }
 }

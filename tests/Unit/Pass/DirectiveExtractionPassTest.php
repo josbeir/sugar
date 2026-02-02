@@ -161,7 +161,9 @@ final class DirectiveExtractionPassTest extends TestCase
         $ast = new DocumentNode([$element]);
         $result = $this->pass->transform($ast);
 
-        $directive = $result->children[0];        $this->assertInstanceOf(DirectiveNode::class, $directive);        $this->assertSame('isset', $directive->name);
+        $directive = $result->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $directive);
+        $this->assertSame('isset', $directive->name);
         $this->assertSame('$user', $directive->expression);
     }
 

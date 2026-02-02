@@ -20,8 +20,11 @@ use Sugar\Pass\Directive\DirectiveExtractionPass;
 final class DirectiveIntegrationTest extends TestCase
 {
     private Parser $parser;
+
     private DirectiveExtractionPass $extractionPass;
+
     private DirectiveCompilationPass $compilationPass;
+
     private CodeGenerator $generator;
 
     protected function setUp(): void

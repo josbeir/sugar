@@ -53,9 +53,10 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
 
         foreach ($node->children as $child) {
             if ($child instanceof DirectiveNode && $child->name === 'none') {
-                if ($noneMarker !== null) {
+                if ($noneMarker instanceof DirectiveNode) {
                     throw new RuntimeException('Forelse can only have one none/empty marker');
                 }
+
                 $noneMarker = $child;
             } else {
                 $loopChildren[] = $child;
@@ -65,7 +66,7 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
         $parts = [];
 
         // If we have a none marker, wrap in if/else
-        if ($noneMarker !== null) {
+        if ($noneMarker instanceof DirectiveNode) {
             // Opening if (!empty)
             $parts[] = new RawPhpNode(
                 sprintf('if (!empty(%s)):', $collection),
@@ -110,7 +111,7 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
         $parts[] = new RawPhpNode('$loop = array_pop($__loopStack);', $node->line, $node->column);
 
         // If we have a none marker, add else branch
-        if ($noneMarker !== null) {
+        if ($noneMarker instanceof DirectiveNode) {
             $parts[] = new RawPhpNode('else:', $node->line, $node->column);
             array_push($parts, ...$noneMarker->children);
             $parts[] = new RawPhpNode('endif;', $node->line, $node->column);

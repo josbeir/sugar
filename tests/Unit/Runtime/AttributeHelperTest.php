@@ -91,13 +91,13 @@ final class AttributeHelperTest extends TestCase
 
     public function testClassNamesComplexRealWorldExample(): void
     {
-        $userRole = 'admin';
+        $isAdmin = true;
         $isPremium = true;
         $hasNotifications = false;
 
         $result = AttributeHelper::classNames([
             'user-card',
-            'user-admin' => $userRole === 'admin',
+            'user-admin' => $isAdmin,
             'user-premium' => $isPremium,
             'has-notifications' => $hasNotifications,
         ]);

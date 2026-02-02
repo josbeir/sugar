@@ -83,11 +83,21 @@ final class ExtensionRegistry
     /**
      * Get all registered directives
      *
+     * Resolves all lazy-loaded class strings to instances.
+     *
      * @return array<string, \Sugar\Extension\DirectiveCompilerInterface>
      */
     public function allDirectives(): array
     {
-        return $this->directives;
+        // Resolve all lazy instances
+        foreach (array_keys($this->directives) as $name) {
+            $this->getDirective($name); // This will instantiate and cache it
+        }
+
+        /** @var array<string, \Sugar\Extension\DirectiveCompilerInterface> $directives */
+        $directives = $this->directives;
+
+        return $directives;
     }
 
     /**

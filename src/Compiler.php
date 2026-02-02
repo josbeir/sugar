@@ -14,6 +14,7 @@ use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Directive\WhileCompiler;
+use Sugar\Escape\Escaper;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
@@ -28,23 +29,29 @@ use Sugar\Pass\Directive\DirectiveExtractionPass;
 final class Compiler implements CompilerInterface
 {
     private readonly ExtensionRegistry $registry;
+
     private readonly DirectiveExtractionPass $directiveExtractionPass;
+
     private readonly DirectiveCompilationPass $directiveCompilationPass;
+
+    private readonly Escaper $escaper;
 
     /**
      * Constructor
      *
      * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Pass\ContextAnalysisPass $contextPass Context analysis pass
-     * @param \Sugar\CodeGen\CodeGenerator $generator Code generator
+     * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
      */
     public function __construct(
         private readonly Parser $parser,
         private readonly ContextAnalysisPass $contextPass,
-        private readonly CodeGenerator $generator,
+        Escaper $escaper,
         ?ExtensionRegistry $registry = null,
     ) {
+        $this->escaper = $escaper;
+
         // Use provided registry or create default with built-in directives
         $this->registry = $registry ?? $this->createDefaultRegistry();
 
@@ -67,9 +74,11 @@ final class Compiler implements CompilerInterface
      * Compile template source to executable PHP code
      *
      * @param string $source Template source code
+     * @param bool $debug Enable debug mode with inline source comments (default: false)
+     * @param string|null $sourceFile Original source file path for debug info (default: null)
      * @return string Compiled PHP code
      */
-    public function compile(string $source): string
+    public function compile(string $source, bool $debug = false, ?string $sourceFile = null): string
     {
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
@@ -84,7 +93,9 @@ final class Compiler implements CompilerInterface
         $analyzedAst = $this->contextPass->analyze($transformedAst);
 
         // Step 5: Generate executable PHP code with inline escaping
-        return $this->generator->generate($analyzedAst);
+        $generator = new CodeGenerator($this->escaper, $debug, $sourceFile);
+
+        return $generator->generate($analyzedAst);
     }
 
     /**
