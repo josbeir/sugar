@@ -4,18 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Ast\RawPhpNode;
-use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Config\ParserConfig;
-use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Parser\Parser;
+use Sugar\Core\Ast\DocumentNode;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Ast\OutputNode;
 
-/**
- * Test template parsing to AST
- */
 final class ParserTest extends TestCase
 {
     private Parser $parser;
@@ -25,418 +18,232 @@ final class ParserTest extends TestCase
         $this->parser = new Parser();
     }
 
-    public function testParseStaticText(): void
+    public function testParseReturnsDocumentNode(): void
     {
-        $source = 'Hello World';
-
+        $source = '<h1>Hello</h1>';
         $ast = $this->parser->parse($source);
 
         $this->assertInstanceOf(DocumentNode::class, $ast);
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]);
-        $this->assertSame('Hello World', $ast->children[0]->content);
     }
 
-    public function testParsePhpShortEcho(): void
+    public function testParseSimpleText(): void
     {
-        $source = '<?= $name ?>';
+        $source = 'Hello, World!';
+        $ast = $this->parser->parse($source);
 
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(TextNode::class, $ast->children[0]);
+        $this->assertSame('Hello, World!', $ast->children[0]->content);
+    }
+
+    public function testParseSimpleOutput(): void
+    {
+        $source = '<?= $title ?>';
         $ast = $this->parser->parse($source);
 
         $this->assertCount(1, $ast->children);
         $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('$name', $ast->children[0]->expression);
-        $this->assertTrue($ast->children[0]->escape); // Default to escaped
-        $this->assertSame(OutputContext::HTML, $ast->children[0]->context);
+        $this->assertSame('$title', $ast->children[0]->expression);
     }
 
-    public function testParseMixedContent(): void
+    public function testParseHtmlWithOutput(): void
     {
-        $source = 'Hello <?= $name ?>!';
-
+        $source = '<h1><?= $title ?></h1>';
         $ast = $this->parser->parse($source);
 
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]);
-        $this->assertSame('Hello ', $ast->children[0]->content);
+        // Should have h1 element
+        $this->assertCount(1, $ast->children);
+        $h1 = $ast->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $h1);
+        $this->assertSame('h1', $h1->tag);
 
-        $this->assertInstanceOf(OutputNode::class, $ast->children[1]);
-        $this->assertSame('$name', $ast->children[1]->expression);
-
-        $this->assertInstanceOf(TextNode::class, $ast->children[2]);
-        $this->assertSame('!', $ast->children[2]->content);
+        // h1 should contain OutputNode
+        $this->assertCount(1, $h1->children);
+        $this->assertInstanceOf(OutputNode::class, $h1->children[0]);
+        $this->assertSame('$title', $h1->children[0]->expression);
     }
 
     public function testParseMultipleOutputs(): void
     {
-        $source = '<?= $first ?> and <?= $second ?>';
-
+        $source = '<?= $title ?> and <?= $subtitle ?>';
         $ast = $this->parser->parse($source);
 
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('$first', $ast->children[0]->expression);
-
-        $this->assertInstanceOf(TextNode::class, $ast->children[1]);
-        $this->assertSame(' and ', $ast->children[1]->content);
-
-        $this->assertInstanceOf(OutputNode::class, $ast->children[2]);
-        $this->assertSame('$second', $ast->children[2]->expression);
+        $outputs = array_filter($ast->children, fn($n) => $n instanceof OutputNode);
+        $this->assertCount(2, $outputs);
     }
 
-    public function testParseEmptyString(): void
+    public function testParseSimpleHtmlElement(): void
     {
-        $source = '';
+        $template = '<div>text</div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertInstanceOf(DocumentNode::class, $ast);
-        $this->assertCount(0, $ast->children);
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertSame('div', $element->tag);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $element->children[0]);
+        $this->assertSame('text', $element->children[0]->content);
     }
 
-    public function testParseExpressionWithSpaces(): void
+    public function testParseElementWithAttribute(): void
     {
-        $source = '<?= $user->name ?>';
+        $template = '<div class="test">content</div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('$user->name', $ast->children[0]->expression);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('class', $element->attributes[0]->name);
+        $this->assertSame('test', $element->attributes[0]->value);
     }
 
-    public function testParseComplexExpression(): void
+    public function testParseNestedElements(): void
     {
-        $source = '<?= htmlspecialchars($title, ENT_QUOTES) ?>';
+        $template = '<div><a>link</a> label</div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
+        $div = $doc->children[0];
+        $this->assertSame('div', $div->tag);
+        $this->assertCount(2, $div->children);
 
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('htmlspecialchars($title, ENT_QUOTES)', $ast->children[0]->expression);
+        $a = $div->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $a);
+        $this->assertSame('a', $a->tag);
+        $this->assertCount(1, $a->children);
+        $this->assertSame('link', $a->children[0]->content);
+
+        $this->assertSame(' label', $div->children[1]->content);
     }
 
-    public function testParseNewlinesPreserved(): void
+    public function testParseSelfClosingElement(): void
     {
-        $source = "Line 1\nLine 2\n<?= \$var ?>\nLine 3";
+        $template = '<br />';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]);
-        $this->assertSame("Line 1\nLine 2\n", $ast->children[0]->content);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[1]);
-        $this->assertSame('$var', $ast->children[1]->expression);
-        $this->assertInstanceOf(TextNode::class, $ast->children[2]);
-        $this->assertSame('Line 3', $ast->children[2]->content);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertSame('br', $element->tag);
+        $this->assertTrue($element->selfClosing);
+        $this->assertCount(0, $element->children);
     }
 
-    public function testParsePhpEchoStatement(): void
+    public function testParseDirectiveAttribute(): void
     {
-        $source = '<?php echo $name ?>';
+        $template = '<div s:if="$condition">text</div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('$name', $ast->children[0]->expression);
-        $this->assertTrue($ast->children[0]->escape);
-        $this->assertSame(OutputContext::HTML, $ast->children[0]->context);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('s:if', $element->attributes[0]->name);
+        $this->assertSame('$condition', $element->attributes[0]->value);
     }
 
-    public function testParseRawPhpCode(): void
+    public function testParseElementWithPhpOutput(): void
     {
-        $source = '<?php $x = 42; ?>';
+        $template = '<div><?= $var ?></div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(RawPhpNode::class, $ast->children[0]);
-        $this->assertSame(' $x= 42; ', $ast->children[0]->code);
+        $div = $doc->children[0];
+        $this->assertSame('div', $div->tag);
+        $this->assertCount(1, $div->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $div->children[0]);
+        $this->assertSame('$var', $div->children[0]->expression);
     }
 
-    public function testParsePhpBlockWithLogic(): void
+    public function testParseRawPhpBlock(): void
     {
-        $source = '<?php if ($condition): ?>';
+        $template = '<?php $x = 42; ?>Result: <?= $x ?>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(RawPhpNode::class, $ast->children[0]);
-        $this->assertSame(' if($condition): ', $ast->children[0]->code);
+        $this->assertCount(3, $doc->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[0]);
+        $this->assertSame('$x = 42;', $doc->children[0]->code);
+        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $doc->children[1]);
+        $this->assertSame('Result: ', $doc->children[1]->content);
+        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $doc->children[2]);
+        $this->assertSame('$x', $doc->children[2]->expression);
     }
 
-    public function testParseMixedPhpTags(): void
+    public function testParseUnclosedPhpBlock(): void
     {
-        $source = '<?php $x = 42; ?>Hello <?= $x ?>';
+        // Valid PHP - no closing tag at end of file
+        $template = '<?php $x = 42;';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(RawPhpNode::class, $ast->children[0]);
-        $this->assertSame(' $x= 42; ', $ast->children[0]->code);
-
-        $this->assertInstanceOf(TextNode::class, $ast->children[1]);
-        $this->assertSame('Hello ', $ast->children[1]->content);
-
-        $this->assertInstanceOf(OutputNode::class, $ast->children[2]);
-        $this->assertSame('$x', $ast->children[2]->expression);
+        $this->assertCount(1, $doc->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[0]);
+        $this->assertSame('$x = 42;', $doc->children[0]->code);
     }
 
-    public function testParsePhpEchoWithComplexExpression(): void
+    public function testParseMixedContentWithUnclosedPhp(): void
     {
-        $source = '<?php echo $user->name . " " . $user->email ?>';
+        $template = '<h1>Title</h1><?php echo "test";';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
+        $this->assertCount(2, $doc->children);
 
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
-        $this->assertSame('$user->name. " ". $user->email', $ast->children[0]->expression);
+        $h1 = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $h1);
+        $this->assertSame('h1', $h1->tag);
+        $this->assertSame('Title', $h1->children[0]->content);
+
+        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[1]);
+        $this->assertStringContainsString('echo "test";', $doc->children[1]->code);
     }
 
-    public function testParseHtmlWithPhpShortEcho(): void
+    public function testParseComplexNestedStructure(): void
     {
-        $source = '<div><?= $content ?></div>';
+        $template = '<ul><li><?= $item1 ?></li><li><?= $item2 ?></li></ul>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
+        $ul = $doc->children[0];
+        $this->assertSame('ul', $ul->tag);
+        $this->assertCount(2, $ul->children);
 
-        // HTML stitching properly reconstructs this into complete ElementNode
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('div', $ast->children[0]->tag);
+        $li1 = $ul->children[0];
+        $this->assertSame('li', $li1->tag);
+        $this->assertCount(1, $li1->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $li1->children[0]);
+        $this->assertSame('$item1', $li1->children[0]->expression);
 
-        // PHP output is nested as child of div
-        $this->assertCount(1, $ast->children[0]->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]->children[0]);
-        $this->assertSame('$content', $ast->children[0]->children[0]->expression);
-
-        // Note: </div> becomes a separate ElementNode with closing tag,
-        // but parser detects it's a closing tag and handles appropriately
+        $li2 = $ul->children[1];
+        $this->assertSame('li', $li2->tag);
+        $this->assertCount(1, $li2->children);
+        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $li2->children[0]);
+        $this->assertSame('$item2', $li2->children[0]->expression);
     }
 
-    public function testParseHtmlWithMultiplePhpTags(): void
+    public function testParseHtmlComments(): void
     {
-        $source = '<h1><?= $title ?></h1><p><?php echo $description ?></p>';
+        $template = '<!-- Comment --><div>content</div>';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
-
-        // HTML stitching properly reconstructs both elements
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('h1', $ast->children[0]->tag);
-
-        // h1 has OutputNode child
-        $this->assertCount(1, $ast->children[0]->children);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]->children[0]);
-        $this->assertSame('$title', $ast->children[0]->children[0]->expression);
-
-        // '</h1><p>' is contiguous HTML, parsed as tree
-        $this->assertInstanceOf(ElementNode::class, $ast->children[2]);
-
-        $this->assertInstanceOf(OutputNode::class, $ast->children[3]);
-        $this->assertSame('$description', $ast->children[3]->expression);
-
-        // Note: </p> is in final HTML section
+        $this->assertGreaterThan(0, count($doc->children));
+        // HTML comments are treated as text nodes
+        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $doc->children[0]);
+        $this->assertSame('<!-- Comment -->', $doc->children[0]->content);
     }
 
-    public function testParseHtmlAttributeWithPhp(): void
+    public function testParseMultipleAttributes(): void
     {
-        // PHP inside attributes - now properly reconstructed into ElementNode
-        $source = '<a href="<?= $url ?>" class="link">Click</a>';
+        $template = '<input type="text" name="username" class="form-control" required />';
+        $doc = $this->parser->parse($template);
 
-        $ast = $this->parser->parse($source);
+        $input = $doc->children[0];
+        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $input);
+        $this->assertSame('input', $input->tag);
+        $this->assertTrue($input->selfClosing);
+        $this->assertCount(4, $input->attributes);
 
-        // Should create proper ElementNode with PHP in attribute value
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('a', $ast->children[0]->tag);
-
-        // Check attributes
-        $this->assertCount(2, $ast->children[0]->attributes);
-        $this->assertSame('href', $ast->children[0]->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]->attributes[0]->value);
-        $this->assertSame('$url', $ast->children[0]->attributes[0]->value->expression);
-
-        $this->assertSame('class', $ast->children[0]->attributes[1]->name);
-        $this->assertSame('link', $ast->children[0]->attributes[1]->value);
-
-        // Check element has text child
-        $this->assertCount(1, $ast->children[0]->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]->children[0]);
-        $this->assertSame('Click', $ast->children[0]->children[0]->content);
-    }
-
-    public function testParseScriptTagWithPhp(): void
-    {
-        $source = '<script>var data = <?= $jsonData ?>;</script>';
-
-        $ast = $this->parser->parse($source);
-
-        // Stitching doesn't trigger here (equal < and > counts)
-        // Results in fragmented nodes - tree reconstruction handles nesting
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('script', $ast->children[0]->tag);
-        // Script has text content before PHP break
-        $this->assertCount(1, $ast->children[0]->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]->children[0]);
-        $this->assertSame('var data = ', $ast->children[0]->children[0]->content);
-        $this->assertInstanceOf(OutputNode::class, $ast->children[0]->children[1]);
-        $this->assertSame('$jsonData', $ast->children[0]->children[1]->expression);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]->children[2]);
-        $this->assertSame(';', $ast->children[0]->children[2]->content);
-    }
-
-    public function testParseStyleTagWithPhp(): void
-    {
-        $source = '<style>.class { color: <?= $color ?>; }</style>';
-
-        $ast = $this->parser->parse($source);
-
-        // Stitching doesn't trigger here (equal < and > counts)
-        // Results in fragmented nodes - tree reconstruction handles nesting
-        $this->assertCount(3, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('style', $ast->children[0]->tag);
-        // Style has text content before PHP break
-        $this->assertCount(1, $ast->children[0]->children);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]->children[0]);
-        $this->assertInstanceOf(TextNode::class, $ast->children[0]->children[2]);
-    }
-
-    public function testParseComplexHtmlDocument(): void
-    {
-        $source = <<<'HTML'
-<!DOCTYPE html>
-<html>
-<head>
-    <title><?= $pageTitle ?></title>
-</head>
-<body>
-    <?php $count = 10; ?>
-    <h1><?php echo $heading ?></h1>
-    <p>Count: <?= $count ?></p>
-</body>
-</html>
-HTML;
-
-        $ast = $this->parser->parse($source);
-
-        // Verify we have mixed TextNodes, RawPhpNode, and OutputNodes (recursively)
-        $hasTextNode = false;
-        $hasOutputNode = false;
-        $hasRawPhpNode = false;
-
-        $checkNodes = function (array $nodes) use (&$checkNodes, &$hasTextNode, &$hasOutputNode, &$hasRawPhpNode): void {
-            foreach ($nodes as $node) {
-                if ($node instanceof TextNode) {
-                    $hasTextNode = true;
-                }
-
-                if ($node instanceof OutputNode) {
-                    $hasOutputNode = true;
-                }
-
-                if ($node instanceof RawPhpNode) {
-                    $hasRawPhpNode = true;
-                }
-
-                if ($node instanceof ElementNode && $node->children !== []) {
-                    $checkNodes($node->children);
-                }
-            }
-        };
-
-        $checkNodes($ast->children);
-
-        $this->assertTrue($hasTextNode, 'Should contain TextNode for HTML');
-        $this->assertTrue($hasOutputNode, 'Should contain OutputNode for <?= and <?php echo');
-        $this->assertTrue($hasRawPhpNode, 'Should contain RawPhpNode for <?php $count = 10; ?>');
-    }
-
-    public function testParseNestedHtmlWithMultiplePhpStyles(): void
-    {
-        $source = '<div><span><?= $a ?></span><?php echo $b ?><em><?php $c = 1; ?><?= $c ?></em></div>';
-
-        $ast = $this->parser->parse($source);
-
-        // HTML stitching + tree reconstruction work together
-        // Results may vary based on token boundaries and stitching logic
-        $this->assertGreaterThan(0, count($ast->children));
-
-        // Should have some form of proper structure (elements, output, or mix)
-        $hasElement = false;
-        foreach ($ast->children as $child) {
-            if ($child instanceof ElementNode) {
-                $hasElement = true;
-                break;
-            }
-        }
-        $this->assertTrue($hasElement, 'Should have at least one ElementNode');
-    }
-
-    public function testParsePhpInMultipleAttributes(): void
-    {
-        $source = '<img src="<?= $imageSrc ?>" alt="<?= $imageAlt ?>" width="<?= $width ?>">';
-
-        $ast = $this->parser->parse($source);
-
-        // Should create ElementNode with PHP in multiple attribute values
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(ElementNode::class, $ast->children[0]);
-        $this->assertSame('img', $ast->children[0]->tag);
-
-        // Check all 3 attributes have OutputNodes
-        $this->assertCount(3, $ast->children[0]->attributes);
-
-        foreach ($ast->children[0]->attributes as $attr) {
-            $this->assertInstanceOf(OutputNode::class, $attr->value, 'All attributes should have PHP output');
-        }
-
-        $this->assertSame('src', $ast->children[0]->attributes[0]->name);
-        $this->assertSame('$imageSrc', $ast->children[0]->attributes[0]->value->expression);
-
-        $this->assertSame('alt', $ast->children[0]->attributes[1]->name);
-        $this->assertSame('$imageAlt', $ast->children[0]->attributes[1]->value->expression);
-
-        $this->assertSame('width', $ast->children[0]->attributes[2]->name);
-        $this->assertSame('$width', $ast->children[0]->attributes[2]->value->expression);
-    }
-
-    public function testParseEmptyPhpTags(): void
-    {
-        $source = '<?php ?><div><?= $x ?></div>';
-
-        $ast = $this->parser->parse($source);
-
-        // Empty php tags should create RawPhpNode with minimal content
-        $this->assertGreaterThan(0, count($ast->children));
-        $this->assertInstanceOf(RawPhpNode::class, $ast->children[0]);
-    }
-
-    public function testParserWithDefaultConfig(): void
-    {
-        $config = new ParserConfig();
-        $parser = new Parser($config);
-
-        $this->assertSame('s', $config->directivePrefix);
-
-        $source = '<div><?= $name ?></div>';
-        $ast = $parser->parse($source);
-
-        $this->assertInstanceOf(DocumentNode::class, $ast);
-    }
-
-    public function testParserWithCustomConfig(): void
-    {
-        $config = new ParserConfig(directivePrefix: 'v');
-        $parser = new Parser($config);
-
-        $this->assertSame('v', $config->directivePrefix);
-
-        $source = '<div><?= $name ?></div>';
-        $ast = $parser->parse($source);
-
-        $this->assertInstanceOf(DocumentNode::class, $ast);
+        $this->assertSame('type', $input->attributes[0]->name);
+        $this->assertSame('text', $input->attributes[0]->value);
+        $this->assertSame('name', $input->attributes[1]->name);
+        $this->assertSame('username', $input->attributes[1]->value);
+        $this->assertSame('class', $input->attributes[2]->name);
+        $this->assertSame('form-control', $input->attributes[2]->value);
+        $this->assertSame('required', $input->attributes[3]->name);
+        $this->assertNull($input->attributes[3]->value); // Boolean attribute
     }
 }

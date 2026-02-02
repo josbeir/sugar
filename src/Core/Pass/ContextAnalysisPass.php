@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Core\Pass;
 
 use Sugar\Core\Ast\DocumentNode;
+use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Context\AnalysisContext;
@@ -24,25 +25,68 @@ final class ContextAnalysisPass
     public function analyze(DocumentNode $ast): DocumentNode
     {
         $context = new AnalysisContext();
-        $inAttribute = false;
+        $newChildren = $this->processNodes($ast->children, $context, false);
 
-        $newChildren = [];
+        return new DocumentNode($newChildren);
+    }
 
-        foreach ($ast->children as $node) {
-            if ($node instanceof TextNode) {
-                // Parse HTML tags and update context
+    /**
+     * Process array of nodes recursively
+     *
+     * @param array<\Sugar\Core\Ast\Node> $nodes Nodes to process
+     * @param \Sugar\Core\Context\AnalysisContext $context Current context
+     * @param bool $inAttribute Whether currently in attribute
+     * @return array<\Sugar\Core\Ast\Node> Processed nodes
+     */
+    private function processNodes(array $nodes, AnalysisContext $context, bool $inAttribute): array
+    {
+        $newNodes = [];
+
+        foreach ($nodes as $node) {
+            if ($node instanceof ElementNode) {
+                $newNodes[] = $this->processElementNode($node, $context, $inAttribute);
+            } elseif ($node instanceof TextNode) {
                 [$context, $inAttribute] = $this->processTextNode($node, $context, $inAttribute);
-                $newChildren[] = $node;
+                $newNodes[] = $node;
             } elseif ($node instanceof OutputNode) {
-                // Update context for output nodes
-                $newChildren[] = $this->updateOutputNode($node, $context, $inAttribute);
+                $newNodes[] = $this->updateOutputNode($node, $context, $inAttribute);
             } else {
-                // RawPhpNode and others pass through unchanged
-                $newChildren[] = $node;
+                // Other node types pass through unchanged
+                $newNodes[] = $node;
             }
         }
 
-        return new DocumentNode($newChildren);
+        return $newNodes;
+    }
+
+    /**
+     * Process element node and its children
+     *
+     * @param \Sugar\Core\Ast\ElementNode $node Element to process
+     * @param \Sugar\Core\Context\AnalysisContext $context Current context
+     * @param bool $inAttribute Whether in attribute
+     * @return \Sugar\Core\Ast\ElementNode Processed element
+     */
+    private function processElementNode(
+        ElementNode $node,
+        AnalysisContext $context,
+        bool $inAttribute,
+    ): ElementNode {
+        // Push tag onto context stack
+        $childContext = $context->push($node->tag);
+
+        // Process children with updated context
+        $newChildren = $this->processNodes($node->children, $childContext, $inAttribute);
+
+        // Return new element with updated children
+        return new ElementNode(
+            tag: $node->tag,
+            attributes: $node->attributes,
+            children: $newChildren,
+            selfClosing: $node->selfClosing,
+            line: $node->line,
+            column: $node->column,
+        );
     }
 
     /**

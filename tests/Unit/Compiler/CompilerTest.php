@@ -91,7 +91,7 @@ final class CompilerTest extends TestCase
 
         $result = $this->compiler->compile($source);
 
-        $this->assertStringContainsString('<?php $x= 42; ?>', $result);
+        $this->assertStringContainsString('<?php $x = 42; ?>', $result);
         $this->assertStringContainsString('htmlspecialchars((string)($x)', $result);
     }
 
@@ -171,5 +171,30 @@ final class CompilerTest extends TestCase
 
         // Third should be HTML escaped again
         $this->assertStringContainsString('htmlspecialchars((string)($html2)', $outputs[2]);
+    }
+
+    public function testCompileUnclosedPhpBlock(): void
+    {
+        $source = $this->loadTemplate('unclosed-php.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        // Should contain the PHP code
+        $this->assertStringContainsString('$items = [', $result);
+        $this->assertStringContainsString('foreach ($items as $item)', $result);
+        $this->assertStringContainsString('strtoupper($item)', $result);
+    }
+
+    public function testCompileMixedUnclosedPhp(): void
+    {
+        $source = $this->loadTemplate('mixed-unclosed.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        // Should have the h1 element
+        $this->assertStringContainsString('<h1>Welcome</h1>', $result);
+        // Should have the PHP code
+        $this->assertStringContainsString('$greeting = "Hello, World!";', $result);
+        $this->assertStringContainsString('echo $greeting;', $result);
     }
 }
