@@ -6,25 +6,34 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\IfCompiler;
 use Sugar\Escape\Escaper;
+use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
-use Sugar\Pass\DirectivePass;
+use Sugar\Pass\Directive\DirectiveCompilationPass;
+use Sugar\Pass\Directive\DirectiveExtractionPass;
 
 /**
- * Integration test: Parser → DirectivePass → CodeGenerator
+ * Integration test: Parser → DirectiveExtractionPass → DirectiveCompilationPass → CodeGenerator
  */
 final class DirectiveIntegrationTest extends TestCase
 {
     private Parser $parser;
-
-    private DirectivePass $pass;
-
+    private DirectiveExtractionPass $extractionPass;
+    private DirectiveCompilationPass $compilationPass;
     private CodeGenerator $generator;
 
     protected function setUp(): void
     {
         $this->parser = new Parser();
-        $this->pass = new DirectivePass();
+        $this->extractionPass = new DirectiveExtractionPass();
+
+        $registry = new ExtensionRegistry();
+        $registry->registerDirective('if', new IfCompiler());
+        $registry->registerDirective('foreach', new ForeachCompiler());
+
+        $this->compilationPass = new DirectiveCompilationPass($registry);
         $this->generator = new CodeGenerator(new Escaper());
     }
 
@@ -36,8 +45,11 @@ final class DirectiveIntegrationTest extends TestCase
         $ast = $this->parser->parse($template);
         $this->assertInstanceOf(DocumentNode::class, $ast);
 
-        // Transform directives
-        $transformed = $this->pass->transform($ast);
+        // Extract directives
+        $extracted = $this->extractionPass->transform($ast);
+
+        // Compile directives
+        $transformed = $this->compilationPass->transform($extracted);
 
         // Generate code
         $code = $this->generator->generate($transformed);
@@ -56,9 +68,10 @@ final class DirectiveIntegrationTest extends TestCase
     {
         $template = '<li s:foreach="$items as $item"><?= $item ?></li>';
 
-        // Parse → Transform → Generate
+        // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $transformed = $this->pass->transform($ast);
+        $extracted = $this->extractionPass->transform($ast);
+        $transformed = $this->compilationPass->transform($extracted);
         $code = $this->generator->generate($transformed);
 
         // Should contain foreach/endforeach
@@ -71,9 +84,11 @@ final class DirectiveIntegrationTest extends TestCase
     {
         $template = '<ul s:if="$show"><li s:foreach="$items as $item"><?= $item ?></li></ul>';
 
-        // Parse → Transform → Generate
+        // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $transformed = $this->pass->transform($ast);
+        $extracted = $this->extractionPass->transform($ast);
+        $transformed = $this->compilationPass->transform($extracted);
+        $code = $this->generator->generate($transformed);
         $code = $this->generator->generate($transformed);
 
         // Should contain nested control structures

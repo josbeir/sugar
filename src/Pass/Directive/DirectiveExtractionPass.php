@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass;
+namespace Sugar\Pass\Directive;
 
 use RuntimeException;
 use Sugar\Ast\DirectiveNode;
@@ -9,45 +9,48 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
 
 /**
- * Transforms DirectiveNodes into PHP control structures
+ * Extracts directive attributes from elements and creates DirectiveNodes
  *
- * Converts template directives (s:if, s:foreach, s:while) into their
- * PHP equivalents while preserving child node structure.
+ * This pass walks the AST looking for elements with s:* attributes
+ * (s:if, s:foreach, s:while, etc.) and converts them into DirectiveNode
+ * instances. It does NOT compile directives - that's handled by
+ * DirectiveCompilationPass.
  *
- * This pass handles two scenarios:
- * 1. DirectiveNodes already in the AST
- * 2. ElementNodes with s:* directive attributes
+ * Example:
+ * ```
+ * <div s:if="$user">Content</div>
+ * ```
+ *
+ * Becomes:
+ * ```
+ * DirectiveNode(name: 'if', expression: '$user', children: [<div>Content</div>])
+ * ```
  */
-final class DirectivePass
+final readonly class DirectiveExtractionPass
 {
     /**
      * @param string $directivePrefix Prefix for directive attributes (default: 's')
      */
     public function __construct(
-        private readonly string $directivePrefix = 's',
+        private string $directivePrefix = 's',
     ) {
     }
 
     /**
-     * Transform AST by converting DirectiveNodes to PHP control structures
+     * Transform AST by extracting directives from elements
      */
     public function transform(DocumentNode $ast): DocumentNode
     {
         $newChildren = [];
 
         foreach ($ast->children as $node) {
-            if ($node instanceof DirectiveNode) {
-                // Transform directive into PHP control structure
-                array_push($newChildren, ...$this->transformDirective($node));
-            } elseif ($node instanceof ElementNode && $this->hasDirectiveAttribute($node)) {
-                // Transform element with directive attribute into DirectiveNode
-                $directiveNode = $this->elementToDirective($node);
-                array_push($newChildren, ...$this->transformDirective($directiveNode));
+            if ($node instanceof ElementNode && $this->hasDirectiveAttribute($node)) {
+                // Convert element with directive into DirectiveNode
+                $newChildren[] = $this->elementToDirective($node);
             } else {
-                // Transform children if node has them
+                // Transform children recursively
                 $newChildren[] = $this->transformNode($node);
             }
         }
@@ -56,70 +59,16 @@ final class DirectivePass
     }
 
     /**
-     * Transform a single directive node into PHP control structure
-     *
-     * @return array<\Sugar\Ast\Node>
-     */
-    private function transformDirective(DirectiveNode $node): array
-    {
-        $result = [];
-
-        // Opening PHP tag
-        $result[] = match ($node->name) {
-            'if' => new RawPhpNode('if (' . $node->expression . '):', $node->line, $node->column),
-            'foreach' => new RawPhpNode('foreach (' . $node->expression . '):', $node->line, $node->column),
-            'while' => new RawPhpNode('while (' . $node->expression . '):', $node->line, $node->column),
-            default => throw new RuntimeException('Unsupported directive: ' . $node->name),
-        };
-
-        // Transform children recursively
-        foreach ($node->children as $child) {
-            $result[] = $this->transformNode($child);
-        }
-
-        // Else branch if present
-        if ($node->elseChildren !== null) {
-            $result[] = new RawPhpNode('else:', $node->line, $node->column);
-
-            foreach ($node->elseChildren as $elseChild) {
-                $result[] = $this->transformNode($elseChild);
-            }
-        }
-
-        // Closing PHP tag
-        $result[] = match ($node->name) {
-            'if' => new RawPhpNode('endif;', $node->line, $node->column),
-            'foreach' => new RawPhpNode('endforeach;', $node->line, $node->column),
-            'while' => new RawPhpNode('endwhile;', $node->line, $node->column),
-            default => throw new RuntimeException('Unsupported directive: ' . $node->name),
-        };
-
-        return $result;
-    }
-
-    /**
      * Transform a node and its children recursively
      */
     private function transformNode(Node $node): Node
     {
-        // Handle directives nested in element children
+        // Handle elements with children
         if ($node instanceof ElementNode) {
-            // Check if this element has a directive attribute
-            if ($this->hasDirectiveAttribute($node)) {
-                $directiveNode = $this->elementToDirective($node);
-                // Return the first transformed node (there will be multiple, but we can only return one)
-                // This is a limitation - we'd need to return array here
-                // For now, we'll handle this in the transform() method
-                return $node; // Fallback
-            }
-
             $newChildren = [];
             foreach ($node->children as $child) {
-                if ($child instanceof DirectiveNode) {
-                    array_push($newChildren, ...$this->transformDirective($child));
-                } elseif ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
-                    $directiveNode = $this->elementToDirective($child);
-                    array_push($newChildren, ...$this->transformDirective($directiveNode));
+                if ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
+                    $newChildren[] = $this->elementToDirective($child);
                 } else {
                     $newChildren[] = $this->transformNode($child);
                 }
@@ -200,11 +149,21 @@ final class DirectivePass
     {
         $directive = $this->extractDirective($node);
 
+        // First, transform children recursively to extract nested directives
+        $transformedChildren = [];
+        foreach ($node->children as $child) {
+            if ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
+                $transformedChildren[] = $this->elementToDirective($child);
+            } else {
+                $transformedChildren[] = $this->transformNode($child);
+            }
+        }
+
         // Create element without directive attribute as child
         $wrappedElement = new ElementNode(
             tag: $node->tag,
             attributes: $directive['remaining'],
-            children: $node->children,
+            children: $transformedChildren,
             selfClosing: $node->selfClosing,
             line: $node->line,
             column: $node->column,

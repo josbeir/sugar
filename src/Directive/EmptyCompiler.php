@@ -1,0 +1,53 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Directive;
+
+use Sugar\Ast\Node;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Extension\DirectiveCompilerInterface;
+
+/**
+ * Compiler for empty directive
+ *
+ * Transforms s:empty directives into PHP empty() checks.
+ *
+ * Example:
+ * ```
+ * <div s:empty="$cart">Your cart is empty</div>
+ * <div s:empty="$user->posts">No posts yet</div>
+ * ```
+ *
+ * Compiles to:
+ * ```php
+ * <?php if (empty($cart)): ?>
+ * <div>Your cart is empty</div>
+ * <?php endif; ?>
+ * ```
+ */
+final readonly class EmptyCompiler implements DirectiveCompilerInterface
+{
+    /**
+     * @param \Sugar\Ast\DirectiveNode $node
+     * @return array<\Sugar\Ast\Node>
+     */
+    public function compile(Node $node): array
+    {
+        $parts = [];
+
+        // Opening control structure with empty check
+        $parts[] = new RawPhpNode(
+            'if (empty(' . $node->expression . ')):',
+            $node->line,
+            $node->column,
+        );
+
+        // Children nodes (content to render when variable is empty)
+        array_push($parts, ...$node->children);
+
+        // Closing control structure
+        $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
+
+        return $parts;
+    }
+}

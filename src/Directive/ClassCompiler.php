@@ -1,0 +1,54 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Directive;
+
+use Sugar\Ast\Node;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Extension\DirectiveCompilerInterface;
+
+/**
+ * Compiler for s:class directive (dynamic CSS classes)
+ *
+ * Transforms s:class directives into calls to the classNames() helper.
+ * Handles conditional class arrays for clean dynamic class generation.
+ *
+ * Example:
+ * ```
+ * <div s:class="['btn', 'active' => $isActive, 'disabled' => !$canClick]">
+ *     Button
+ * </div>
+ * ```
+ *
+ * Compiles to:
+ * ```php
+ * <div class="<?= \Sugar\Runtime\classNames(['btn', 'active' => $isActive, 'disabled' => !$canClick]) ?>">
+ *     Button
+ * </div>
+ * ```
+ *
+ * Note: s:class is compiled into a class="..." attribute, not a directive node.
+ * This compilation happens in DirectiveExtractionPass.
+ */
+final readonly class ClassCompiler implements DirectiveCompilerInterface
+{
+    /**
+     * @param \Sugar\Ast\DirectiveNode $node
+     * @return array<\Sugar\Ast\Node>
+     */
+    public function compile(Node $node): array
+    {
+        // s:class is handled as attribute output, not control structure
+        // This compiler shouldn't be called directly - it's for registry completeness
+        return [
+            new RawPhpNode(
+                sprintf(
+                    'class="<?= \\Sugar\\Runtime\\AttributeHelper::classNames(%s) ?>"',
+                    $node->expression,
+                ),
+                $node->line,
+                $node->column,
+            ),
+        ];
+    }
+}

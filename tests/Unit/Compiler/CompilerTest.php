@@ -9,7 +9,6 @@ use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
-use Sugar\Pass\DirectivePass;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
@@ -27,7 +26,6 @@ final class CompilerTest extends TestCase
     {
         $this->compiler = new Compiler(
             new Parser(),
-            new DirectivePass(),
             new ContextAnalysisPass(),
             new CodeGenerator(new Escaper()),
         );

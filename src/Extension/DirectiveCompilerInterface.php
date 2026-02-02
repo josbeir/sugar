@@ -1,0 +1,26 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Extension;
+
+use Sugar\Ast\Node;
+
+/**
+ * Interface for directive compilers
+ *
+ * Directive compilers transform DirectiveNodes (s:if, s:foreach, etc.)
+ * into arrays of AST nodes (typically RawPhpNodes).
+ */
+interface DirectiveCompilerInterface extends ExtensionCompilerInterface
+{
+    /**
+     * Compile a directive node into an array of AST nodes
+     *
+     * Overrides parent to specify DirectiveNode in docblock for clarity,
+     * but accepts Node to maintain contravariance.
+     *
+     * @param \Sugar\Ast\DirectiveNode $node The directive node to compile
+     * @return array<\Sugar\Ast\Node> The compiled AST nodes
+     */
+    public function compile(Node $node): array;
+}
