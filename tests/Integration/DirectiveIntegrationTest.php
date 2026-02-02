@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Escape\Escaper;
-use Sugar\Core\Parser\Parser;
-use Sugar\Core\Pass\DirectivePass;
+use Sugar\Ast\DocumentNode;
+use Sugar\CodeGen\CodeGenerator;
+use Sugar\Escape\Escaper;
+use Sugar\Parser\Parser;
+use Sugar\Pass\DirectivePass;
 
 /**
  * Integration test: Parser → DirectivePass → CodeGenerator

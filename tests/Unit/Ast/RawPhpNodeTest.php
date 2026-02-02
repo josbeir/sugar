@@ -5,10 +5,10 @@ namespace Sugar\Tests\Unit\Ast;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Ast\RawPhpNode;
 
 /**
- * @covers \Sugar\Core\Ast\RawPhpNode
+ * @covers \Sugar\Ast\RawPhpNode
  */
 #[CoversClass(RawPhpNode::class)]
 final class RawPhpNodeTest extends TestCase

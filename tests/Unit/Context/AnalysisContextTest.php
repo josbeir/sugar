@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Context;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Context\AnalysisContext;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Context\AnalysisContext;
+use Sugar\Enum\OutputContext;
 
 /**
  * Test context analysis helper

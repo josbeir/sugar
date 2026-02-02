@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Parser\SugarToken;
+use Sugar\Parser\SugarToken;
 
 final class SugarTokenTest extends TestCase
 {

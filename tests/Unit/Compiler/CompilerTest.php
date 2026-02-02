@@ -4,12 +4,12 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Compiler\Compiler;
-use Sugar\Core\Escape\Escaper;
-use Sugar\Core\Parser\Parser;
-use Sugar\Core\Pass\ContextAnalysisPass;
-use Sugar\Core\Pass\DirectivePass;
+use Sugar\CodeGen\CodeGenerator;
+use Sugar\Compiler;
+use Sugar\Escape\Escaper;
+use Sugar\Parser\Parser;
+use Sugar\Pass\ContextAnalysisPass;
+use Sugar\Pass\DirectivePass;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
@@ -194,5 +194,122 @@ final class CompilerTest extends TestCase
         // Should have the PHP code
         $this->assertStringContainsString('$greeting = "Hello, World!";', $result);
         $this->assertStringContainsString('echo $greeting;', $result);
+    }
+
+    public function testCompileIfDirective(): void
+    {
+        $source = '<div s:if="$isAdmin">Admin Panel</div>';
+
+        $result = $this->compiler->compile($source);
+
+        // Should contain if control structure
+        $this->assertStringContainsString('<?php if ($isAdmin): ?>', $result);
+        $this->assertStringContainsString('<?php endif; ?>', $result);
+        $this->assertStringContainsString('<div>Admin Panel</div>', $result);
+    }
+
+    public function testCompileIfDirectiveExecutable(): void
+    {
+        $source = '<div s:if="$showMessage">Hello <?= $name ?></div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        // Test with condition true
+        $output = $this->executeTemplate($compiled, [
+            'showMessage' => true,
+            'name' => 'Alice',
+        ]);
+        $this->assertStringContainsString('<div>Hello Alice</div>', $output);
+
+        // Test with condition false
+        $output = $this->executeTemplate($compiled, [
+            'showMessage' => false,
+            'name' => 'Bob',
+        ]);
+        $this->assertStringNotContainsString('Hello', $output);
+        $this->assertStringNotContainsString('Bob', $output);
+    }
+
+    public function testCompileForeachDirective(): void
+    {
+        $source = '<ul><li s:foreach="$items as $item"><?= $item ?></li></ul>';
+
+        $result = $this->compiler->compile($source);
+
+        // Should contain foreach control structure
+        $this->assertStringContainsString('<?php foreach ($items as $item): ?>', $result);
+        $this->assertStringContainsString('<?php endforeach; ?>', $result);
+        $this->assertStringContainsString('<li>', $result);
+    }
+
+    public function testCompileForeachDirectiveExecutable(): void
+    {
+        $source = '<ul><li s:foreach="$items as $item"><?= $item ?></li></ul>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'items' => ['Apple', 'Banana', 'Cherry'],
+        ]);
+
+        $this->assertStringContainsString('<ul>', $output);
+        $this->assertStringContainsString('<li>Apple</li>', $output);
+        $this->assertStringContainsString('<li>Banana</li>', $output);
+        $this->assertStringContainsString('<li>Cherry</li>', $output);
+        $this->assertStringContainsString('</ul>', $output);
+    }
+
+    public function testCompileNestedDirectives(): void
+    {
+        $source = '<div s:if="$show"><ul><li s:foreach="$items as $item"><?= $item ?></li></ul></div>';
+
+        $result = $this->compiler->compile($source);
+
+        // Should contain nested control structures
+        $this->assertStringContainsString('<?php if ($show): ?>', $result);
+        $this->assertStringContainsString('<?php foreach ($items as $item): ?>', $result);
+        $this->assertStringContainsString('<?php endforeach; ?>', $result);
+        $this->assertStringContainsString('<?php endif; ?>', $result);
+    }
+
+    public function testCompileNestedDirectivesExecutable(): void
+    {
+        $source = '<div s:if="$show"><ul><li s:foreach="$items as $item"><?= $item ?></li></ul></div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        // Test with condition true
+        $output = $this->executeTemplate($compiled, [
+            'show' => true,
+            'items' => ['One', 'Two'],
+        ]);
+        $this->assertStringContainsString('<div>', $output);
+        $this->assertStringContainsString('<li>One</li>', $output);
+        $this->assertStringContainsString('<li>Two</li>', $output);
+
+        // Test with condition false
+        $output = $this->executeTemplate($compiled, [
+            'show' => false,
+            'items' => ['One', 'Two'],
+        ]);
+        $this->assertStringNotContainsString('<div>', $output);
+        $this->assertStringNotContainsString('One', $output);
+    }
+
+    public function testCompileDirectiveWithEscaping(): void
+    {
+        $source = '<div s:if="$isUser">Welcome <?= $name ?></div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'isUser' => true,
+            'name' => '<script>alert("xss")</script>',
+        ]);
+
+        // Should escape the name variable
+        $this->assertStringContainsString('&lt;script&gt;', $output);
+        $this->assertStringNotContainsString('<script>', $output);
+        $this->assertStringContainsString('Welcome', $output);
     }
 }

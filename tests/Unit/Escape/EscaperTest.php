@@ -5,8 +5,8 @@ namespace Sugar\Tests\Unit\Escape;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Escape\Escaper;
+use Sugar\Enum\OutputContext;
+use Sugar\Escape\Escaper;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**

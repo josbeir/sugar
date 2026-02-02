@@ -20,6 +20,7 @@ trait ExecuteTemplateTrait
         extract($variables, EXTR_SKIP);
 
         ob_start();
+        // phpcs:ignore Squiz.PHP.Eval.Discouraged
         eval('?>' . $compiledCode);
 
         return (string)ob_get_clean();
@@ -36,7 +37,6 @@ trait ExecuteTemplateTrait
     {
         extract($variables, EXTR_SKIP);
 
-        // phpcs:ignore Squiz.PHP.Eval.Discouraged
-        return eval(sprintf('return %s;', $expression));
+        return eval(sprintf('return %s;', $expression)); // phpcs:ignore Squiz.PHP.Eval.Discouraged
     }
 }

@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Ast;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\AttributeNode;
-use Sugar\Core\Ast\Node;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Ast\AttributeNode;
+use Sugar\Ast\Node;
+use Sugar\Ast\OutputNode;
+use Sugar\Enum\OutputContext;
 
 /**
  * Test AttributeNode AST class

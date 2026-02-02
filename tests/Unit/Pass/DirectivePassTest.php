@@ -5,14 +5,14 @@ namespace Sugar\Tests\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Sugar\Core\Ast\DirectiveNode;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Ast\RawPhpNode;
-use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Pass\DirectivePass;
+use Sugar\Ast\DirectiveNode;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\ElementNode;
+use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\TextNode;
+use Sugar\Enum\OutputContext;
+use Sugar\Pass\DirectivePass;
 
 /**
  * Test DirectivePass - transforms DirectiveNodes into PHP control structures

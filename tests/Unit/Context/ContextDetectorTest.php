@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Context;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Context\ContextDetector;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Context\ContextDetector;
+use Sugar\Enum\OutputContext;
 
 /**
  * Test context detection (security-critical - 100% coverage required)

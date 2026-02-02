@@ -4,13 +4,13 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\CodeGen;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Ast\RawPhpNode;
-use Sugar\Core\Ast\TextNode;
-use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Escape\Escaper;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\TextNode;
+use Sugar\CodeGen\CodeGenerator;
+use Sugar\Enum\OutputContext;
+use Sugar\Escape\Escaper;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**

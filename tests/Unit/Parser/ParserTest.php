@@ -4,13 +4,13 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\Node;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Ast\RawPhpNode;
-use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Parser\Parser;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\ElementNode;
+use Sugar\Ast\Node;
+use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\TextNode;
+use Sugar\Parser\Parser;
 
 final class ParserTest extends TestCase
 {
