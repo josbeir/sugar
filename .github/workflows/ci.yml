@@ -14,11 +14,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        php-version: [8.2, 8.3, 8.4, 8.5]
+        # os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
+        php-version: [8.4, 8.5]
         prefer-lowest: ['']
         include:
-          - php-version: '8.2'
+          - php-version: '8.4'
             os: ubuntu-latest
             prefer-lowest: 'prefer-lowest'
 

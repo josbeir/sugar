@@ -40,8 +40,12 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
 
 **Converted to Sugar:**
 ```php
+<!-- Mix Sugar directives with regular PHP - both work together! -->
 <div s:forelse="$users as $user" s:class="['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]">
     <?= $user->name ?>
+    <?php if ($user->email): ?>
+        <small><?= $user->email ?></small>
+    <?php endif; ?>
 </div>
 <div s:none>No users found</div>
 ```
@@ -52,6 +56,9 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
     <?php foreach ($users as $user): ?>
         <div class="<?= \Sugar\Runtime\AttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
             <?= htmlspecialchars((string)($user->name), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>
+            <?php if ($user->email): ?>
+                <small><?= htmlspecialchars((string)($user->email), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></small>
+            <?php endif; ?>
         </div>
     <?php endforeach; ?>
 <?php else: ?>
@@ -64,22 +71,31 @@ Notice:
 - ✅ **Cleaner markup** - No PHP noise in your HTML
 - ✅ **Type-safe** - Proper flags and encoding for modern HTML5
 - ✅ **Still pure PHP** - Can be cached, debugged, and profiled like any PHP file
+- ✅ **Mix and match** - Regular `<?php if/foreach ?>` and Sugar directives work together seamlessly
 
 ### More Examples
 
 **Context-Aware Escaping**
 
-Sugar automatically applies the right escaping based on where your output appears:
+Sugar automatically applies the right escaping based on where your output appears. Regular PHP logic works normally:
 
 ```php
 <!-- Sugar Template -->
-<div data-user="<?= $name ?>">
+<div data-user="<?= $name ?>" s:if="$isActive">
+    <?php $displayName = strtoupper($name); // Regular PHP works fine ?>
+    <span><?= $displayName ?></span>
+</div>
 <script>const user = <?= $userData ?>;</script>
 <style>.user::before { content: '<?= $prefix ?>'; }</style>
 <a href="/search?q=<?= $query ?>">Search</a>
 
 <!-- Compiled Output -->
-<div data-user="<?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>">
+<?php if ($isActive): ?>
+    <div data-user="<?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>">
+        <?php $displayName = strtoupper($name); // Regular PHP works fine ?>
+        <span><?= htmlspecialchars($displayName, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></span>
+    </div>
+<?php endif; ?>
 <script>const user = <?= json_encode($userData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
 <style>.user::before { content: '<?= \Sugar\Escape\Escaper::escapeCss($prefix) ?>'; }</style>
 <a href="/search?q=<?= rawurlencode($query) ?>">Search</a>
@@ -264,7 +280,3 @@ Sugar is actively developed and welcomes contributions! Check out the issues or 
 ## License
 
 MIT License - see LICENSE file for details
-
-## Credits
-
-Created by [Jasper Smet](https://github.com/josbeir) and the CakePHP Community.
