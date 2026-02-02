@@ -1,0 +1,18 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Core\Enum;
+
+/**
+ * Output context types for context-aware escaping
+ */
+enum OutputContext: string
+{
+    case HTML = 'html';
+    case HTML_ATTRIBUTE = 'html_attr';
+    case JAVASCRIPT = 'javascript';
+    case JSON = 'json';
+    case CSS = 'css';
+    case URL = 'url';
+    case RAW = 'raw';
+}

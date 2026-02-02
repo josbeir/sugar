@@ -1,0 +1,36 @@
+{
+    "name": "cakephp/sugar",
+    "description": "A fun and safe PHP templating engine",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Sugar\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sugar\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Jasper Smet",
+            "email": "josbeir@gmail.com"
+        },
+        {
+            "name": "CakePHP Community",
+            "homepage": "https://github.com/cakephp/cakephp/graphs/contributors"
+        }        
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^12.5",
+        "cakephp/cakephp-codesniffer": "^5.3",
+        "rector/rector": "^2.3",
+        "phpstan/phpstan": "^2.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

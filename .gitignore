@@ -1,0 +1,9 @@
+vendor/*
+tmp/*
+.vscode/*
+.idea/*
+.DS_Store
+.env
+.zed/*
+docs/*
+spec/*
