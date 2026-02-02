@@ -9,21 +9,10 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Config\ParserConfig;
 use Sugar\Core\Enum\OutputContext;
 
 final readonly class Parser
 {
-    /**
-     * Constructor
-     *
-     * @param \Sugar\Core\Config\ParserConfig $config Parser configuration
-     */
-    public function __construct(
-        private ParserConfig $config = new ParserConfig(),
-    ) {
-    }
-
     /**
      * Parse a Sugar template into an AST
      *
@@ -66,7 +55,7 @@ final readonly class Parser
                 continue;
             }
 
-            if ($token->isOpenTag() && !$token->isOutput()) {
+            if ($token->isOpenTag()) {
                 [$code, $nextIndex] = $this->extractPhpBlock($tokens, $i + 1);
                 $nodes[] = new RawPhpNode($code, $token->line, $token->pos);
                 $i = $nextIndex;
@@ -85,6 +74,7 @@ final readonly class Parser
                 } else {
                     $nodes[] = new TextNode($token->content(), $token->line, $token->pos);
                 }
+
                 $i++;
                 continue;
             }
@@ -173,6 +163,7 @@ final readonly class Parser
                 if ($pos < $len) {
                     $nodes[] = new TextNode(substr($html, $pos), $line, $column);
                 }
+
                 break;
             }
 
@@ -194,6 +185,7 @@ final readonly class Parser
                 } else {
                     $endPos++;
                 }
+
                 $nodes[] = new TextNode(substr($html, $tagStart, $endPos - $tagStart), $line, $column);
                 $pos = $endPos;
             } else {
@@ -353,6 +345,7 @@ final readonly class Parser
                     $value .= $html[$pos++];
                 }
             }
+
             if ($pos < $len) {
                 $pos++; // Skip closing quote
             }

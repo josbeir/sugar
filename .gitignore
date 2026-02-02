@@ -7,3 +7,4 @@ tmp/*
 .zed/*
 docs/*
 spec/*
+.phpunit.result.cache

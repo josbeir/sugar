@@ -9,6 +9,8 @@ use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\ContextAnalysisPass;
+use Sugar\Core\Pass\DirectivePass;
+use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
 /**
@@ -16,6 +18,7 @@ use Sugar\Tests\TemplateTestHelperTrait;
  */
 final class CompilerTest extends TestCase
 {
+    use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
 
     private Compiler $compiler;
@@ -24,6 +27,7 @@ final class CompilerTest extends TestCase
     {
         $this->compiler = new Compiler(
             new Parser(),
+            new DirectivePass(),
             new ContextAnalysisPass(),
             new CodeGenerator(new Escaper()),
         );
@@ -123,16 +127,10 @@ final class CompilerTest extends TestCase
 
         $compiled = $this->compiler->compile($source);
 
-        // Variables used in eval scope
-        // phpcs:ignore SlevomatCodingStandard.Variables.UnusedVariable.UnusedVariable
-        $name = '<script>alert("xss")</script>';
-        // phpcs:ignore SlevomatCodingStandard.Variables.UnusedVariable.UnusedVariable
-        $age = 25;
-
-        ob_start();
-        // phpcs:ignore Squiz.PHP.Eval.Discouraged
-        eval('?>' . $compiled);
-        $output = ob_get_clean();
+        $output = $this->executeTemplate($compiled, [
+            'name' => '<script>alert("xss")</script>',
+            'age' => 25,
+        ]);
 
         $this->assertNotFalse($output);
         $this->assertStringContainsString('User:', $output);

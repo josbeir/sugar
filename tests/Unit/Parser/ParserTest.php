@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Parser\Parser;
 use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Parser\Parser;
 
 final class ParserTest extends TestCase
 {
@@ -54,7 +57,7 @@ final class ParserTest extends TestCase
         // Should have h1 element
         $this->assertCount(1, $ast->children);
         $h1 = $ast->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $h1);
+        $this->assertInstanceOf(ElementNode::class, $h1);
         $this->assertSame('h1', $h1->tag);
 
         // h1 should contain OutputNode
@@ -68,7 +71,7 @@ final class ParserTest extends TestCase
         $source = '<?= $title ?> and <?= $subtitle ?>';
         $ast = $this->parser->parse($source);
 
-        $outputs = array_filter($ast->children, fn($n) => $n instanceof OutputNode);
+        $outputs = array_filter($ast->children, fn(Node $n): bool => $n instanceof OutputNode);
         $this->assertCount(2, $outputs);
     }
 
@@ -79,10 +82,10 @@ final class ParserTest extends TestCase
 
         $this->assertCount(1, $doc->children);
         $element = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertSame('div', $element->tag);
         $this->assertCount(1, $element->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $element->children[0]);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
         $this->assertSame('text', $element->children[0]->content);
     }
 
@@ -92,7 +95,7 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $element = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('class', $element->attributes[0]->name);
         $this->assertSame('test', $element->attributes[0]->value);
@@ -104,16 +107,22 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $div = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $div);
         $this->assertSame('div', $div->tag);
         $this->assertCount(2, $div->children);
 
         $a = $div->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $a);
+        $this->assertInstanceOf(ElementNode::class, $a);
         $this->assertSame('a', $a->tag);
         $this->assertCount(1, $a->children);
-        $this->assertSame('link', $a->children[0]->content);
 
-        $this->assertSame(' label', $div->children[1]->content);
+        $aChild = $a->children[0];
+        $this->assertInstanceOf(TextNode::class, $aChild);
+        $this->assertSame('link', $aChild->content);
+
+        $divChild = $div->children[1];
+        $this->assertInstanceOf(TextNode::class, $divChild);
+        $this->assertSame(' label', $divChild->content);
     }
 
     public function testParseSelfClosingElement(): void
@@ -122,7 +131,7 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $element = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertSame('br', $element->tag);
         $this->assertTrue($element->selfClosing);
         $this->assertCount(0, $element->children);
@@ -134,7 +143,7 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $element = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $element);
+        $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('s:if', $element->attributes[0]->name);
         $this->assertSame('$condition', $element->attributes[0]->value);
@@ -146,10 +155,13 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $div = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $div);
         $this->assertSame('div', $div->tag);
         $this->assertCount(1, $div->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $div->children[0]);
-        $this->assertSame('$var', $div->children[0]->expression);
+
+        $output = $div->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$var', $output->expression);
     }
 
     public function testParseRawPhpBlock(): void
@@ -158,11 +170,13 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $this->assertCount(3, $doc->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[0]);
-        $this->assertSame('$x = 42;', $doc->children[0]->code);
-        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $doc->children[1]);
+
+        $rawPhp = $doc->children[0];
+        $this->assertInstanceOf(RawPhpNode::class, $rawPhp);
+        $this->assertSame('$x = 42;', $rawPhp->code);
+        $this->assertInstanceOf(TextNode::class, $doc->children[1]);
         $this->assertSame('Result: ', $doc->children[1]->content);
-        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $doc->children[2]);
+        $this->assertInstanceOf(OutputNode::class, $doc->children[2]);
         $this->assertSame('$x', $doc->children[2]->expression);
     }
 
@@ -173,7 +187,7 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $this->assertCount(1, $doc->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[0]);
+        $this->assertInstanceOf(RawPhpNode::class, $doc->children[0]);
         $this->assertSame('$x = 42;', $doc->children[0]->code);
     }
 
@@ -185,12 +199,16 @@ final class ParserTest extends TestCase
         $this->assertCount(2, $doc->children);
 
         $h1 = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $h1);
+        $this->assertInstanceOf(ElementNode::class, $h1);
         $this->assertSame('h1', $h1->tag);
-        $this->assertSame('Title', $h1->children[0]->content);
 
-        $this->assertInstanceOf(\Sugar\Core\Ast\RawPhpNode::class, $doc->children[1]);
-        $this->assertStringContainsString('echo "test";', $doc->children[1]->code);
+        $h1Child = $h1->children[0];
+        $this->assertInstanceOf(TextNode::class, $h1Child);
+        $this->assertSame('Title', $h1Child->content);
+
+        $rawPhp = $doc->children[1];
+        $this->assertInstanceOf(RawPhpNode::class, $rawPhp);
+        $this->assertStringContainsString('echo "test";', $rawPhp->code);
     }
 
     public function testParseComplexNestedStructure(): void
@@ -199,20 +217,27 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $ul = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $ul);
         $this->assertSame('ul', $ul->tag);
         $this->assertCount(2, $ul->children);
 
         $li1 = $ul->children[0];
+        $this->assertInstanceOf(ElementNode::class, $li1);
         $this->assertSame('li', $li1->tag);
         $this->assertCount(1, $li1->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $li1->children[0]);
-        $this->assertSame('$item1', $li1->children[0]->expression);
+
+        $output1 = $li1->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output1);
+        $this->assertSame('$item1', $output1->expression);
 
         $li2 = $ul->children[1];
+        $this->assertInstanceOf(ElementNode::class, $li2);
         $this->assertSame('li', $li2->tag);
         $this->assertCount(1, $li2->children);
-        $this->assertInstanceOf(\Sugar\Core\Ast\OutputNode::class, $li2->children[0]);
-        $this->assertSame('$item2', $li2->children[0]->expression);
+
+        $output2 = $li2->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output2);
+        $this->assertSame('$item2', $output2->expression);
     }
 
     public function testParseHtmlComments(): void
@@ -221,9 +246,11 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $this->assertGreaterThan(0, count($doc->children));
+
         // HTML comments are treated as text nodes
-        $this->assertInstanceOf(\Sugar\Core\Ast\TextNode::class, $doc->children[0]);
-        $this->assertSame('<!-- Comment -->', $doc->children[0]->content);
+        $comment = $doc->children[0];
+        $this->assertInstanceOf(TextNode::class, $comment);
+        $this->assertSame('<!-- Comment -->', $comment->content);
     }
 
     public function testParseMultipleAttributes(): void
@@ -232,7 +259,7 @@ final class ParserTest extends TestCase
         $doc = $this->parser->parse($template);
 
         $input = $doc->children[0];
-        $this->assertInstanceOf(\Sugar\Core\Ast\ElementNode::class, $input);
+        $this->assertInstanceOf(ElementNode::class, $input);
         $this->assertSame('input', $input->tag);
         $this->assertTrue($input->selfClosing);
         $this->assertCount(4, $input->attributes);

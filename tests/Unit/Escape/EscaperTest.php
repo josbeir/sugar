@@ -7,12 +7,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
+use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
  * Test context-aware escaping (security-critical - 100% coverage required)
  */
 final class EscaperTest extends TestCase
 {
+    use ExecuteTemplateTrait;
+
     private Escaper $escaper;
 
     protected function setUp(): void
@@ -233,11 +236,10 @@ final class EscaperTest extends TestCase
     public function testGeneratedCodeIsValidPhp(): void
     {
         $code = $this->escaper->generateEscapeCode('$var', OutputContext::HTML);
-        // Variable used in eval scope
-        // phpcs:ignore SlevomatCodingStandard.Variables.UnusedVariable.UnusedVariable
-        $var = '<script>alert("xss")</script>';
-        // phpcs:ignore Squiz.PHP.Eval.Discouraged
-        $result = eval(sprintf('return %s;', $code));
+
+        $result = $this->evaluateExpression($code, [
+            'var' => '<script>alert("xss")</script>',
+        ]);
 
         $this->assertSame('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', $result);
     }

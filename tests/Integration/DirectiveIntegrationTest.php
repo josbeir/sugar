@@ -6,7 +6,6 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Config\ParserConfig;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\DirectivePass;
@@ -24,7 +23,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new Parser(new ParserConfig('s'));
+        $this->parser = new Parser();
         $this->pass = new DirectivePass();
         $this->generator = new CodeGenerator(new Escaper());
     }

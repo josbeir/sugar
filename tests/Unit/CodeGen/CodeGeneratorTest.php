@@ -11,12 +11,15 @@ use Sugar\Core\Ast\TextNode;
 use Sugar\Core\CodeGen\CodeGenerator;
 use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
+use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
  * Test code generation from AST
  */
 final class CodeGeneratorTest extends TestCase
 {
+    use ExecuteTemplateTrait;
+
     private CodeGenerator $generator;
 
     protected function setUp(): void
@@ -109,13 +112,10 @@ final class CodeGeneratorTest extends TestCase
         ]);
 
         $code = $this->generator->generate($ast);
-        // Variable used in eval scope
-        // phpcs:ignore SlevomatCodingStandard.Variables.UnusedVariable.UnusedVariable
-        $name = '<script>alert("xss")</script>';
-        ob_start();
-        // phpcs:ignore Squiz.PHP.Eval.Discouraged
-        eval('?>' . $code);
-        $output = ob_get_clean();
+
+        $output = $this->executeTemplate($code, [
+            'name' => '<script>alert("xss")</script>',
+        ]);
 
         $this->assertNotFalse($output);
         $this->assertStringContainsString('Hello', $output);
