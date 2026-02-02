@@ -1,7 +1,21 @@
 {
-    "name": "cakephp/sugar",
+    "name": "josbeir/sugar",
     "description": "A fun and safe PHP templating engine",
     "license": "MIT",
+    "keywords": [
+        "templating",
+        "template",
+        "template-engine",
+        "php",
+        "security",
+        "xss-protection",
+        "auto-escaping",
+        "context-aware",
+        "compiler",
+        "cakephp",
+        "performance",
+        "directives"
+    ],
     "autoload": {
         "psr-4": {
             "Sugar\\": "src/"
@@ -16,12 +30,11 @@
         {
             "name": "Jasper Smet",
             "email": "josbeir@gmail.com"
-        },
-        {
-            "name": "CakePHP Community",
-            "homepage": "https://github.com/cakephp/cakephp/graphs/contributors"
-        }        
+        }
     ],
+    "require": {
+        "php": ">=8.4"
+    },
     "require-dev": {
         "phpunit/phpunit": "^12.5",
         "cakephp/cakephp-codesniffer": "^5.3",
