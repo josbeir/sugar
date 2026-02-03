@@ -47,7 +47,7 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
         <small><?= $user->email ?></small>
     <?php endif; ?>
 </div>
-<div s:none>No users found</div>
+<div s:empty>No users found</div>
 ```
 
 **Compiles to optimized PHP:**
@@ -151,6 +151,45 @@ foreach ($items as $item): ?>
 </div>
 ```
 
+**Output Directives**
+
+Use `s:text` and `s:html` for explicit output control:
+
+```php
+<!-- s:text - Escaped output (same as <?= ?>) -->
+<div s:text="$userName"></div>
+<!-- Compiles to: -->
+<div><?= htmlspecialchars((string)($userName), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></div>
+
+<!-- s:html - Unescaped output for trusted HTML -->
+<div s:html="$article->renderedContent"></div>
+<!-- Compiles to: -->
+<div><?= $article->renderedContent ?></div>
+```
+
+> [!WARNING]
+> **`s:html` Security**: Only use with trusted content you control. Never use with user input as it bypasses XSS protection!
+
+**Standalone Variable Checks**
+
+Use `s:empty` and `s:isset` to conditionally render content based on variable state:
+
+```php
+<!-- s:empty - Render when variable is empty -->
+<div s:empty="$cart">Your cart is empty</div>
+<!-- Compiles to: -->
+<?php if (empty($cart)): ?>
+<div>Your cart is empty</div>
+<?php endif; ?>
+
+<!-- s:isset - Render when variable is set -->
+<div s:isset="$user">Welcome back!</div>
+<!-- Compiles to: -->
+<?php if (isset($user)): ?>
+<div>Welcome back!</div>
+<?php endif; ?>
+```
+
 
 ## Why Sugar?
 
@@ -167,15 +206,25 @@ foreach ($items as $item): ?>
 
 Sugar provides familiar control structures as HTML attributes:
 
+#### Control Flow
 - **`s:if` / `s:elseif` / `s:else`** - Conditional rendering
-- **`s:foreach` / `s:forelse`** - Iteration with empty fallbacks
+- **`s:foreach` / `s:forelse` / `s:empty`** - Iteration with empty fallbacks (`s:empty` can also be used standalone)
 - **`s:while`** - Loop structures
 - **`s:switch` / `s:case` / `s:default`** - Switch statements
 - **`s:unless`** - Inverse conditionals
-- **`s:isset` / `s:empty`** - Variable checks
+- **`s:isset` / `s:empty`** - Variable checks (standalone usage)
 
-### Utility Directives
+#### Output Directives
+- **`s:text`** - Escaped output (alternative to `<?= ?>`)
+- **`s:html`** - Raw/unescaped output for trusted HTML (use with caution)
 
+#### Template Composition
+- **`s:extends`** - Extend a parent template layout
+- **`s:block`** - Define named content blocks that can be overridden
+- **`s:include`** - Include other templates (extension-less paths supported)
+- **`s:with`** - Pass variables to included templates with isolated scope
+
+#### Utility Directives
 - **`s:class`** - Dynamic CSS classes with conditional arrays
 - **`s:spread`** - Spread attributes from arrays
 
@@ -251,6 +300,127 @@ Access loop information with the `$loop` variable (inspired by Blade):
 </ul>
 ```
 
+### Template Inheritance & Composition
+
+Build reusable layouts with template inheritance, similar to Blade or Twig:
+
+#### Basic Layout Inheritance
+
+**Base Layout** (`layouts/base.sugar.php`):
+```php
+<!DOCTYPE html>
+<html>
+<head>
+    <title s:block="title">Default Title</title>
+</head>
+<body>
+    <header s:block="header">
+        <h1>My Site</h1>
+    </header>
+
+    <main s:block="content">
+        Default content
+    </main>
+
+    <footer s:block="footer">
+        &copy; 2026
+    </footer>
+</body>
+</html>
+```
+
+**Child Template** (`pages/home.sugar.php`):
+```php
+<div s:extends="../layouts/base.sugar.php"></div>
+
+<title s:block="title">Home Page</title>
+
+<div s:block="content">
+    <h2>Welcome!</h2>
+    <p>This is the home page content.</p>
+</div>
+```
+
+**Compiled Result**:
+```php
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Page</title>
+</head>
+<body>
+    <header>
+        <h1>My Site</h1>
+    </header>
+
+    <main>
+        <h2>Welcome!</h2>
+        <p>This is the home page content.</p>
+    </main>
+
+    <footer>
+        &copy; 2026
+    </footer>
+</body>
+</html>
+```
+
+#### Multi-Level Inheritance
+
+Templates can extend templates that extend other templates:
+
+```php
+<!-- layouts/master.sugar.php -->
+<html>
+    <title s:block="title">Master</title>
+    <body s:block="body">Master body</body>
+</html>
+
+<!-- layouts/app.sugar.php -->
+<div s:extends="master.sugar.php"></div>
+<title s:block="title">App Layout</title>
+
+<!-- pages/profile.sugar.php -->
+<div s:extends="../layouts/app.sugar.php"></div>
+<title s:block="title">User Profile</title>
+```
+
+#### Template Includes
+
+Include reusable template fragments with `s:include`:
+
+```php
+<!-- partials/header.sugar.php -->
+<header>
+    <h1><?= $title ?></h1>
+</header>
+
+<!-- pages/home.sugar.php -->
+<div s:include="partials/header"></div>
+<main>Page content here</main>
+```
+
+**Extension-less paths supported**: You can write `s:include="partials/header"` instead of `s:include="partials/header.sugar.php"` - Sugar automatically tries both.
+
+#### Isolated Variable Scope with `s:with`
+
+Pass specific variables to included templates for better encapsulation:
+
+```php
+<!-- partials/user-card.sugar.php -->
+<div class="card">
+    <h3><?= $name ?></h3>
+    <p><?= $email ?></p>
+</div>
+
+<!-- pages/team.sugar.php -->
+<div s:foreach="$users as $user">
+    <div s:include="partials/user-card" s:with="['name' => $user->name, 'email' => $user->email]"></div>
+</div>
+```
+
+The `s:with` directive creates an isolated scope where only the specified variables are available to the included template.
+
 ## Quick Start
 
 ```bash
@@ -262,11 +432,22 @@ use Sugar\Compiler;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Escape\Escaper;
+use Sugar\TemplateInheritance\FileTemplateLoader;
 
+// Basic compiler
 $compiler = new Compiler(
     new Parser(),
     new ContextAnalysisPass(),
     new Escaper()
+);
+
+// With template inheritance support
+$loader = new FileTemplateLoader(__DIR__ . '/templates');
+$compiler = new Compiler(
+    new Parser(),
+    new ContextAnalysisPass(),
+    new Escaper(),
+    templateLoader: $loader
 );
 
 $compiled = $compiler->compile('<div s:if="$show"><?= $message ?></div>');
@@ -307,10 +488,9 @@ Output includes helpful comments:
 ## Roadmap
 
 ### Core Features
+- [x] **Template Inheritance** - Layouts, blocks, extends, and includes (✅ Completed)
 - [ ] **Custom Components** - Reusable template components with slots and props
-- [ ] **Template Inheritance** - Layouts, blocks, and extends (like Blade/Twig)
 - [ ] **Custom Filter Functions** - Pipe data through custom transformations
-- [ ] **Asset Bundling** - Built-in support for CSS/JS compilation and versioning
 - [ ] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
 
 ### Developer Experience

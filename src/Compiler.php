@@ -23,6 +23,8 @@ use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\TemplateInheritancePass;
+use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
 /**
  * Orchestrates template compilation pipeline
@@ -41,6 +43,8 @@ final class Compiler implements CompilerInterface
 
     private readonly Escaper $escaper;
 
+    private readonly ?TemplateInheritancePass $templateInheritancePass;
+
     /**
      * Constructor
      *
@@ -48,12 +52,14 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Pass\ContextAnalysisPass $contextPass Context analysis pass
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
+     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
      */
     public function __construct(
         private readonly Parser $parser,
         private readonly ContextAnalysisPass $contextPass,
         Escaper $escaper,
         ?ExtensionRegistry $registry = null,
+        ?TemplateLoaderInterface $templateLoader = null,
     ) {
         $this->escaper = $escaper;
 
@@ -64,6 +70,11 @@ final class Compiler implements CompilerInterface
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
+
+        // Create template inheritance pass if loader is provided
+        $this->templateInheritancePass = $templateLoader instanceof TemplateLoaderInterface
+            ? new TemplateInheritancePass($templateLoader)
+            : null;
     }
 
     /**
@@ -80,14 +91,24 @@ final class Compiler implements CompilerInterface
      * Compile template source to executable PHP code
      *
      * @param string $source Template source code
+     * @param string|null $templatePath Template path for inheritance resolution and debug info (default: null)
      * @param bool $debug Enable debug mode with inline source comments (default: false)
-     * @param string|null $sourceFile Original source file path for debug info (default: null)
+     * @param string|null $sourceFile Override source file path for debug info (default: uses templatePath)
      * @return string Compiled PHP code
      */
-    public function compile(string $source, bool $debug = false, ?string $sourceFile = null): string
-    {
+    public function compile(
+        string $source,
+        ?string $templatePath = null,
+        bool $debug = false,
+        ?string $sourceFile = null,
+    ): string {
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
+
+        // Step 1.5: Process template inheritance if enabled
+        if ($this->templateInheritancePass instanceof TemplateInheritancePass && $templatePath !== null) {
+            $ast = $this->templateInheritancePass->process($ast, $templatePath);
+        }
 
         // Step 2: Extract directives from elements (s:if → DirectiveNode)
         $extractedAst = $this->directiveExtractionPass->transform($ast);
@@ -102,7 +123,8 @@ final class Compiler implements CompilerInterface
         $analyzedAst = $this->contextPass->analyze($transformedAst);
 
         // Step 5: Generate executable PHP code with inline escaping
-        $generator = new CodeGenerator($this->escaper, $debug, $sourceFile);
+        // Use templatePath as sourceFile for debug info if sourceFile not explicitly provided
+        $generator = new CodeGenerator($this->escaper, $debug, $sourceFile ?? $templatePath);
 
         return $generator->generate($analyzedAst);
     }

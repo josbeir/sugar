@@ -3,4 +3,5 @@
     <rule ref="CakePHP"/>
     <file>src/</file>
     <file>tests/</file>
+    <exclude-pattern>tests/fixtures/*</exclude-pattern>
 </ruleset>
