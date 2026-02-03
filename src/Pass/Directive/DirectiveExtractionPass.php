@@ -218,19 +218,29 @@ final readonly class DirectiveExtractionPass
     }
 
     /**
-     * Transform ElementNode with directive attribute into DirectiveNode
+     * Transform ElementNode with directive attribute into DirectiveNode or ElementNode
+     *
+     * If the element only has attribute directives (s:class, s:spread), it remains an ElementNode
+     * with those directives in its attributes array. The DirectiveCompilationPass will handle them.
      */
-    private function elementToDirective(ElementNode $node): DirectiveNode
+    private function elementToDirective(ElementNode $node): DirectiveNode|ElementNode
     {
         $directives = $this->extractDirective($node);
 
-        // Must have at least one non-attribute directive
-        if ($directives['controlFlow'] === null && $directives['content'] === null) {
-            throw new RuntimeException('No control flow or content directive found on element');
-        }
-
         // Transform children recursively
         $transformedChildren = $this->transformChildren($node->children);
+
+        // If there are only attribute directives, return ElementNode with them
+        if ($directives['controlFlow'] === null && $directives['content'] === null) {
+            return new ElementNode(
+                tag: $node->tag,
+                attributes: $directives['remaining'],
+                children: $transformedChildren,
+                selfClosing: $node->selfClosing,
+                line: $node->line,
+                column: $node->column,
+            );
+        }
 
         // If there's a content directive, wrap it as a DirectiveNode in children
         if ($directives['content'] !== null) {
@@ -429,20 +439,40 @@ final readonly class DirectiveExtractionPass
         $compiledNodes = $compiler->compile($directiveNode);
 
         // Convert compiled nodes to attribute format
-        // Attribute compilers should return appropriate output format
+        // Attribute compilers can return two formats:
+        // 1. Named attribute: name="value" (e.g., s:class)
+        // 2. Spread output: raw output without name (e.g., s:spread)
         foreach ($compiledNodes as $node) {
-            // Parse the RawPhpNode code to extract attribute name and value
-            // Example: class="<php echo classNames(...) >"
+            if (!($node instanceof RawPhpNode)) {
+                continue;
+            }
+
+            // Try to parse as named attribute format: name="value"
             $pattern = '/^([a-zA-Z][a-zA-Z0-9:_.-]*)="(.+)"$/s';
-            if ($node instanceof RawPhpNode && preg_match($pattern, $node->code, $matches)) {
+            if (preg_match($pattern, $node->code, $matches)) {
+                // Named attribute format - extract name and value
                 $attrName = $matches[1];
                 $attrValue = $matches[2];
-                // Create OutputNode for the attribute value
                 $remainingAttrs[] = new AttributeNode(
                     name: $attrName,
                     value: new OutputNode(
                         expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $attrValue)),
                         escape: false, // Already handled by the directive compiler
+                        context: OutputContext::HTML_ATTRIBUTE,
+                        line: $line,
+                        column: $column,
+                    ),
+                    line: $line,
+                    column: $column,
+                );
+            } else {
+                // Spread format - raw output without name
+                // Empty name signals to code generator to output directly
+                $remainingAttrs[] = new AttributeNode(
+                    name: '',
+                    value: new OutputNode(
+                        expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $node->code)),
+                        escape: false,
                         context: OutputContext::HTML_ATTRIBUTE,
                         line: $line,
                         column: $column,

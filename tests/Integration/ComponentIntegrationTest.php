@@ -505,4 +505,71 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('alert-info', $output);
         $this->assertStringContainsString('Simple message', $output);
     }
+
+    public function testComponentWithSClassDirective(): void
+    {
+        // Test s:class directive inside component template
+        $template = '<s-badge s-bind:variant="\'primary\'">Admin</s-badge>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should pass variant as variable
+        $this->assertStringContainsString("'variant' => 'primary'", $compiled);
+
+        // Should compile s:class directive
+        $this->assertStringContainsString('AttributeHelper::classNames', $compiled);
+
+        // Execute and verify correct class is applied
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<span class="badge badge-primary">', $output);
+        $this->assertStringContainsString('Admin', $output);
+
+        // Test with different variant
+        $template2 = '<s-badge s-bind:variant="\'danger\'">Error</s-badge>';
+        $compiled2 = $this->compiler->compile($template2);
+        $output2 = $this->executeTemplate($compiled2);
+        $this->assertStringContainsString('badge-danger', $output2);
+
+        // Test with no variant (should only have base class)
+        $template3 = '<s-badge>Default</s-badge>';
+        $compiled3 = $this->compiler->compile($template3);
+        $output3 = $this->executeTemplate($compiled3);
+        $this->assertStringContainsString('<span class="badge">', $output3);
+        $this->assertStringNotContainsString('badge-primary', $output3);
+        $this->assertStringNotContainsString('badge-danger', $output3);
+    }
+
+    public function testComponentWithSSpreadDirective(): void
+    {
+        // Test s:spread directive inside component template
+        // Now works without needing s:text since we allow attribute-only directives
+        $componentTemplate = '<div class="container" s:spread="$attrs ?? []"><?= $slot ?></div>';
+        file_put_contents(
+            $this->templatesPath . '/components/s-container.sugar.php',
+            $componentTemplate,
+        );
+
+        // Rediscover components to include the new one
+        $this->setUp();
+
+        // Use component with spread attributes
+        $template = '<s-container s-bind:attrs="[\'data-id\' => \'123\', \'aria-label\' => \'Container\']">Content</s-container>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should pass attrs as variable
+        $this->assertStringContainsString("'attrs' => ['data-id' => '123', 'aria-label' => 'Container']", $compiled);
+
+        // Should compile s:spread directive
+        $this->assertStringContainsString('AttributeHelper::spreadAttrs', $compiled);
+
+        // Execute and verify attributes are spread
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('data-id="123"', $output);
+        $this->assertStringContainsString('aria-label="Container"', $output);
+        $this->assertStringContainsString('Content', $output);
+
+        // Cleanup
+        unlink($this->templatesPath . '/components/s-container.sugar.php');
+    }
 }

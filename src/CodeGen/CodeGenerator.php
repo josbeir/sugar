@@ -184,6 +184,15 @@ final class CodeGenerator
      */
     private function generateAttribute(AttributeNode $attribute, OutputBuffer $buffer): void
     {
+        // Special case: empty name means this is a spread directive output
+        // Output it directly without name= wrapper (e.g., <php echo spreadAttrs($attrs) >)
+        if ($attribute->name === '' && $attribute->value instanceof OutputNode) {
+            $buffer->write(' ');
+            $this->generateOutput($attribute->value, $buffer);
+
+            return;
+        }
+
         $buffer->write(' ' . $attribute->name);
 
         if ($attribute->value !== null) {

@@ -105,14 +105,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
 
         // Execute the compiled template
-        $variables = ['name' => 'World'];
-        extract($variables);
-        ob_start();
-        // phpcs:ignore Squiz.PHP.Eval.Discouraged
-        eval('?>' . $compiled);
-        $output = ob_get_clean();
-
-        $this->assertIsString($output);
+        $output = $this->executeTemplate($compiled, ['name' => 'World']);
 
         // Verify rendered output
         $this->assertStringContainsString('<title>Test Page</title>', $output);

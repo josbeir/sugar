@@ -17,6 +17,12 @@
 - [What is Sugar?](#what-is-sugar)
   - [Before & After](#before--after)
   - [More Examples](#more-examples)
+    - [Context-Aware Escaping](#context-aware-escaping)
+    - [Loop Metadata](#loop-metadata)
+    - [Switch Statements](#switch-statements)
+    - [Output Directives](#output-directives)
+    - [Reusable Components](#reusable-components)
+    - [Standalone Variable Checks](#standalone-variable-checks)
 - [Why Sugar?](#why-sugar)
 - [Features](#features)
   - [Directives](#directives)
@@ -95,7 +101,7 @@ Notice:
 
 ### More Examples
 
-**Context-Aware Escaping**
+#### Context-Aware Escaping
 
 Sugar automatically applies the right escaping based on where your output appears. Regular PHP logic works normally:
 
@@ -123,7 +129,7 @@ Compiled Output:
 <a href="/search?q=<?= rawurlencode($query) ?>">Search</a>
 ```
 
-**Loop Metadata**
+#### Loop Metadata
 
 Access iteration information without manual counters:
 
@@ -150,7 +156,7 @@ foreach ($items as $item): ?>
 <?php $loop = array_pop($__loopStack); ?>
 ```
 
-**Switch Statements**
+#### Switch Statements
 
 Sugar template:
 ```html
@@ -177,7 +183,7 @@ Compiled Output:
 </div>
 ```
 
-**Output Directives**
+#### Output Directives
 
 Use `s:text` and `s:html` for explicit output control:
 
@@ -196,7 +202,68 @@ Use `s:text` and `s:html` for explicit output control:
 > [!WARNING]
 > **`s:html` Security**: Only use with trusted content you control. Never use with user input as it bypasses XSS protection!
 
-**Standalone Variable Checks**
+#### Reusable Components
+
+Create reusable UI components with named slots and automatic attribute merging:
+
+Component definition (`components/s-card.sugar.php`):
+```html
+<div class="card" s:class="['card-featured' => $featured ?? false]">
+    <div class="card-header" s:if="isset($header)">
+        <?= $header ?>
+    </div>
+    <div class="card-body">
+        <?= $slot ?>
+    </div>
+    <div class="card-footer" s:if="isset($footer)">
+        <?= $footer ?>
+    </div>
+</div>
+```
+
+Usage:
+```html
+<s-card s-bind:featured="true" class="shadow-lg" data-id="123">
+    <s-slot:header>
+        <h3>Product Title</h3>
+    </s-slot:header>
+
+    <p>This is the main card content in the default slot.</p>
+
+    <s-slot:footer>
+        <button>Learn More</button>
+    </s-slot:footer>
+</s-card>
+```
+
+Compiled Output:
+```php
+<?php (function($__vars) { extract($__vars); ?>
+    <div class="card shadow-lg" data-id="123" class="<?= \Sugar\Runtime\AttributeHelper::classNames(['card-featured' => $featured ?? false]) ?>">
+        <?php if (isset($header)): ?>
+            <div class="card-header">
+                <h3><?= htmlspecialchars('Product Title', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></h3>
+            </div>
+        <?php endif; ?>
+        <div class="card-body">
+            <p><?= htmlspecialchars('This is the main card content in the default slot.', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></p>
+        </div>
+        <?php if (isset($footer)): ?>
+            <div class="card-footer">
+                <button><?= htmlspecialchars('Learn More', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></button>
+            </div>
+        <?php endif; ?>
+    </div>
+<?php })(['featured' => true, 'header' => '<h3>Product Title</h3>', 'footer' => '<button>Learn More</button>', 'slot' => '<p>This is the main card content in the default slot.</p>']); ?>
+```
+
+Notice:
+- ✅ **Named slots** - Organize component content with `<s-slot:name>`
+- ✅ **Attribute merging** - Component's `class` attribute merges with usage's `class`, other attributes are passed through
+- ✅ **Scoped variables** - Component props are isolated in a closure
+- ✅ **No raw() needed** - Slot content is automatically safe from double-escaping
+
+#### Standalone Variable Checks
 
 Use `s:empty` and `s:isset` to conditionally render content based on variable state:
 
@@ -555,7 +622,7 @@ Pass data to components as props using the `s-bind:` prefix. Props become variab
 
 **Component** (`components/alert.sugar.php`):
 ```html
-<div class="alert alert-<?= $type ?>">
+<div class="<?= $class ?? 'alert alert-info' ?>">
     <strong s:if="$title"><?= $title ?></strong>
     <?= $slot ?>
 </div>
@@ -564,17 +631,17 @@ Pass data to components as props using the `s-bind:` prefix. Props become variab
 **Usage**:
 ```html
 <!-- String literals need inner quotes (like Vue/Alpine) -->
-<s-alert s-bind:title="'Well done!'">
+<s-alert s-bind:class="'alert alert-success'" s-bind:title="'Well done!'">
     Your changes have been saved.
 </s-alert>
 
 <!-- Pass variables without quotes -->
-<s-alert s-bind:type="$alertType" s-bind:title="$message">
+<s-alert s-bind:class="$alertClass" s-bind:title="$message">
     <?= $content ?>
 </s-alert>
 
 <!-- Pass expressions -->
-<s-alert s-bind:type="$hasError ? 'danger' : 'success'">
+<s-alert s-bind:class="'alert alert-' . ($hasError ? 'danger' : 'success')">
     Operation complete
 </s-alert>
 ```

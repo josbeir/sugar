@@ -170,11 +170,9 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         $this->assertCount(1, $result->children[0]->children);
     }
 
-    public function testElementWithOnlyAttributeDirectivesThrowsError(): void
+    public function testElementWithOnlyAttributeDirectivesNowWorks(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('No control flow or content directive found on element');
-
+        // Attribute-only directives are now supported - element remains ElementNode with compiled attributes
         $element = new ElementNode(
             tag: 'div',
             attributes: [
@@ -187,7 +185,20 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $this->pass->transform($ast);
+        $result = $this->pass->transform($ast);
+
+        // Should return ElementNode with compiled class attribute
+        $this->assertInstanceOf(DocumentNode::class, $result);
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+
+        $resultElement = $result->children[0];
+        $this->assertSame('div', $resultElement->tag);
+
+        // Should have compiled class attribute (not s:class)
+        $this->assertCount(1, $resultElement->attributes);
+        $this->assertSame('class', $resultElement->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $resultElement->attributes[0]->value);
     }
 
     public function testElementWithContentDirectiveOnly(): void

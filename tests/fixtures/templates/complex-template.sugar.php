@@ -39,6 +39,10 @@
 
     <a href="<?= $link ?>">Click here</a>
 
+	<div s:class="['highlight' => true, 'disabled' => !false]">
+	    This div's classes depend on conditions.
+	</div>
+
     <!-- Footer with both escaped and raw content -->
     <footer>
         <p>Copyright <?= $year ?></p>
