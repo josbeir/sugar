@@ -517,7 +517,7 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString("'variant' => 'primary'", $compiled);
 
         // Should compile s:class directive
-        $this->assertStringContainsString('AttributeHelper::classNames', $compiled);
+        $this->assertStringContainsString('HtmlAttributeHelper::classNames', $compiled);
 
         // Execute and verify correct class is applied
         $output = $this->executeTemplate($compiled);
@@ -561,7 +561,7 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString("'attrs' => ['data-id' => '123', 'aria-label' => 'Container']", $compiled);
 
         // Should compile s:spread directive
-        $this->assertStringContainsString('AttributeHelper::spreadAttrs', $compiled);
+        $this->assertStringContainsString('HtmlAttributeHelper::spreadAttrs', $compiled);
 
         // Execute and verify attributes are spread
         $output = $this->executeTemplate($compiled);

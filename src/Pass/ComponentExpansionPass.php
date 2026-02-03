@@ -8,6 +8,8 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -25,6 +27,10 @@ use Sugar\TemplateInheritance\TemplateLoaderInterface;
  */
 final readonly class ComponentExpansionPass
 {
+    private DirectivePrefixHelper $prefixHelper;
+
+    private string $slotAttrName;
+
     /**
      * Constructor
      *
@@ -37,8 +43,10 @@ final readonly class ComponentExpansionPass
         private TemplateLoaderInterface $loader,
         private Parser $parser,
         private ExtensionRegistry $registry,
-        private string $directivePrefix = 's',
+        string $directivePrefix = 's',
     ) {
+        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
+        $this->slotAttrName = $directivePrefix . ':slot';
     }
 
     /**
@@ -69,13 +77,9 @@ final readonly class ComponentExpansionPass
             if ($node instanceof ComponentNode) {
                 // Expand component
                 $expanded = $this->expandComponent($node);
-                $result = array_merge($result, $expanded);
-            } elseif ($node instanceof ElementNode) {
-                // Process children recursively
-                $node->children = $this->expandNodes($node->children);
-                $result[] = $node;
-            } elseif (property_exists($node, 'children') && is_array($node->children)) {
-                // Process any other node with children
+                array_push($result, ...$expanded);
+            } elseif ($node instanceof ElementNode || $node instanceof FragmentNode) {
+                // Process children recursively for nodes with children
                 $node->children = $this->expandNodes($node->children);
                 $result[] = $node;
             } else {
@@ -168,7 +172,7 @@ final readonly class ComponentExpansionPass
             $name = $attr->name;
 
             // Sugar directives: s:if, s:class, s:foreach
-            if (str_starts_with($name, $this->directivePrefix . ':')) {
+            if ($this->prefixHelper->isDirective($name)) {
                 if ($this->isControlFlowDirective($name)) {
                     // Control flow: s:if, s:foreach, s:while
                     $controlFlow[] = $attr;
@@ -176,12 +180,11 @@ final readonly class ComponentExpansionPass
                     // Attribute directives: s:class, s:spread
                     $attributeDirectives[] = $attr;
                 }
-            } elseif (str_starts_with($name, $this->directivePrefix . '-bind:')) {
+            } elseif ($this->prefixHelper->isBinding($name)) {
                 // Component bindings: s-bind:variant, s-bind:size
                 // Remove prefix to get variable name
-                $bindPrefix = $this->directivePrefix . '-bind:';
                 $componentBindings[] = new AttributeNode(
-                    substr($name, strlen($bindPrefix)),
+                    $this->prefixHelper->stripBindingPrefix($name),
                     $attr->value,
                     $attr->line,
                     $attr->column,
@@ -207,7 +210,7 @@ final readonly class ComponentExpansionPass
      */
     private function isControlFlowDirective(string $directiveName): bool
     {
-        $name = substr($directiveName, strlen($this->directivePrefix) + 1);
+        $name = $this->prefixHelper->stripPrefix($directiveName);
 
         if (!$this->registry->hasDirective($name)) {
             return false;
@@ -300,30 +303,25 @@ final readonly class ComponentExpansionPass
 
         foreach ($children as $child) {
             // Handle both ElementNode and FragmentNode (s-template)
-            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                // Check for s:slot attribute
-                $slotName = null;
-                $slotAttrIndex = null;
+            if (!$child instanceof ElementNode && !$child instanceof FragmentNode) {
+                continue;
+            }
 
-                foreach ($child->attributes as $index => $attr) {
-                    if ($attr->name === $this->directivePrefix . ':slot') {
-                        $slotName = $attr->value;
-                        $slotAttrIndex = (int)$index;
-                        break;
-                    }
-                }
+            $slotInfo = $this->findSlotAttribute($child->attributes);
+            if ($slotInfo === null) {
+                continue;
+            }
 
-                if ($slotName !== null && is_string($slotName) && $slotAttrIndex !== null) {
-                    // For FragmentNode (s-template), use its children as slot content
-                    if ($child instanceof FragmentNode) {
-                        $slots[$slotName] = $child->children;
-                    } else {
-                        // For regular ElementNode, remove s:slot attribute and use the element itself
-                        $clonedElement = clone $child;
-                        array_splice($clonedElement->attributes, $slotAttrIndex, 1);
-                        $slots[$slotName] = [$clonedElement];
-                    }
-                }
+            [$slotName, $slotAttrIndex] = $slotInfo;
+
+            // For FragmentNode (s-template), use its children as slot content
+            if ($child instanceof FragmentNode) {
+                $slots[$slotName] = $child->children;
+            } else {
+                // For regular ElementNode, remove s:slot attribute and use the element itself
+                $clonedElement = clone $child;
+                array_splice($clonedElement->attributes, $slotAttrIndex, 1);
+                $slots[$slotName] = [$clonedElement];
             }
         }
 
@@ -341,26 +339,40 @@ final readonly class ComponentExpansionPass
         $defaultSlot = [];
 
         foreach ($children as $child) {
-            $hasSlotAttr = false;
-
             // Check both ElementNode and FragmentNode for s:slot attribute
-            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                // Check if this element/fragment has s:slot attribute
-                foreach ($child->attributes as $attr) {
-                    if ($attr->name === $this->directivePrefix . ':slot') {
-                        $hasSlotAttr = true;
-                        break;
-                    }
-                }
+            $isSlottedElement = ($child instanceof ElementNode || $child instanceof FragmentNode) &&
+                $this->findSlotAttribute($child->attributes) !== null;
+
+            if ($isSlottedElement) {
+                continue;
+                // Has s:slot attribute, skip
             }
 
             // Add to default slot if no s:slot attribute
-            if (!$hasSlotAttr) {
-                $defaultSlot[] = $child;
-            }
+            $defaultSlot[] = $child;
         }
 
         return $defaultSlot;
+    }
+
+    /**
+     * Find s:slot attribute in attributes array
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes Attributes to search
+     * @return array{string, int}|null [slotName, index] or null if not found
+     */
+    private function findSlotAttribute(array $attributes): ?array
+    {
+        $result = AttributeHelper::findAttributeWithIndex($attributes, $this->slotAttrName);
+
+        if ($result !== null) {
+            [$attr, $index] = $result;
+            if (is_string($attr->value)) {
+                return [$attr->value, $index];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -454,8 +466,8 @@ final readonly class ComponentExpansionPass
             }
         }
 
-        // Recursively process children
-        if (property_exists($node, 'children') && is_array($node->children)) {
+        // Recursively process children for all node types that have them
+        if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof DocumentNode) {
             foreach ($node->children as $child) {
                 $this->processNodeForSlotWrapping($child, $slotVars);
             }

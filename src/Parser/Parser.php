@@ -29,6 +29,22 @@ final readonly class Parser
     }
 
     /**
+     * Check if tag name has element prefix
+     */
+    private function hasElementPrefix(string $tagName): bool
+    {
+        return str_starts_with($tagName, $this->config->elementPrefix);
+    }
+
+    /**
+     * Strip element prefix from tag name
+     */
+    private function stripElementPrefix(string $tagName): string
+    {
+        return substr($tagName, strlen($this->config->elementPrefix));
+    }
+
+    /**
      * Parse a Sugar template into an AST
      *
      * @param string $source Template source code
@@ -317,9 +333,8 @@ final readonly class Parser
 
         // Handle component elements (e.g., <s-button>, <x-alert>)
         // Components start with elementPrefix but are NOT the fragment element
-        $elementPrefix = $this->config->elementPrefix;
-        if (str_starts_with($tagName, $elementPrefix) && $tagName !== $this->config->getFragmentElement()) {
-            $componentName = substr($tagName, strlen($elementPrefix));
+        if ($this->hasElementPrefix($tagName) && $tagName !== $this->config->getFragmentElement()) {
+            $componentName = $this->stripElementPrefix($tagName);
             $element = new ComponentNode(
                 name: $componentName,
                 attributes: $attributes,

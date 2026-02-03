@@ -5,6 +5,7 @@ namespace Sugar\Pass;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\AnalysisContext;
@@ -79,14 +80,7 @@ final class ContextAnalysisPass
         $newChildren = $this->processNodes($node->children, $childContext, $inAttribute);
 
         // Return new element with updated children
-        return new ElementNode(
-            tag: $node->tag,
-            attributes: $node->attributes,
-            children: $newChildren,
-            selfClosing: $node->selfClosing,
-            line: $node->line,
-            column: $node->column,
-        );
+        return NodeCloner::withChildren($node, $newChildren);
     }
 
     /**

@@ -8,6 +8,8 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\InheritanceAttribute;
@@ -74,12 +76,11 @@ final readonly class TemplateInheritancePass
     private function findExtendsDirective(DocumentNode $document): ?ElementNode
     {
         foreach ($document->children as $child) {
-            if ($child instanceof ElementNode) {
-                foreach ($child->attributes as $attr) {
-                    if ($attr instanceof AttributeNode && $attr->name === InheritanceAttribute::EXTENDS->value) {
-                        return $child;
-                    }
-                }
+            if (
+                $child instanceof ElementNode &&
+                AttributeHelper::hasAttribute($child, InheritanceAttribute::EXTENDS->value)
+            ) {
+                return $child;
             }
         }
 
@@ -157,14 +158,12 @@ final readonly class TemplateInheritancePass
                 }
             } elseif ($child instanceof ElementNode) {
                 // Recursively process children
-                $processedChild = new ElementNode(
-                    $child->tag,
-                    $child->attributes,
-                    $this->processChildrenIncludes($child->children, $currentTemplate, $loadedTemplates),
-                    $child->selfClosing,
-                    $child->line,
-                    $child->column,
+                $processedChildren = $this->processChildrenIncludes(
+                    $child->children,
+                    $currentTemplate,
+                    $loadedTemplates,
                 );
+                $processedChild = NodeCloner::withChildren($child, $processedChildren);
                 $newChildren[] = $processedChild;
             } else {
                 $newChildren[] = $child;
@@ -202,14 +201,10 @@ final readonly class TemplateInheritancePass
 
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                foreach ($child->attributes as $attr) {
-                    if (
-                        $attr instanceof AttributeNode &&
-                        $attr->name === InheritanceAttribute::BLOCK->value &&
-                        is_string($attr->value)
-                    ) {
-                        $blocks[$attr->value] = $child;
-                    }
+                $blockName = AttributeHelper::getAttributeValue($child, InheritanceAttribute::BLOCK->value);
+
+                if (is_string($blockName) && $blockName !== '') {
+                    $blocks[$blockName] = $child;
                 }
 
                 // Recursively collect from children
@@ -265,16 +260,10 @@ final readonly class TemplateInheritancePass
         }
 
         // Check if this node has s:block attribute
-        $blockName = null;
-        foreach ($node->attributes as $attr) {
-            if (
-                $attr instanceof AttributeNode &&
-                $attr->name === InheritanceAttribute::BLOCK->value &&
-                is_string($attr->value)
-            ) {
-                $blockName = $attr->value;
-                break;
-            }
+        $blockName = AttributeHelper::getAttributeValue($node, InheritanceAttribute::BLOCK->value);
+
+        if (!is_string($blockName) || $blockName === '') {
+            $blockName = null;
         }
 
         // If block exists in child, replace content
@@ -284,22 +273,10 @@ final readonly class TemplateInheritancePass
             if ($childBlock instanceof ElementNode) {
                 // Child is element: keep parent wrapper, replace children
                 if ($node instanceof ElementNode) {
-                    return new ElementNode(
-                        $node->tag,
-                        $node->attributes,
-                        $childBlock->children,
-                        $node->selfClosing,
-                        $node->line,
-                        $node->column,
-                    );
+                    return NodeCloner::withChildren($node, $childBlock->children);
                 } else {
                     // Parent is fragment, child is element: use child's children
-                    return new FragmentNode(
-                        $node->attributes,
-                        $childBlock->children,
-                        $node->line,
-                        $node->column,
-                    );
+                    return NodeCloner::fragmentWithChildren($node, $childBlock->children);
                 }
             } elseif ($childBlock instanceof FragmentNode) {
                 // Child is fragment: check if it has directive attributes
@@ -327,31 +304,19 @@ final readonly class TemplateInheritancePass
                             }
                         }
 
-                        $wrappedFragment = new FragmentNode(
-                            $cleanAttrs,
+                        $wrappedFragment = NodeCloner::fragmentWithChildren(
+                            $childBlock,
                             $childBlock->children,
-                            $childBlock->line,
-                            $childBlock->column,
+                        );
+                        $wrappedFragment = NodeCloner::fragmentWithAttributes(
+                            $wrappedFragment,
+                            $cleanAttrs,
                         );
 
-                        return new ElementNode(
-                            $node->tag,
-                            $node->attributes,
-                            [$wrappedFragment],
-                            $node->selfClosing,
-                            $node->line,
-                            $node->column,
-                        );
+                        return NodeCloner::withChildren($node, [$wrappedFragment]);
                     } else {
                         // No directives: just use fragment's children
-                        return new ElementNode(
-                            $node->tag,
-                            $node->attributes,
-                            $childBlock->children,
-                            $node->selfClosing,
-                            $node->line,
-                            $node->column,
-                        );
+                        return NodeCloner::withChildren($node, $childBlock->children);
                     }
                 } elseif ($hasDirectives) {
                     // Both are fragments
@@ -363,20 +328,10 @@ final readonly class TemplateInheritancePass
                         }
                     }
 
-                    return new FragmentNode(
-                        $cleanAttrs,
-                        $childBlock->children,
-                        $childBlock->line,
-                        $childBlock->column,
-                    );
+                    return NodeCloner::fragmentWithAttributes($childBlock, $cleanAttrs);
                 } else {
                     // No directives: merge children
-                    return new FragmentNode(
-                        $node->attributes,
-                        $childBlock->children,
-                        $node->line,
-                        $node->column,
-                    );
+                    return NodeCloner::fragmentWithChildren($node, $childBlock->children);
                 }
             }
         }
@@ -388,21 +343,9 @@ final readonly class TemplateInheritancePass
         }
 
         if ($node instanceof ElementNode) {
-            return new ElementNode(
-                $node->tag,
-                $node->attributes,
-                $newChildren,
-                $node->selfClosing,
-                $node->line,
-                $node->column,
-            );
+            return NodeCloner::withChildren($node, $newChildren);
         } else {
-            return new FragmentNode(
-                $node->attributes,
-                $newChildren,
-                $node->line,
-                $node->column,
-            );
+            return NodeCloner::fragmentWithChildren($node, $newChildren);
         }
     }
 
@@ -437,13 +380,7 @@ final readonly class TemplateInheritancePass
      */
     private function hasAttribute(ElementNode $element, string $name): bool
     {
-        foreach ($element->attributes as $attr) {
-            if ($attr instanceof AttributeNode && $attr->name === $name) {
-                return true;
-            }
-        }
-
-        return false;
+        return AttributeHelper::hasAttribute($element, $name);
     }
 
     /**
@@ -455,13 +392,9 @@ final readonly class TemplateInheritancePass
      */
     private function getAttributeValue(ElementNode $element, string $name): string
     {
-        foreach ($element->attributes as $attr) {
-            if ($attr instanceof AttributeNode && $attr->name === $name) {
-                return is_string($attr->value) ? $attr->value : '';
-            }
-        }
+        $value = AttributeHelper::getAttributeValue($element, $name, '');
 
-        return '';
+        return is_string($value) ? $value : '';
     }
 
     /**
@@ -513,20 +446,11 @@ final readonly class TemplateInheritancePass
         }
 
         if ($node instanceof ElementNode) {
-            return new ElementNode(
-                $node->tag,
-                $cleanAttributes,
-                $cleanChildren,
-                $node->selfClosing,
-                $node->line,
-                $node->column,
-            );
+            return NodeCloner::withAttributesAndChildren($node, $cleanAttributes, $cleanChildren);
         } else {
-            return new FragmentNode(
+            return NodeCloner::fragmentWithAttributes(
+                NodeCloner::fragmentWithChildren($node, $cleanChildren),
                 $cleanAttributes,
-                $cleanChildren,
-                $node->line,
-                $node->column,
             );
         }
     }

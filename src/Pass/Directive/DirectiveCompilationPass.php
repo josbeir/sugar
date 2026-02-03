@@ -6,6 +6,7 @@ namespace Sugar\Pass\Directive;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Extension\ExtensionRegistry;
 
@@ -96,14 +97,7 @@ final readonly class DirectiveCompilationPass
                 array_push($newChildren, ...is_array($compiled) ? $compiled : [$compiled]);
             }
 
-            return new ElementNode(
-                tag: $node->tag,
-                attributes: $node->attributes,
-                children: $newChildren,
-                selfClosing: $node->selfClosing,
-                line: $node->line,
-                column: $node->column,
-            );
+            return NodeCloner::withChildren($node, $newChildren);
         }
 
         // All other nodes pass through unchanged

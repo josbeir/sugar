@@ -35,6 +35,22 @@ final class FileTemplateLoader implements TemplateLoaderInterface
     }
 
     /**
+     * Check if a basename starts with the element prefix
+     */
+    private function hasElementPrefix(string $basename): bool
+    {
+        return str_starts_with($basename, $this->elementPrefix);
+    }
+
+    /**
+     * Strip element prefix from basename
+     */
+    private function stripElementPrefix(string $basename): string
+    {
+        return substr($basename, strlen($this->elementPrefix));
+    }
+
+    /**
      * @inheritDoc
      */
     public function load(string $path): string
@@ -165,7 +181,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
             $basename = $file->getBasename('.sugar.php');
 
             // Must start with element prefix
-            if (!str_starts_with($basename, $this->elementPrefix)) {
+            if (!$this->hasElementPrefix($basename)) {
                 continue;
             }
 
@@ -175,7 +191,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
             }
 
             // Extract component name (e.g., "button" from "s-button")
-            $componentName = substr($basename, strlen($this->elementPrefix));
+            $componentName = $this->stripElementPrefix($basename);
 
             // Store relative path from basePath
             $relativePath = str_replace($this->basePath . '/', '', $file->getPathname());
@@ -222,7 +238,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
     public function isComponent(string $elementName): bool
     {
         // Must start with element prefix
-        if (!str_starts_with($elementName, $this->elementPrefix)) {
+        if (!$this->hasElementPrefix($elementName)) {
             return false;
         }
 
@@ -232,7 +248,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
         }
 
         // Extract component name and check if registered
-        $componentName = substr($elementName, strlen($this->elementPrefix));
+        $componentName = $this->stripElementPrefix($elementName);
 
         return $this->hasComponent($componentName);
     }
@@ -245,7 +261,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
      */
     public function getComponentName(string $elementName): string
     {
-        return substr($elementName, strlen($this->elementPrefix));
+        return $this->stripElementPrefix($elementName);
     }
 
     /**

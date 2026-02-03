@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Runtime;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Runtime\AttributeHelper;
+use Sugar\Runtime\HtmlAttributeHelper;
 
 final class AttributeHelperTest extends TestCase
 {
@@ -12,14 +12,14 @@ final class AttributeHelperTest extends TestCase
 
     public function testClassNamesWithBasicClasses(): void
     {
-        $result = AttributeHelper::classNames(['btn', 'btn-primary']);
+        $result = HtmlAttributeHelper::classNames(['btn', 'btn-primary']);
 
         $this->assertSame('btn btn-primary', $result);
     }
 
     public function testClassNamesWithConditionalClasses(): void
     {
-        $result = AttributeHelper::classNames([
+        $result = HtmlAttributeHelper::classNames([
             'btn',
             'active' => true,
             'disabled' => false,
@@ -30,7 +30,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testClassNamesIgnoresEmptyString(): void
     {
-        $result = AttributeHelper::classNames(['card', '', 'shadow']);
+        $result = HtmlAttributeHelper::classNames(['card', '', 'shadow']);
 
         $this->assertSame('card shadow', $result);
     }
@@ -41,7 +41,7 @@ final class AttributeHelperTest extends TestCase
         $isDisabled = false;
         $hasError = true;
 
-        $result = AttributeHelper::classNames([
+        $result = HtmlAttributeHelper::classNames([
             'form-control',
             'is-active' => $isActive,
             'is-disabled' => $isDisabled,
@@ -53,7 +53,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testClassNamesWithAllFalseConditions(): void
     {
-        $result = AttributeHelper::classNames([
+        $result = HtmlAttributeHelper::classNames([
             'active' => false,
             'disabled' => false,
             'hidden' => false,
@@ -64,21 +64,21 @@ final class AttributeHelperTest extends TestCase
 
     public function testClassNamesWithEmptyArray(): void
     {
-        $result = AttributeHelper::classNames([]);
+        $result = HtmlAttributeHelper::classNames([]);
 
         $this->assertSame('', $result);
     }
 
     public function testClassNamesIgnoresNullValues(): void
     {
-        $result = AttributeHelper::classNames(['btn', 'active' => null]);
+        $result = HtmlAttributeHelper::classNames(['btn', 'active' => null]);
 
         $this->assertSame('btn', $result);
     }
 
     public function testClassNamesIgnoresZeroAndFalsyValues(): void
     {
-        $result = AttributeHelper::classNames([
+        $result = HtmlAttributeHelper::classNames([
             'btn',
             0,
             false,
@@ -95,7 +95,7 @@ final class AttributeHelperTest extends TestCase
         $isPremium = true;
         $hasNotifications = false;
 
-        $result = AttributeHelper::classNames([
+        $result = HtmlAttributeHelper::classNames([
             'user-card',
             'user-admin' => $isAdmin,
             'user-premium' => $isPremium,
@@ -109,7 +109,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithBasicAttributes(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'id' => 'user-123',
             'class' => 'card',
         ]);
@@ -119,7 +119,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithBooleanAttributes(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'disabled' => true,
             'required' => true,
             'readonly' => false,
@@ -130,7 +130,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsOmitsNullValues(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'id' => 'test',
             'hidden' => null,
             'data-value' => 'test',
@@ -141,7 +141,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsEscaping(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'title' => 'Test "quoted" value',
             'data-html' => '<script>alert("xss")</script>',
         ]);
@@ -153,7 +153,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithDataAttributes(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'data-user-id' => '123',
             'data-action' => 'click',
             'data-value' => 'test',
@@ -164,14 +164,14 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithEmptyArray(): void
     {
-        $result = AttributeHelper::spreadAttrs([]);
+        $result = HtmlAttributeHelper::spreadAttrs([]);
 
         $this->assertSame('', $result);
     }
 
     public function testSpreadAttrsWithNumericValues(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'tabindex' => 0,
             'data-count' => 42,
         ]);
@@ -181,7 +181,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithMixedBooleanAndRegular(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'id' => 'button-1',
             'disabled' => true,
             'class' => 'btn btn-primary',
@@ -202,7 +202,7 @@ final class AttributeHelperTest extends TestCase
             'disabled' => false,
         ];
 
-        $result = AttributeHelper::spreadAttrs($attrs);
+        $result = HtmlAttributeHelper::spreadAttrs($attrs);
 
         $this->assertStringContainsString('id="user-card-123"', $result);
         $this->assertStringContainsString('class="card shadow-sm"', $result);
@@ -213,7 +213,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testSpreadAttrsWithAriaAttributes(): void
     {
-        $result = AttributeHelper::spreadAttrs([
+        $result = HtmlAttributeHelper::spreadAttrs([
             'aria-label' => 'Close button',
             'aria-expanded' => 'true',
             'role' => 'button',

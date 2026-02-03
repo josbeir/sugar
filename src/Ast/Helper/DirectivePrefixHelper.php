@@ -1,0 +1,139 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Ast\Helper;
+
+/**
+ * Directive prefix utilities
+ *
+ * Handles directive name parsing and manipulation for configurable prefixes.
+ * Supports custom directive prefixes (s:, x:, v:, etc.) as configured in SugarConfig.
+ *
+ * Example:
+ * ```php
+ * $helper = new DirectivePrefixHelper('s');
+ * $helper->isDirective('s:if');        // true
+ * $helper->stripPrefix('s:foreach');   // 'foreach'
+ * $helper->buildName('while');         // 's:while'
+ * ```
+ */
+final readonly class DirectivePrefixHelper
+{
+    private string $directiveSeparator;
+
+    private string $bindingPrefix;
+
+    /**
+     * Constructor
+     *
+     * @param string $prefix Directive prefix (e.g., 's', 'x', 'v')
+     */
+    public function __construct(
+        private string $prefix = 's',
+    ) {
+        $this->directiveSeparator = $prefix . ':';
+        $this->bindingPrefix = $prefix . '-bind:';
+    }
+
+    /**
+     * Check if attribute name is a directive
+     *
+     * @param string $attrName Attribute name (e.g., 's:if', 'class')
+     */
+    public function isDirective(string $attrName): bool
+    {
+        return str_starts_with($attrName, $this->directiveSeparator);
+    }
+
+    /**
+     * Check if attribute name is a binding directive
+     *
+     * @param string $attrName Attribute name (e.g., 's-bind:title')
+     */
+    public function isBinding(string $attrName): bool
+    {
+        return str_starts_with($attrName, $this->bindingPrefix);
+    }
+
+    /**
+     * Strip directive prefix from name
+     *
+     * @param string $attrName Full attribute name (e.g., 's:if')
+     * @return string Directive name without prefix (e.g., 'if')
+     */
+    public function stripPrefix(string $attrName): string
+    {
+        if ($this->isDirective($attrName)) {
+            return substr($attrName, strlen($this->directiveSeparator));
+        }
+
+        return $attrName;
+    }
+
+    /**
+     * Strip binding prefix from name
+     *
+     * @param string $attrName Full attribute name (e.g., 's-bind:prop')
+     * @return string Property name without prefix (e.g., 'prop')
+     */
+    public function stripBindingPrefix(string $attrName): string
+    {
+        if ($this->isBinding($attrName)) {
+            return substr($attrName, strlen($this->bindingPrefix));
+        }
+
+        return $attrName;
+    }
+
+    /**
+     * Build full directive name from short name
+     *
+     * @param string $name Short directive name (e.g., 'if')
+     * @return string Full directive name (e.g., 's:if')
+     */
+    public function buildName(string $name): string
+    {
+        return $this->directiveSeparator . $name;
+    }
+
+    /**
+     * Build full binding name from property name
+     *
+     * @param string $name Property name (e.g., 'title')
+     * @return string Full binding name (e.g., 's-bind:title')
+     */
+    public function buildBindingName(string $name): string
+    {
+        return $this->bindingPrefix . $name;
+    }
+
+    /**
+     * Get the configured prefix
+     *
+     * @return string The directive prefix (e.g., 's')
+     */
+    public function getPrefix(): string
+    {
+        return $this->prefix;
+    }
+
+    /**
+     * Get the directive separator (prefix + colon)
+     *
+     * @return string The directive separator (e.g., 's:')
+     */
+    public function getDirectiveSeparator(): string
+    {
+        return $this->directiveSeparator;
+    }
+
+    /**
+     * Get the binding prefix (prefix + -bind:)
+     *
+     * @return string The binding prefix (e.g., 's-bind:')
+     */
+    public function getBindingPrefix(): string
+    {
+        return $this->bindingPrefix;
+    }
+}

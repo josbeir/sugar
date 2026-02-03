@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Directive\Trait;
 
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 
@@ -184,14 +185,7 @@ trait ForeachLoopTrait
         ];
 
         // Create wrapper element with loop content inside
-        return new ElementNode(
-            tag: $wrapper->tag,
-            attributes: $wrapper->attributes,
-            children: $loopContent,
-            selfClosing: $wrapper->selfClosing,
-            line: $wrapper->line,
-            column: $wrapper->column,
-        );
+        return NodeCloner::withChildren($wrapper, $loopContent);
     }
 
     /**

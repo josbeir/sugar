@@ -80,7 +80,7 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
 ```php
 <?php if (!empty($users)): ?>
     <?php foreach ($users as $user): ?>
-        <div class="<?= \Sugar\Runtime\AttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
+        <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
             <?= htmlspecialchars((string)($user->name), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>
             <?php if ($user->email): ?>
                 <small><?= htmlspecialchars((string)($user->email), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></small>
@@ -148,7 +148,7 @@ Compiled Output:
 $__loopStack = [];
 $__loopStack[] = $loop = new \Sugar\Runtime\LoopMetadata($items);
 foreach ($items as $item): ?>
-    <li class="<?= \Sugar\Runtime\AttributeHelper::classNames(['first' => $loop->first, 'last' => $loop->last, 'odd' => $loop->odd]) ?>">
+    <li class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['first' => $loop->first, 'last' => $loop->last, 'odd' => $loop->odd]) ?>">
         <?= htmlspecialchars($item, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?> (<?= htmlspecialchars($loop->iteration, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?> of <?= htmlspecialchars($loop->count, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>)
     </li>
     <?php $loop->next(); ?>
@@ -235,7 +235,7 @@ Usage:
 Compiled Output:
 ```php
 <?php (function($__vars) { extract($__vars); ?>
-    <div class="card shadow-lg" data-id="123" class="<?= \Sugar\Runtime\AttributeHelper::classNames(['card-featured' => $featured ?? false]) ?>">
+    <div class="card shadow-lg" data-id="123" class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['card-featured' => $featured ?? false]) ?>">
         <?php if (isset($header)): ?>
             <div class="card-header">
                 <h3><?= htmlspecialchars('Product Title', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></h3>

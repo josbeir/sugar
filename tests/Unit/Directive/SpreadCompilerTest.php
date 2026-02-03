@@ -8,7 +8,7 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Enum\DirectiveType;
-use Sugar\Runtime\AttributeHelper;
+use Sugar\Runtime\HtmlAttributeHelper;
 
 final class SpreadCompilerTest extends TestCase
 {
@@ -33,7 +33,7 @@ final class SpreadCompilerTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString(AttributeHelper::class . '::spreadAttrs', $result[0]->code);
+        $this->assertStringContainsString(HtmlAttributeHelper::class . '::spreadAttrs', $result[0]->code);
         $this->assertStringContainsString('$attrs', $result[0]->code);
     }
 

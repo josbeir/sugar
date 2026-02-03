@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Directive;
 
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\Trait\ForeachLoopTrait;
@@ -73,26 +74,14 @@ final readonly class WhileCompiler implements DirectiveCompilerInterface
      */
     private function compileWithWrapper(Node $node, ElementNode $wrapper): array
     {
-        $parts = [];
-
-        // Create wrapper element with loop content inside
-        $parts[] = new ElementNode(
-            tag: $wrapper->tag,
-            attributes: $wrapper->attributes,
-            children: [
-                // Opening while
-                new RawPhpNode('while (' . $node->expression . '):', $node->line, $node->column),
-                // Wrapper's children (repeated content)
-                ...$wrapper->children,
-                // Closing endwhile
-                new RawPhpNode('endwhile;', $node->line, $node->column),
-            ],
-            selfClosing: $wrapper->selfClosing,
-            line: $wrapper->line,
-            column: $wrapper->column,
-        );
-
-        return $parts;
+        return [NodeCloner::withChildren($wrapper, [
+            // Opening while
+            new RawPhpNode('while (' . $node->expression . '):', $node->line, $node->column),
+            // Wrapper's children (repeated content)
+            ...$wrapper->children,
+            // Closing endwhile
+            new RawPhpNode('endwhile;', $node->line, $node->column),
+        ])];
     }
 
     /**

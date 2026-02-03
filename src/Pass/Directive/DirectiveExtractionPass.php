@@ -9,6 +9,8 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -43,6 +45,8 @@ use Sugar\Extension\ExtensionRegistry;
  */
 final readonly class DirectiveExtractionPass
 {
+    private DirectivePrefixHelper $prefixHelper;
+
     /**
      * Constructor
      *
@@ -51,8 +55,9 @@ final readonly class DirectiveExtractionPass
      */
     public function __construct(
         private ExtensionRegistry $registry,
-        private string $directivePrefix = 's',
+        string $directivePrefix = 's',
     ) {
+        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
     }
 
     /**
@@ -101,26 +106,14 @@ final readonly class DirectiveExtractionPass
         if ($node instanceof ElementNode) {
             $newChildren = $this->transformChildren($node->children);
 
-            return new ElementNode(
-                tag: $node->tag,
-                attributes: $node->attributes,
-                children: $newChildren,
-                selfClosing: $node->selfClosing,
-                line: $node->line,
-                column: $node->column,
-            );
+            return NodeCloner::withChildren($node, $newChildren);
         }
 
         // Handle fragments with children
         if ($node instanceof FragmentNode) {
             $newChildren = $this->transformChildren($node->children);
 
-            return new FragmentNode(
-                attributes: $node->attributes,
-                children: $newChildren,
-                line: $node->line,
-                column: $node->column,
-            );
+            return NodeCloner::fragmentWithChildren($node, $newChildren);
         }
 
         // All other nodes pass through unchanged
@@ -133,7 +126,7 @@ final readonly class DirectiveExtractionPass
     private function hasDirectiveAttribute(ElementNode $node): bool
     {
         foreach ($node->attributes as $attr) {
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+            if ($this->prefixHelper->isDirective($attr->name)) {
                 return true;
             }
         }
@@ -147,7 +140,7 @@ final readonly class DirectiveExtractionPass
     private function hasFragmentDirectiveAttribute(FragmentNode $node): bool
     {
         foreach ($node->attributes as $attr) {
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+            if ($this->prefixHelper->isDirective($attr->name)) {
                 return true;
             }
         }
@@ -172,8 +165,8 @@ final readonly class DirectiveExtractionPass
         $remainingAttrs = [];
 
         foreach ($node->attributes as $attr) {
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
-                $name = substr($attr->name, strlen($this->directivePrefix) + 1);
+            if ($this->prefixHelper->isDirective($attr->name)) {
+                $name = $this->prefixHelper->stripPrefix($attr->name);
 
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
@@ -232,14 +225,7 @@ final readonly class DirectiveExtractionPass
 
         // If there are only attribute directives, return ElementNode with them
         if ($directives['controlFlow'] === null && $directives['content'] === null) {
-            return new ElementNode(
-                tag: $node->tag,
-                attributes: $directives['remaining'],
-                children: $transformedChildren,
-                selfClosing: $node->selfClosing,
-                line: $node->line,
-                column: $node->column,
-            );
+            return NodeCloner::withAttributesAndChildren($node, $directives['remaining'], $transformedChildren);
         }
 
         // If there's a content directive, wrap it as a DirectiveNode in children
@@ -257,14 +243,7 @@ final readonly class DirectiveExtractionPass
         }
 
         // Create element without control flow directive but keep attribute directives
-        $wrappedElement = new ElementNode(
-            tag: $node->tag,
-            attributes: $directives['remaining'],
-            children: $transformedChildren,
-            selfClosing: $node->selfClosing,
-            line: $node->line,
-            column: $node->column,
-        );
+        $wrappedElement = NodeCloner::withAttributesAndChildren($node, $directives['remaining'], $transformedChildren);
 
         // If there's a control flow directive, wrap everything in it
         if ($directives['controlFlow'] !== null) {
@@ -305,8 +284,8 @@ final readonly class DirectiveExtractionPass
         $contentDirective = null;
 
         foreach ($node->attributes as $attr) {
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
-                $name = substr($attr->name, strlen($this->directivePrefix) + 1);
+            if ($this->prefixHelper->isDirective($attr->name)) {
+                $name = $this->prefixHelper->stripPrefix($attr->name);
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
                     throw new RuntimeException('Directive attributes cannot contain dynamic output expressions');

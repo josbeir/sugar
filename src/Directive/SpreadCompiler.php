@@ -7,7 +7,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
-use Sugar\Runtime\AttributeHelper;
+use Sugar\Runtime\HtmlAttributeHelper;
 
 /**
  * Compiler for s:spread directive (attribute spreading)
@@ -52,7 +52,7 @@ final readonly class SpreadCompiler implements DirectiveCompilerInterface
         return [
             new RawPhpNode(
                 sprintf(
-                    '<?= ' . AttributeHelper::class . '::spreadAttrs(%s) ?>',
+                    '<?= ' . HtmlAttributeHelper::class . '::spreadAttrs(%s) ?>',
                     $node->expression,
                 ),
                 $node->line,
