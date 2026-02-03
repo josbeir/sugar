@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
@@ -102,5 +103,13 @@ final readonly class ForeachCompiler implements DirectiveCompilerInterface
         $parts = preg_split('/\s+as\s+/i', $expression, 2);
 
         return trim($parts[0] ?? $expression);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::CONTROL_FLOW;
     }
 }

@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
@@ -44,5 +45,13 @@ final readonly class WhileCompiler implements DirectiveCompilerInterface
         $parts[] = new RawPhpNode('endwhile;', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::CONTROL_FLOW;
     }
 }

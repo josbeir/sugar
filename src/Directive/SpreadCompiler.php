@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\AttributeHelper;
 
@@ -58,5 +59,13 @@ final readonly class SpreadCompiler implements DirectiveCompilerInterface
                 $node->column,
             ),
         ];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::ATTRIBUTE;
     }
 }

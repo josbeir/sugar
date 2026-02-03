@@ -8,10 +8,12 @@ use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\EmptyCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\HtmlCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\TextCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Escape\Escaper;
@@ -55,8 +57,8 @@ final class Compiler implements CompilerInterface
         // Use provided registry or create default with built-in directives
         $this->registry = $registry ?? $this->createDefaultRegistry();
 
-        // Create passes
-        $this->directiveExtractionPass = new DirectiveExtractionPass();
+        // Create passes - DirectiveExtractionPass needs registry for type checking
+        $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
     }
 
@@ -121,6 +123,8 @@ final class Compiler implements CompilerInterface
         $registry->registerDirective('while', WhileCompiler::class);
         $registry->registerDirective('class', ClassCompiler::class);
         $registry->registerDirective('spread', SpreadCompiler::class);
+        $registry->registerDirective('text', TextCompiler::class);
+        $registry->registerDirective('html', HtmlCompiler::class);
 
         return $registry;
     }

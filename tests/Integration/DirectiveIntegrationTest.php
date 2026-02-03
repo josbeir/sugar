@@ -30,12 +30,12 @@ final class DirectiveIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->parser = new Parser();
-        $this->extractionPass = new DirectiveExtractionPass();
 
         $registry = new ExtensionRegistry();
         $registry->registerDirective('if', new IfCompiler());
         $registry->registerDirective('foreach', new ForeachCompiler());
 
+        $this->extractionPass = new DirectiveExtractionPass($registry);
         $this->compilationPass = new DirectiveCompilationPass($registry);
         $this->generator = new CodeGenerator(new Escaper());
     }

@@ -11,6 +11,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
@@ -37,6 +38,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     ...$node->children,
                     new RawPhpNode('<?php endif; ?>', 1, 0),
                 ];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
 
@@ -71,6 +77,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php endif; ?>', 1, 0),
                 ];
             }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
+            }
         };
 
         $foreachCompiler = new class implements DirectiveCompilerInterface {
@@ -81,6 +92,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     ...$node->children,
                     new RawPhpNode('<?php endforeach; ?>', 1, 0),
                 ];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
 
@@ -182,6 +198,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php // End ?>', 1, 0),
                 ];
             }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
+            }
         };
 
         $this->registry->registerDirective('custom', $compiler);
@@ -215,6 +236,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode(sprintf('<?php // %s ?>', $node->expression), 1, 0),
                     ...$node->children,
                 ];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
 
@@ -259,6 +285,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php endif; ?>', 1, 0),
                 ];
             }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
+            }
         };
 
         $this->registry->registerDirective('if', $compiler);
@@ -301,6 +332,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php /* compiled */ ?>', 1, 0),
                     ...$node->children,
                 ];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
 
@@ -379,6 +415,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php // Outer end ?>', 1, 0),
                 ];
             }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
+            }
         };
 
         $innerCompiler = new class implements DirectiveCompilerInterface {
@@ -388,6 +429,11 @@ final class DirectiveCompilationPassTest extends TestCase
                     new RawPhpNode('<?php // Inner ?>', 1, 0),
                     ...$node->children,
                 ];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
 

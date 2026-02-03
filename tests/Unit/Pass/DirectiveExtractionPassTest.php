@@ -11,16 +11,45 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\HtmlCompiler;
+use Sugar\Directive\IfCompiler;
+use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\SpreadCompiler;
+use Sugar\Directive\TextCompiler;
+use Sugar\Directive\UnlessCompiler;
 use Sugar\Enum\OutputContext;
+use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 
 final class DirectiveExtractionPassTest extends TestCase
 {
     private DirectiveExtractionPass $pass;
 
+    private ExtensionRegistry $registry;
+
     protected function setUp(): void
     {
-        $this->pass = new DirectiveExtractionPass();
+        // Create registry with test directives
+        $this->registry = $this->createTestRegistry();
+        $this->pass = new DirectiveExtractionPass($this->registry);
+    }
+
+    private function createTestRegistry(): ExtensionRegistry
+    {
+        $registry = new ExtensionRegistry();
+        // Register built-in directives needed for tests
+        $registry->registerDirective('if', IfCompiler::class);
+        $registry->registerDirective('foreach', ForeachCompiler::class);
+        $registry->registerDirective('class', ClassCompiler::class);
+        $registry->registerDirective('spread', SpreadCompiler::class);
+        $registry->registerDirective('text', TextCompiler::class);
+        $registry->registerDirective('html', HtmlCompiler::class);
+        $registry->registerDirective('isset', IssetCompiler::class);
+        $registry->registerDirective('unless', UnlessCompiler::class);
+
+        return $registry;
     }
 
     public function testExtractsSimpleIfDirective(): void
@@ -355,7 +384,8 @@ final class DirectiveExtractionPassTest extends TestCase
 
     public function testUsesCustomDirectivePrefix(): void
     {
-        $pass = new DirectiveExtractionPass('x');
+        $registry = $this->createTestRegistry();
+        $pass = new DirectiveExtractionPass($registry, 'x');
 
         $element = new ElementNode(
             tag: 'div',
@@ -376,7 +406,8 @@ final class DirectiveExtractionPassTest extends TestCase
 
     public function testDoesNotExtractNonPrefixedAttributes(): void
     {
-        $pass = new DirectiveExtractionPass('x');
+        $registry = $this->createTestRegistry();
+        $pass = new DirectiveExtractionPass($registry, 'x');
 
         $element = new ElementNode(
             tag: 'div',

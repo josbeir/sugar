@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use Sugar\Ast\Node;
+use Sugar\Enum\DirectiveType;
 
 /**
  * Interface for directive compilers
@@ -23,4 +24,16 @@ interface DirectiveCompilerInterface extends ExtensionCompilerInterface
      * @return array<\Sugar\Ast\Node> The compiled AST nodes
      */
     public function compile(Node $node): array;
+
+    /**
+     * Get the directive type classification
+     *
+     * Determines how this directive interacts with elements:
+     * - CONTROL_FLOW: Wraps element (if, foreach, while, etc.)
+     * - ATTRIBUTE: Modifies attributes (class, spread)
+     * - CONTENT: Injects content (text, html)
+     *
+     * @return \Sugar\Enum\DirectiveType The directive type
+     */
+    public function getType(): DirectiveType;
 }

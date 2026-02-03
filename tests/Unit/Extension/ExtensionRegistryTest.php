@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 
@@ -129,6 +130,11 @@ final class ExtensionRegistryTest extends TestCase
             public function compile(Node $node): array
             {
                 return [];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::CONTROL_FLOW;
             }
         };
     }

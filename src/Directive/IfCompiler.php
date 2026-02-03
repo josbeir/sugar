@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
@@ -60,5 +61,13 @@ final readonly class IfCompiler implements DirectiveCompilerInterface
         }
 
         return $parts;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::CONTROL_FLOW;
     }
 }

@@ -7,6 +7,7 @@ use RuntimeException;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
@@ -111,5 +112,13 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
         $parts[] = new RawPhpNode('endswitch;', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::CONTROL_FLOW;
     }
 }
