@@ -62,7 +62,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $this->pass->transform($ast);
+        $this->pass->execute($ast);
     }
 
     public function testThrowsWhenFragmentAttributeContainsDynamicOutput(): void
@@ -85,7 +85,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->transform($ast);
+        $this->pass->execute($ast);
     }
 
     public function testThrowsWhenFragmentHasRegularHtmlAttribute(): void
@@ -104,7 +104,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->transform($ast);
+        $this->pass->execute($ast);
     }
 
     public function testThrowsWhenFragmentHasAttributeDirective(): void
@@ -122,7 +122,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->transform($ast);
+        $this->pass->execute($ast);
     }
 
     public function testFragmentWithContentDirective(): void
@@ -137,7 +137,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
@@ -158,7 +158,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         // Should have if directive wrapping html directive
         $this->assertCount(1, $result->children);
@@ -185,7 +185,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         // Should return ElementNode with compiled class attribute
         $this->assertInstanceOf(DocumentNode::class, $result);
@@ -215,7 +215,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(1, $result->children);
         $directive = $result->children[0];
@@ -239,7 +239,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         // Should wrap: if -> element containing text directive
         $this->assertCount(1, $result->children);

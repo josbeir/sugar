@@ -49,10 +49,10 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertInstanceOf(DocumentNode::class, $ast);
 
         // Extract directives
-        $extracted = $this->extractionPass->transform($ast);
+        $extracted = $this->extractionPass->execute($ast);
 
         // Compile directives
-        $transformed = $this->compilationPass->transform($extracted);
+        $transformed = $this->compilationPass->execute($extracted);
 
         // Generate code
         $code = $this->generator->generate($transformed);
@@ -73,8 +73,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->transform($ast);
-        $transformed = $this->compilationPass->transform($extracted);
+        $extracted = $this->extractionPass->execute($ast);
+        $transformed = $this->compilationPass->execute($extracted);
         $code = $this->generator->generate($transformed);
 
         // Should contain foreach/endforeach
@@ -89,8 +89,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->transform($ast);
-        $transformed = $this->compilationPass->transform($extracted);
+        $extracted = $this->extractionPass->execute($ast);
+        $transformed = $this->compilationPass->execute($extracted);
         $code = $this->generator->generate($transformed);
         $code = $this->generator->generate($transformed);
 
@@ -109,8 +109,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->transform($ast);
-        $transformed = $this->compilationPass->transform($extracted);
+        $extracted = $this->extractionPass->execute($ast);
+        $transformed = $this->compilationPass->execute($extracted);
         $code = $this->generator->generate($transformed);
 
         // Should unwrap raw() and output without htmlspecialchars
@@ -125,8 +125,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->transform($ast);
-        $transformed = $this->compilationPass->transform($extracted);
+        $extracted = $this->extractionPass->execute($ast);
+        $transformed = $this->compilationPass->execute($extracted);
         $code = $this->generator->generate($transformed);
 
         // Should unwrap r() and output without escaping
@@ -141,8 +141,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->transform($ast);
-        $transformed = $this->compilationPass->transform($extracted);
+        $extracted = $this->extractionPass->execute($ast);
+        $transformed = $this->compilationPass->execute($extracted);
         $code = $this->generator->generate($transformed);
 
         // Regular output should use htmlspecialchars

@@ -57,7 +57,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(3, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -128,7 +128,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$outerDirective]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         // Should compile both directives
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]); // foreach open
@@ -156,7 +156,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
@@ -178,7 +178,7 @@ final class DirectiveCompilationPassTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Directive "unknown" is not registered');
 
-        $this->pass->transform($ast);
+        $this->pass->execute($ast);
     }
 
     public function testHandlesCompilerReturningMultipleNodes(): void
@@ -212,7 +212,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(5, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -258,7 +258,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive1, $directive2]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(4, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -305,7 +305,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $divElement = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $divElement);
@@ -356,7 +356,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $sectionElement = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $sectionElement);
@@ -379,7 +379,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertCount(1, $result->children);
         $inputElement = $result->children[0];
@@ -439,7 +439,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->transform($ast);
+        $result = $this->pass->execute($ast);
 
         // Should compile both outer and inner directives
         $this->assertCount(4, $result->children);

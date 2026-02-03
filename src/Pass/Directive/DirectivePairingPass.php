@@ -10,6 +10,7 @@ use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Extension\PairedDirectiveCompilerInterface;
+use Sugar\Pass\PassInterface;
 
 /**
  * Directive Pairing Pass
@@ -21,7 +22,7 @@ use Sugar\Extension\PairedDirectiveCompilerInterface;
  * sibling-based directive pairing that works regardless of intervening
  * text nodes, comments, or whitespace.
  */
-final class DirectivePairingPass
+final class DirectivePairingPass implements PassInterface
 {
     /**
      * Constructor
@@ -34,17 +35,20 @@ final class DirectivePairingPass
     }
 
     /**
-     * Transform AST: wire parents and pair sibling directives
+     * Execute the pass: wire parent references and pair sibling directives
+     *
+     * @param \Sugar\Ast\DocumentNode $ast Document to transform
+     * @return \Sugar\Ast\DocumentNode Same document with paired directives linked
      */
-    public function transform(DocumentNode $node): DocumentNode
+    public function execute(DocumentNode $ast): DocumentNode
     {
         // First pass: wire up all parent references
-        $this->wireParents($node, null);
+        $this->wireParents($ast, null);
 
         // Second pass: pair sibling directives
-        $this->pairSiblingDirectives($node);
+        $this->pairSiblingDirectives($ast);
 
-        return $node;
+        return $ast;
     }
 
     /**

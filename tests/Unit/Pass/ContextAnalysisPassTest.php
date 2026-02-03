@@ -29,7 +29,7 @@ final class ContextAnalysisPassTest extends TestCase
             new OutputNode('$name', true, OutputContext::HTML, 1, 7),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML, $result->children[1]->context);
@@ -43,7 +43,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script>', 1, 15),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -57,7 +57,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</style>', 1, 13),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::CSS, $result->children[1]->context);
@@ -71,7 +71,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script></div>', 1, 20),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -86,7 +86,7 @@ final class ContextAnalysisPassTest extends TestCase
             new OutputNode('$html', true, OutputContext::HTML, 1, 22),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -104,7 +104,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</style></div>', 1, 41),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -120,7 +120,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script>', 1, 14),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         // Raw output should not be modified
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -135,7 +135,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('" />', 1, 16),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         // Should detect attribute context
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -150,7 +150,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('">', 1, 15),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
@@ -166,7 +166,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</a>', 1, 23),
         ]);
 
-        $result = $this->pass->analyze($ast);
+        $result = $this->pass->execute($ast);
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);

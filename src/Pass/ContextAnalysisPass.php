@@ -15,15 +15,15 @@ use Sugar\Enum\OutputContext;
  * Analyzes AST and assigns proper OutputContext to OutputNodes
  * based on their position in HTML structure
  */
-final class ContextAnalysisPass
+final class ContextAnalysisPass implements PassInterface
 {
     /**
-     * Analyze AST and update OutputNode contexts
+     * Execute the pass: analyze AST and update OutputNode contexts
      *
      * @param \Sugar\Ast\DocumentNode $ast Document to analyze
      * @return \Sugar\Ast\DocumentNode New document with updated contexts
      */
-    public function analyze(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast): DocumentNode
     {
         $context = new AnalysisContext();
         $newChildren = $this->processNodes($ast->children, $context, false);

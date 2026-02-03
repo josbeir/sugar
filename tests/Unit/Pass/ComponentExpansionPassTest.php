@@ -58,7 +58,7 @@ final class ComponentExpansionPassTest extends TestCase
             ),
         ]);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         // Component should be expanded to multiple nodes (RawPhpNode for variables + template content)
         $this->assertGreaterThan(0, count($result->children));
@@ -77,7 +77,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button>Save</s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         $code = $this->astToString($result);
 
@@ -91,7 +91,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button></s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $code);
@@ -108,7 +108,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-panel>Submit</s-panel>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<div class="panel">', $code);
@@ -132,7 +132,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectException(ComponentNotFoundException::class);
         $this->expectExceptionMessage('Component "nonexistent" not found');
 
-        $this->pass->process($ast);
+        $this->pass->execute($ast);
     }
 
     public function testPreservesComponentAttributes(): void
@@ -141,7 +141,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-alert s-bind:type="\'warning\'">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         $code = $this->astToString($result);
 
@@ -165,7 +165,7 @@ final class ComponentExpansionPassTest extends TestCase
             '</s-card>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->process($ast);
+        $result = $this->pass->execute($ast);
 
         $code = $this->astToString($result);
 

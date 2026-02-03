@@ -19,6 +19,7 @@ use Sugar\Enum\InheritanceAttribute;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
+use Sugar\Pass\PassInterface;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -43,7 +44,7 @@ use Sugar\Extension\ExtensionRegistry;
  * DirectiveNode(name: 'if', expression: '$user', children: [<div>Content</div>])
  * ```
  */
-final readonly class DirectiveExtractionPass
+final readonly class DirectiveExtractionPass implements PassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
 
@@ -61,9 +62,12 @@ final readonly class DirectiveExtractionPass
     }
 
     /**
-     * Transform AST by extracting directives from elements
+     * Execute the pass: extract directive attributes into DirectiveNodes
+     *
+     * @param \Sugar\Ast\DocumentNode $ast Document to transform
+     * @return \Sugar\Ast\DocumentNode New document with directives extracted
      */
-    public function transform(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast): DocumentNode
     {
         $children = $this->transformChildren($ast->children);
 

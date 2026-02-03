@@ -127,20 +127,20 @@ final class Compiler implements CompilerInterface
 
         // Step 1.75: Expand components (s-button → template content)
         if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $ast = $this->componentExpansionPass->process($ast);
+            $ast = $this->componentExpansionPass->execute($ast);
         }
 
         // Step 2: Extract directives from elements (s:if → DirectiveNode)
-        $extractedAst = $this->directiveExtractionPass->transform($ast);
+        $extractedAst = $this->directiveExtractionPass->execute($ast);
 
         // Step 3: Wire up parent references and pair sibling directives
-        $pairedAst = $this->directivePairingPass->transform($extractedAst);
+        $pairedAst = $this->directivePairingPass->execute($extractedAst);
 
         // Step 4: Compile DirectiveNodes into PHP control structures
-        $transformedAst = $this->directiveCompilationPass->transform($pairedAst);
+        $transformedAst = $this->directiveCompilationPass->execute($pairedAst);
 
         // Step 4: Analyze context and update OutputNode contexts
-        $analyzedAst = $this->contextPass->analyze($transformedAst);
+        $analyzedAst = $this->contextPass->execute($transformedAst);
 
         // Step 5: Generate executable PHP code with inline escaping
         // Use templatePath as sourceFile for debug info if sourceFile not explicitly provided

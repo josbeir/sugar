@@ -25,7 +25,7 @@ use Sugar\TemplateInheritance\TemplateLoaderInterface;
  * Replaces ComponentNode instances with their actual template content,
  * injecting slots and attributes as variables.
  */
-final readonly class ComponentExpansionPass
+final readonly class ComponentExpansionPass implements PassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
 
@@ -50,15 +50,15 @@ final readonly class ComponentExpansionPass
     }
 
     /**
-     * Process document and expand all components
+     * Execute the pass: expand all component invocations
      *
-     * @param \Sugar\Ast\DocumentNode $document Document to process
+     * @param \Sugar\Ast\DocumentNode $ast Document to process
      * @return \Sugar\Ast\DocumentNode Processed document with expanded components
      * @throws \Sugar\Exception\ComponentNotFoundException If component template not found
      */
-    public function process(DocumentNode $document): DocumentNode
+    public function execute(DocumentNode $ast): DocumentNode
     {
-        $expandedChildren = $this->expandNodes($document->children);
+        $expandedChildren = $this->expandNodes($ast->children);
 
         return new DocumentNode($expandedChildren);
     }

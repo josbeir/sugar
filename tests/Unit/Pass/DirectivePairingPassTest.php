@@ -35,7 +35,7 @@ final class DirectivePairingPassTest extends TestCase
         $child2 = new TextNode('World', 1, 7);
         $doc = new DocumentNode([$child1, $child2]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         $this->assertSame($doc, $child1->getParent());
         $this->assertSame($doc, $child2->getParent());
@@ -47,7 +47,7 @@ final class DirectivePairingPassTest extends TestCase
         $child = new DirectiveNode('if', '$x', [$grandchild], 1, 1);
         $doc = new DocumentNode([$child]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         $this->assertSame($doc, $child->getParent());
         $this->assertSame($child, $grandchild->getParent());
@@ -59,7 +59,7 @@ final class DirectivePairingPassTest extends TestCase
         $empty = new DirectiveNode('empty', '', [], 2, 1);
         $doc = new DocumentNode([$forelse, $empty]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         $this->assertSame($empty, $forelse->getPairedSibling());
     }
@@ -71,7 +71,7 @@ final class DirectivePairingPassTest extends TestCase
         $empty = new DirectiveNode('empty', '', [], 3, 1);
         $doc = new DocumentNode([$forelse, $text, $empty]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         // Should still pair even with text node between them
         $this->assertSame($empty, $forelse->getPairedSibling());
@@ -83,7 +83,7 @@ final class DirectivePairingPassTest extends TestCase
         $text = new TextNode('Text', 2, 1);
         $doc = new DocumentNode([$forelse, $text]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         $this->assertNull($forelse->getPairedSibling());
     }
@@ -95,7 +95,7 @@ final class DirectivePairingPassTest extends TestCase
         $case1 = new DirectiveNode('case', '1', [], 2, 1);
         $doc = new DocumentNode([$switch, $case1]);
 
-        $this->pass->transform($doc);
+        $this->pass->execute($doc);
 
         // Should not pair since switch doesn't implement the interface
         $this->assertNull($switch->getPairedSibling());
