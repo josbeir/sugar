@@ -3,11 +3,16 @@ declare(strict_types=1);
 
 namespace Sugar\Ast;
 
+use Sugar\Ast\Trait\SiblingNavigationTrait;
+use Sugar\Ast\Interface\SiblingNavigationInterface;
+
 /**
  * Root document node
  */
-final class DocumentNode extends Node
+final class DocumentNode extends Node implements SiblingNavigationInterface
 {
+    use SiblingNavigationTrait;
+
     /**
      * @param array<\Sugar\Ast\Node> $children
      */

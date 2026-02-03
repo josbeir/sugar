@@ -8,9 +8,41 @@
 </head>
 <body>
     <h1><?= $heading ?></h1>
+
+    <!-- Conditional banner -->
+    <div s:if="$showBanner" class="banner">
+        <p><?= $bannerMessage ?></p>
+    </div>
+
+    <!-- Trusted HTML content (pre-rendered) -->
+    <article><?= raw($articleBody) ?></article>
+
+    <!-- Short form for trusted content -->
+    <aside><?= r($sidebarHtml) ?></aside>
+
     <script>
         var config = <?= $config ?>;
     </script>
+
+    <!-- List with foreach and loop metadata -->
+    <ul s:foreach="$items as $item">
+        <li><?= $item->name ?> - Item <?= $loop->iteration ?> of <?= $loop->count ?></li>
+    </ul>
+
+    <!-- List with forelse for empty state -->
+    <ul s:forelse="$products as $product">
+        <li><?= $product->title ?> - $<?= $product->price ?></li>
+    </ul>
+    <div s:empty class="empty-state">
+        <p>No products available</p>
+    </div>
+
     <a href="<?= $link ?>">Click here</a>
+
+    <!-- Footer with both escaped and raw content -->
+    <footer>
+        <p>Copyright <?= $year ?></p>
+        <?= raw($footerContent) ?>
+    </footer>
 </body>
 </html>

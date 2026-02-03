@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Sugar\Ast;
 
+use Sugar\Ast\Trait\SiblingNavigationTrait;
+use Sugar\Ast\Interface\SiblingNavigationInterface;
+
 /**
  * HTML element node with attributes and children
  *
@@ -11,8 +14,10 @@ namespace Sugar\Ast;
  * - Child nodes (text, output, nested elements)
  * - Self-closing flag for void elements (img, br, input, etc.)
  */
-final class ElementNode extends Node
+final class ElementNode extends Node implements SiblingNavigationInterface
 {
+    use SiblingNavigationTrait;
+
     /**
      * @param string $tag HTML tag name (e.g., 'div', 'span', 'img')
      * @param array<\Sugar\Ast\AttributeNode> $attributes Element attributes

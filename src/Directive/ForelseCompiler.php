@@ -83,8 +83,11 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
      */
     public function compile(Node $node): array
     {
-        // If no empty clause, behave exactly like foreach
-        if ($node->elseChildren === null) {
+        // Check if we have a paired s:empty sibling
+        $emptyNode = $node->getPairedSibling();
+
+        // If no paired empty clause, behave exactly like foreach
+        if ($emptyNode === null) {
             return parent::compile($node);
         }
 
@@ -105,8 +108,8 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
         // Else clause
         $parts[] = new RawPhpNode('else:', $node->line, $node->column);
 
-        // Empty children (fallback content)
-        array_push($parts, ...$node->elseChildren);
+        // Empty directive's children (fallback content)
+        array_push($parts, ...$emptyNode->children);
 
         // Closing endif
         $parts[] = new RawPhpNode('endif;', $node->line, $node->column);

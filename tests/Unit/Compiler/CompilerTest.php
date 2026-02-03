@@ -116,6 +116,43 @@ final class CompilerTest extends TestCase
 
         // Check body HTML context
         $this->assertStringContainsString('htmlspecialchars((string)($heading)', $result);
+
+        // Check raw() unwraps and outputs without escaping
+        $this->assertStringContainsString('<?php echo $articleBody; ?>', $result);
+        $this->assertStringNotContainsString('htmlspecialchars((string)($articleBody)', $result);
+
+        // Check r() short form unwraps
+        $this->assertStringContainsString('<?php echo $sidebarHtml; ?>', $result);
+        $this->assertStringNotContainsString('htmlspecialchars((string)($sidebarHtml)', $result);
+
+        // Check footer raw content
+        $this->assertStringContainsString('<?php echo $footerContent; ?>', $result);
+
+        // Check year is still escaped (regular output)
+        $this->assertStringContainsString('htmlspecialchars((string)($year)', $result);
+
+        // Verify raw() function calls are removed (unwrapped at compile-time)
+        $this->assertStringNotContainsString('raw($articleBody)', $result);
+        $this->assertStringNotContainsString('r($sidebarHtml)', $result);
+
+        // Check s:if directive compiles
+        $this->assertStringContainsString('<?php if ($showBanner): ?>', $result);
+        $this->assertStringContainsString('<?php endif; ?>', $result);
+
+        // Check s:foreach directive compiles
+        $this->assertStringContainsString('<?php foreach ($items as $item): ?>', $result);
+        $this->assertStringContainsString('<?php endforeach; ?>', $result);
+
+        // Check s:forelse directive compiles with if/else wrapper
+        $this->assertStringContainsString('<?php if (!empty($products)): ?>', $result);
+        $this->assertStringContainsString('<?php foreach ($products as $product): ?>', $result);
+        $this->assertStringContainsString('<?php else: ?>', $result);
+        $this->assertStringContainsString('No products available', $result);
+
+        // Check loop metadata
+        $this->assertStringContainsString('$loop', $result);
+        $this->assertStringContainsString('->iteration', $result);
+        $this->assertStringContainsString('->count', $result);
     }
 
     public function testCompiledCodeIsExecutable(): void

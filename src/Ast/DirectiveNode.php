@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Sugar\Ast;
 
+use Sugar\Ast\Trait\SiblingNavigationTrait;
+use Sugar\Ast\Interface\SiblingNavigationInterface;
+
 /**
  * Structural directive node (if, foreach, while, etc.)
  *
@@ -11,8 +14,20 @@ namespace Sugar\Ast;
  * - s:foreach / s:each - Loop iteration
  * - s:while - While loops
  */
-final class DirectiveNode extends Node
+final class DirectiveNode extends Node implements SiblingNavigationInterface
 {
+    use SiblingNavigationTrait;
+
+    /**
+     * Paired sibling directive (e.g., s:empty for s:forelse)
+     */
+    private ?DirectiveNode $pairedSibling = null;
+
+    /**
+     * Whether this directive has been consumed by a pairing primary directive
+     */
+    private bool $consumedByPairing = false;
+
     /**
      * @param string $name Directive name (e.g., 'if', 'foreach', 'while')
      * @param string $expression PHP expression for the directive
@@ -30,5 +45,88 @@ final class DirectiveNode extends Node
         int $column,
     ) {
         parent::__construct($line, $column);
+    }
+
+    /**
+     * Set paired sibling directive node
+     */
+    public function setPairedSibling(DirectiveNode $sibling): void
+    {
+        $this->pairedSibling = $sibling;
+    }
+
+    /**
+     * Get paired sibling directive node
+     */
+    public function getPairedSibling(): ?DirectiveNode
+    {
+        return $this->pairedSibling;
+    }
+
+    /**
+     * Mark this directive as consumed by a pairing primary directive
+     */
+    public function markConsumedByPairing(): void
+    {
+        $this->consumedByPairing = true;
+    }
+
+    /**
+     * Check if this directive has been consumed by pairing
+     */
+    public function isConsumedByPairing(): bool
+    {
+        return $this->consumedByPairing;
+    }
+
+    /**
+     * Get next sibling of given child node
+     */
+    public function getNextSibling(Node $child): ?Node
+    {
+        $index = array_search($child, $this->children, true);
+
+        if (!is_int($index) || $index >= count($this->children) - 1) {
+            return null;
+        }
+
+        return $this->children[$index + 1];
+    }
+
+    /**
+     * Get previous sibling of given child node
+     */
+    public function getPreviousSibling(Node $child): ?Node
+    {
+        $index = array_search($child, $this->children, true);
+
+        if (!is_int($index) || $index === 0) {
+            return null;
+        }
+
+        return $this->children[$index - 1];
+    }
+
+    /**
+     * Find next sibling matching predicate
+     *
+     * @param callable(\Sugar\Ast\Node): bool $predicate
+     */
+    public function findNextSibling(Node $child, callable $predicate): ?Node
+    {
+        $index = array_search($child, $this->children, true);
+
+        if (!is_int($index)) {
+            return null;
+        }
+
+        $childCount = count($this->children);
+        for ($i = $index + 1; $i < $childCount; $i++) {
+            if ($predicate($this->children[$i])) {
+                return $this->children[$i];
+            }
+        }
+
+        return null;
     }
 }

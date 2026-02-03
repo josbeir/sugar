@@ -83,14 +83,26 @@ final class ForelseCompilerTest extends TestCase
             column: 1,
         );
 
+        $emptyNode = new DirectiveNode(
+            name: 'empty',
+            expression: 'true',
+            children: [$emptyElement],
+            elseChildren: null,
+            line: 1,
+            column: 1,
+        );
+
         $node = new DirectiveNode(
             name: 'forelse',
             expression: '$items as $item',
             children: [new TextNode('Item', 1, 1)],
-            elseChildren: [$emptyElement],
+            elseChildren: null,
             line: 1,
             column: 1,
         );
+
+        // Wire the pairing
+        $node->setPairedSibling($emptyNode);
 
         $result = $this->compiler->compile($node);
 

@@ -174,7 +174,7 @@ final class ContextAnalysisPass
         AnalysisContext $context,
         bool $inAttribute,
     ): OutputNode {
-        // Don't modify raw output
+        // Don't modify raw output - return as-is
         if (!$node->escape) {
             return $node;
         }
@@ -184,7 +184,6 @@ final class ContextAnalysisPass
             ? OutputContext::HTML_ATTRIBUTE
             : $context->determineContext();
 
-        // Return new node with updated context
         return new OutputNode(
             expression: $node->expression,
             escape: $node->escape,

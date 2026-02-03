@@ -40,11 +40,7 @@ final readonly class DirectiveCompilationPass
 
         foreach ($ast->children as $node) {
             $compiled = $this->compileNode($node);
-            if (is_array($compiled)) {
-                array_push($newChildren, ...$compiled);
-            } else {
-                $newChildren[] = $compiled;
-            }
+            array_push($newChildren, ...is_array($compiled) ? $compiled : [$compiled]);
         }
 
         return new DocumentNode($newChildren);
@@ -58,6 +54,11 @@ final readonly class DirectiveCompilationPass
     private function compileNode(Node $node): Node|array
     {
         if ($node instanceof DirectiveNode) {
+            // Skip directives that have been consumed by pairing
+            if ($node->isConsumedByPairing()) {
+                return [];
+            }
+
             // Get compiler for this directive
             $compiler = $this->registry->getDirective($node->name);
 
@@ -92,11 +93,7 @@ final readonly class DirectiveCompilationPass
             $newChildren = [];
             foreach ($node->children as $child) {
                 $compiled = $this->compileNode($child);
-                if (is_array($compiled)) {
-                    array_push($newChildren, ...$compiled);
-                } else {
-                    $newChildren[] = $compiled;
-                }
+                array_push($newChildren, ...is_array($compiled) ? $compiled : [$compiled]);
             }
 
             return new ElementNode(

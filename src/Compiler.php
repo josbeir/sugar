@@ -22,15 +22,18 @@ use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Pass\Directive\DirectivePairingPass;
 
 /**
  * Orchestrates template compilation pipeline
  *
- * Pipeline: Parser → DirectiveExtractionPass → DirectiveCompilationPass → ContextAnalysisPass → CodeGenerator
+ * Pipeline: Parser → DirectiveExtractionPass → DirectivePairingPass → DirectiveCompilationPass → ContextAnalysisPass → CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
     private readonly ExtensionRegistry $registry;
+
+    private readonly DirectivePairingPass $directivePairingPass;
 
     private readonly DirectiveExtractionPass $directiveExtractionPass;
 
@@ -57,7 +60,8 @@ final class Compiler implements CompilerInterface
         // Use provided registry or create default with built-in directives
         $this->registry = $registry ?? $this->createDefaultRegistry();
 
-        // Create passes - DirectiveExtractionPass needs registry for type checking
+        // Create passes
+        $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
     }
@@ -88,8 +92,11 @@ final class Compiler implements CompilerInterface
         // Step 2: Extract directives from elements (s:if → DirectiveNode)
         $extractedAst = $this->directiveExtractionPass->transform($ast);
 
-        // Step 3: Compile DirectiveNodes into PHP control structures
-        $transformedAst = $this->directiveCompilationPass->transform($extractedAst);
+        // Step 3: Wire up parent references and pair sibling directives
+        $pairedAst = $this->directivePairingPass->transform($extractedAst);
+
+        // Step 4: Compile DirectiveNodes into PHP control structures
+        $transformedAst = $this->directiveCompilationPass->transform($pairedAst);
 
         // Step 4: Analyze context and update OutputNode contexts
         $analyzedAst = $this->contextPass->analyze($transformedAst);

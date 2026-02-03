@@ -1,0 +1,114 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Tests\Unit\Pass;
+
+use PHPUnit\Framework\TestCase;
+use Sugar\Ast\DirectiveNode;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\TextNode;
+use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\SwitchCompiler;
+use Sugar\Extension\ExtensionRegistry;
+use Sugar\Pass\Directive\DirectivePairingPass;
+
+final class DirectivePairingPassTest extends TestCase
+{
+    private DirectivePairingPass $pass;
+
+    private ExtensionRegistry $registry;
+
+    protected function setUp(): void
+    {
+        $this->registry = new ExtensionRegistry();
+        $this->registry->registerDirective('forelse', ForelseCompiler::class);
+        $this->registry->registerDirective('empty', ForelseCompiler::class);
+        $this->registry->registerDirective('switch', SwitchCompiler::class);
+        $this->registry->registerDirective('case', SwitchCompiler::class);
+
+        $this->pass = new DirectivePairingPass($this->registry);
+    }
+
+    public function testWiresParentReferences(): void
+    {
+        $child1 = new TextNode('Hello', 1, 1);
+        $child2 = new TextNode('World', 1, 7);
+        $doc = new DocumentNode([$child1, $child2]);
+
+        $this->pass->transform($doc);
+
+        $this->assertSame($doc, $child1->getParent());
+        $this->assertSame($doc, $child2->getParent());
+    }
+
+    public function testWiresNestedParentReferences(): void
+    {
+        $grandchild = new TextNode('Inner', 1, 1);
+        $child = new DirectiveNode('if', '$x', [$grandchild], null, 1, 1);
+        $doc = new DocumentNode([$child]);
+
+        $this->pass->transform($doc);
+
+        $this->assertSame($doc, $child->getParent());
+        $this->assertSame($child, $grandchild->getParent());
+    }
+
+    public function testPairsForelseWithEmpty(): void
+    {
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
+        $empty = new DirectiveNode('empty', '', [], null, 2, 1);
+        $doc = new DocumentNode([$forelse, $empty]);
+
+        $this->pass->transform($doc);
+
+        $this->assertSame($empty, $forelse->getPairedSibling());
+    }
+
+    public function testDoesNotPairNonSiblingDirectives(): void
+    {
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
+        $text = new TextNode('Some text', 2, 1);
+        $empty = new DirectiveNode('empty', '', [], null, 3, 1);
+        $doc = new DocumentNode([$forelse, $text, $empty]);
+
+        $this->pass->transform($doc);
+
+        // Should still pair even with text node between them
+        $this->assertSame($empty, $forelse->getPairedSibling());
+    }
+
+    public function testDoesNotPairForelseWithoutEmpty(): void
+    {
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
+        $text = new TextNode('Text', 2, 1);
+        $doc = new DocumentNode([$forelse, $text]);
+
+        $this->pass->transform($doc);
+
+        $this->assertNull($forelse->getPairedSibling());
+    }
+
+    public function testDoesNotPairNonPairedDirectiveTypes(): void
+    {
+        // Switch doesn't implement PairedDirectiveCompilerInterface yet
+        $switch = new DirectiveNode('switch', '$value', [], null, 1, 1);
+        $case1 = new DirectiveNode('case', '1', [], null, 2, 1);
+        $doc = new DocumentNode([$switch, $case1]);
+
+        $this->pass->transform($doc);
+
+        // Should not pair since switch doesn't implement the interface
+        $this->assertNull($switch->getPairedSibling());
+    }
+
+    public function testHandlesElseChildrenParenting(): void
+    {
+        $elseChild = new TextNode('Else content', 2, 1);
+        $directive = new DirectiveNode('if', '$x', [], [$elseChild], 1, 1);
+        $doc = new DocumentNode([$directive]);
+
+        $this->pass->transform($doc);
+
+        $this->assertSame($directive, $elseChild->getParent());
+    }
+}
