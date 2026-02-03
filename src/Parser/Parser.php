@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Parser;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
@@ -249,7 +250,7 @@ final readonly class Parser
      * @param int $start Position of <
      * @param int $line Line number
      * @param int $column Column number
-     * @return array{0: \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode, 1: int} Element or Fragment and position after tag
+     * @return array{0: \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode|\Sugar\Ast\ComponentNode, 1: int} Element, Fragment, or Component and position after tag
      */
     private function extractOpeningTag(string $html, int $start, int $line, int $column): array
     {
@@ -307,6 +308,20 @@ final readonly class Parser
         // Handle fragment element (e.g., <s-template>, <x-template>)
         if ($tagName === $this->config->getFragmentElement()) {
             $element = new FragmentNode(
+                attributes: $attributes,
+                children: [],
+                line: $line,
+                column: $column,
+            );
+        }
+
+        // Handle component elements (e.g., <s-button>, <x-alert>)
+        // Components start with elementPrefix but are NOT the fragment element
+        $elementPrefix = $this->config->elementPrefix;
+        if (str_starts_with($tagName, $elementPrefix) && $tagName !== $this->config->getFragmentElement()) {
+            $componentName = substr($tagName, strlen($elementPrefix));
+            $element = new ComponentNode(
+                name: $componentName,
                 attributes: $attributes,
                 children: [],
                 line: $line,
@@ -437,6 +452,11 @@ final readonly class Parser
                 // Fragment node - treat like element
                 $stack[count($stack) - 1][] = $node;
                 // Push reference to this fragment's children array onto stack
+                $stack[] = &$node->children;
+            } elseif ($node instanceof ComponentNode) {
+                // Component node - treat like element (non-self-closing)
+                $stack[count($stack) - 1][] = $node;
+                // Push reference to this component's children array onto stack
                 $stack[] = &$node->children;
             } elseif ($node instanceof ClosingTagMarker) {
                 // Closing tag - pop from stack

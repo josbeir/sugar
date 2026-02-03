@@ -13,26 +13,39 @@ final class SugarConfigTest extends TestCase
         $config = new SugarConfig();
 
         $this->assertSame('s', $config->directivePrefix);
+        $this->assertSame('s-', $config->elementPrefix);
         $this->assertSame('s-template', $config->getFragmentElement());
+        $this->assertSame([], $config->componentPaths);
     }
 
     public function testCustomPrefix(): void
     {
-        $config = new SugarConfig(directivePrefix: 'x');
+        $config = new SugarConfig(directivePrefix: 'x', elementPrefix: 'x-');
 
         $this->assertSame('x', $config->directivePrefix);
+        $this->assertSame('x-', $config->elementPrefix);
         $this->assertSame('x-template', $config->getFragmentElement());
     }
 
-    public function testCustomFragmentElement(): void
+    public function testCustomElementPrefix(): void
     {
         $config = new SugarConfig(
             directivePrefix: 'v',
-            fragmentElement: 'v-fragment',
+            elementPrefix: 'v:',
         );
 
         $this->assertSame('v', $config->directivePrefix);
-        $this->assertSame('v-fragment', $config->getFragmentElement());
+        $this->assertSame('v:', $config->elementPrefix);
+        $this->assertSame('v:template', $config->getFragmentElement());
+    }
+
+    public function testComponentPaths(): void
+    {
+        $config = new SugarConfig(
+            componentPaths: ['components', 'shared/components'],
+        );
+
+        $this->assertSame(['components', 'shared/components'], $config->componentPaths);
     }
 
     public function testNamedConstructorWithPrefix(): void
@@ -40,14 +53,15 @@ final class SugarConfigTest extends TestCase
         $config = SugarConfig::withPrefix('tw');
 
         $this->assertSame('tw', $config->directivePrefix);
+        $this->assertSame('tw-', $config->elementPrefix);
         $this->assertSame('tw-template', $config->getFragmentElement());
     }
 
-    public function testFragmentElementDerivedFromPrefix(): void
+    public function testFragmentElementDerivedFromElementPrefix(): void
     {
-        $config = new SugarConfig(directivePrefix: 'htmx');
+        $config = new SugarConfig(elementPrefix: 'htmx-');
 
-        $this->assertSame('htmx', $config->directivePrefix);
+        $this->assertSame('htmx-', $config->elementPrefix);
         $this->assertSame('htmx-template', $config->getFragmentElement());
     }
 

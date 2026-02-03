@@ -20,6 +20,7 @@ use Sugar\Directive\WhileCompiler;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
+use Sugar\Pass\ComponentExpansionPass;
 use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
@@ -45,6 +46,8 @@ final class Compiler implements CompilerInterface
     private readonly Escaper $escaper;
 
     private readonly ?TemplateInheritancePass $templateInheritancePass;
+
+    private readonly ?ComponentExpansionPass $componentExpansionPass;
 
     /**
      * Constructor
@@ -82,6 +85,11 @@ final class Compiler implements CompilerInterface
         $this->templateInheritancePass = $templateLoader instanceof TemplateLoaderInterface
             ? new TemplateInheritancePass($templateLoader)
             : null;
+
+        // Create component expansion pass if loader is provided
+        $this->componentExpansionPass = $templateLoader instanceof TemplateLoaderInterface
+            ? new ComponentExpansionPass($templateLoader, $this->parser, $config->directivePrefix)
+            : null;
     }
 
     /**
@@ -115,6 +123,11 @@ final class Compiler implements CompilerInterface
         // Step 1.5: Process template inheritance if enabled
         if ($this->templateInheritancePass instanceof TemplateInheritancePass && $templatePath !== null) {
             $ast = $this->templateInheritancePass->process($ast, $templatePath);
+        }
+
+        // Step 1.75: Expand components (s-button → template content)
+        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
+            $ast = $this->componentExpansionPass->process($ast);
         }
 
         // Step 2: Extract directives from elements (s:if → DirectiveNode)

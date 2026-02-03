@@ -22,4 +22,13 @@ interface TemplateLoaderInterface
      * @return string Resolved path
      */
     public function resolve(string $path, string $currentTemplate = ''): string;
+
+    /**
+     * Load a component template by name.
+     *
+     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
+     * @return string Component template content
+     * @throws \Sugar\Exception\ComponentNotFoundException If component is not found
+     */
+    public function loadComponent(string $name): string;
 }

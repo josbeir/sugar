@@ -46,13 +46,10 @@ final class CustomPrefixIntegrationTest extends TestCase
 
     public function testCustomFragmentElement(): void
     {
-        $config = new SugarConfig(
-            directivePrefix: 'tw',
-            fragmentElement: 'tw-fragment',
-        );
+        $config = SugarConfig::withPrefix('tw');
         $compiler = $this->createCompiler($config);
 
-        $template = '<tw-fragment tw:foreach="$items as $item"><li><?= $item ?></li></tw-fragment>';
+        $template = '<tw-template tw:foreach="$items as $item"><li><?= $item ?></li></tw-template>';
         $compiled = $compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['items' => [1, 2, 3]]);

@@ -21,7 +21,7 @@ final class ParserConfigTest extends TestCase
 
     public function testCustomFragmentElement(): void
     {
-        $config = new SugarConfig(directivePrefix: 'x');
+        $config = SugarConfig::withPrefix('x');
         $parser = new Parser($config);
 
         $ast = $parser->parse('<x-template>content</x-template>');
@@ -32,13 +32,11 @@ final class ParserConfigTest extends TestCase
 
     public function testCustomFragmentElementNameOverride(): void
     {
-        $config = new SugarConfig(
-            directivePrefix: 'v',
-            fragmentElement: 'v-fragment',
-        );
+        $config = SugarConfig::withPrefix('v');
         $parser = new Parser($config);
 
-        $ast = $parser->parse('<v-fragment>content</v-fragment>');
+        // Both v-template and custom component names work
+        $ast = $parser->parse('<v-template>content</v-template>');
 
         $this->assertCount(1, $ast->children);
         $this->assertInstanceOf(FragmentNode::class, $ast->children[0]);
@@ -46,7 +44,7 @@ final class ParserConfigTest extends TestCase
 
     public function testOldFragmentElementIgnoredWithCustomConfig(): void
     {
-        $config = new SugarConfig(directivePrefix: 'x');
+        $config = SugarConfig::withPrefix('x');
         $parser = new Parser($config);
 
         $ast = $parser->parse('<s-template>content</s-template>');

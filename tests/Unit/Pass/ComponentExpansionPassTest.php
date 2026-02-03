@@ -1,0 +1,227 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Test\Unit\Pass;
+
+use PHPUnit\Framework\TestCase;
+use Sugar\Ast\ComponentNode;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\ElementNode;
+use Sugar\Ast\Node;
+use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\TextNode;
+use Sugar\Exception\ComponentNotFoundException;
+use Sugar\Parser\Parser;
+use Sugar\Pass\ComponentExpansionPass;
+use Sugar\TemplateInheritance\FileTemplateLoader;
+
+final class ComponentExpansionPassTest extends TestCase
+{
+    private FileTemplateLoader $loader;
+
+    private Parser $parser;
+
+    private ComponentExpansionPass $pass;
+
+    protected function setUp(): void
+    {
+        $componentsPath = __DIR__ . '/../../fixtures/templates/components';
+        $this->loader = new FileTemplateLoader($componentsPath);
+        $this->loader->discoverComponents('.');
+
+        $this->parser = new Parser();
+        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, 's');
+    }
+
+    public function testExpandsSimpleComponent(): void
+    {
+        $ast = new DocumentNode([
+            new ComponentNode(
+                name: 'button',
+                children: [new TextNode('Click me', 1, 0)],
+                line: 1,
+                column: 0,
+            ),
+        ]);
+
+        $result = $this->pass->process($ast);
+
+        // Component should be expanded to multiple nodes (RawPhpNode for variables + template content)
+        $this->assertGreaterThan(0, count($result->children));
+        // No ComponentNode should remain
+        foreach ($result->children as $child) {
+            $this->assertNotInstanceOf(ComponentNode::class, $child);
+        }
+        // The expanded output should contain the button element
+        $output = $this->astToString($result);
+        $this->assertStringContainsString('<button class="btn">', $output);
+    }
+
+    public function testInjectsDefaultSlotContent(): void
+    {
+        $template = '<s-button>Save</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->process($ast);
+
+        $code = $this->astToString($result);
+
+        // The button component template wraps content in <button class="btn">
+        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertStringContainsString('Save', $code);
+    }
+
+    public function testHandlesComponentWithoutChildren(): void
+    {
+        $template = '<s-button></s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->process($ast);
+
+        $code = $this->astToString($result);
+        $this->assertStringContainsString('<button class="btn">', $code);
+    }
+
+    public function testExpandsNestedComponents(): void
+    {
+        // Create a temporary component that uses another component
+        $nestedComponentPath = __DIR__ . '/../../fixtures/templates/components/s-panel.sugar.php';
+        file_put_contents($nestedComponentPath, '<div class="panel"><s-button><?= $slot ?></s-button></div>');
+
+        $this->loader->discoverComponents('.');
+
+        $template = '<s-panel>Submit</s-panel>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->process($ast);
+
+        $code = $this->astToString($result);
+        $this->assertStringContainsString('<div class="panel">', $code);
+        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertStringContainsString('Submit', $code);
+
+        unlink($nestedComponentPath);
+    }
+
+    public function testThrowsExceptionForUndiscoveredComponent(): void
+    {
+        $ast = new DocumentNode([
+            new ComponentNode(
+                name: 'nonexistent',
+                children: [],
+                line: 1,
+                column: 0,
+            ),
+        ]);
+
+        $this->expectException(ComponentNotFoundException::class);
+        $this->expectExceptionMessage('Component "nonexistent" not found');
+
+        $this->pass->process($ast);
+    }
+
+    public function testPreservesComponentAttributes(): void
+    {
+        // Component with attributes should pass them as variables
+        $template = '<s-alert type="warning">Important message</s-alert>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->process($ast);
+
+        $code = $this->astToString($result);
+
+        // Should inject $type = 'warning';
+        $this->assertStringContainsString("\$type = 'warning';", $code);
+        // Should have the template with $type usage
+        $this->assertStringContainsString('<?= $type ?? \'info\' ?>', $code);
+        // Should have the message content
+        $this->assertStringContainsString('Important message', $code);
+    }
+
+    public function testSupportsNamedSlots(): void
+    {
+        // Component with named slots
+        $template = '<s-card>' .
+            '<div s:slot="header">Custom Header</div>' .
+            '<p>Body content</p>' .
+            '<div s:slot="footer">Custom Footer</div>' .
+            '</s-card>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->process($ast);
+
+        $code = $this->astToString($result);
+
+        // Should inject named slots as variables
+        $this->assertStringContainsString('$header =', $code);
+        $this->assertStringContainsString('$footer =', $code);
+        $this->assertStringContainsString('$slot =', $code); // Default slot
+
+        // Should contain the slot content in variable assignments
+        $this->assertStringContainsString('Custom Header', $code);
+        $this->assertStringContainsString('Custom Footer', $code);
+        $this->assertStringContainsString('Body content', $code);
+    }
+
+    /**
+     * Helper to convert AST back to string for assertions
+     */
+    private function astToString(DocumentNode $ast): string
+    {
+        $output = '';
+        foreach ($ast->children as $child) {
+            $output .= $this->nodeToString($child);
+        }
+
+        return $output;
+    }
+
+    /**
+     * Helper to convert a single node to string for assertions
+     *
+     * @param \Sugar\Ast\Node $node Node to convert
+     * @return string String representation
+     */
+    private function nodeToString(Node $node): string
+    {
+        if ($node instanceof TextNode) {
+            return $node->content;
+        }
+
+        if ($node instanceof RawPhpNode) {
+            return $node->code;
+        }
+
+        if ($node instanceof ElementNode) {
+            $html = '<' . $node->tag;
+            foreach ($node->attributes as $attr) {
+                $html .= ' ' . $attr->name;
+                if ($attr->value !== null) {
+                    if ($attr->value instanceof OutputNode) {
+                        $html .= '="<?= ' . $attr->value->expression . ' ?>"';
+                    } else {
+                        $html .= '="' . $attr->value . '"';
+                    }
+                }
+            }
+
+            $html .= '>';
+            foreach ($node->children as $child) {
+                $html .= $this->nodeToString($child);
+            }
+
+            if (!$node->selfClosing) {
+                $html .= '</' . $node->tag . '>';
+            }
+
+            return $html;
+        }
+
+        if ($node instanceof OutputNode) {
+            return '<?= ' . $node->expression . ' ?>';
+        }
+
+        return '';
+    }
+}
