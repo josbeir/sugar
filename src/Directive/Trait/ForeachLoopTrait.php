@@ -116,6 +116,11 @@ trait ForeachLoopTrait
     {
         return [
             new RawPhpNode(
+                '$__loopStack ??= [];',
+                $line,
+                $column,
+            ),
+            new RawPhpNode(
                 '$__loopStack[] = $loop ?? null;',
                 $line,
                 $column,
