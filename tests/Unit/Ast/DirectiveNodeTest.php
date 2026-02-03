@@ -145,4 +145,136 @@ final class DirectiveNodeTest extends TestCase
         $this->assertSame(42, $node->line);
         $this->assertSame(5, $node->column);
     }
+
+    public function testConsumedByPairingFlag(): void
+    {
+        $node = new DirectiveNode(
+            name: 'empty',
+            expression: '',
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $this->assertFalse($node->isConsumedByPairing());
+
+        $node->markConsumedByPairing();
+
+        $this->assertTrue($node->isConsumedByPairing());
+    }
+
+    public function testGetNextSibling(): void
+    {
+        $child1 = new TextNode('First', 1, 1);
+        $child2 = new TextNode('Second', 1, 10);
+        $child3 = new TextNode('Third', 1, 20);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$child1, $child2, $child3],
+            line: 1,
+            column: 1,
+        );
+
+        $this->assertSame($child2, $node->getNextSibling($child1));
+        $this->assertSame($child3, $node->getNextSibling($child2));
+        $this->assertNull($node->getNextSibling($child3));
+    }
+
+    public function testGetNextSiblingReturnsNullForNonChild(): void
+    {
+        $child = new TextNode('Child', 1, 1);
+        $nonChild = new TextNode('Not a child', 2, 1);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$child],
+            line: 1,
+            column: 1,
+        );
+
+        $this->assertNull($node->getNextSibling($nonChild));
+    }
+
+    public function testGetPreviousSibling(): void
+    {
+        $child1 = new TextNode('First', 1, 1);
+        $child2 = new TextNode('Second', 1, 10);
+        $child3 = new TextNode('Third', 1, 20);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$child1, $child2, $child3],
+            line: 1,
+            column: 1,
+        );
+
+        $this->assertNull($node->getPreviousSibling($child1));
+        $this->assertSame($child1, $node->getPreviousSibling($child2));
+        $this->assertSame($child2, $node->getPreviousSibling($child3));
+    }
+
+    public function testGetPreviousSiblingReturnsNullForNonChild(): void
+    {
+        $child = new TextNode('Child', 1, 1);
+        $nonChild = new TextNode('Not a child', 2, 1);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$child],
+            line: 1,
+            column: 1,
+        );
+
+        $this->assertNull($node->getPreviousSibling($nonChild));
+    }
+
+    public function testFindNextSibling(): void
+    {
+        $text1 = new TextNode('Text 1', 1, 1);
+        $output = new OutputNode('$var', true, OutputContext::HTML, 1, 10);
+        $text2 = new TextNode('Text 2', 1, 20);
+        $text3 = new TextNode('Text 3', 1, 30);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$text1, $output, $text2, $text3],
+            line: 1,
+            column: 1,
+        );
+
+        // Find next TextNode after first text
+        $found = $node->findNextSibling($text1, fn($n): bool => $n instanceof TextNode);
+        $this->assertSame($text2, $found);
+
+        // Find next OutputNode after first text
+        $found = $node->findNextSibling($text1, fn($n): bool => $n instanceof OutputNode);
+        $this->assertSame($output, $found);
+
+        // Find next sibling that doesn't exist
+        $found = $node->findNextSibling($text3, fn($n): bool => $n instanceof OutputNode);
+        $this->assertNull($found);
+    }
+
+    public function testFindNextSiblingReturnsNullForNonChild(): void
+    {
+        $child = new TextNode('Child', 1, 1);
+        $nonChild = new TextNode('Not a child', 2, 1);
+
+        $node = new DirectiveNode(
+            name: 'if',
+            expression: '$test',
+            children: [$child],
+            line: 1,
+            column: 1,
+        );
+
+        $found = $node->findNextSibling($nonChild, fn($n): true => true);
+        $this->assertNull($found);
+    }
 }

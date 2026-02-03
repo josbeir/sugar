@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\SwitchCompiler;
+use Sugar\Enum\DirectiveType;
 
 final class SwitchCompilerTest extends TestCase
 {
@@ -281,5 +282,12 @@ final class SwitchCompilerTest extends TestCase
         }
 
         $this->assertSame(2, $caseCount);
+    }
+
+    public function testGetType(): void
+    {
+        $type = $this->compiler->getType();
+
+        $this->assertSame(DirectiveType::CONTROL_FLOW, $type);
     }
 }

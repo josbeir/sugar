@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\SpreadCompiler;
+use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\AttributeHelper;
 
 final class SpreadCompilerTest extends TestCase
@@ -69,5 +70,12 @@ final class SpreadCompilerTest extends TestCase
         $this->assertCount(1, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('array_merge($baseAttrs, $customAttrs)', $result[0]->code);
+    }
+
+    public function testGetType(): void
+    {
+        $type = $this->compiler->getType();
+
+        $this->assertSame(DirectiveType::ATTRIBUTE, $type);
     }
 }
