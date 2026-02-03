@@ -59,7 +59,7 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
 ```
 
 **Converted to Sugar:**
-```php
+```html
 <!-- Mix Sugar directives with regular PHP - both work together! -->
 <div s:forelse="$users as $user" s:class="['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]">
     <?= $user->name ?>
@@ -97,8 +97,8 @@ Notice:
 
 Sugar automatically applies the right escaping based on where your output appears. Regular PHP logic works normally:
 
-```php
-<!-- Sugar Template -->
+Sugar template:
+```html
 <div data-user="<?= $name ?>" s:if="$isActive">
     <?php $displayName = strtoupper($name); // Regular PHP works fine ?>
     <span><?= $displayName ?></span>
@@ -106,8 +106,10 @@ Sugar automatically applies the right escaping based on where your output appear
 <script>const user = <?= $userData ?>;</script>
 <style>.user::before { content: '<?= $prefix ?>'; }</style>
 <a href="/search?q=<?= $query ?>">Search</a>
+```
 
-<!-- Compiled Output -->
+Compiled Output:
+```php
 <?php if ($isActive): ?>
     <div data-user="<?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>">
         <?php $displayName = strtoupper($name); // Regular PHP works fine ?>
@@ -123,15 +125,17 @@ Sugar automatically applies the right escaping based on where your output appear
 
 Access iteration information without manual counters:
 
-```php
-<!-- Sugar Template -->
+Sugar template:
+```html
 <ul s:foreach="$items as $item">
     <li s:class="['first' => $loop->first, 'last' => $loop->last, 'odd' => $loop->odd]">
         <?= $item ?> (<?= $loop->iteration ?> of <?= $loop->count ?>)
     </li>
 </ul>
+```
 
-<!-- Compiled Output -->
+Compiled Output:
+```php
 <?php
 $__loopStack = [];
 $__loopStack[] = $loop = new \Sugar\Runtime\LoopMetadata($items);
@@ -146,15 +150,17 @@ foreach ($items as $item): ?>
 
 **Switch Statements**
 
-```php
-<!-- Sugar Template -->
+Sugar template:
+```html
 <div s:switch="$role">
     <span s:case="'admin'" class="badge-red">Administrator</span>
     <span s:case="'moderator'" class="badge-blue">Moderator</span>
     <span s:default class="badge-gray">User</span>
 </div>
+```
 
-<!-- Compiled Output -->
+Compiled Output:
+```php
 <div>
     <?php switch ($role): ?>
         <?php case 'admin': ?>
@@ -173,7 +179,7 @@ foreach ($items as $item): ?>
 
 Use `s:text` and `s:html` for explicit output control:
 
-```php
+```html
 <!-- s:text - Escaped output (same as <?= ?>) -->
 <div s:text="$userName"></div>
 <!-- Compiles to: -->
@@ -192,7 +198,7 @@ Use `s:text` and `s:html` for explicit output control:
 
 Use `s:empty` and `s:isset` to conditionally render content based on variable state:
 
-```php
+```html
 <!-- s:empty - Render when variable is empty -->
 <div s:empty="$cart">Your cart is empty</div>
 <!-- Compiles to: -->
@@ -207,7 +213,6 @@ Use `s:empty` and `s:isset` to conditionally render content based on variable st
 <div>Welcome back!</div>
 <?php endif; ?>
 ```
-
 
 ## Why Sugar?
 
@@ -254,7 +259,7 @@ Sugar provides familiar control structures as HTML attributes:
 
 Sugar automatically detects output context and applies appropriate escaping:
 
-```php
+```html
 <div data-user="<?= $name ?>">        <!-- HTML context: htmlspecialchars() -->
 <script>const user = '<?= $name ?>';  <!-- JS context: json_encode() -->
 <style>.user::before { content: '<?= $name ?>'; }  <!-- CSS context: CSS escaping -->
@@ -314,7 +319,7 @@ The parser detects `raw()` and `r()` at compile-time and unwraps them, so there'
 
 Access loop information with the `$loop` variable (inspired by Blade):
 
-```php
+```html
 <ul s:foreach="$items as $item">
     <li s:class="['first' => $loop->first, 'last' => $loop->last]">
         Item <?= $loop->iteration ?> of <?= $loop->count ?>
@@ -328,7 +333,7 @@ Sometimes you need to apply directives without adding an extra wrapper element. 
 
 #### Problem: Unwanted Wrapper
 
-```php
+```html
 <!-- ❌ Adds an extra <div> wrapper -->
 <div class="container">
     <div s:foreach="$items as $item">
@@ -347,7 +352,7 @@ Sometimes you need to apply directives without adding an extra wrapper element. 
 
 #### Solution: Fragment Element
 
-```php
+```html
 <!-- ✅ No extra wrapper - renders children directly -->
 <div class="container">
     <s-template s:foreach="$items as $item">
@@ -365,7 +370,7 @@ Sometimes you need to apply directives without adding an extra wrapper element. 
 #### Common Use Cases
 
 **Conditional Multiple Elements:**
-```php
+```html
 <s-template s:if="$showHeader">
     <header>Header</header>
     <nav>Navigation</nav>
@@ -373,7 +378,7 @@ Sometimes you need to apply directives without adding an extra wrapper element. 
 ```
 
 **Loops Without Wrappers:**
-```php
+```html
 <table>
     <s-template s:foreach="$rows as $row">
         <tr><td><?= $row ?></td></tr>
@@ -382,7 +387,7 @@ Sometimes you need to apply directives without adding an extra wrapper element. 
 ```
 
 **Nested Fragments:**
-```php
+```html
 <s-template s:if="$condition">
     <s-template s:foreach="$items as $item">
         <div><?= $item ?></div>
@@ -403,7 +408,7 @@ Build reusable layouts with template inheritance, similar to Blade or Twig:
 #### Basic Layout Inheritance
 
 **Base Layout** (`layouts/base.sugar.php`):
-```php
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -426,7 +431,7 @@ Build reusable layouts with template inheritance, similar to Blade or Twig:
 ```
 
 **Child Template** (`pages/home.sugar.php`):
-```php
+```html
 <div s:extends="../layouts/base.sugar.php"></div>
 
 <title s:block="title">Home Page</title>
@@ -438,7 +443,7 @@ Build reusable layouts with template inheritance, similar to Blade or Twig:
 ```
 
 **Compiled Result**:
-```php
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -465,7 +470,7 @@ Build reusable layouts with template inheritance, similar to Blade or Twig:
 
 Templates can extend templates that extend other templates:
 
-```php
+```html
 <!-- layouts/master.sugar.php -->
 <html>
     <title s:block="title">Master</title>
@@ -485,7 +490,7 @@ Templates can extend templates that extend other templates:
 
 Include reusable template fragments with `s:include`:
 
-```php
+```html
 <!-- partials/header.sugar.php -->
 <header>
     <h1><?= $title ?></h1>
@@ -502,7 +507,7 @@ Include reusable template fragments with `s:include`:
 
 Pass specific variables to included templates for better encapsulation:
 
-```php
+```html
 <!-- partials/user-card.sugar.php -->
 <div class="card">
     <h3><?= $name ?></h3>
