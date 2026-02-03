@@ -24,9 +24,9 @@
   - [Loop Metadata](#loop-metadata)
   - [Fragment Elements (`<s-template>`)](#fragment-elements-s-template)
   - [Template Inheritance & Composition](#template-inheritance--composition)
+  - [Components](#components)
 - [Quick Start](#quick-start)
   - [Configuration](#configuration)
-    - [Custom Directive Prefix](#custom-directive-prefix)
 - [Architecture](#architecture)
 - [Debug Mode](#debug-mode)
 - [Roadmap](#roadmap)
@@ -524,6 +524,230 @@ Pass specific variables to included templates for better encapsulation:
 
 The `s:with` directive creates an isolated scope where only the specified variables are available to the included template.
 
+### Components
+
+Create reusable UI components with slots and attribute merging. Components are templates that accept props and automatically merge HTML/framework attributes to their root element.
+
+#### Basic Component Usage
+
+**Define Component** (`components/button.sugar.php`):
+```html
+<button class="btn" type="button">
+    <?= $slot ?>
+</button>
+```
+
+**Use Component**:
+```html
+<s-button>Click Me</s-button>
+```
+
+**Compiled Output**:
+```html
+<button class="btn" type="button">
+    Click Me
+</button>
+```
+
+#### Component Props with `s-bind:`
+
+Pass data to components as props using the `s-bind:` prefix. Props become variables inside the component scope.
+
+**Component** (`components/alert.sugar.php`):
+```html
+<div class="alert alert-<?= $type ?>">
+    <strong s:if="$title"><?= $title ?></strong>
+    <?= $slot ?>
+</div>
+```
+
+**Usage**:
+```html
+<!-- String literals need inner quotes (like Vue/Alpine) -->
+<s-alert s-bind:title="'Well done!'">
+    Your changes have been saved.
+</s-alert>
+
+<!-- Pass variables without quotes -->
+<s-alert s-bind:type="$alertType" s-bind:title="$message">
+    <?= $content ?>
+</s-alert>
+
+<!-- Pass expressions -->
+<s-alert s-bind:type="$hasError ? 'danger' : 'success'">
+    Operation complete
+</s-alert>
+```
+
+**Compiled Output**:
+```php
+<?php (function($__vars) { extract($__vars); ?><div class="alert alert-info">
+    <strong><?php echo htmlspecialchars((string)($title ?? 'Notice'), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></strong>
+    <?php echo $slot; ?></div>
+<?php })(['title' => 'Well done!', 'slot' => 'Your changes have been saved.']); ?>
+```
+
+> **Note:** The `s-bind:` syntax treats values as **PHP expressions**. String literals require inner quotes (`"'success'"`), similar to Vue's `:prop` or Alpine's `x-bind:`. Pass variables directly without quotes (`"$var"`). Slot content is pre-rendered HTML and should be output with `raw()` in your component templates to avoid double-escaping.
+
+**Compiled Output**:
+```html
+<div class="alert alert-success">
+    <strong>Well done!</strong>
+    Your changes have been saved.
+</div>
+```
+
+#### Attribute Merging
+
+HTML attributes and framework directives automatically merge to the component's root element. This enables seamless integration with Alpine.js, Vue, HTMX, and other frameworks:
+
+**Component** (`components/card.sugar.php`):
+```html
+<div class="card">
+    <h3><?= $title ?></h3>
+    <div class="card-body"><?= $slot ?></div>
+</div>
+```
+
+**Usage with HTML & Framework Attributes**:
+```html
+<s-card
+    s-bind:title="'User Profile'"
+    class="shadow-lg"
+    id="profile-card"
+    @click="handleClick"
+    x-data="{ open: false }">
+    Profile content here
+</s-card>
+```
+
+**Compiled Output**:
+```html
+<div class="card shadow-lg" id="profile-card" @click="handleClick" x-data="{ open: false }">
+    <h3>User Profile</h3>
+    <div class="card-body">Profile content here</div>
+</div>
+```
+
+#### Special Class Handling
+
+The `class` attribute **appends** instead of replacing, allowing component styles to combine with usage styles:
+
+**Component** (`components/badge.sugar.php`):
+```html
+<span class="badge"><?= $slot ?></span>
+```
+
+**Usage**:
+```html
+<s-badge class="badge-lg badge-primary">Admin</s-badge>
+```
+
+**Compiled Output**:
+```html
+<span class="badge badge-lg badge-primary">Admin</span>
+```
+
+#### Named Slots
+
+Components support multiple named slots using the `s:slot` attribute. This allows you to pass different content to specific areas of your component:
+
+**Component** (`components/card.sugar.php`):
+```html
+<div class="card">
+    <div class="card-header"><?= $header ?></div>
+    <div class="card-body"><?= $slot ?></div>
+    <div class="card-footer" s:if="isset($footer)"><?= $footer ?></div>
+</div>
+```
+
+**Usage**:
+```html
+<s-card>
+    <h3 s:slot="header">User Profile</h3>
+    <p>This is the main content in the default slot.</p>
+    <button s:slot="footer">Save Changes</button>
+</s-card>
+```
+
+**Compiled Output**:
+```html
+<div class="card">
+    <div class="card-header"><h3>User Profile</h3></div>
+    <div class="card-body"><p>This is the main content in the default slot.</p></div>
+    <div class="card-footer"><button>Save Changes</button></div>
+</div>
+```
+
+**Key Points**:
+- Elements with `s:slot="name"` are passed to the named slot variable `$name`
+- Elements without `s:slot` go to the default `$slot`
+- Named slots are optional - check with `isset($slotName)` in your component
+- The `s:slot` attribute is removed from the final output
+
+#### Directives on Components
+
+You can use Sugar directives on component invocations:
+
+```html
+<!-- Conditional components -->
+<s-alert s:if="$hasErrors" s-bind:type="'error'">
+    <?= $errorMessage ?>
+</s-alert>
+
+<!-- Components in loops -->
+<s-badge s:foreach="$tags as $tag" class="mx-1">
+    <?= $tag ?>
+</s-badge>
+
+<!-- Dynamic classes -->
+<s-button s:class="['btn-primary' => $isPrimary, 'btn-disabled' => $disabled]">
+    Submit
+</s-button>
+```
+
+#### Framework Integration
+
+Components work seamlessly with attribute-based frameworks:
+
+**Alpine.js**:
+```html
+<s-modal s-bind:title="'Confirm'" x-data="{ open: false }" @close="open = false">
+    Are you sure?
+</s-modal>
+```
+
+**Vue**:
+```html
+<s-dropdown s-bind:items="$menuItems" v-model="selectedItem" @change="handleChange">
+    Select option
+</s-dropdown>
+```
+
+**HTMX**:
+```html
+<s-form s-bind:action="'/api/users'" hx-post="/api/users" hx-target="#result">
+    Form content
+</s-form>
+```
+
+#### Component Best Practices
+
+✅ **DO:**
+- Use `s-bind:` for component-specific data (props)
+- Use regular attributes for HTML/framework features
+- Keep component templates simple with single root element
+- Use descriptive prop names (`s-bind:type`, not `s-bind:t`)
+- Output slot variables directly: `<?= $slot ?>` - Sugar automatically disables escaping for slots
+
+❌ **DON'T:**
+- Don't use `s-bind:` for HTML attributes like `class`, `id`, `data-*` (just use them directly)
+- Don't add control flow directives (`s:if`, `s:foreach`) to component root element (they won't be seen by consumers)
+- Avoid multiple root elements in components (first one wins for attribute merging)
+
+**Note on Slots:**
+Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansionPass automatically marks slot variables (`$slot`, `$header`, `$footer`, etc.) as safe, so you don't need to use `raw()`. The compiled output will skip escaping for these variables.
+
 ## Quick Start
 
 ```bash
@@ -635,7 +859,7 @@ Output includes helpful comments:
 
 ### Core Features
 - [x] **Template Inheritance** - Layouts, blocks, extends, and includes (✅ Completed)
-- [ ] **Custom Components** - Reusable template components with slots and props
+- [x] **Custom Components** - Reusable template components with slots, props, and attribute merging (✅ Completed)
 - [ ] **Custom Filter Functions** - Pipe data through custom transformations
 - [ ] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
 

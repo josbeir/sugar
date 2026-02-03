@@ -385,6 +385,12 @@ final readonly class ComponentExpansionPass
             }
         }
 
+        // Collect all slot variable names
+        $slotVars = ['slot'];
+        foreach (array_keys($namedSlots) as $name) {
+            $slotVars[] = $name;
+        }
+
         // Add default slot
         if ($defaultSlot === []) {
             $arrayItems[] = "'slot' => ''";
@@ -396,6 +402,9 @@ final readonly class ComponentExpansionPass
         foreach ($namedSlots as $name => $nodes) {
             $arrayItems[] = sprintf("'%s' => %s", $name, $this->nodesToPhpString($nodes));
         }
+
+        // Automatically disable escaping for slot variable outputs in component template
+        $this->processNodeForSlotWrapping($template, $slotVars);
 
         // Build closure with extract pattern for isolated scope
         $openingCode = '(function($__vars) { extract($__vars);';
@@ -410,6 +419,65 @@ final readonly class ComponentExpansionPass
             ...$template->children,
             $closingNode,
         ]);
+    }
+
+    /**
+     * Recursively process nodes to disable escaping for slot outputs
+     *
+     * Traverses the component template AST and sets escape=false for any OutputNode
+     * referencing a slot variable (e.g., $slot, $header, $footer).
+     *
+     * Slots contain pre-rendered HTML from component usage, so escaping would
+     * double-escape them (e.g., <strong> becomes &lt;strong&gt;).
+     *
+     * @param \Sugar\Ast\Node $node Node to process
+     * @param array<string> $slotVars List of slot variable names
+     */
+    private function processNodeForSlotWrapping(Node $node, array $slotVars): void
+    {
+        if ($node instanceof OutputNode) {
+            // Check if this output references a slot variable
+            // Match patterns like: $slot, $header, ($slot), $footer ?? '', isset($slot) ? $slot : ''
+            foreach ($slotVars as $varName) {
+                if ($this->expressionReferencesVariable($node->expression, $varName)) {
+                    // Disable escaping for this slot output (it's already safe HTML)
+                    $node->escape = false;
+                    break;
+                }
+            }
+        }
+
+        // Recursively process children
+        if (property_exists($node, 'children') && is_array($node->children)) {
+            foreach ($node->children as $child) {
+                $this->processNodeForSlotWrapping($child, $slotVars);
+            }
+        }
+
+        // Process element attributes (for OutputNode in attribute values)
+        if ($node instanceof ElementNode) {
+            foreach ($node->attributes as $attr) {
+                if ($attr->value instanceof OutputNode) {
+                    $this->processNodeForSlotWrapping($attr->value, $slotVars);
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if a PHP expression references a specific variable
+     *
+     * @param string $expression PHP expression
+     * @param string $varName Variable name (without $)
+     * @return bool True if expression references the variable
+     */
+    private function expressionReferencesVariable(string $expression, string $varName): bool
+    {
+        // Match $varName as a standalone variable or with array/object access
+        // Patterns: $slot, $slot['key'], $slot->prop, ($slot), $slot ?? ''
+        $pattern = '/\$' . preg_quote($varName, '/') . '(?![a-zA-Z0-9_])/';
+
+        return (bool)preg_match($pattern, $expression);
     }
 
     /**
