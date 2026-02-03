@@ -201,7 +201,8 @@ final class CodeGenerator
         }
     }
 
-    /**     * Generate fragment output (renders only children, not the fragment element itself)
+    /**
+     * Generate fragment output (renders only children, not the fragment element itself)
      *
      * @param \Sugar\Ast\FragmentNode $node Fragment node
      * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer
@@ -214,7 +215,8 @@ final class CodeGenerator
         }
     }
 
-    /**     * Generate directive control structure
+    /**
+     * Generate directive control structure
      *
      * @param \Sugar\Ast\DirectiveNode $node Directive node
      * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer

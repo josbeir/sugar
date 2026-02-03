@@ -25,6 +25,8 @@
   - [Fragment Elements (`<s-template>`)](#fragment-elements-s-template)
   - [Template Inheritance & Composition](#template-inheritance--composition)
 - [Quick Start](#quick-start)
+  - [Configuration](#configuration)
+    - [Custom Directive Prefix](#custom-directive-prefix)
 - [Architecture](#architecture)
 - [Debug Mode](#debug-mode)
 - [Roadmap](#roadmap)
@@ -553,6 +555,49 @@ $compiler = new Compiler(
 
 $compiled = $compiler->compile('<div s:if="$show"><?= $message ?></div>');
 ```
+
+### Configuration
+
+#### Custom Directive Prefix
+
+By default, Sugar uses the `s:` prefix for directives (e.g., `s:if`, `s:foreach`). You can customize this to match your preferences or integrate with other frameworks:
+
+```php
+use Sugar\Config\SugarConfig;
+
+// Option 1: Using named constructor
+$config = SugarConfig::withPrefix('x');
+
+// Option 2: Explicit configuration
+$config = new SugarConfig(
+    directivePrefix: 'v',
+    fragmentElement: 'v-fragment'  // Optional, defaults to "{prefix}-template"
+);
+
+// Pass config to Parser and Compiler
+$compiler = new Compiler(
+    parser: new Parser($config),
+    contextPass: new ContextAnalysisPass(),
+    escaper: new Escaper(),
+    config: $config
+);
+
+// Now use your custom prefix
+$template = '<div x:if="$show">Hello</div>';  // Using 'x' prefix
+$compiled = $compiler->compile($template);
+```
+
+**Common prefix conventions:**
+- `s:` (default) - Sugar's default namespace
+- `x:` - Inspired by JSX conventions
+- `v:` - Vue.js style directives
+- `tw:` - Tailwind-style naming
+
+**Benefits:**
+- ✅ Avoid conflicts with other attribute-based frameworks
+- ✅ Match your team's naming conventions
+- ✅ Support multiple template styles in the same project
+- ✅ Backward compatible - defaults to `s:` prefix
 
 ## Architecture
 

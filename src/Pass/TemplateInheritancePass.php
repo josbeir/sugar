@@ -7,7 +7,9 @@ use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
+use Sugar\Enum\InheritanceAttribute;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
@@ -73,7 +75,7 @@ final readonly class TemplateInheritancePass
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode) {
                 foreach ($child->attributes as $attr) {
-                    if ($attr instanceof AttributeNode && $attr->name === 's:extends') {
+                    if ($attr instanceof AttributeNode && $attr->name === InheritanceAttribute::EXTENDS->value) {
                         return $child;
                     }
                 }
@@ -99,7 +101,7 @@ final readonly class TemplateInheritancePass
         array $loadedTemplates,
     ): DocumentNode {
         // Get parent template path
-        $parentPath = $this->getAttributeValue($extendsElement, 's:extends');
+        $parentPath = $this->getAttributeValue($extendsElement, InheritanceAttribute::EXTENDS->value);
         $resolvedPath = $this->loader->resolve($parentPath, $currentTemplate);
 
         // Load and parse parent template
@@ -133,8 +135,8 @@ final readonly class TemplateInheritancePass
         $newChildren = [];
 
         foreach ($document->children as $child) {
-            if ($child instanceof ElementNode && $this->hasAttribute($child, 's:include')) {
-                $includePath = $this->getAttributeValue($child, 's:include');
+            if ($child instanceof ElementNode && $this->hasAttribute($child, InheritanceAttribute::INCLUDE->value)) {
+                $includePath = $this->getAttributeValue($child, InheritanceAttribute::INCLUDE->value);
                 $resolvedPath = $this->loader->resolve($includePath, $currentTemplate);
                 // Load and parse included template
                 $includeContent = $this->loader->load($resolvedPath);
@@ -143,7 +145,7 @@ final readonly class TemplateInheritancePass
                 // Process includes recursively
                 $includeDocument = $this->processIncludes($includeDocument, $resolvedPath, $loadedTemplates);
                 // Check for s:with (scope isolation)
-                if ($this->hasAttribute($child, 's:with')) {
+                if ($this->hasAttribute($child, InheritanceAttribute::WITH->value)) {
                     // Wrap in scope isolation
                     $newChildren[] = $this->wrapInScope($includeDocument);
                 } else {
@@ -196,9 +198,13 @@ final readonly class TemplateInheritancePass
         $blocks = [];
 
         foreach ($document->children as $child) {
-            if ($child instanceof ElementNode) {
+            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
                 foreach ($child->attributes as $attr) {
-                    if ($attr instanceof AttributeNode && $attr->name === 's:block' && is_string($attr->value)) {
+                    if (
+                        $attr instanceof AttributeNode &&
+                        $attr->name === InheritanceAttribute::BLOCK->value &&
+                        is_string($attr->value)
+                    ) {
                         $blocks[$attr->value] = $child;
                     }
                 }
@@ -251,32 +257,124 @@ final readonly class TemplateInheritancePass
      */
     private function replaceBlocksInNode(Node $node, array $childBlocks): Node
     {
-        if (!($node instanceof ElementNode)) {
+        if (!($node instanceof ElementNode) && !($node instanceof FragmentNode)) {
             return $node;
         }
 
         // Check if this node has s:block attribute
         $blockName = null;
         foreach ($node->attributes as $attr) {
-            if ($attr instanceof AttributeNode && $attr->name === 's:block' && is_string($attr->value)) {
+            if (
+                $attr instanceof AttributeNode &&
+                $attr->name === InheritanceAttribute::BLOCK->value &&
+                is_string($attr->value)
+            ) {
                 $blockName = $attr->value;
                 break;
             }
         }
 
-        // If block exists in child, replace content only (keep wrapper)
+        // If block exists in child, replace content
         if ($blockName !== null && isset($childBlocks[$blockName])) {
             $childBlock = $childBlocks[$blockName];
+
             if ($childBlock instanceof ElementNode) {
-                // Replace children only, keep parent wrapper
-                return new ElementNode(
-                    $node->tag,
-                    $node->attributes,
-                    $childBlock->children,
-                    $node->selfClosing,
-                    $node->line,
-                    $node->column,
-                );
+                // Child is element: keep parent wrapper, replace children
+                if ($node instanceof ElementNode) {
+                    return new ElementNode(
+                        $node->tag,
+                        $node->attributes,
+                        $childBlock->children,
+                        $node->selfClosing,
+                        $node->line,
+                        $node->column,
+                    );
+                } else {
+                    // Parent is fragment, child is element: use child's children
+                    return new FragmentNode(
+                        $node->attributes,
+                        $childBlock->children,
+                        $node->line,
+                        $node->column,
+                    );
+                }
+            } elseif ($childBlock instanceof FragmentNode) {
+                // Child is fragment: check if it has directive attributes
+                $hasDirectives = false;
+                foreach ($childBlock->attributes as $attr) {
+                    // Check for s: attributes that are NOT inheritance attributes
+                    if (
+                        str_starts_with($attr->name, 's:') &&
+                        !InheritanceAttribute::isInheritanceAttribute($attr->name)
+                    ) {
+                        $hasDirectives = true;
+                        break;
+                    }
+                }
+
+                if ($node instanceof ElementNode) {
+                    // Parent is element
+                    if ($hasDirectives) {
+                        // Fragment has directives: return fragment so DirectiveExtractionPass can process it
+                        // Remove s:block since it's already been processed
+                        $cleanAttrs = [];
+                        foreach ($childBlock->attributes as $attr) {
+                            if ($attr->name !== InheritanceAttribute::BLOCK->value) {
+                                $cleanAttrs[] = $attr;
+                            }
+                        }
+
+                        $wrappedFragment = new FragmentNode(
+                            $cleanAttrs,
+                            $childBlock->children,
+                            $childBlock->line,
+                            $childBlock->column,
+                        );
+
+                        return new ElementNode(
+                            $node->tag,
+                            $node->attributes,
+                            [$wrappedFragment],
+                            $node->selfClosing,
+                            $node->line,
+                            $node->column,
+                        );
+                    } else {
+                        // No directives: just use fragment's children
+                        return new ElementNode(
+                            $node->tag,
+                            $node->attributes,
+                            $childBlock->children,
+                            $node->selfClosing,
+                            $node->line,
+                            $node->column,
+                        );
+                    }
+                } elseif ($hasDirectives) {
+                    // Both are fragments
+                    // Child fragment has directives: return it for later processing
+                    $cleanAttrs = [];
+                    foreach ($childBlock->attributes as $attr) {
+                        if ($attr->name !== InheritanceAttribute::BLOCK->value) {
+                            $cleanAttrs[] = $attr;
+                        }
+                    }
+
+                    return new FragmentNode(
+                        $cleanAttrs,
+                        $childBlock->children,
+                        $childBlock->line,
+                        $childBlock->column,
+                    );
+                } else {
+                    // No directives: merge children
+                    return new FragmentNode(
+                        $node->attributes,
+                        $childBlock->children,
+                        $node->line,
+                        $node->column,
+                    );
+                }
             }
         }
 
@@ -286,14 +384,23 @@ final readonly class TemplateInheritancePass
             $newChildren[] = $this->replaceBlocksInNode($child, $childBlocks);
         }
 
-        return new ElementNode(
-            $node->tag,
-            $node->attributes,
-            $newChildren,
-            $node->selfClosing,
-            $node->line,
-            $node->column,
-        );
+        if ($node instanceof ElementNode) {
+            return new ElementNode(
+                $node->tag,
+                $node->attributes,
+                $newChildren,
+                $node->selfClosing,
+                $node->line,
+                $node->column,
+            );
+        } else {
+            return new FragmentNode(
+                $node->attributes,
+                $newChildren,
+                $node->line,
+                $node->column,
+            );
+        }
     }
 
     /**
@@ -370,7 +477,7 @@ final readonly class TemplateInheritancePass
      */
     private function removeInheritanceAttributesFromNode(Node $node): Node
     {
-        if (!($node instanceof ElementNode)) {
+        if (!($node instanceof ElementNode) && !($node instanceof FragmentNode)) {
             return $node;
         }
 
@@ -378,8 +485,8 @@ final readonly class TemplateInheritancePass
         $cleanAttributes = [];
         foreach ($node->attributes as $attr) {
             if ($attr instanceof AttributeNode) {
-                // Keep all attributes except s:block, s:extends, s:include, s:with
-                if (!in_array($attr->name, ['s:block', 's:extends', 's:include', 's:with'], true)) {
+                // Keep all attributes except inheritance attributes
+                if (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
                     $cleanAttributes[] = $attr;
                 }
             } else {
@@ -393,13 +500,22 @@ final readonly class TemplateInheritancePass
             $cleanChildren[] = $this->removeInheritanceAttributesFromNode($child);
         }
 
-        return new ElementNode(
-            $node->tag,
-            $cleanAttributes,
-            $cleanChildren,
-            $node->selfClosing,
-            $node->line,
-            $node->column,
-        );
+        if ($node instanceof ElementNode) {
+            return new ElementNode(
+                $node->tag,
+                $cleanAttributes,
+                $cleanChildren,
+                $node->selfClosing,
+                $node->line,
+                $node->column,
+            );
+        } else {
+            return new FragmentNode(
+                $cleanAttributes,
+                $cleanChildren,
+                $node->line,
+                $node->column,
+            );
+        }
     }
 }

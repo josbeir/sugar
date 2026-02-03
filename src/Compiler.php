@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar;
 
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\EmptyCompiler;
 use Sugar\Directive\ForeachCompiler;
@@ -53,6 +54,7 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
+     * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(
         private readonly Parser $parser,
@@ -60,7 +62,9 @@ final class Compiler implements CompilerInterface
         Escaper $escaper,
         ?ExtensionRegistry $registry = null,
         ?TemplateLoaderInterface $templateLoader = null,
+        ?SugarConfig $config = null,
     ) {
+        $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
 
         // Use provided registry or create default with built-in directives
@@ -68,7 +72,10 @@ final class Compiler implements CompilerInterface
 
         // Create passes
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
-        $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry);
+        $this->directiveExtractionPass = new DirectiveExtractionPass(
+            registry: $this->registry,
+            directivePrefix: $config->directivePrefix,
+        );
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
 
         // Create template inheritance pass if loader is provided

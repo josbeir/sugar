@@ -13,6 +13,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\DirectiveType;
+use Sugar\Enum\InheritanceAttribute;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
@@ -43,8 +44,10 @@ use Sugar\Extension\ExtensionRegistry;
 final readonly class DirectiveExtractionPass
 {
     /**
+     * Constructor
+     *
      * @param \Sugar\Extension\ExtensionRegistry $registry Directive registry for type checking
-     * @param string $directivePrefix Prefix for directive attributes (default: 's')
+     * @param string $directivePrefix Prefix for directive attributes (e.g., 's', 'x', 'v')
      */
     public function __construct(
         private ExtensionRegistry $registry,
@@ -283,8 +286,9 @@ final readonly class DirectiveExtractionPass
      * Transform FragmentNode with directive attribute into DirectiveNode
      *
      * Fragments can only have directive attributes, not regular HTML attributes.
+     * Returns FragmentNode if it only has inheritance attributes (processed later).
      */
-    private function fragmentToDirective(FragmentNode $node): DirectiveNode
+    private function fragmentToDirective(FragmentNode $node): DirectiveNode|FragmentNode
     {
         // Extract directives from fragment
         $controlFlowDirective = null;
@@ -293,18 +297,15 @@ final readonly class DirectiveExtractionPass
         foreach ($node->attributes as $attr) {
             if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
                 $name = substr($attr->name, strlen($this->directivePrefix) + 1);
-
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
                     throw new RuntimeException('Directive attributes cannot contain dynamic output expressions');
                 }
 
                 $expression = $attr->value ?? 'true';
-
                 // Get directive type
                 $compiler = $this->registry->getDirective($name);
                 $type = $compiler->getType();
-
                 match ($type) {
                     DirectiveType::CONTROL_FLOW => $controlFlowDirective = [
                         'name' => $name,
@@ -319,18 +320,35 @@ final readonly class DirectiveExtractionPass
                         'Only control flow and content directives are allowed.',
                     ),
                 };
-            } else {
-                // Fragments cannot have regular HTML attributes
+            } elseif (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
+                // Allow template inheritance attributes on fragments
+                // These are processed by TemplateInheritancePass before DirectiveExtractionPass
                 throw new RuntimeException(
                     sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
-                    'Only s: directives are allowed.',
+                    'Only s: directives and template inheritance attributes ' .
+                    '(s:block, s:include, etc.) are allowed.',
                 );
             }
         }
 
-        // Must have at least one directive
+        // Must have at least one directive or inheritance attribute
         if ($controlFlowDirective === null && $contentDirective === null) {
-            throw new RuntimeException('<s-template> must have at least one directive attribute');
+            // Check if there's at least one inheritance attribute
+            $hasInheritanceAttr = false;
+            foreach ($node->attributes as $attr) {
+                if (InheritanceAttribute::isInheritanceAttribute($attr->name)) {
+                    $hasInheritanceAttr = true;
+                    break;
+                }
+            }
+
+            if (!$hasInheritanceAttr) {
+                throw new RuntimeException('<s-template> must have at least one directive or inheritance attribute');
+            }
+
+            // Fragment with only inheritance attributes - return children directly
+            // TemplateInheritancePass will handle these attributes
+            return $node;
         }
 
         // Transform children recursively

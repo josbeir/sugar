@@ -10,10 +10,23 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
 
 final readonly class Parser
 {
+    private SugarConfig $config;
+
+    /**
+     * Constructor
+     *
+     * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
+     */
+    public function __construct(?SugarConfig $config = null)
+    {
+        $this->config = $config ?? new SugarConfig();
+    }
+
     /**
      * Parse a Sugar template into an AST
      *
@@ -291,8 +304,8 @@ final readonly class Parser
             column: $column,
         );
 
-        // Handle <s-template> as FragmentNode
-        if ($tagName === 's-template') {
+        // Handle fragment element (e.g., <s-template>, <x-template>)
+        if ($tagName === $this->config->getFragmentElement()) {
             $element = new FragmentNode(
                 attributes: $attributes,
                 children: [],
