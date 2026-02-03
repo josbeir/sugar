@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use RuntimeException;
+use Sugar\Enum\DirectiveType;
 
 /**
  * Unified registry for all template engine extensions
@@ -98,6 +99,26 @@ final class ExtensionRegistry
         $directives = $this->directives;
 
         return $directives;
+    }
+
+    /**
+     * Get directives of a specific type
+     *
+     * @param \Sugar\Enum\DirectiveType $type Directive type to filter by
+     * @return array<string, \Sugar\Extension\DirectiveCompilerInterface> Filtered directives
+     */
+    public function getDirectivesByType(DirectiveType $type): array
+    {
+        $filtered = [];
+
+        foreach (array_keys($this->directives) as $name) {
+            $compiler = $this->getDirective($name);
+            if ($compiler->getType() === $type) {
+                $filtered[$name] = $compiler;
+            }
+        }
+
+        return $filtered;
     }
 
     /**

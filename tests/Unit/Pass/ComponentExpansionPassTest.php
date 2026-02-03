@@ -11,7 +11,11 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\IfCompiler;
+use Sugar\Directive\WhileCompiler;
 use Sugar\Exception\ComponentNotFoundException;
+use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ComponentExpansionPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
@@ -22,6 +26,8 @@ final class ComponentExpansionPassTest extends TestCase
 
     private Parser $parser;
 
+    private ExtensionRegistry $registry;
+
     private ComponentExpansionPass $pass;
 
     protected function setUp(): void
@@ -31,7 +37,14 @@ final class ComponentExpansionPassTest extends TestCase
         $this->loader->discoverComponents('.');
 
         $this->parser = new Parser();
-        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, 's');
+        $this->registry = new ExtensionRegistry();
+
+        // Register standard directives for testing
+        $this->registry->registerDirective('if', IfCompiler::class);
+        $this->registry->registerDirective('foreach', ForeachCompiler::class);
+        $this->registry->registerDirective('while', WhileCompiler::class);
+
+        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $this->registry, 's');
     }
 
     public function testExpandsSimpleComponent(): void
@@ -124,8 +137,8 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testPreservesComponentAttributes(): void
     {
-        // Component with attributes should pass them as variables via closure
-        $template = '<s-alert type="warning">Important message</s-alert>';
+        // Component with s-bind: attributes should pass them as variables via closure
+        $template = '<s-alert s-bind:type="\'warning\'">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
         $result = $this->pass->process($ast);

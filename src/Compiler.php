@@ -88,7 +88,7 @@ final class Compiler implements CompilerInterface
 
         // Create component expansion pass if loader is provided
         $this->componentExpansionPass = $templateLoader instanceof TemplateLoaderInterface
-            ? new ComponentExpansionPass($templateLoader, $this->parser, $config->directivePrefix)
+            ? new ComponentExpansionPass($templateLoader, $this->parser, $this->registry, $config->directivePrefix)
             : null;
     }
 

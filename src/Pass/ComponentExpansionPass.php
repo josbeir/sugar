@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Pass;
 
+use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -11,6 +12,8 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Enum\DirectiveType;
+use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
@@ -27,11 +30,13 @@ final readonly class ComponentExpansionPass
      *
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader for loading components
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
+     * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry for directive type checking
      * @param string $directivePrefix Directive prefix (e.g., 's' for s:if, s:class)
      */
     public function __construct(
         private TemplateLoaderInterface $loader,
         private Parser $parser,
+        private ExtensionRegistry $registry,
         private string $directivePrefix = 's',
     ) {
     }
@@ -95,15 +100,19 @@ final readonly class ComponentExpansionPass
         // Parse component template
         $templateAst = $this->parser->parse($templateContent);
 
-        // Separate directive attributes (s:if, s:class) from component attributes (type, name)
-        $directiveAttrs = [];
-        $componentAttrs = [];
-        foreach ($component->attributes as $attr) {
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
-                $directiveAttrs[] = $attr;
-            } else {
-                $componentAttrs[] = $attr;
-            }
+        // Categorize attributes: control flow, attribute directives, bindings, merge
+        $categorized = $this->categorizeAttributes($component->attributes);
+
+        // Find root element in component template for attribute merging
+        $rootElement = $this->findRootElement($templateAst);
+
+        // Merge non-binding attributes to root element
+        if ($rootElement instanceof ElementNode) {
+            $this->mergeAttributesToRoot(
+                $rootElement,
+                $categorized['merge'],
+                $categorized['attributeDirectives'],
+            );
         }
 
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
@@ -118,10 +127,10 @@ final readonly class ComponentExpansionPass
 
         $expandedDefaultSlot = $this->expandNodes($defaultSlot);
 
-        // Wrap component template with variable injections (using only component attributes)
+        // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
             $templateAst,
-            $componentAttrs,
+            $categorized['componentBindings'],
             $expandedSlots,
             $expandedDefaultSlot,
         );
@@ -129,10 +138,10 @@ final readonly class ComponentExpansionPass
         // Recursively expand any nested components in the wrapped template itself
         $expandedContent = $this->expandNodes($wrappedTemplate->children);
 
-        // If component has directive attributes, wrap in FragmentNode so DirectiveExtractionPass can process them
-        if ($directiveAttrs !== []) {
+        // If component has control flow directives, wrap in FragmentNode
+        if ($categorized['controlFlow'] !== []) {
             return [new FragmentNode(
-                attributes: $directiveAttrs,
+                attributes: $categorized['controlFlow'],
                 children: $expandedContent,
                 line: $component->line,
                 column: $component->column,
@@ -140,6 +149,143 @@ final readonly class ComponentExpansionPass
         }
 
         return $expandedContent;
+    }
+
+    /**
+     * Categorize component attributes into different types
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes
+     * @return array{controlFlow: array<\Sugar\Ast\AttributeNode>, attributeDirectives: array<\Sugar\Ast\AttributeNode>, componentBindings: array<\Sugar\Ast\AttributeNode>, merge: array<\Sugar\Ast\AttributeNode>}
+     */
+    private function categorizeAttributes(array $attributes): array
+    {
+        $controlFlow = [];
+        $attributeDirectives = [];
+        $componentBindings = [];
+        $mergeAttrs = [];
+
+        foreach ($attributes as $attr) {
+            $name = $attr->name;
+
+            // Sugar directives: s:if, s:class, s:foreach
+            if (str_starts_with($name, $this->directivePrefix . ':')) {
+                if ($this->isControlFlowDirective($name)) {
+                    // Control flow: s:if, s:foreach, s:while
+                    $controlFlow[] = $attr;
+                } else {
+                    // Attribute directives: s:class, s:spread
+                    $attributeDirectives[] = $attr;
+                }
+            } elseif (str_starts_with($name, $this->directivePrefix . '-bind:')) {
+                // Component bindings: s-bind:variant, s-bind:size
+                // Remove prefix to get variable name
+                $bindPrefix = $this->directivePrefix . '-bind:';
+                $componentBindings[] = new AttributeNode(
+                    substr($name, strlen($bindPrefix)),
+                    $attr->value,
+                    $attr->line,
+                    $attr->column,
+                );
+            } else {
+                // Everything else merges: class, id, @click, x-show, data-*, v-if, hx-get
+                $mergeAttrs[] = $attr;
+            }
+        }
+
+        return [
+            'controlFlow' => $controlFlow,
+            'attributeDirectives' => $attributeDirectives,
+            'componentBindings' => $componentBindings,
+            'merge' => $mergeAttrs,
+        ];
+    }
+
+    /**
+     * Check if directive is a control flow directive
+     *
+     * @param string $directiveName Full directive name (e.g., 's:if', 's:foreach')
+     */
+    private function isControlFlowDirective(string $directiveName): bool
+    {
+        $name = substr($directiveName, strlen($this->directivePrefix) + 1);
+
+        if (!$this->registry->hasDirective($name)) {
+            return false;
+        }
+
+        $compiler = $this->registry->getDirective($name);
+
+        return $compiler->getType() === DirectiveType::CONTROL_FLOW;
+    }
+
+    /**
+     * Find root element in component template
+     *
+     * @param \Sugar\Ast\DocumentNode $template Component template AST
+     * @return \Sugar\Ast\ElementNode|null Root element or null if not found
+     */
+    private function findRootElement(DocumentNode $template): ?ElementNode
+    {
+        // Find first ElementNode child
+        foreach ($template->children as $child) {
+            if ($child instanceof ElementNode) {
+                return $child;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Merge attributes to root element
+     *
+     * @param \Sugar\Ast\ElementNode $rootElement Root element to merge into
+     * @param array<\Sugar\Ast\AttributeNode> $mergeAttrs Regular attributes to merge
+     * @param array<\Sugar\Ast\AttributeNode> $attributeDirectives Attribute directives (s:class, s:spread)
+     */
+    private function mergeAttributesToRoot(
+        ElementNode $rootElement,
+        array $mergeAttrs,
+        array $attributeDirectives,
+    ): void {
+        // Build map of existing attributes
+        $existingAttrs = [];
+        foreach ($rootElement->attributes as $attr) {
+            $existingAttrs[$attr->name] = $attr;
+        }
+
+        // Merge regular attributes
+        foreach ($mergeAttrs as $attr) {
+            if ($attr->name === 'class' && isset($existingAttrs['class'])) {
+                // Special handling for class: append instead of replace
+                $existingClass = $existingAttrs['class']->value;
+                $newClass = $attr->value;
+
+                // Both values must be strings for concatenation
+                if (is_string($existingClass) && is_string($newClass)) {
+                    $existingAttrs['class'] = new AttributeNode(
+                        'class',
+                        trim($existingClass . ' ' . $newClass),
+                        $attr->line,
+                        $attr->column,
+                    );
+                } else {
+                    // If either is not a string (e.g., OutputNode), just override
+                    $existingAttrs[$attr->name] = $attr;
+                }
+            } else {
+                // Regular merge: usage overrides component
+                $existingAttrs[$attr->name] = $attr;
+            }
+        }
+
+        // Add attribute directives (s:class, s:spread)
+        foreach ($attributeDirectives as $attr) {
+            $existingAttrs[$attr->name] = $attr;
+        }
+
+        // Update root element attributes
+        $rootElement->attributes = array_values($existingAttrs);
     }
 
     /**
@@ -230,10 +376,11 @@ final readonly class ComponentExpansionPass
         // Add component attributes as array items
         foreach ($attributes as $attr) {
             if (is_string($attr->value)) {
+                // s-bind values are PHP expressions, not literal strings
                 $arrayItems[] = sprintf(
                     "'%s' => %s",
                     $attr->name,
-                    var_export($attr->value, true),
+                    $attr->value, // Use value as-is (it's a PHP expression)
                 );
             }
         }

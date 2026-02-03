@@ -59,7 +59,8 @@ final class ComponentIntegrationTest extends TestCase
 
     public function testCompilesComponentWithAttributes(): void
     {
-        $template = '<s-alert type="warning">Important message</s-alert>';
+        // Use s-bind: to pass component variables
+        $template = '<s-alert s-bind:type="\'warning\'">Important message</s-alert>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -212,5 +213,94 @@ final class ComponentIntegrationTest extends TestCase
         $output = $this->executeTemplate($compiled);
         $this->assertStringContainsString('parent value', $output);
         $this->assertStringContainsString('<button class="btn">Button text</button>', $output);
+    }
+
+    public function testMergesClassToRootElement(): void
+    {
+        // HTML attributes should merge to root element
+        $template = '<s-button class="btn-large shadow">Save</s-button>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should merge class with component's class
+        $this->assertStringContainsString('<button class="btn btn-large shadow">', $compiled);
+
+        // Execute and verify
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<button class="btn btn-large shadow">Save</button>', $output);
+    }
+
+    public function testMergesMultipleAttributesToRootElement(): void
+    {
+        // Multiple HTML attributes should all merge
+        $template = '<s-button id="save-btn" class="shadow" data-action="submit">Save</s-button>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should have all merged attributes
+        $this->assertStringContainsString('id="save-btn"', $compiled);
+        $this->assertStringContainsString('class="btn shadow"', $compiled);
+        $this->assertStringContainsString('data-action="submit"', $compiled);
+
+        // Execute and verify
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<button', $output);
+        $this->assertStringContainsString('id="save-btn"', $output);
+        $this->assertStringContainsString('class="btn shadow"', $output);
+        $this->assertStringContainsString('data-action="submit"', $output);
+    }
+
+    public function testMergesAlpineDirectives(): void
+    {
+        // Alpine.js directives should merge to root element
+        $template = '<s-button @click="save()" x-data="{ loading: false }">Save</s-button>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should have Alpine directives on button
+        $this->assertStringContainsString('@click="save()"', $compiled);
+        $this->assertStringContainsString('x-data="{ loading: false }"', $compiled);
+    }
+
+    public function testBindAttributesBecomeVariables(): void
+    {
+        // s-bind: attributes should become component variables
+        $template = '<s-alert s-bind:type="\'warning\'" s-bind:title="\'Attention\'" class="mb-4">Check this</s-alert>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should pass type and title as variables
+        $this->assertStringContainsString("'type' => 'warning'", $compiled);
+        $this->assertStringContainsString("'title' => 'Attention'", $compiled);
+
+        // class should merge to root element
+        $this->assertStringContainsString('class="alert alert-', $compiled);
+        $this->assertStringContainsString('mb-4', $compiled);
+    }
+
+    public function testMixedBindingsAttributesAndDirectives(): void
+    {
+        // Test everything together
+        $template = '<s-button ' .
+            's-bind:variant="\'primary\'" ' .
+            'class="btn-lg shadow" ' .
+            'id="save-btn" ' .
+            '@click="save()" ' .
+            's:if="$canSave">' .
+            'Save Changes' .
+            '</s-button>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // s-bind:variant becomes variable
+        $this->assertStringContainsString("'variant' => 'primary'", $compiled);
+
+        // HTML attributes merge to root
+        $this->assertStringContainsString('class="btn btn-lg shadow"', $compiled);
+        $this->assertStringContainsString('id="save-btn"', $compiled);
+        $this->assertStringContainsString('@click="save()"', $compiled);
+
+        // s:if wraps the component
+        $this->assertStringContainsString('<?php if ($canSave): ?>', $compiled);
     }
 }
