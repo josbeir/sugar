@@ -32,7 +32,7 @@ use Sugar\Extension\PairedDirectiveCompilerInterface;
  *     $__loopStack[] = $loop ?? null;
  *     $loop = new \Sugar\Runtime\LoopMetadata($items, end($__loopStack));
  *     foreach ($items as $item):
- *         ?>
+ * ?>
  * <ul>
  *     <li><?= $item ?></li>
  * </ul>
@@ -40,14 +40,11 @@ use Sugar\Extension\PairedDirectiveCompilerInterface;
  *         $loop->next();
  *     endforeach;
  *     $loop = array_pop($__loopStack);
- * else:
- *     ?>
+ * else: ?>
  * <div>
  *     No items found
  * </div>
- * <?php
- * endif;
- * ?>
+ * <?php endif; ?>
  * ```
  */
 final readonly class ForelseCompiler implements PairedDirectiveCompilerInterface

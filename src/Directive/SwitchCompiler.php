@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use RuntimeException;
 use Sugar\Ast\DirectiveNode;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\DirectiveType;
@@ -52,24 +53,46 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
         $hasValidCases = false;
 
         foreach ($node->children as $child) {
-            if (!$child instanceof DirectiveNode) {
-                continue;
+            // Check direct DirectiveNode children (for unit tests and manual AST construction)
+            if ($child instanceof DirectiveNode) {
+                if ($child->name === 'case') {
+                    if (trim($child->expression) === '') {
+                        throw new RuntimeException('Case directive requires a value expression');
+                    }
+
+                    $cases[] = $child;
+                    $hasValidCases = true;
+                } elseif ($child->name === 'default') {
+                    if ($default instanceof DirectiveNode) {
+                        throw new RuntimeException('Switch directive can only have one default case');
+                    }
+
+                    $default = $child;
+                    $hasValidCases = true;
+                }
             }
 
-            if ($child->name === 'case') {
-                if (trim($child->expression) === '') {
-                    throw new RuntimeException('Case directive requires a value expression');
-                }
+            // Check DirectiveNodes nested inside ElementNodes (from template syntax after extraction)
+            if ($child instanceof ElementNode) {
+                foreach ($child->children as $grandchild) {
+                    if ($grandchild instanceof DirectiveNode) {
+                        if ($grandchild->name === 'case') {
+                            if (trim($grandchild->expression) === '') {
+                                throw new RuntimeException('Case directive requires a value expression');
+                            }
 
-                $cases[] = $child;
-                $hasValidCases = true;
-            } elseif ($child->name === 'default') {
-                if ($default instanceof DirectiveNode) {
-                    throw new RuntimeException('Switch directive can only have one default case');
-                }
+                            $cases[] = $grandchild;
+                            $hasValidCases = true;
+                        } elseif ($grandchild->name === 'default') {
+                            if ($default instanceof DirectiveNode) {
+                                throw new RuntimeException('Switch directive can only have one default case');
+                            }
 
-                $default = $child;
-                $hasValidCases = true;
+                            $default = $grandchild;
+                            $hasValidCases = true;
+                        }
+                    }
+                }
             }
         }
 

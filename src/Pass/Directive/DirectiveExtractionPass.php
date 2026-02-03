@@ -222,14 +222,7 @@ final readonly class DirectiveExtractionPass
         }
 
         // Transform children recursively
-        $transformedChildren = [];
-        foreach ($node->children as $child) {
-            if ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
-                $transformedChildren[] = $this->elementToDirective($child);
-            } else {
-                $transformedChildren[] = $this->transformNode($child);
-            }
-        }
+        $transformedChildren = $this->transformChildren($node->children);
 
         // If there's a content directive, wrap it as a DirectiveNode in children
         if ($directives['content'] !== null) {
@@ -271,14 +264,12 @@ final readonly class DirectiveExtractionPass
         }
 
         // Only content directive - return it directly
-        $contentDir = $directives['content'];
-        if ($contentDir === null) {
-            throw new RuntimeException('No content directive found');
-        }
+        // This is guaranteed non-null due to the check above
+        assert($directives['content'] !== null);
 
         return new DirectiveNode(
-            name: $contentDir['name'],
-            expression: $contentDir['expression'],
+            name: $directives['content']['name'],
+            expression: $directives['content']['expression'],
             children: [$wrappedElement],
             elseChildren: null,
             line: $node->line,
@@ -324,7 +315,8 @@ final readonly class DirectiveExtractionPass
         foreach ($compiledNodes as $node) {
             // Parse the RawPhpNode code to extract attribute name and value
             // Example: class="<php echo classNames(...) >"
-            if ($node instanceof RawPhpNode && preg_match('/^(\w+)="(.+)"$/', $node->code, $matches)) {
+            $pattern = '/^([a-zA-Z][a-zA-Z0-9:_.-]*)="(.+)"$/s';
+            if ($node instanceof RawPhpNode && preg_match($pattern, $node->code, $matches)) {
                 $attrName = $matches[1];
                 $attrValue = $matches[2];
                 // Create OutputNode for the attribute value
@@ -407,7 +399,7 @@ final readonly class DirectiveExtractionPass
         }
 
         // Transform primary node children recursively
-        $transformedChildren = $this->transformChildrenForDirective($primaryNode);
+        $transformedChildren = $this->transformChildren($primaryNode->children);
 
         // If there's a content directive, wrap it
         if ($directives['content'] !== null) {
@@ -435,7 +427,7 @@ final readonly class DirectiveExtractionPass
         );
 
         // Transform pair node children recursively
-        $transformedPairChildren = $this->transformChildrenForDirective($pairNode);
+        $transformedPairChildren = $this->transformChildren($pairNode->children);
 
         // Get pairing directive name from the compiler
         $pairingDirectiveName = $directives['controlFlow']['name'];
@@ -471,16 +463,5 @@ final readonly class DirectiveExtractionPass
             line: $primaryNode->line,
             column: $primaryNode->column,
         );
-    }
-
-    /**
-     * Transform children of an element node for directive extraction
-     *
-     * @param \Sugar\Ast\ElementNode $node
-     * @return array<\Sugar\Ast\Node>
-     */
-    private function transformChildrenForDirective(ElementNode $node): array
-    {
-        return $this->transformChildren($node->children);
     }
 }

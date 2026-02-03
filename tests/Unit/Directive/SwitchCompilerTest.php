@@ -6,6 +6,7 @@ namespace Sugar\Tests\Unit\Directive;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Ast\DirectiveNode;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\SwitchCompiler;
@@ -209,5 +210,93 @@ final class SwitchCompilerTest extends TestCase
         $this->expectExceptionMessage('Case directive requires a value expression');
 
         $this->compiler->compile($switch);
+    }
+
+    public function testCompilesNestedCasesInsideElementNodes(): void
+    {
+        // This tests the structure created by DirectiveExtractionPass from template syntax
+        // <div s:switch="$role">
+        //     <div s:case="'admin'">Admin</div>
+        //     <div s:case="'user'">User</div>
+        // </div>
+        $switch = new DirectiveNode(
+            name: 'switch',
+            expression: '$role',
+            children: [
+                // After extraction, switch wrapper contains ElementNodes
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        // Case directive is nested inside ElementNode
+                        new DirectiveNode(
+                            name: 'case',
+                            expression: "'admin'",
+                            children: [
+                                new ElementNode(
+                                    tag: 'div',
+                                    attributes: [],
+                                    children: [new TextNode('Admin', 1, 0)],
+                                    selfClosing: false,
+                                    line: 1,
+                                    column: 0,
+                                ),
+                            ],
+                            elseChildren: null,
+                            line: 1,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 1,
+                    column: 0,
+                ),
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        new DirectiveNode(
+                            name: 'case',
+                            expression: "'user'",
+                            children: [
+                                new ElementNode(
+                                    tag: 'div',
+                                    attributes: [],
+                                    children: [new TextNode('User', 1, 0)],
+                                    selfClosing: false,
+                                    line: 1,
+                                    column: 0,
+                                ),
+                            ],
+                            elseChildren: null,
+                            line: 1,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 1,
+                    column: 0,
+                ),
+            ],
+            elseChildren: null,
+            line: 1,
+            column: 0,
+        );
+
+        $result = $this->compiler->compile($switch);
+
+        // Should successfully compile nested cases
+        $this->assertGreaterThanOrEqual(8, count($result));
+        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
+        $this->assertStringContainsString('switch', $result[0]->code);
+
+        // Verify both cases are compiled
+        $caseCount = 0;
+        foreach ($result as $node) {
+            if ($node instanceof RawPhpNode && str_contains($node->code, 'case ')) {
+                $caseCount++;
+            }
+        }
+        $this->assertSame(2, $caseCount);
     }
 }
