@@ -572,4 +572,37 @@ final class ComponentIntegrationTest extends TestCase
         // Cleanup
         unlink($this->templatesPath . '/components/s-container.sugar.php');
     }
+
+    public function testFragmentElementWithNamedSlot(): void
+    {
+        // Test that <s-template s:slot="name"> works - allows multiple elements in a named slot without wrapper
+        $template = '<s-card>' .
+            '<s-template s:slot="header">' .
+            '<h3>Product Title</h3>' .
+            '<p class="subtitle">Premium Edition</p>' .
+            '</s-template>' .
+            '<p>Main content here</p>' .
+            '</s-card>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should have header slot with both elements
+        $this->assertStringContainsString("'header' =>", $compiled);
+        $this->assertStringContainsString('Product Title', $compiled);
+        $this->assertStringContainsString('Premium Edition', $compiled);
+
+        // Should have default slot
+        $this->assertStringContainsString("'slot' =>", $compiled);
+        $this->assertStringContainsString('Main content here', $compiled);
+
+        // Execute and verify both header elements render without wrapper
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<h3>Product Title</h3>', $output);
+        $this->assertStringContainsString('<p class="subtitle">Premium Edition</p>', $output);
+        $this->assertStringContainsString('Main content here', $output);
+
+        // Verify no s-template element in output
+        $this->assertStringNotContainsString('<s-template', $output);
+        $this->assertStringNotContainsString('s:slot', $output);
+    }
 }

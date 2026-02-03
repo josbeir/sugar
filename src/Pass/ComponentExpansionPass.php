@@ -299,7 +299,8 @@ final readonly class ComponentExpansionPass
         $slots = [];
 
         foreach ($children as $child) {
-            if ($child instanceof ElementNode) {
+            // Handle both ElementNode and FragmentNode (s-template)
+            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
                 // Check for s:slot attribute
                 $slotName = null;
                 $slotAttrIndex = null;
@@ -313,10 +314,15 @@ final readonly class ComponentExpansionPass
                 }
 
                 if ($slotName !== null && is_string($slotName) && $slotAttrIndex !== null) {
-                    // Remove s:slot attribute and use element as slot content
-                    $clonedElement = clone $child;
-                    array_splice($clonedElement->attributes, $slotAttrIndex, 1);
-                    $slots[$slotName] = [$clonedElement];
+                    // For FragmentNode (s-template), use its children as slot content
+                    if ($child instanceof FragmentNode) {
+                        $slots[$slotName] = $child->children;
+                    } else {
+                        // For regular ElementNode, remove s:slot attribute and use the element itself
+                        $clonedElement = clone $child;
+                        array_splice($clonedElement->attributes, $slotAttrIndex, 1);
+                        $slots[$slotName] = [$clonedElement];
+                    }
                 }
             }
         }
@@ -337,8 +343,9 @@ final readonly class ComponentExpansionPass
         foreach ($children as $child) {
             $hasSlotAttr = false;
 
-            if ($child instanceof ElementNode) {
-                // Check if this element has s:slot attribute
+            // Check both ElementNode and FragmentNode for s:slot attribute
+            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
+                // Check if this element/fragment has s:slot attribute
                 foreach ($child->attributes as $attr) {
                     if ($attr->name === $this->directivePrefix . ':slot') {
                         $hasSlotAttr = true;

@@ -224,15 +224,11 @@ Component definition (`components/s-card.sugar.php`):
 Usage:
 ```html
 <s-card s-bind:featured="true" class="shadow-lg" data-id="123">
-    <s-slot:header>
-        <h3>Product Title</h3>
-    </s-slot:header>
+    <h3 s:slot="header">Product Title</h3>
 
     <p>This is the main card content in the default slot.</p>
 
-    <s-slot:footer>
-        <button>Learn More</button>
-    </s-slot:footer>
+    <button s:slot="footer">Learn More</button>
 </s-card>
 ```
 
@@ -731,9 +727,16 @@ Components support multiple named slots using the `s:slot` attribute. This allow
 **Usage**:
 ```html
 <s-card>
+    <!-- Single element slot -->
     <h3 s:slot="header">User Profile</h3>
+
+    <!-- Multiple elements slot - use s-template to avoid wrapper -->
+    <s-template s:slot="footer">
+        <button class="btn-secondary">Cancel</button>
+        <button class="btn-primary">Save Changes</button>
+    </s-template>
+
     <p>This is the main content in the default slot.</p>
-    <button s:slot="footer">Save Changes</button>
 </s-card>
 ```
 
@@ -742,18 +745,19 @@ Components support multiple named slots using the `s:slot` attribute. This allow
 <div class="card">
     <div class="card-header"><h3>User Profile</h3></div>
     <div class="card-body"><p>This is the main content in the default slot.</p></div>
-    <div class="card-footer"><button>Save Changes</button></div>
+    <div class="card-footer">
+        <button class="btn-secondary">Cancel</button>
+        <button class="btn-primary">Save Changes</button>
+    </div>
 </div>
 ```
 
 **Key Points**:
 - Elements with `s:slot="name"` are passed to the named slot variable `$name`
 - Elements without `s:slot` go to the default `$slot`
+- Use `<s-template s:slot="name">` to pass multiple elements without a wrapper
 - Named slots are optional - check with `isset($slotName)` in your component
 - The `s:slot` attribute is removed from the final output
-
-#### Directives on Components
-
 You can use Sugar directives on component invocations:
 
 ```html
