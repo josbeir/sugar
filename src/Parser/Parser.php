@@ -6,6 +6,7 @@ namespace Sugar\Parser;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
@@ -235,7 +236,7 @@ final readonly class Parser
      * @param int $start Position of <
      * @param int $line Line number
      * @param int $column Column number
-     * @return array{0: \Sugar\Ast\ElementNode, 1: int} Element and position after tag
+     * @return array{0: \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode, 1: int} Element or Fragment and position after tag
      */
     private function extractOpeningTag(string $html, int $start, int $line, int $column): array
     {
@@ -243,8 +244,8 @@ final readonly class Parser
         $len = strlen($html);
         $tagName = '';
 
-        // Extract tag name
-        while ($pos < $len && ctype_alnum($html[$pos])) {
+        // Extract tag name (alphanumeric + hyphens for custom elements like s-template)
+        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
             $tagName .= $html[$pos++];
         }
 
@@ -290,6 +291,16 @@ final readonly class Parser
             column: $column,
         );
 
+        // Handle <s-template> as FragmentNode
+        if ($tagName === 's-template') {
+            $element = new FragmentNode(
+                attributes: $attributes,
+                children: [],
+                line: $line,
+                column: $column,
+            );
+        }
+
         return [$element, $pos];
     }
 
@@ -306,7 +317,8 @@ final readonly class Parser
         $len = strlen($html);
         $tagName = '';
 
-        while ($pos < $len && ctype_alnum($html[$pos])) {
+        // Extract tag name (alphanumeric + hyphens for custom elements)
+        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
             $tagName .= $html[$pos++];
         }
 
@@ -407,6 +419,11 @@ final readonly class Parser
                 // Opening tag - add to current level
                 $stack[count($stack) - 1][] = $node;
                 // Push reference to this element's children array onto stack
+                $stack[] = &$node->children;
+            } elseif ($node instanceof FragmentNode) {
+                // Fragment node - treat like element
+                $stack[count($stack) - 1][] = $node;
+                // Push reference to this fragment's children array onto stack
                 $stack[] = &$node->children;
             } elseif ($node instanceof ClosingTagMarker) {
                 // Closing tag - pop from stack

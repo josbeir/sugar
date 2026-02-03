@@ -12,6 +12,26 @@
 > [!WARNING]
 > **Work in Progress** - Sugar is under active development. Core features are stable, but the API may change before 1.0.
 
+## Table of Contents
+
+- [What is Sugar?](#what-is-sugar)
+  - [Before & After](#before--after)
+  - [More Examples](#more-examples)
+- [Why Sugar?](#why-sugar)
+- [Features](#features)
+  - [Directives](#directives)
+  - [Context-Aware Escaping](#context-aware-escaping)
+  - [Loop Metadata](#loop-metadata)
+  - [Fragment Elements (`<s-template>`)](#fragment-elements-s-template)
+  - [Template Inheritance & Composition](#template-inheritance--composition)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Debug Mode](#debug-mode)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Requirements](#requirements)
+- [License](#license)
+
 ## What is Sugar?
 
 Sugar is a modern PHP (8.4+) templating engine that **compiles to pure, optimized PHP code**. It takes your existing PHP templates and supercharges them with:
@@ -43,9 +63,7 @@ The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then 
 <!-- Mix Sugar directives with regular PHP - both work together! -->
 <div s:forelse="$users as $user" s:class="['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]">
     <?= $user->name ?>
-    <?php if ($user->email): ?>
-        <small><?= $user->email ?></small>
-    <?php endif; ?>
+    <small s:if="$user->email"><?= $user->email ?></small>
 </div>
 <div s:empty>No users found</div>
 ```
@@ -198,7 +216,8 @@ Use `s:empty` and `s:isset` to conditionally render content based on variable st
 - **⚡ Pure PHP** - Compiles to optimized PHP code with opcache support
 - **🔧 Framework-Agnostic** - Use standalone or integrate with CakePHP, Laravel, Symfony
 - **📦 Zero Dependencies** - Core engine has no external requirements (except brick/varexporter)
-- **🧪 Battle-Tested** - 262 tests, PHPStan level 8, 95%+ code coverage
+- **🧪 Battle-Tested** - 360 tests, PHPStan level 8, 95%+ code coverage
+- **🎨 Fragment Elements** - `<s-template>` for applying directives without wrapper elements
 
 ## Features
 
@@ -223,6 +242,9 @@ Sugar provides familiar control structures as HTML attributes:
 - **`s:block`** - Define named content blocks that can be overridden
 - **`s:include`** - Include other templates (extension-less paths supported)
 - **`s:with`** - Pass variables to included templates with isolated scope
+
+#### Special Elements
+- **`<s-template>`** - Fragment element that renders only children (no wrapper element)
 
 #### Utility Directives
 - **`s:class`** - Dynamic CSS classes with conditional arrays
@@ -299,6 +321,80 @@ Access loop information with the `$loop` variable (inspired by Blade):
     </li>
 </ul>
 ```
+
+### Fragment Elements (`<s-template>`)
+
+Sometimes you need to apply directives without adding an extra wrapper element. Use `<s-template>` - a phantom element that renders only its children:
+
+#### Problem: Unwanted Wrapper
+
+```php
+<!-- ❌ Adds an extra <div> wrapper -->
+<div class="container">
+    <div s:foreach="$items as $item">
+        <span><?= $item ?></span>
+    </div>
+</div>
+
+<!-- Output has unwanted nested div -->
+<div class="container">
+    <div>
+        <span>A</span>
+        <span>B</span>
+    </div>
+</div>
+```
+
+#### Solution: Fragment Element
+
+```php
+<!-- ✅ No extra wrapper - renders children directly -->
+<div class="container">
+    <s-template s:foreach="$items as $item">
+        <span><?= $item ?></span>
+    </s-template>
+</div>
+
+<!-- Output: spans render directly in container -->
+<div class="container">
+    <span>A</span>
+    <span>B</span>
+</div>
+```
+
+#### Common Use Cases
+
+**Conditional Multiple Elements:**
+```php
+<s-template s:if="$showHeader">
+    <header>Header</header>
+    <nav>Navigation</nav>
+</s-template>
+```
+
+**Loops Without Wrappers:**
+```php
+<table>
+    <s-template s:foreach="$rows as $row">
+        <tr><td><?= $row ?></td></tr>
+    </s-template>
+</table>
+```
+
+**Nested Fragments:**
+```php
+<s-template s:if="$condition">
+    <s-template s:foreach="$items as $item">
+        <div><?= $item ?></div>
+    </s-template>
+</s-template>
+```
+
+**Restrictions:**
+- `<s-template>` can **only** have `s:` directive attributes
+- Regular HTML attributes are **not allowed** (throws compile error)
+- Attribute directives like `s:class`, `s:spread` are **not allowed** (no element to apply them to)
+- Only control flow (`s:if`, `s:foreach`) and content directives (`s:text`, `s:html`) are permitted
 
 ### Template Inheritance & Composition
 

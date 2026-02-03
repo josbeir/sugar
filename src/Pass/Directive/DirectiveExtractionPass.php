@@ -8,6 +8,7 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -76,6 +77,9 @@ final readonly class DirectiveExtractionPass
                 // Convert element with directive into DirectiveNode
                 // Don't pair at extraction time - let DirectivePairingPass handle that
                 $result[] = $this->elementToDirective($node);
+            } elseif ($node instanceof FragmentNode && $this->hasFragmentDirectiveAttribute($node)) {
+                // Convert fragment with directive into DirectiveNode
+                $result[] = $this->fragmentToDirective($node);
             } else {
                 // Transform children recursively
                 $result[] = $this->transformNode($node);
@@ -104,6 +108,18 @@ final readonly class DirectiveExtractionPass
             );
         }
 
+        // Handle fragments with children
+        if ($node instanceof FragmentNode) {
+            $newChildren = $this->transformChildren($node->children);
+
+            return new FragmentNode(
+                attributes: $node->attributes,
+                children: $newChildren,
+                line: $node->line,
+                column: $node->column,
+            );
+        }
+
         // All other nodes pass through unchanged
         return $node;
     }
@@ -112,6 +128,20 @@ final readonly class DirectiveExtractionPass
      * Check if an ElementNode has a directive attribute (s:if, s:foreach, etc.)
      */
     private function hasDirectiveAttribute(ElementNode $node): bool
+    {
+        foreach ($node->attributes as $attr) {
+            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a FragmentNode has a directive attribute
+     */
+    private function hasFragmentDirectiveAttribute(FragmentNode $node): bool
     {
         foreach ($node->attributes as $attr) {
             if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
@@ -244,6 +274,104 @@ final readonly class DirectiveExtractionPass
             name: $directives['content']['name'],
             expression: $directives['content']['expression'],
             children: [$wrappedElement],
+            line: $node->line,
+            column: $node->column,
+        );
+    }
+
+    /**
+     * Transform FragmentNode with directive attribute into DirectiveNode
+     *
+     * Fragments can only have directive attributes, not regular HTML attributes.
+     */
+    private function fragmentToDirective(FragmentNode $node): DirectiveNode
+    {
+        // Extract directives from fragment
+        $controlFlowDirective = null;
+        $contentDirective = null;
+
+        foreach ($node->attributes as $attr) {
+            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+                $name = substr($attr->name, strlen($this->directivePrefix) + 1);
+
+                // Directive expressions must be strings, not OutputNodes
+                if ($attr->value instanceof OutputNode) {
+                    throw new RuntimeException('Directive attributes cannot contain dynamic output expressions');
+                }
+
+                $expression = $attr->value ?? 'true';
+
+                // Get directive type
+                $compiler = $this->registry->getDirective($name);
+                $type = $compiler->getType();
+
+                match ($type) {
+                    DirectiveType::CONTROL_FLOW => $controlFlowDirective = [
+                        'name' => $name,
+                        'expression' => $expression,
+                    ],
+                    DirectiveType::CONTENT => $contentDirective = [
+                        'name' => $name,
+                        'expression' => $expression,
+                    ],
+                    DirectiveType::ATTRIBUTE => throw new RuntimeException(
+                        sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
+                        'Only control flow and content directives are allowed.',
+                    ),
+                };
+            } else {
+                // Fragments cannot have regular HTML attributes
+                throw new RuntimeException(
+                    sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
+                    'Only s: directives are allowed.',
+                );
+            }
+        }
+
+        // Must have at least one directive
+        if ($controlFlowDirective === null && $contentDirective === null) {
+            throw new RuntimeException('<s-template> must have at least one directive attribute');
+        }
+
+        // Transform children recursively
+        $transformedChildren = $this->transformChildren($node->children);
+
+        // If there's a content directive, wrap it as a DirectiveNode in children
+        if ($contentDirective !== null) {
+            $contentDir = $contentDirective;
+            $transformedChildren = [
+                new DirectiveNode(
+                    name: $contentDir['name'],
+                    expression: $contentDir['expression'],
+                    children: $transformedChildren,
+                    line: $node->line,
+                    column: $node->column,
+                ),
+            ];
+        }
+
+        // If there's a control flow directive, wrap children directly in it
+        // Fragments don't need a wrapper element - their children render directly
+        if ($controlFlowDirective !== null) {
+            $controlDir = $controlFlowDirective;
+
+            return new DirectiveNode(
+                name: $controlDir['name'],
+                expression: $controlDir['expression'],
+                children: $transformedChildren,
+                line: $node->line,
+                column: $node->column,
+            );
+        }
+
+        // Only content directive - return it directly
+        // This is guaranteed non-null due to the check above
+        assert($contentDirective !== null);
+
+        return new DirectiveNode(
+            name: $contentDirective['name'],
+            expression: $contentDirective['expression'],
+            children: $transformedChildren,
             line: $node->line,
             column: $node->column,
         );

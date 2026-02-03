@@ -8,6 +8,7 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -79,6 +80,7 @@ final class CodeGenerator
             OutputNode::class => $this->generateOutput($node, $buffer),
             RawPhpNode::class => $this->generateRawPhp($node, $buffer),
             ElementNode::class => $this->generateElement($node, $buffer),
+            FragmentNode::class => $this->generateFragment($node, $buffer),
             DirectiveNode::class => $this->generateDirective($node, $buffer),
             default => throw new RuntimeException('Unsupported node type: ' . $node::class),
         };
@@ -199,8 +201,20 @@ final class CodeGenerator
         }
     }
 
-    /**
-     * Generate directive control structure
+    /**     * Generate fragment output (renders only children, not the fragment element itself)
+     *
+     * @param \Sugar\Ast\FragmentNode $node Fragment node
+     * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer
+     */
+    private function generateFragment(FragmentNode $node, OutputBuffer $buffer): void
+    {
+        // Fragments don't render themselves - only their children
+        foreach ($node->children as $child) {
+            $this->generateNode($child, $buffer);
+        }
+    }
+
+    /**     * Generate directive control structure
      *
      * @param \Sugar\Ast\DirectiveNode $node Directive node
      * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer
