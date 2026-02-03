@@ -102,4 +102,51 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertStringContainsString('<ul>', $code);
         $this->assertStringContainsString('<li>', $code);
     }
+
+    public function testRawOutputFullPipeline(): void
+    {
+        $template = '<div><?= raw($html) ?></div>';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->transform($ast);
+        $transformed = $this->compilationPass->transform($extracted);
+        $code = $this->generator->generate($transformed);
+
+        // Should unwrap raw() and output without htmlspecialchars
+        $this->assertStringContainsString('<?php echo $html; ?>', $code);
+        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('raw(', $code);
+    }
+
+    public function testShortRawOutputFullPipeline(): void
+    {
+        $template = '<div><?= r($content) ?></div>';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->transform($ast);
+        $transformed = $this->compilationPass->transform($extracted);
+        $code = $this->generator->generate($transformed);
+
+        // Should unwrap r() and output without escaping
+        $this->assertStringContainsString('<?php echo $content; ?>', $code);
+        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('r(', $code);
+    }
+
+    public function testRegularOutputStillEscapedFullPipeline(): void
+    {
+        $template = '<div><?= $userInput ?></div>';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->transform($ast);
+        $transformed = $this->compilationPass->transform($extracted);
+        $code = $this->generator->generate($transformed);
+
+        // Regular output should use htmlspecialchars
+        $this->assertStringContainsString('htmlspecialchars', $code);
+        $this->assertStringContainsString('$userInput', $code);
+    }
 }

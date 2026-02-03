@@ -190,6 +190,55 @@ Sugar automatically detects output context and applies appropriate escaping:
 <a href="?name=<?= $name ?>">         <!-- URL context: rawurlencode() -->
 ```
 
+#### Disabling Auto-Escaping (Raw Output)
+
+When you need to output trusted HTML or pre-encoded content, use `raw()` or its short alias `r()`:
+
+```php
+<!-- Regular output (auto-escaped) -->
+<div><?= $userInput ?></div>
+<!-- Output: <div>&lt;script&gt;alert('xss')&lt;/script&gt;</div> -->
+
+<!-- Raw output for trusted content -->
+<div><?= raw($article->renderedBody) ?></div>
+<!-- Output: <div><p>Article content...</p></div> -->
+
+<!-- Short form -->
+<div><?= r($trustedHtml) ?></div>
+
+<!-- Works with complex expressions -->
+<div><?= raw($cms->renderBlock('hero')) ?></div>
+```
+
+**Note:** `raw()` and `r()` only work with **shorthand echo syntax** `<?= ?>`. If you're using long-form PHP blocks `<?php echo ?>`, you're already writing raw PHP, so just omit the function:
+
+```php
+<!-- ✅ Shorthand - parser unwraps raw() -->
+<?= raw($html) ?>
+
+<!-- ❌ Long-form - raw() stays as function call (use runtime function) -->
+<?php echo raw($html); ?>
+
+<!-- ✅ Long-form - just omit raw() entirely -->
+<?php echo $html; ?>  // Already raw, no auto-escaping in <?php ?> blocks
+```
+
+> [!WARNING]
+> **Security Notice**: Only use `raw()` or `r()` with trusted content you control. Never use with user input as it bypasses XSS protection and creates security vulnerabilities.
+
+```php
+// ✅ SAFE: Content you control
+<?= raw($article->renderedMarkdown) ?>
+
+// ❌ DANGEROUS: User input (XSS vulnerability!)
+<?= raw($_GET['comment']) ?>
+
+// ✅ SAFE: Let auto-escaping protect you
+<?= $_GET['comment'] ?>
+```
+
+The parser detects `raw()` and `r()` at compile-time and unwraps them, so there's zero runtime overhead.
+
 ### Loop Metadata
 
 Access loop information with the `$loop` variable (inspired by Blade):

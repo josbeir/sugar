@@ -273,4 +273,70 @@ final class ParserTest extends TestCase
         $this->assertSame('required', $input->attributes[3]->name);
         $this->assertNull($input->attributes[3]->value); // Boolean attribute
     }
+
+    public function testParseRawFunctionDisablesEscaping(): void
+    {
+        $source = '<?= raw($html) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('$html', $ast->children[0]->expression);
+        $this->assertFalse($ast->children[0]->escape, 'raw() should disable escaping');
+    }
+
+    public function testParseShortRawFunctionDisablesEscaping(): void
+    {
+        $source = '<?= r($content) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('$content', $ast->children[0]->expression);
+        $this->assertFalse($ast->children[0]->escape, 'r() should disable escaping');
+    }
+
+    public function testParseRawFunctionWithComplexExpression(): void
+    {
+        $source = '<?= raw($user->htmlBio) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('$user->htmlBio', $ast->children[0]->expression);
+        $this->assertFalse($ast->children[0]->escape);
+    }
+
+    public function testParseRawFunctionWithWhitespace(): void
+    {
+        $source = '<?= raw( $var ) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('$var', $ast->children[0]->expression);
+        $this->assertFalse($ast->children[0]->escape);
+    }
+
+    public function testParseRegularOutputStillEscapes(): void
+    {
+        $source = '<?= $var ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('$var', $ast->children[0]->expression);
+        $this->assertTrue($ast->children[0]->escape, 'Regular output should still escape');
+    }
+
+    public function testParseRawFunctionDoesNotAffectOtherFunctions(): void
+    {
+        $source = '<?= strtoupper($var) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('strtoupper($var)', $ast->children[0]->expression);
+        $this->assertTrue($ast->children[0]->escape, 'Other functions should not disable escaping');
+    }
 }

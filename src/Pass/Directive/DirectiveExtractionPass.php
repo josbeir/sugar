@@ -444,7 +444,7 @@ final readonly class DirectiveExtractionPass
             tag: $pairNode->tag,
             attributes: array_filter(
                 $pairNode->attributes,
-                fn($attr) => $attr->name !== $this->directivePrefix . ':' . $pairDirectiveName,
+                fn(AttributeNode $attr): bool => $attr->name !== $this->directivePrefix . ':' . $pairDirectiveName,
             ),
             children: $transformedPairChildren,
             selfClosing: $pairNode->selfClosing,

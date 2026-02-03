@@ -44,9 +44,13 @@ final readonly class Parser
 
             if ($token->isOutput()) {
                 [$expression, $nextIndex] = $this->extractExpression($tokens, $i + 1);
+
+                // Check if expression is wrapped in raw() or r() function
+                [$unwrappedExpression, $shouldEscape] = $this->unwrapRawFunction($expression);
+
                 $nodes[] = new OutputNode(
-                    expression: $expression,
-                    escape: true,
+                    expression: $unwrappedExpression,
+                    escape: $shouldEscape,
                     context: OutputContext::HTML,
                     line: $token->line,
                     column: $token->pos,
@@ -111,6 +115,31 @@ final readonly class Parser
         }
 
         return [trim($expression), $i];
+    }
+
+    /**
+     * Check if expression is wrapped in raw() or r() and unwrap it
+     *
+     * The raw() and r() functions disable auto-escaping for trusted content.
+     * Parser detects these wrappers and extracts the inner expression.
+     *
+     * Note: This only works for shorthand echo syntax <?= ?>. Long-form PHP blocks
+     * <?php echo ?> are RawPhpNodes and passed through unchanged. Users should omit
+     * raw() in long-form blocks since there's no auto-escaping there anyway.
+     *
+     * @param string $expression The expression to check
+     * @return array{0: string, 1: bool} Unwrapped expression and whether to escape
+     */
+    private function unwrapRawFunction(string $expression): array
+    {
+        $trimmed = trim($expression);
+
+        // Match raw(...) or r(...) with optional whitespace
+        if (preg_match('/^(?:raw|r)\s*\(\s*(.+?)\s*\)$/s', $trimmed, $matches)) {
+            return [trim($matches[1]), false]; // Return inner expression, disable escaping
+        }
+
+        return [$expression, true]; // Return as-is with escaping enabled
     }
 
     /**

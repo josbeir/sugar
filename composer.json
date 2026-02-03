@@ -19,7 +19,10 @@
     "autoload": {
         "psr-4": {
             "Sugar\\": "src/"
-        }
+        },
+        "files": [
+            "src/Runtime/functions.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -45,5 +48,14 @@
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true
         }
+    },
+    "scripts": {
+        "test": "phpunit --colors=always",
+        "test-coverage": "export XDEBUG_MODE=coverage; phpunit --log-junit tmp/coverage/unitreport.xml --coverage-html tmp/coverage --coverage-clover tmp/coverage/coverage.xml",
+        "phpstan": "phpstan analyse",
+        "cs-check": "phpcs --colors -p -s",
+        "cs-fix": "phpcbf --colors -p -s",
+        "rector-check": "rector --dry-run --ansi",
+        "rector-fix": "rector --ansi"
     }
 }

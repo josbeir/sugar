@@ -297,6 +297,7 @@ final class SwitchCompilerTest extends TestCase
                 $caseCount++;
             }
         }
+
         $this->assertSame(2, $caseCount);
     }
 }
