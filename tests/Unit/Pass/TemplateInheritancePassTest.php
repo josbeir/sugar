@@ -8,6 +8,8 @@ use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Node;
+use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Pass\TemplateInheritancePass;
@@ -276,5 +278,110 @@ final class TemplateInheritancePassTest extends TestCase
         $this->assertCount(1, $element->attributes);
         $this->assertInstanceOf(AttributeNode::class, $element->attributes[0]);
         $this->assertSame('s:if', $element->attributes[0]->name);
+    }
+
+    public function testIncludeWithoutWithHasOpenScope(): void
+    {
+        $loader = new FileTemplateLoader($this->fixturesPath);
+        $pass = new TemplateInheritancePass($loader);
+
+        // Create a simple included template
+        $includePath = $this->fixturesPath . '/temp-include.sugar.php';
+        file_put_contents($includePath, '<p><?= $message ?></p>');
+
+        try {
+            $document = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:include', 'temp-include.sugar.php')], [], false, 1, 1),
+            ]);
+
+            $result = $pass->process($document, 'home.sugar.php');
+
+            // Should expand inline (no closure wrapper)
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $this->assertCount(1, $result->children);
+
+            // The included content should be directly in the tree
+            $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+            $this->assertSame('p', $result->children[0]->tag);
+        } finally {
+            unlink($includePath);
+        }
+    }
+
+    public function testIncludeWithWithHasIsolatedScope(): void
+    {
+        $loader = new FileTemplateLoader($this->fixturesPath);
+        $pass = new TemplateInheritancePass($loader);
+
+        // Create a simple included template
+        $includePath = $this->fixturesPath . '/temp-include-with.sugar.php';
+        file_put_contents($includePath, '<p><?= $title ?></p>');
+
+        try {
+            $document = new DocumentNode([
+                new ElementNode('div', [
+                    $this->attr('s:include', 'temp-include-with.sugar.php'),
+                    $this->attr('s:with', "['title' => 'Hello']"),
+                ], [], false, 1, 1),
+            ]);
+
+            $result = $pass->process($document, 'home.sugar.php');
+
+            // Should wrap in closure for isolation
+            $this->assertInstanceOf(DocumentNode::class, $result);
+
+            // Convert to string to check for closure pattern
+            $code = $this->documentToString($result);
+
+            $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
+            $this->assertStringContainsString("})(['title' => 'Hello']);", $code);
+        } finally {
+            unlink($includePath);
+        }
+    }
+
+    private function documentToString(DocumentNode $document): string
+    {
+        $output = '';
+        foreach ($document->children as $child) {
+            $output .= $this->nodeToString($child);
+        }
+
+        return $output;
+    }
+
+    private function nodeToString(Node $node): string
+    {
+        if ($node instanceof TextNode) {
+            return $node->content;
+        }
+
+        if ($node instanceof ElementNode) {
+            $output = '<' . $node->tag;
+            foreach ($node->attributes as $attr) {
+                $output .= ' ' . $attr->name;
+                if ($attr->value !== null && is_string($attr->value)) {
+                    $output .= '="' . $attr->value . '"';
+                }
+            }
+
+            $output .= '>';
+
+            foreach ($node->children as $child) {
+                $output .= $this->nodeToString($child);
+            }
+
+            if (!$node->selfClosing) {
+                $output .= '</' . $node->tag . '>';
+            }
+
+            return $output;
+        }
+
+        if ($node instanceof RawPhpNode) {
+            return '<?php ' . $node->code . ' ?>';
+        }
+
+        return '';
     }
 }

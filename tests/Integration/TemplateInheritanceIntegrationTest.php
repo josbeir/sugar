@@ -9,10 +9,12 @@ use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
 final class TemplateInheritanceIntegrationTest extends TestCase
 {
+    use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
 
     private Compiler $compiler;
@@ -125,5 +127,36 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         // Should successfully resolve "base" to "base.sugar.php" and "partials/header" to "partials/header.sugar.php"
         $this->assertStringContainsString('Extension-less Test', $compiled);
         $this->assertStringContainsString('This template uses extension-less includes', $compiled);
+    }
+
+    public function testIncludeWithWithHasIsolatedScope(): void
+    {
+        // Create temporary included template
+        $includePath = $this->templatesPath . '/partials/temp-isolated.sugar.php';
+        file_put_contents($includePath, '<div class="alert"><?= $message ?></div>');
+
+        try {
+            $template = '<?php $message = "parent message"; ?>' .
+                '<div s:include="partials/temp-isolated.sugar.php" s:with="[\'message\' => \'included message\']"></div>' .
+                '<p><?= $message ?></p>';
+
+            $compiled = $this->compiler->compile($template, 'home.sugar.php');
+
+            // Should contain closure for isolation
+            $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+            $this->assertStringContainsString("})(['message' => 'included message']);", $compiled);
+
+            // Execute to verify isolation
+            $output = $this->executeTemplate($compiled, ['message' => 'parent message']);
+
+            // Verify included template got isolated variable
+            $this->assertStringContainsString('<div class="alert">included message</div>', $output);
+            // Verify parent variable not overwritten
+            $this->assertStringContainsString('<p>parent message</p>', $output);
+        } finally {
+            if (file_exists($includePath)) {
+                unlink($includePath);
+            }
+        }
     }
 }

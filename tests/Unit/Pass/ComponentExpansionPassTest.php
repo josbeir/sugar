@@ -53,6 +53,7 @@ final class ComponentExpansionPassTest extends TestCase
         foreach ($result->children as $child) {
             $this->assertNotInstanceOf(ComponentNode::class, $child);
         }
+
         // The expanded output should contain the button element
         $output = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $output);
@@ -123,7 +124,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testPreservesComponentAttributes(): void
     {
-        // Component with attributes should pass them as variables
+        // Component with attributes should pass them as variables via closure
         $template = '<s-alert type="warning">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
@@ -131,8 +132,10 @@ final class ComponentExpansionPassTest extends TestCase
 
         $code = $this->astToString($result);
 
-        // Should inject $type = 'warning';
-        $this->assertStringContainsString("\$type = 'warning';", $code);
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
+        $this->assertStringContainsString("'type' => 'warning'", $code);
+        $this->assertStringContainsString("'slot' => 'Important message'", $code);
         // Should have the template with $type usage
         $this->assertStringContainsString('<?= $type ?? \'info\' ?>', $code);
         // Should have the message content
@@ -153,12 +156,14 @@ final class ComponentExpansionPassTest extends TestCase
 
         $code = $this->astToString($result);
 
-        // Should inject named slots as variables
-        $this->assertStringContainsString('$header =', $code);
-        $this->assertStringContainsString('$footer =', $code);
-        $this->assertStringContainsString('$slot =', $code); // Default slot
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
+        // Should have named slots in array
+        $this->assertStringContainsString("'header' =>", $code);
+        $this->assertStringContainsString("'footer' =>", $code);
+        $this->assertStringContainsString("'slot' =>", $code); // Default slot
 
-        // Should contain the slot content in variable assignments
+        // Should contain the slot content
         $this->assertStringContainsString('Custom Header', $code);
         $this->assertStringContainsString('Custom Footer', $code);
         $this->assertStringContainsString('Body content', $code);

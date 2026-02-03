@@ -9,6 +9,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
+use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\InheritanceAttribute;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
@@ -146,8 +147,10 @@ final readonly class TemplateInheritancePass
                 $includeDocument = $this->processIncludes($includeDocument, $resolvedPath, $loadedTemplates);
                 // Check for s:with (scope isolation)
                 if ($this->hasAttribute($child, InheritanceAttribute::WITH->value)) {
-                    // Wrap in scope isolation
-                    $newChildren[] = $this->wrapInScope($includeDocument);
+                    // Wrap in scope isolation with variables from s:with
+                    $withValue = $this->getAttributeValue($child, InheritanceAttribute::WITH->value);
+                    $wrapped = $this->wrapInScope($includeDocument, $withValue);
+                    array_push($newChildren, ...$wrapped->children);
                 } else {
                     // Open scope - add children directly
                     array_push($newChildren, ...$includeDocument->children);
@@ -407,13 +410,22 @@ final readonly class TemplateInheritancePass
      * Wrap included document in scope isolation.
      *
      * @param \Sugar\Ast\DocumentNode $document Document to wrap
-     * @return \Sugar\Ast\DocumentNode Wrapped node (likely RawPhpNode for scope)
+     * @param string $withExpression PHP expression that evaluates to array of variables
+     * @return \Sugar\Ast\DocumentNode Wrapped document with closure
      */
-    private function wrapInScope(DocumentNode $document): DocumentNode
+    private function wrapInScope(DocumentNode $document, string $withExpression): DocumentNode
     {
-        // For now, return document as-is
-        // TODO: Implement proper scope wrapping with extract() or similar
-        return new DocumentNode($document->children);
+        // Wrap in closure with extract for variable isolation
+        // Pattern: (function($__vars) { extract($__vars); ...template... })([...]);
+
+        $openingCode = '(function($__vars) { extract($__vars);';
+        $closingCode = '})(' . $withExpression . ');';
+
+        return new DocumentNode([
+            new RawPhpNode($openingCode, 0, 0),
+            ...$document->children,
+            new RawPhpNode($closingCode, 0, 0),
+        ]);
     }
 
     /**

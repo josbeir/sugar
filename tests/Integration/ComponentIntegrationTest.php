@@ -47,8 +47,9 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // Should inject $slot variable
-        $this->assertStringContainsString('$slot = \'Click me\';', $compiled);
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString("'slot' => 'Click me'", $compiled);
 
         // Should have button template HTML
         $this->assertStringContainsString('<button class="btn">', $compiled);
@@ -62,9 +63,10 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // Should inject $type and $slot variables
-        $this->assertStringContainsString('$type = \'warning\';', $compiled);
-        $this->assertStringContainsString('$slot = \'Important message\';', $compiled);
+        // Should use closure with extract and pass variables in array
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString("'type' => 'warning'", $compiled);
+        $this->assertStringContainsString("'slot' => 'Important message'", $compiled);
 
         // Should have alert template structure
         $this->assertStringContainsString('<div class="alert alert-', $compiled);
@@ -82,14 +84,16 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // Should inject named slot variables
-        $this->assertStringContainsString('$header =', $compiled);
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        // Should have named slots in array
+        $this->assertStringContainsString("'header' =>", $compiled);
         $this->assertStringContainsString('Card Title', $compiled);
-        $this->assertStringContainsString('$footer =', $compiled);
+        $this->assertStringContainsString("'footer' =>", $compiled);
         $this->assertStringContainsString('Footer text', $compiled);
 
-        // Should inject default slot (the <p> without s:slot)
-        $this->assertStringContainsString('$slot =', $compiled);
+        // Should have default slot in array
+        $this->assertStringContainsString("'slot' =>", $compiled);
         $this->assertStringContainsString('Card body content', $compiled);
 
         // Should have card template structure
@@ -111,15 +115,34 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('<div class="card">', $compiled);
         $this->assertStringContainsString('<button class="btn">', $compiled);
 
-        // Should have proper variable scoping (multiple $slot assignments for nested components)
-        $this->assertStringContainsString('$slot =', $compiled);
+        // Should use closure for isolation (nested components each get their own closure)
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString("'slot' =>", $compiled);
     }
 
     public function testComponentsWorkWithDirectives(): void
     {
-        // TODO: Component expansion happens BEFORE directive extraction, so directives on component elements
-        // are lost. Need to preserve directives on the wrapper element during expansion.
-        $this->markTestIncomplete('Directives on components need special handling');
+        // Test s:if directive on component
+        $template = '<s-button s:if="$showButton">Save</s-button>';
+
+        $compiled = $this->compiler->compile($template);
+
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString("'slot' => 'Save'", $compiled);
+        $this->assertStringContainsString('<button class="btn">', $compiled);
+
+        // Should compile s:if directive
+        $this->assertStringContainsString('<?php if ($showButton): ?>', $compiled);
+        $this->assertStringContainsString('<?php endif; ?>', $compiled);
+
+        // Test execution
+        $output = $this->executeTemplate($compiled, ['showButton' => true]);
+        $this->assertStringContainsString('<button class="btn">Save</button>', $output);
+
+        // Test s:if=false hides component
+        $output = $this->executeTemplate($compiled, ['showButton' => false]);
+        $this->assertStringNotContainsString('<button', $output);
     }
 
     public function testComponentExpansionBeforeContextAnalysis(): void
@@ -130,8 +153,10 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // The slot content should be treated as text and escaped
-        $this->assertStringContainsString('$slot =', $compiled);
+        // Should use closure with extract
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        // The slot content should be in the array
+        $this->assertStringContainsString("'slot' =>", $compiled);
         $this->assertStringContainsString('alert("XSS")', $compiled);
 
         // Component template should have proper escaping applied
@@ -169,5 +194,23 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('danger', $output);
         $this->assertStringContainsString('<strong>Notice</strong>', $output); // Default title
         $this->assertStringContainsString('This is a critical error!', $output);
+    }
+
+    public function testComponentVariablesAreIsolated(): void
+    {
+        // Test that component variables don't leak into parent scope
+        $template = '<?php $slot = "parent value"; ?>' .
+            '<s-button>Button text</s-button>' .
+            '<?= $slot ?>'; // Should still be "parent value"
+
+        $compiled = $this->compiler->compile($template);
+
+        // Component should use closure for isolation
+        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+
+        // Execute and verify parent $slot is not overwritten
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('parent value', $output);
+        $this->assertStringContainsString('<button class="btn">Button text</button>', $output);
     }
 }

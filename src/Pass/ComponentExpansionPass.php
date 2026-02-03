@@ -6,6 +6,7 @@ namespace Sugar\Pass;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -94,6 +95,17 @@ final readonly class ComponentExpansionPass
         // Parse component template
         $templateAst = $this->parser->parse($templateContent);
 
+        // Separate directive attributes (s:if, s:class) from component attributes (type, name)
+        $directiveAttrs = [];
+        $componentAttrs = [];
+        foreach ($component->attributes as $attr) {
+            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+                $directiveAttrs[] = $attr;
+            } else {
+                $componentAttrs[] = $attr;
+            }
+        }
+
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
         $slots = $this->extractSlots($component->children);
         $defaultSlot = $this->extractDefaultSlot($component->children);
@@ -103,18 +115,31 @@ final readonly class ComponentExpansionPass
         foreach ($slots as $name => $nodes) {
             $expandedSlots[$name] = $this->expandNodes($nodes);
         }
+
         $expandedDefaultSlot = $this->expandNodes($defaultSlot);
 
-        // Wrap component template with variable injections
+        // Wrap component template with variable injections (using only component attributes)
         $wrappedTemplate = $this->wrapWithVariables(
             $templateAst,
-            $component->attributes,
+            $componentAttrs,
             $expandedSlots,
             $expandedDefaultSlot,
         );
 
         // Recursively expand any nested components in the wrapped template itself
-        return $this->expandNodes($wrappedTemplate->children);
+        $expandedContent = $this->expandNodes($wrappedTemplate->children);
+
+        // If component has directive attributes, wrap in FragmentNode so DirectiveExtractionPass can process them
+        if ($directiveAttrs !== []) {
+            return [new FragmentNode(
+                attributes: $directiveAttrs,
+                children: $expandedContent,
+                line: $component->line,
+                column: $component->column,
+            )];
+        }
+
+        return $expandedContent;
     }
 
     /**
@@ -189,7 +214,7 @@ final readonly class ComponentExpansionPass
      * Wrap template with PHP code that injects variables
      *
      * @param \Sugar\Ast\DocumentNode $template Component template AST
-     * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes
+     * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes (non-directive)
      * @param array<string, array<\Sugar\Ast\Node>> $namedSlots Named slots
      * @param array<\Sugar\Ast\Node> $defaultSlot Default slot content
      * @return \Sugar\Ast\DocumentNode Wrapped template
@@ -200,42 +225,44 @@ final readonly class ComponentExpansionPass
         array $namedSlots,
         array $defaultSlot,
     ): DocumentNode {
-        $injectionCode = '';
+        $arrayItems = [];
 
-        // Inject component attributes as variables (skip directive attributes like s:if)
+        // Add component attributes as array items
         foreach ($attributes as $attr) {
-            // Skip directive attributes (s:if, s:class, etc.) - they're handled by directive passes
-            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
-                continue;
-            }
-
             if (is_string($attr->value)) {
-                $injectionCode .= sprintf(
-                    '$%s = %s;' . "\n",
+                $arrayItems[] = sprintf(
+                    "'%s' => %s",
                     $attr->name,
                     var_export($attr->value, true),
                 );
             }
         }
 
-        // Inject default slot as $slot
-        $injectionCode .= '$slot = ';
-        if (empty($defaultSlot)) {
-            $injectionCode .= "'';\n";
+        // Add default slot
+        if ($defaultSlot === []) {
+            $arrayItems[] = "'slot' => ''";
         } else {
-            $injectionCode .= $this->nodesToPhpString($defaultSlot) . ";\n";
+            $arrayItems[] = sprintf("'slot' => %s", $this->nodesToPhpString($defaultSlot));
         }
 
-        // Inject named slots as variables
+        // Add named slots
         foreach ($namedSlots as $name => $nodes) {
-            $injectionCode .= sprintf('$%s = %s;' . "\n", $name, $this->nodesToPhpString($nodes));
+            $arrayItems[] = sprintf("'%s' => %s", $name, $this->nodesToPhpString($nodes));
         }
 
-        // Prepend injection code to template (without PHP tags - RawPhpNode adds them)
-        $injectionNode = new RawPhpNode(trim($injectionCode), 0, 0);
-        $newChildren = array_merge([$injectionNode], $template->children);
+        // Build closure with extract pattern for isolated scope
+        $openingCode = '(function($__vars) { extract($__vars);';
+        $closingCode = '})([' . implode(', ', $arrayItems) . ']);';
 
-        return new DocumentNode($newChildren);
+        // Wrap template in closure
+        $openingNode = new RawPhpNode($openingCode, 0, 0);
+        $closingNode = new RawPhpNode($closingCode, 0, 0);
+
+        return new DocumentNode([
+            $openingNode,
+            ...$template->children,
+            $closingNode,
+        ]);
     }
 
     /**
@@ -246,7 +273,7 @@ final readonly class ComponentExpansionPass
      */
     private function nodesToPhpString(array $nodes): string
     {
-        if (empty($nodes)) {
+        if ($nodes === []) {
             return "''";
         }
 
