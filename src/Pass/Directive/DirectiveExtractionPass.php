@@ -15,6 +15,7 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\PairedDirectiveCompilerInterface;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -56,19 +57,57 @@ final readonly class DirectiveExtractionPass
      */
     public function transform(DocumentNode $ast): DocumentNode
     {
-        $newChildren = [];
+        $children = $this->transformChildren($ast->children);
 
-        foreach ($ast->children as $node) {
+        return new DocumentNode($children);
+    }
+
+    /**
+     * Transform a list of child nodes, handling directive pairing
+     *
+     * @param array<\Sugar\Ast\Node> $nodes
+     * @return array<\Sugar\Ast\Node>
+     */
+    private function transformChildren(array $nodes): array
+    {
+        $result = [];
+        $skipNext = false;
+
+        $count = count($nodes);
+        for ($i = 0; $i < $count; $i++) {
+            if ($skipNext) {
+                $skipNext = false;
+                continue;
+            }
+
+            $node = $nodes[$i];
+
             if ($node instanceof ElementNode && $this->hasDirectiveAttribute($node)) {
+                // Check if this directive needs pairing with next sibling
+                $pairingDirectiveName = $this->getPairingDirectiveName($node);
+
+                if ($pairingDirectiveName !== null && isset($nodes[$i + 1])) {
+                    $nextNode = $nodes[$i + 1];
+                    if (
+                        $nextNode instanceof ElementNode &&
+                        $this->hasSpecificDirective($nextNode, $pairingDirectiveName)
+                    ) {
+                        // Pair the directives
+                        $result[] = $this->elementToDirectiveWithPairing($node, $nextNode);
+                        $skipNext = true;
+                        continue;
+                    }
+                }
+
                 // Convert element with directive into DirectiveNode
-                $newChildren[] = $this->elementToDirective($node);
+                $result[] = $this->elementToDirective($node);
             } else {
                 // Transform children recursively
-                $newChildren[] = $this->transformNode($node);
+                $result[] = $this->transformNode($node);
             }
         }
 
-        return new DocumentNode($newChildren);
+        return $result;
     }
 
     /**
@@ -78,14 +117,7 @@ final readonly class DirectiveExtractionPass
     {
         // Handle elements with children
         if ($node instanceof ElementNode) {
-            $newChildren = [];
-            foreach ($node->children as $child) {
-                if ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
-                    $newChildren[] = $this->elementToDirective($child);
-                } else {
-                    $newChildren[] = $this->transformNode($child);
-                }
-            }
+            $newChildren = $this->transformChildren($node->children);
 
             return new ElementNode(
                 tag: $node->tag,
@@ -310,5 +342,145 @@ final readonly class DirectiveExtractionPass
                 );
             }
         }
+    }
+
+    /**
+     * Get the pairing directive name for an element
+     *
+     * Checks if the element has a control flow directive that requires pairing.
+     *
+     * @return string|null The name of the pairing directive, or null if no pairing needed
+     */
+    private function getPairingDirectiveName(ElementNode $node): ?string
+    {
+        foreach ($node->attributes as $attr) {
+            if (str_starts_with($attr->name, $this->directivePrefix . ':')) {
+                $name = substr($attr->name, strlen($this->directivePrefix) + 1);
+
+                try {
+                    $compiler = $this->registry->getDirective($name);
+                    if (
+                        $compiler->getType() === DirectiveType::CONTROL_FLOW &&
+                        $compiler instanceof PairedDirectiveCompilerInterface
+                    ) {
+                        return $compiler->getPairingDirective();
+                    }
+                } catch (RuntimeException) {
+                    // Directive not found, continue
+                    continue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if an element has a specific directive
+     *
+     * @param string $directiveName The directive name (without prefix)
+     */
+    private function hasSpecificDirective(ElementNode $node, string $directiveName): bool
+    {
+        foreach ($node->attributes as $attr) {
+            if ($attr->name === $this->directivePrefix . ':' . $directiveName) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Transform ElementNode with paired directive into DirectiveNode
+     *
+     * Handles directives that have a pairing sibling (e.g., forelse + empty).
+     * Populates the DirectiveNode's elseChildren property with the paired element's content.
+     */
+    private function elementToDirectiveWithPairing(ElementNode $primaryNode, ElementNode $pairNode): DirectiveNode
+    {
+        // Extract directives from primary node
+        $directives = $this->extractDirective($primaryNode);
+
+        if ($directives['controlFlow'] === null) {
+            throw new RuntimeException('Expected control flow directive for pairing');
+        }
+
+        // Transform primary node children recursively
+        $transformedChildren = $this->transformChildrenForDirective($primaryNode);
+
+        // If there's a content directive, wrap it
+        if ($directives['content'] !== null) {
+            $contentDir = $directives['content'];
+            $transformedChildren = [
+                new DirectiveNode(
+                    name: $contentDir['name'],
+                    expression: $contentDir['expression'],
+                    children: $transformedChildren,
+                    elseChildren: null,
+                    line: $primaryNode->line,
+                    column: $primaryNode->column,
+                ),
+            ];
+        }
+
+        // Create element for primary body
+        $wrappedElement = new ElementNode(
+            tag: $primaryNode->tag,
+            attributes: $directives['remaining'],
+            children: $transformedChildren,
+            selfClosing: $primaryNode->selfClosing,
+            line: $primaryNode->line,
+            column: $primaryNode->column,
+        );
+
+        // Transform pair node children recursively
+        $transformedPairChildren = $this->transformChildrenForDirective($pairNode);
+
+        // Get pairing directive name from the compiler
+        $pairingDirectiveName = $directives['controlFlow']['name'];
+        $pairCompiler = $this->registry->getDirective($pairingDirectiveName);
+
+        if (!$pairCompiler instanceof PairedDirectiveCompilerInterface) {
+            throw new RuntimeException('Expected paired directive compiler');
+        }
+
+        $pairDirectiveName = $pairCompiler->getPairingDirective();
+
+        // Create element for pair body (without the pairing directive attribute)
+        $pairElement = new ElementNode(
+            tag: $pairNode->tag,
+            attributes: array_filter(
+                $pairNode->attributes,
+                fn($attr) => $attr->name !== $this->directivePrefix . ':' . $pairDirectiveName,
+            ),
+            children: $transformedPairChildren,
+            selfClosing: $pairNode->selfClosing,
+            line: $pairNode->line,
+            column: $pairNode->column,
+        );
+
+        // Create DirectiveNode with elseChildren populated
+        $controlDir = $directives['controlFlow'];
+
+        return new DirectiveNode(
+            name: $controlDir['name'],
+            expression: $controlDir['expression'],
+            children: [$wrappedElement],
+            elseChildren: [$pairElement],
+            line: $primaryNode->line,
+            column: $primaryNode->column,
+        );
+    }
+
+    /**
+     * Transform children of an element node for directive extraction
+     *
+     * @param \Sugar\Ast\ElementNode $node
+     * @return array<\Sugar\Ast\Node>
+     */
+    private function transformChildrenForDirective(ElementNode $node): array
+    {
+        return $this->transformChildren($node->children);
     }
 }

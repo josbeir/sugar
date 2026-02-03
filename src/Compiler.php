@@ -119,7 +119,6 @@ final class Compiler implements CompilerInterface
         $registry->registerDirective('default', SwitchCompiler::class);
         $registry->registerDirective('foreach', ForeachCompiler::class);
         $registry->registerDirective('forelse', ForelseCompiler::class);
-        $registry->registerDirective('none', ForelseCompiler::class);
         $registry->registerDirective('while', WhileCompiler::class);
         $registry->registerDirective('class', ClassCompiler::class);
         $registry->registerDirective('spread', SpreadCompiler::class);

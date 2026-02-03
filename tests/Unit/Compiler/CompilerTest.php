@@ -494,8 +494,79 @@ TEMPLATE;
         $this->assertStringNotContainsString('<script>test</script>', $output);
     }
 
-    public function testForelseWithText(): void
+    public function testCompileForelseDirective(): void
     {
-        $this->markTestIncomplete('Forelse with content directives needs special handling - s:none being processed as regular directive');
+        $source = '<ul s:forelse="$items as $item"><li><?= $item ?></li></ul><div s:empty>No items</div>';
+
+        $result = $this->compiler->compile($source);
+
+        // Should contain if/else wrapper
+        $this->assertStringContainsString('<?php if (!empty($items)): ?>', $result);
+        $this->assertStringContainsString('<?php foreach ($items as $item): ?>', $result);
+        $this->assertStringContainsString('<?php endforeach; ?>', $result);
+        $this->assertStringContainsString('<?php else: ?>', $result);
+        $this->assertStringContainsString('<?php endif; ?>', $result);
+        $this->assertStringContainsString('<ul>', $result);
+        $this->assertStringContainsString('<div>No items</div>', $result);
+    }
+
+    public function testCompileForelseDirectiveExecutableWithItems(): void
+    {
+        $source = '<ul s:forelse="$items as $item"><li><?= $item ?></li></ul><div s:empty>No items found</div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'items' => ['Apple', 'Banana', 'Cherry'],
+        ]);
+
+        $this->assertStringContainsString('<ul>', $output);
+        $this->assertStringContainsString('<li>Apple</li>', $output);
+        $this->assertStringContainsString('<li>Banana</li>', $output);
+        $this->assertStringContainsString('<li>Cherry</li>', $output);
+        $this->assertStringContainsString('</ul>', $output);
+        $this->assertStringNotContainsString('No items found', $output);
+    }
+
+    public function testCompileForelseDirectiveExecutableWithEmptyArray(): void
+    {
+        $source = '<ul s:forelse="$items as $item"><li><?= $item ?></li></ul><div s:empty>No items found</div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'items' => [],
+        ]);
+
+        $this->assertStringNotContainsString('<li>', $output);
+        $this->assertStringContainsString('<div>No items found</div>', $output);
+    }
+
+    public function testCompileForelseDirectiveExecutableWithNullItems(): void
+    {
+        $source = '<ul s:forelse="$items as $item"><li><?= $item ?></li></ul><div s:empty>No items found</div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'items' => null,
+        ]);
+
+        $this->assertStringNotContainsString('<li>', $output);
+        $this->assertStringContainsString('<div>No items found</div>', $output);
+    }
+
+    public function testCompileForelseWithLoopVariable(): void
+    {
+        $source = '<ul s:forelse="$items as $item"><li><?= $loop->index ?>: <?= $item ?></li></ul><div s:empty>Empty</div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $output = $this->executeTemplate($compiled, [
+            'items' => ['First', 'Second'],
+        ]);
+
+        $this->assertStringContainsString('0: First', $output);
+        $this->assertStringContainsString('1: Second', $output);
     }
 }

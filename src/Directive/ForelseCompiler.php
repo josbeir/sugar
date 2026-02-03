@@ -3,43 +3,54 @@ declare(strict_types=1);
 
 namespace Sugar\Directive;
 
-use RuntimeException;
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Extension\PairedDirectiveCompilerInterface;
 
 /**
- * Compiler for forelse directive (foreach with empty fallback)
+ * Compiler for forelse directive
  *
- * Transforms s:forelse with s:none fallback into if/foreach/else structure.
- * The s:none child (if present) is shown when the collection is empty.
+ * Transforms s:forelse directives into PHP foreach loops with optional
+ * else clause when the collection is empty. Must be paired with s:empty
+ * directive on a sibling element.
  *
  * Example:
  * ```
- * <ul s:forelse="$users as $user">
- *     <li><?= $user->name ?></li>
- *     <li s:none>No users found</li>
+ * <ul s:forelse="$items as $item">
+ *     <li><?= $item ?></li>
  * </ul>
+ * <div s:empty>
+ *     No items found
+ * </div>
  * ```
  *
  * Compiles to:
  * ```php
- * <?php if (!empty($users)): ?>
+ * <?php
+ * if (!empty($items)):
+ *     $__loopStack[] = $loop ?? null;
+ *     $loop = new \Sugar\Runtime\LoopMetadata($items, end($__loopStack));
+ *     foreach ($items as $item):
+ *         ?>
  * <ul>
- *     <?php foreach ($users as $user): ?>
- *         <li><?= $user->name ?></li>
- *     <?php endforeach; ?>
+ *     <li><?= $item ?></li>
  * </ul>
- * <?php else: ?>
- * <ul>
- *     <li>No users found</li>
- * </ul>
- * <?php endif; ?>
+ * <?php
+ *         $loop->next();
+ *     endforeach;
+ *     $loop = array_pop($__loopStack);
+ * else:
+ *     ?>
+ * <div>
+ *     No items found
+ * </div>
+ * <?php
+ * endif;
+ * ?>
  * ```
  */
-final readonly class ForelseCompiler implements DirectiveCompilerInterface
+final readonly class ForelseCompiler implements PairedDirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node
@@ -47,28 +58,14 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
      */
     public function compile(Node $node): array
     {
-        // Extract collection and find none marker
+        // Extract collection variable from "as $var" or "as $key => $value"
         $collection = $this->extractCollection($node->expression);
-        $noneMarker = null;
-        $loopChildren = [];
-
-        foreach ($node->children as $child) {
-            if ($child instanceof DirectiveNode && $child->name === 'none') {
-                if ($noneMarker instanceof DirectiveNode) {
-                    throw new RuntimeException('Forelse can only have one none/empty marker');
-                }
-
-                $noneMarker = $child;
-            } else {
-                $loopChildren[] = $child;
-            }
-        }
 
         $parts = [];
 
-        // If we have a none marker, wrap in if/else
-        if ($noneMarker instanceof DirectiveNode) {
-            // Opening if (!empty)
+        // If there's an elseChildren, wrap in if/else
+        if ($node->elseChildren !== null) {
+            // Opening if (!empty($collection))
             $parts[] = new RawPhpNode(
                 sprintf('if (!empty(%s)):', $collection),
                 $node->line,
@@ -76,13 +73,14 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
             );
         }
 
-        // Loop setup (similar to ForeachCompiler)
+        // Push current $loop to stack (preserve parent loop)
         $parts[] = new RawPhpNode(
             '$__loopStack[] = $loop ?? null;',
             $node->line,
             $node->column,
         );
 
+        // Create new LoopMetadata instance
         $parts[] = new RawPhpNode(
             sprintf(
                 '$loop = new \Sugar\Runtime\LoopMetadata(%s, end($__loopStack));',
@@ -99,10 +97,10 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
             $node->column,
         );
 
-        // Loop children (excluding none marker)
-        array_push($parts, ...$loopChildren);
+        // Children nodes (loop body)
+        array_push($parts, ...$node->children);
 
-        // Increment loop counter
+        // Increment loop counter after each iteration
         $parts[] = new RawPhpNode('$loop->next();', $node->line, $node->column);
 
         // Closing endforeach
@@ -111,10 +109,15 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
         // Restore parent loop
         $parts[] = new RawPhpNode('$loop = array_pop($__loopStack);', $node->line, $node->column);
 
-        // If we have a none marker, add else branch
-        if ($noneMarker instanceof DirectiveNode) {
+        // If there's an elseChildren, add else clause
+        if ($node->elseChildren !== null) {
+            // Else clause
             $parts[] = new RawPhpNode('else:', $node->line, $node->column);
-            array_push($parts, ...$noneMarker->children);
+
+            // Empty children (fallback content)
+            array_push($parts, ...$node->elseChildren);
+
+            // Closing endif
             $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
         }
 
@@ -122,17 +125,19 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
     }
 
     /**
-     * Extract collection variable from foreach expression
+     * Extract collection variable from forelse expression
      *
      * Examples:
      * - "$items as $item" -> "$items"
      * - "$users as $key => $user" -> "$users"
+     * - "range(1, 10) as $i" -> "range(1, 10)"
      *
-     * @param string $expression Foreach expression
+     * @param string $expression Forelse expression
      * @return string Collection expression
      */
     private function extractCollection(string $expression): string
     {
+        // Split on " as " and take the first part
         $parts = preg_split('/\s+as\s+/i', $expression, 2);
 
         return trim($parts[0] ?? $expression);
@@ -144,5 +149,13 @@ final readonly class ForelseCompiler implements DirectiveCompilerInterface
     public function getType(): DirectiveType
     {
         return DirectiveType::CONTROL_FLOW;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getPairingDirective(): string
+    {
+        return 'empty';
     }
 }
