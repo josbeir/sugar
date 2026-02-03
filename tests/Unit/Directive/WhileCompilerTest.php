@@ -24,7 +24,6 @@ final class WhileCompilerTest extends TestCase
             name: 'while',
             expression: '$counter < 10',
             children: [new TextNode('Loop', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );

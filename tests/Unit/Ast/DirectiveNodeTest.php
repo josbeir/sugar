@@ -23,7 +23,6 @@ final class DirectiveNodeTest extends TestCase
             name: 'if',
             expression: '$user->isAdmin',
             children: $children,
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -31,30 +30,38 @@ final class DirectiveNodeTest extends TestCase
         $this->assertSame('if', $node->name);
         $this->assertSame('$user->isAdmin', $node->expression);
         $this->assertCount(1, $node->children);
-        $this->assertNull($node->elseChildren);
         $this->assertSame(1, $node->line);
         $this->assertSame(1, $node->column);
     }
 
-    public function testDirectiveNodeWithElseChildren(): void
+    public function testDirectiveNodeWithPairedSibling(): void
     {
-        $children = [new TextNode('Admin Panel', 1, 1)];
+        $ifChildren = [new TextNode('Admin Panel', 1, 1)];
         $elseChildren = [new TextNode('Guest Panel', 2, 1)];
 
-        $node = new DirectiveNode(
+        $ifNode = new DirectiveNode(
             name: 'if',
             expression: '$user->isAdmin',
-            children: $children,
-            elseChildren: $elseChildren,
+            children: $ifChildren,
             line: 1,
             column: 1,
         );
 
-        $this->assertSame('if', $node->name);
-        $this->assertCount(1, $node->children);
-        $this->assertNotNull($node->elseChildren);
-        $this->assertCount(1, $node->elseChildren);
-        $this->assertInstanceOf(TextNode::class, $node->elseChildren[0]);
+        $elseNode = new DirectiveNode(
+            name: 'else',
+            expression: '',
+            children: $elseChildren,
+            line: 2,
+            column: 1,
+        );
+
+        $ifNode->setPairedSibling($elseNode);
+
+        $this->assertSame('if', $ifNode->name);
+        $this->assertCount(1, $ifNode->children);
+        $this->assertNotNull($ifNode->getPairedSibling());
+        $this->assertSame($elseNode, $ifNode->getPairedSibling());
+        $this->assertInstanceOf(TextNode::class, $elseNode->children[0]);
     }
 
     public function testDirectiveNodeWithForeach(): void
@@ -67,7 +74,6 @@ final class DirectiveNodeTest extends TestCase
             name: 'foreach',
             expression: '$users as $user',
             children: $children,
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -90,7 +96,6 @@ final class DirectiveNodeTest extends TestCase
             name: 'if',
             expression: '$showContent',
             children: $children,
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -107,7 +112,6 @@ final class DirectiveNodeTest extends TestCase
             name: 'if',
             expression: '$test',
             children: [],
-            elseChildren: null,
             line: 5,
             column: 10,
         );
@@ -121,14 +125,11 @@ final class DirectiveNodeTest extends TestCase
             name: 'if',
             expression: '$isEmpty',
             children: [],
-            elseChildren: [],
             line: 1,
             column: 1,
         );
 
         $this->assertCount(0, $node->children);
-        $this->assertNotNull($node->elseChildren);
-        $this->assertCount(0, $node->elseChildren);
     }
 
     public function testDirectiveNodePreservesLineColumn(): void
@@ -137,7 +138,6 @@ final class DirectiveNodeTest extends TestCase
             name: 'foreach',
             expression: '$items as $item',
             children: [new TextNode('Item', 42, 15)],
-            elseChildren: null,
             line: 42,
             column: 5,
         );

@@ -61,16 +61,10 @@ final class DirectivePairingPass
             }
         }
 
-        // Process DirectiveNode children and elseChildren
+        // Process DirectiveNode children
         if ($node instanceof DirectiveNode) {
             foreach ($node->children as $child) {
                 $this->wireParents($child, $node);
-            }
-
-            if ($node->elseChildren !== null) {
-                foreach ($node->elseChildren as $child) {
-                    $this->wireParents($child, $node);
-                }
             }
         }
     }
@@ -94,12 +88,6 @@ final class DirectivePairingPass
         if ($node instanceof DirectiveNode) {
             foreach ($node->children as $child) {
                 $this->pairSiblingDirectives($child);
-            }
-
-            if ($node->elseChildren !== null) {
-                foreach ($node->elseChildren as $child) {
-                    $this->pairSiblingDirectives($child);
-                }
             }
         }
     }
@@ -133,7 +121,7 @@ final class DirectivePairingPass
             fn($n): bool => $n instanceof DirectiveNode && $n->name === $pairName,
         );
 
-        if ($paired !== null) {
+        if ($paired instanceof Node) {
             assert($paired instanceof DirectiveNode);
             $node->setPairedSibling($paired);
             $paired->markConsumedByPairing();

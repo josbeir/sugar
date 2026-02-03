@@ -52,7 +52,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'if',
             expression: '$condition',
             children: [new TextNode('Content', 1, 10)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -107,7 +106,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'if',
             expression: '$x',
             children: [new TextNode('Inner', 2, 5)],
-            elseChildren: null,
             line: 2,
             column: 4,
         );
@@ -125,7 +123,6 @@ final class DirectiveCompilationPassTest extends TestCase
                     column: 10,
                 ),
             ],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -172,7 +169,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'unknown',
             expression: '$value',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -211,7 +207,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'custom',
             expression: '$value',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -250,7 +245,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'test',
             expression: 'first',
             children: [new TextNode('One', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -259,7 +253,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'test',
             expression: 'second',
             children: [new TextNode('Two', 2, 0)],
-            elseChildren: null,
             line: 2,
             column: 0,
         );
@@ -298,7 +291,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'if',
             expression: '$show',
             children: [new TextNode('Visible', 2, 5)],
-            elseChildren: null,
             line: 2,
             column: 4,
         );
@@ -346,7 +338,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'test',
             expression: '$x',
             children: [new TextNode('Dir', 2, 5)],
-            elseChildren: null,
             line: 2,
             column: 0,
         );
@@ -408,7 +399,6 @@ final class DirectiveCompilationPassTest extends TestCase
                         name: 'inner',
                         expression: '$nested',
                         children: [new TextNode('Nested', 1, 0)],
-                        elseChildren: null,
                         line: 1,
                         column: 0,
                     ),
@@ -444,7 +434,6 @@ final class DirectiveCompilationPassTest extends TestCase
             name: 'outer',
             expression: '$x',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

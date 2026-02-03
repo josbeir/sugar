@@ -24,7 +24,6 @@ final class EmptyCompilerTest extends TestCase
             name: 'empty',
             expression: '$cart',
             children: [new TextNode('Cart is empty', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -45,7 +44,6 @@ final class EmptyCompilerTest extends TestCase
             name: 'empty',
             expression: '$data[\'items\']',
             children: [new TextNode('No items', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -62,7 +60,6 @@ final class EmptyCompilerTest extends TestCase
             name: 'empty',
             expression: '$user->posts',
             children: [new TextNode('No posts', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -79,7 +76,6 @@ final class EmptyCompilerTest extends TestCase
             name: 'empty',
             expression: 'trim($input)',
             children: [new TextNode('Input is empty', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -99,7 +95,6 @@ final class EmptyCompilerTest extends TestCase
                 new TextNode('No results found', 1, 0),
                 new TextNode('Try a different search', 2, 0),
             ],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

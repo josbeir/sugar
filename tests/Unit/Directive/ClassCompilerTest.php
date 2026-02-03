@@ -24,7 +24,6 @@ final class ClassCompilerTest extends TestCase
             name: 'class',
             expression: "['btn', 'active' => \$isActive]",
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -43,7 +42,6 @@ final class ClassCompilerTest extends TestCase
             name: 'class',
             expression: "['card', 'shadow']",
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

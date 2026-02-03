@@ -24,7 +24,6 @@ final class TextCompilerTest extends TestCase
             name: 'text',
             expression: '$user->name',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 5,
         );
@@ -41,7 +40,6 @@ final class TextCompilerTest extends TestCase
             name: 'text',
             expression: '$variable',
             children: [],
-            elseChildren: null,
             line: 2,
             column: 10,
         );
@@ -59,7 +57,6 @@ final class TextCompilerTest extends TestCase
             name: 'text',
             expression: '$content',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -76,7 +73,6 @@ final class TextCompilerTest extends TestCase
             name: 'text',
             expression: '$data',
             children: [],
-            elseChildren: null,
             line: 5,
             column: 12,
         );
@@ -94,7 +90,6 @@ final class TextCompilerTest extends TestCase
             name: 'text',
             expression: '$user->profile->getDisplayName()',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

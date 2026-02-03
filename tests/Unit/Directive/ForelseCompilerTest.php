@@ -36,7 +36,6 @@ final class ForelseCompilerTest extends TestCase
             name: 'forelse',
             expression: '$items as $item',
             children: [new TextNode('Item', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -87,7 +86,6 @@ final class ForelseCompilerTest extends TestCase
             name: 'empty',
             expression: 'true',
             children: [$emptyElement],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -96,7 +94,6 @@ final class ForelseCompilerTest extends TestCase
             name: 'forelse',
             expression: '$items as $item',
             children: [new TextNode('Item', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -154,7 +151,6 @@ final class ForelseCompilerTest extends TestCase
             name: 'forelse',
             expression: '$users as $id => $user',
             children: [new TextNode('User', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -176,7 +172,6 @@ final class ForelseCompilerTest extends TestCase
             name: 'forelse',
             expression: 'range(1, 10) as $num',
             children: [new TextNode('Number', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );

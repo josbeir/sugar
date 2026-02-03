@@ -24,7 +24,6 @@ final class UnlessCompilerTest extends TestCase
             name: 'unless',
             expression: '$isAdmin',
             children: [new TextNode('Regular user content', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -45,7 +44,6 @@ final class UnlessCompilerTest extends TestCase
             name: 'unless',
             expression: '$user->isAdmin() && $user->isActive()',
             children: [new TextNode('Content', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -62,7 +60,6 @@ final class UnlessCompilerTest extends TestCase
             name: 'unless',
             expression: 'empty($cart)',
             children: [new TextNode('Cart is not empty', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -82,7 +79,6 @@ final class UnlessCompilerTest extends TestCase
                 new TextNode('First line', 1, 0),
                 new TextNode('Second line', 2, 0),
             ],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

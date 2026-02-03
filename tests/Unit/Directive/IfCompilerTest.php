@@ -24,7 +24,6 @@ final class IfCompilerTest extends TestCase
             name: 'if',
             expression: '$showContent',
             children: [new TextNode('Content', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -44,7 +43,6 @@ final class IfCompilerTest extends TestCase
             name: 'elseif',
             expression: '$otherCondition',
             children: [new TextNode('Other', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -62,7 +60,6 @@ final class IfCompilerTest extends TestCase
             name: 'else',
             expression: '',
             children: [new TextNode('Fallback', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -76,16 +73,25 @@ final class IfCompilerTest extends TestCase
 
     public function testCompileIfWithElseBranch(): void
     {
-        $node = new DirectiveNode(
+        $ifNode = new DirectiveNode(
             name: 'if',
             expression: '$condition',
             children: [new TextNode('True', 1, 1)],
-            elseChildren: [new TextNode('False', 2, 1)],
             line: 1,
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $elseNode = new DirectiveNode(
+            name: 'else',
+            expression: '',
+            children: [new TextNode('False', 2, 1)],
+            line: 2,
+            column: 1,
+        );
+
+        $ifNode->setPairedSibling($elseNode);
+
+        $result = $this->compiler->compile($ifNode);
 
         $this->assertCount(5, $result); // if, true content, else, false content, endif
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);

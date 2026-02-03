@@ -24,7 +24,6 @@ final class ForeachCompilerTest extends TestCase
             name: 'foreach',
             expression: '$items as $item',
             children: [new TextNode('Item', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );
@@ -64,7 +63,6 @@ final class ForeachCompilerTest extends TestCase
             name: 'foreach',
             expression: '$users as $id => $user',
             children: [new TextNode('User', 1, 1)],
-            elseChildren: null,
             line: 1,
             column: 1,
         );

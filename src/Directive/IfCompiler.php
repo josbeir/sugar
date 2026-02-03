@@ -12,16 +12,23 @@ use Sugar\Extension\DirectiveCompilerInterface;
  * Compiler for if/elseif/else directives
  *
  * Transforms s:if, s:elseif, and s:else directives into PHP control structures.
+ * Uses sibling pairing to handle elseif/else chains.
  *
  * Example:
  * ```
  * <div s:if="$user">Welcome</div>
+ * <div s:elseif="$guest">Hello</div>
+ * <div s:else>Hi</div>
  * ```
  *
  * Compiles to:
  * ```php
  * <?php if ($user): ?>
  * <div>Welcome</div>
+ * <?php elseif ($guest): ?>
+ * <div>Hello</div>
+ * <?php else: ?>
+ * <div>Hi</div>
  * <?php endif; ?>
  * ```
  */
@@ -45,14 +52,13 @@ final readonly class IfCompiler implements DirectiveCompilerInterface
         }
 
         // Children nodes (content to render when condition is true)
-        // Note: Children are added as-is. The DirectiveCompilationPass will
-        // recursively compile any nested DirectiveNodes in the children.
         array_push($parts, ...$node->children);
 
-        // Else branch if present
-        if ($node->elseChildren !== null) {
-            $parts[] = new RawPhpNode('else:', $node->line, $node->column);
-            array_push($parts, ...$node->elseChildren);
+        // Follow pairedSibling chain for elseif/else
+        $paired = $node->getPairedSibling();
+        if ($paired !== null) {
+            // Recursively compile the paired directive (elseif/else)
+            array_push($parts, ...$this->compile($paired));
         }
 
         // Closing control structure (only for 'if')

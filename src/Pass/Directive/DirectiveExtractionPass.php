@@ -207,7 +207,6 @@ final readonly class DirectiveExtractionPass
                     name: $contentDir['name'],
                     expression: $contentDir['expression'],
                     children: $transformedChildren,
-                    elseChildren: null,
                     line: $node->line,
                     column: $node->column,
                 ),
@@ -232,7 +231,6 @@ final readonly class DirectiveExtractionPass
                 name: $controlDir['name'],
                 expression: $controlDir['expression'],
                 children: [$wrappedElement],
-                elseChildren: null,
                 line: $node->line,
                 column: $node->column,
             );
@@ -246,7 +244,6 @@ final readonly class DirectiveExtractionPass
             name: $directives['content']['name'],
             expression: $directives['content']['expression'],
             children: [$wrappedElement],
-            elseChildren: null,
             line: $node->line,
             column: $node->column,
         );
@@ -278,7 +275,6 @@ final readonly class DirectiveExtractionPass
             name: $name,
             expression: $expression,
             children: [],
-            elseChildren: null,
             line: $line,
             column: $column,
         );

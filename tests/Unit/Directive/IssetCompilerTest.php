@@ -24,7 +24,6 @@ final class IssetCompilerTest extends TestCase
             name: 'isset',
             expression: '$user',
             children: [new TextNode('User exists', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -45,7 +44,6 @@ final class IssetCompilerTest extends TestCase
             name: 'isset',
             expression: '$user, $profile',
             children: [new TextNode('Both exist', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -62,7 +60,6 @@ final class IssetCompilerTest extends TestCase
             name: 'isset',
             expression: '$data[\'key\']',
             children: [new TextNode('Key exists', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -79,7 +76,6 @@ final class IssetCompilerTest extends TestCase
             name: 'isset',
             expression: '$user->email',
             children: [new TextNode('Email exists', 1, 0)],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -99,7 +95,6 @@ final class IssetCompilerTest extends TestCase
                 new TextNode('First line', 1, 0),
                 new TextNode('Second line', 2, 0),
             ],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

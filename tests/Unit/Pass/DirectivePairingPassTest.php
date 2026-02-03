@@ -44,7 +44,7 @@ final class DirectivePairingPassTest extends TestCase
     public function testWiresNestedParentReferences(): void
     {
         $grandchild = new TextNode('Inner', 1, 1);
-        $child = new DirectiveNode('if', '$x', [$grandchild], null, 1, 1);
+        $child = new DirectiveNode('if', '$x', [$grandchild], 1, 1);
         $doc = new DocumentNode([$child]);
 
         $this->pass->transform($doc);
@@ -55,8 +55,8 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testPairsForelseWithEmpty(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
-        $empty = new DirectiveNode('empty', '', [], null, 2, 1);
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
+        $empty = new DirectiveNode('empty', '', [], 2, 1);
         $doc = new DocumentNode([$forelse, $empty]);
 
         $this->pass->transform($doc);
@@ -66,9 +66,9 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testDoesNotPairNonSiblingDirectives(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
         $text = new TextNode('Some text', 2, 1);
-        $empty = new DirectiveNode('empty', '', [], null, 3, 1);
+        $empty = new DirectiveNode('empty', '', [], 3, 1);
         $doc = new DocumentNode([$forelse, $text, $empty]);
 
         $this->pass->transform($doc);
@@ -79,7 +79,7 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testDoesNotPairForelseWithoutEmpty(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], null, 1, 1);
+        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
         $text = new TextNode('Text', 2, 1);
         $doc = new DocumentNode([$forelse, $text]);
 
@@ -91,24 +91,13 @@ final class DirectivePairingPassTest extends TestCase
     public function testDoesNotPairNonPairedDirectiveTypes(): void
     {
         // Switch doesn't implement PairedDirectiveCompilerInterface yet
-        $switch = new DirectiveNode('switch', '$value', [], null, 1, 1);
-        $case1 = new DirectiveNode('case', '1', [], null, 2, 1);
+        $switch = new DirectiveNode('switch', '$value', [], 1, 1);
+        $case1 = new DirectiveNode('case', '1', [], 2, 1);
         $doc = new DocumentNode([$switch, $case1]);
 
         $this->pass->transform($doc);
 
         // Should not pair since switch doesn't implement the interface
         $this->assertNull($switch->getPairedSibling());
-    }
-
-    public function testHandlesElseChildrenParenting(): void
-    {
-        $elseChild = new TextNode('Else content', 2, 1);
-        $directive = new DirectiveNode('if', '$x', [], [$elseChild], 1, 1);
-        $doc = new DocumentNode([$directive]);
-
-        $this->pass->transform($doc);
-
-        $this->assertSame($directive, $elseChild->getParent());
     }
 }

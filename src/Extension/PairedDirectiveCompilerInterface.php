@@ -12,10 +12,11 @@ namespace Sugar\Extension;
  *
  * Examples:
  * - forelse pairs with 'empty' - loop with empty fallback
+ * - if pairs with 'elseif' and 'else' - conditional with alternatives
  * - switch could pair with 'case' - switch with case branches
  *
- * During extraction, the DirectiveExtractionPass will detect paired directives
- * and populate the DirectiveNode's elseChildren property with the paired content.
+ * During pairing, the DirectivePairingPass will detect paired directives
+ * and set the pairedSibling property linking them together.
  */
 interface PairedDirectiveCompilerInterface extends DirectiveCompilerInterface
 {

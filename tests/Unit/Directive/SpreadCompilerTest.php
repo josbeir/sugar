@@ -24,7 +24,6 @@ final class SpreadCompilerTest extends TestCase
             name: 'spread',
             expression: '$attrs',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -43,7 +42,6 @@ final class SpreadCompilerTest extends TestCase
             name: 'spread',
             expression: '$attributes',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -62,7 +60,6 @@ final class SpreadCompilerTest extends TestCase
             name: 'spread',
             expression: 'array_merge($baseAttrs, $customAttrs)',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

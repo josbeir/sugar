@@ -24,7 +24,6 @@ final class HtmlCompilerTest extends TestCase
             name: 'html',
             expression: '$content',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 5,
         );
@@ -41,7 +40,6 @@ final class HtmlCompilerTest extends TestCase
             name: 'html',
             expression: '$htmlContent',
             children: [],
-            elseChildren: null,
             line: 2,
             column: 10,
         );
@@ -59,7 +57,6 @@ final class HtmlCompilerTest extends TestCase
             name: 'html',
             expression: '$trustedHtml',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );
@@ -76,7 +73,6 @@ final class HtmlCompilerTest extends TestCase
             name: 'html',
             expression: '$data',
             children: [],
-            elseChildren: null,
             line: 8,
             column: 15,
         );
@@ -94,7 +90,6 @@ final class HtmlCompilerTest extends TestCase
             name: 'html',
             expression: '$formatter->renderHtml($data)',
             children: [],
-            elseChildren: null,
             line: 1,
             column: 0,
         );

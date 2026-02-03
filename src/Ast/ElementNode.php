@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Ast;
 
-use Sugar\Ast\Trait\SiblingNavigationTrait;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
+use Sugar\Ast\Trait\SiblingNavigationTrait;
 
 /**
  * HTML element node with attributes and children
