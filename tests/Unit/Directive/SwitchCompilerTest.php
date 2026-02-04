@@ -101,22 +101,33 @@ final class SwitchCompilerTest extends TestCase
 
     public function testSwitchWithoutCases(): void
     {
+        $source = <<<'TEMPLATE'
+<div s:switch="$value">No cases</div>
+TEMPLATE;
+
         $switch = new DirectiveNode(
             name: 'switch',
             expression: '$value',
             children: [new TextNode('No cases', 1, 0)],
             line: 1,
-            column: 0,
+            column: 5,
         );
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Switch directive must contain at least one case or default');
 
-        $this->compiler->compile($switch, $this->createContext());
+        $this->compiler->compile($switch, $this->createContext($source));
     }
 
     public function testMultipleDefaultsThrowException(): void
     {
+        $source = <<<'TEMPLATE'
+<div s:switch="$role">
+    <div s:default>First default</div>
+    <div s:default>Second default</div>
+</div>
+TEMPLATE;
+
         $switch = new DirectiveNode(
             name: 'switch',
             expression: '$role',
@@ -126,24 +137,24 @@ final class SwitchCompilerTest extends TestCase
                     expression: '',
                     children: [new TextNode('First default', 1, 0)],
                     line: 2,
-                    column: 0,
+                    column: 10,
                 ),
                 new DirectiveNode(
                     name: 'default',
                     expression: '',
                     children: [new TextNode('Second default', 1, 0)],
                     line: 3,
-                    column: 0,
+                    column: 10,
                 ),
             ],
             line: 1,
-            column: 0,
+            column: 5,
         );
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Switch directive can only have one default case');
 
-        $this->compiler->compile($switch, $this->createContext());
+        $this->compiler->compile($switch, $this->createContext($source));
     }
 
     public function testSwitchWithMixedChildren(): void
@@ -179,6 +190,12 @@ final class SwitchCompilerTest extends TestCase
 
     public function testCaseWithoutExpression(): void
     {
+        $source = <<<'TEMPLATE'
+<div s:switch="$role">
+    <div s:case="">Content</div>
+</div>
+TEMPLATE;
+
         $switch = new DirectiveNode(
             name: 'switch',
             expression: '$role',
@@ -188,7 +205,7 @@ final class SwitchCompilerTest extends TestCase
                     expression: '',
                     children: [new TextNode('Content', 1, 0)],
                     line: 2,
-                    column: 0,
+                    column: 10,
                 ),
             ],
             line: 1,
@@ -198,7 +215,7 @@ final class SwitchCompilerTest extends TestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Case directive requires a value expression');
 
-        $this->compiler->compile($switch, $this->createContext());
+        $this->compiler->compile($switch, $this->createContext($source));
     }
 
     public function testCompilesNestedCasesInsideElementNodes(): void
@@ -386,6 +403,12 @@ final class SwitchCompilerTest extends TestCase
 
     public function testNestedCaseWithEmptyExpressionThrowsException(): void
     {
+        $source = <<<'TEMPLATE'
+<div s:switch="$role">
+    <div s:case="   ">Content</div>
+</div>
+TEMPLATE;
+
         $switch = new DirectiveNode(
             name: 'switch',
             expression: '$role',
@@ -398,8 +421,8 @@ final class SwitchCompilerTest extends TestCase
                             name: 'case',
                             expression: '   ',
                             children: [new TextNode('Content', 1, 0)],
-                            line: 1,
-                            column: 0,
+                            line: 2,
+                            column: 10,
                         ),
                     ],
                     selfClosing: false,
@@ -408,12 +431,12 @@ final class SwitchCompilerTest extends TestCase
                 ),
             ],
             line: 1,
-            column: 0,
+            column: 5,
         );
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Case directive requires a value expression');
 
-        $this->compiler->compile($switch, $this->createContext());
+        $this->compiler->compile($switch, $this->createContext($source));
     }
 }

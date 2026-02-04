@@ -4,13 +4,13 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Pass\TemplateInheritancePass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
@@ -198,7 +198,7 @@ final class TemplateInheritancePassTest extends TestCase
             new ElementNode('div', [$this->attr('s:extends', 'circular-a.sugar.php')], [], false, 1, 1),
         ]);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Circular');
 
         try {

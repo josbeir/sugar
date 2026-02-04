@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Pass;
 
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -14,6 +13,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\InheritanceAttribute;
+use Sugar\Exception\SyntaxException;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
@@ -42,7 +42,7 @@ final class TemplateInheritancePass implements PassInterface
      * @param \Sugar\Ast\DocumentNode $ast Document to process
      * @param \Sugar\Context\CompilationContext $context Compilation context
      * @return \Sugar\Ast\DocumentNode Processed document
-     * @throws \RuntimeException On circular inheritance
+     * @throws \Sugar\Exception\SyntaxException On circular inheritance
      * @throws \Sugar\Exception\TemplateNotFoundException If template not found
      */
     public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
@@ -50,29 +50,44 @@ final class TemplateInheritancePass implements PassInterface
         // Reset loaded templates stack for this execution
         $this->loadedTemplates = [];
 
-        return $this->process($ast, $context->templatePath, $this->loadedTemplates);
+        return $this->process($ast, $context, $this->loadedTemplates);
     }
 
     /**
      * Process template inheritance (s:extends, s:block, s:include).
      *
      * @param \Sugar\Ast\DocumentNode $document Document to process
-     * @param string $currentTemplate Current template path
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Stack of loaded templates for circular detection
      * @return \Sugar\Ast\DocumentNode Processed document
-     * @throws \RuntimeException On circular inheritance
+     * @throws \Sugar\Exception\SyntaxException On circular inheritance
      * @throws \Sugar\Exception\TemplateNotFoundException If template not found
      */
     private function process(
         DocumentNode $document,
-        string $currentTemplate,
+        CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
+        $currentTemplate = $context->templatePath;
+
         // Check for circular inheritance
         if (in_array($currentTemplate, $loadedTemplates, true)) {
             $chain = [...$loadedTemplates, $currentTemplate];
-            throw new RuntimeException(
+            $extendsElement = $this->findExtendsDirective($document);
+
+            // Find the s:extends attribute for better error positioning
+            $extendsAttr = $extendsElement instanceof ElementNode
+                ? AttributeHelper::findAttribute($extendsElement->attributes, InheritanceAttribute::EXTENDS->value)
+                : null;
+
+            $line = $extendsAttr instanceof AttributeNode ? $extendsAttr->line : $extendsElement?->line;
+            $column = $extendsAttr instanceof AttributeNode ? $extendsAttr->column : $extendsElement?->column;
+
+            throw $context->createException(
+                SyntaxException::class,
                 sprintf('Circular template inheritance detected: %s', implode(' -> ', $chain)),
+                $line,
+                $column,
             );
         }
 
@@ -82,10 +97,10 @@ final class TemplateInheritancePass implements PassInterface
         $extendsElement = $this->findExtendsDirective($document);
 
         if ($extendsElement instanceof ElementNode) {
-            $document = $this->processExtends($extendsElement, $document, $currentTemplate, $loadedTemplates);
+            $document = $this->processExtends($extendsElement, $document, $context, $loadedTemplates);
         } else {
             // Process s:include directives
-            $document = $this->processIncludes($document, $currentTemplate, $loadedTemplates);
+            $document = $this->processIncludes($document, $context, $loadedTemplates);
         }
 
         // Remove template inheritance attributes (s:block, s:extends, s:include, s:with)
@@ -117,19 +132,19 @@ final class TemplateInheritancePass implements PassInterface
      *
      * @param \Sugar\Ast\ElementNode $extendsElement Element with s:extends
      * @param \Sugar\Ast\DocumentNode $childDocument Child document
-     * @param string $currentTemplate Current template path
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return \Sugar\Ast\DocumentNode Processed parent document
      */
     private function processExtends(
         ElementNode $extendsElement,
         DocumentNode $childDocument,
-        string $currentTemplate,
+        CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
         // Get parent template path
         $parentPath = $this->getAttributeValue($extendsElement, InheritanceAttribute::EXTENDS->value);
-        $resolvedPath = $this->loader->resolve($parentPath, $currentTemplate);
+        $resolvedPath = $this->loader->resolve($parentPath, $context->templatePath);
 
         // Load and parse parent template
         $parentContent = $this->loader->load($resolvedPath);
@@ -142,21 +157,28 @@ final class TemplateInheritancePass implements PassInterface
         // Replace blocks in parent
         $parentDocument = $this->replaceBlocks($parentDocument, $childBlocks);
 
+        // Create new context for parent template
+        $parentContext = new CompilationContext(
+            templatePath: $resolvedPath,
+            source: $parentContent,
+            debug: $context->debug,
+        );
+
         // Recursively process parent (for multi-level inheritance)
-        return $this->process($parentDocument, $resolvedPath, $loadedTemplates);
+        return $this->process($parentDocument, $parentContext, $loadedTemplates);
     }
 
     /**
      * Process s:include directives.
      *
      * @param \Sugar\Ast\DocumentNode $document Document to process
-     * @param string $currentTemplate Current template path
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return \Sugar\Ast\DocumentNode Processed document
      */
     private function processIncludes(
         DocumentNode $document,
-        string $currentTemplate,
+        CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
         $newChildren = [];
@@ -164,13 +186,21 @@ final class TemplateInheritancePass implements PassInterface
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode && $this->hasAttribute($child, InheritanceAttribute::INCLUDE->value)) {
                 $includePath = $this->getAttributeValue($child, InheritanceAttribute::INCLUDE->value);
-                $resolvedPath = $this->loader->resolve($includePath, $currentTemplate);
+                $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
                 // Load and parse included template
                 $includeContent = $this->loader->load($resolvedPath);
                 $parser = new Parser();
                 $includeDocument = $parser->parse($includeContent);
+
+                // Create new context for included template
+                $includeContext = new CompilationContext(
+                    templatePath: $resolvedPath,
+                    source: $includeContent,
+                    debug: $context->debug,
+                );
+
                 // Process includes recursively
-                $includeDocument = $this->processIncludes($includeDocument, $resolvedPath, $loadedTemplates);
+                $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
                 // Check for s:with (scope isolation)
                 if ($this->hasAttribute($child, InheritanceAttribute::WITH->value)) {
                     // Wrap in scope isolation with variables from s:with
@@ -185,7 +215,7 @@ final class TemplateInheritancePass implements PassInterface
                 // Recursively process children
                 $processedChildren = $this->processChildrenIncludes(
                     $child->children,
-                    $currentTemplate,
+                    $context,
                     $loadedTemplates,
                 );
                 $processedChild = NodeCloner::withChildren($child, $processedChildren);
@@ -202,14 +232,17 @@ final class TemplateInheritancePass implements PassInterface
      * Process includes in children nodes.
      *
      * @param array<\Sugar\Ast\Node> $children Children to process
-     * @param string $currentTemplate Current template path
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return array<\Sugar\Ast\Node> Processed children
      */
-    private function processChildrenIncludes(array $children, string $currentTemplate, array &$loadedTemplates): array
-    {
+    private function processChildrenIncludes(
+        array $children,
+        CompilationContext $context,
+        array &$loadedTemplates,
+    ): array {
         $doc = new DocumentNode($children);
-        $processed = $this->processIncludes($doc, $currentTemplate, $loadedTemplates);
+        $processed = $this->processIncludes($doc, $context, $loadedTemplates);
 
         return $processed->children;
     }

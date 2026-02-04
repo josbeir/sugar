@@ -43,9 +43,11 @@ final readonly class CompilationContext
         ?int $line = null,
         ?int $column = null,
     ): SugarException {
-        $snippet = $line !== null && $column !== null
-            ? SnippetGenerator::generate($this->source, $line, $column)
-            : null;
+        $snippet = null;
+        if ($line !== null && $column !== null) {
+            $generated = SnippetGenerator::generate($this->source, $line, $column);
+            $snippet = $generated !== '' ? $generated : null;
+        }
 
         return new $exceptionClass(
             message: $message,

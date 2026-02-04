@@ -23,8 +23,18 @@ final class SnippetGenerator
         int $column,
         int $contextLines = 2,
     ): string {
+        // Don't generate snippet if source is empty or too short
+        if (trim($source) === '') {
+            return '';
+        }
+
         $lines = explode("\n", $source);
         $totalLines = count($lines);
+
+        // Don't generate snippet if the error line doesn't exist or is empty
+        if ($line > $totalLines || trim($lines[$line - 1] ?? '') === '') {
+            return '';
+        }
 
         // Calculate line range
         $startLine = max(1, $line - $contextLines);
@@ -41,8 +51,8 @@ final class SnippetGenerator
             $lineContent = $lines[$i - 1]; // Arrays are 0-indexed
             $snippetLines[] = sprintf('%s | %s', $lineNumber, $lineContent);
 
-            // Add error pointer after the error line
-            if ($i === $line) {
+            // Add error pointer after the error line (only if column > 0)
+            if ($i === $line && $column > 0) {
                 $pointerPadding = $padding + 3 + $column - 1; // padding + " | " + column position
                 $pointer = str_repeat(' ', $pointerPadding) . '^';
                 $snippetLines[] = $pointer;
