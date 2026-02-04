@@ -13,10 +13,9 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\HtmlCompiler;
 use Sugar\Directive\IfCompiler;
-use Sugar\Directive\TextCompiler;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
@@ -34,8 +33,8 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         $registry->registerDirective('if', IfCompiler::class);
         $registry->registerDirective('foreach', ForeachCompiler::class);
         $registry->registerDirective('class', ClassCompiler::class);
-        $registry->registerDirective('text', TextCompiler::class);
-        $registry->registerDirective('html', HtmlCompiler::class);
+        $registry->registerDirective('text', new ContentCompiler(escape: true));
+        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
 
         $this->pass = new DirectiveExtractionPass($registry);
     }

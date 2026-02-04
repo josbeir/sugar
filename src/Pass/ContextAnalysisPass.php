@@ -184,6 +184,7 @@ final class ContextAnalysisPass implements PassInterface
             context: $newContext,
             line: $node->line,
             column: $node->column,
+            pipes: $node->pipes,
         );
     }
 }

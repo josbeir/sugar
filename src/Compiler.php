@@ -6,17 +6,17 @@ namespace Sugar;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\EmptyCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\ForelseCompiler;
-use Sugar\Directive\HtmlCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
-use Sugar\Directive\TextCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Directive\WhileCompiler;
+use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
@@ -171,8 +171,8 @@ final class Compiler implements CompilerInterface
         $registry->registerDirective('while', WhileCompiler::class);
         $registry->registerDirective('class', ClassCompiler::class);
         $registry->registerDirective('spread', SpreadCompiler::class);
-        $registry->registerDirective('text', TextCompiler::class);
-        $registry->registerDirective('html', HtmlCompiler::class);
+        $registry->registerDirective('text', new ContentCompiler(escape: true));
+        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
 
         return $registry;
     }

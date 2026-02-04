@@ -12,12 +12,11 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\HtmlCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\SpreadCompiler;
-use Sugar\Directive\TextCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\ExtensionRegistry;
@@ -44,8 +43,8 @@ final class DirectiveExtractionPassTest extends TestCase
         $registry->registerDirective('foreach', ForeachCompiler::class);
         $registry->registerDirective('class', ClassCompiler::class);
         $registry->registerDirective('spread', SpreadCompiler::class);
-        $registry->registerDirective('text', TextCompiler::class);
-        $registry->registerDirective('html', HtmlCompiler::class);
+        $registry->registerDirective('text', new ContentCompiler(escape: true));
+        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
         $registry->registerDirective('isset', IssetCompiler::class);
         $registry->registerDirective('unless', UnlessCompiler::class);
 
