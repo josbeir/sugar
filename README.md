@@ -53,6 +53,26 @@ Sugar is a modern PHP (8.2+) templating engine that **compiles to pure, optimize
 
 The best part? **Zero runtime overhead**. Sugar compiles once to pure PHP, then opcache takes over for maximum performance.
 
+## Feature Comparison
+
+How does Sugar compare to other popular PHP templating engines?
+
+| Feature | Sugar | Blade | Twig | Latte | Tempest |
+|---------|-------|-------|------|-------|---------|
+| **Performance** | Opcache | Opcache | Compiled | Compiled | Compiled |
+| **Learning Curve** | Native PHP + `s:` attributes | Custom | Python-like | PHP-like | HTML + `:attr` |
+| **Parser** | ✅ AST-based | Regex | ✅ AST-based | ✅ AST-based | ✅ AST-based |
+| **Auto-Escaping** | ✅ All contexts | HTML only | ✅ On by default | ✅ All contexts | ✅ HTML only |
+| **PHP Interop** | ✅ Full | ✅ Full | Limited | ✅ Full | ✅ Full |
+| **Scope Isolation** | ✅ Closure | ❌ None | ✅ Yes | ✅ Sandbox | ✅ Component |
+| **Inheritance** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Components |
+| **Components** | ✅ `s-` files | ✅ Class/File | Macros/Embed | N:attributes | ✅ `x-` files |
+| **IDE Support** | Native | Plugins | Plugins | PhpStorm | Native PHP |
+| **Security** | ✅ Auto + isolate | Basic HTML | ✅ Sandbox mode | ✅ Context + Sandbox | ✅ Auto HTML |
+| **Debugging** | ✅ Native traces | Good | Can be hard | ✅ Tracy plugin | ✅ Native traces |
+| **Caching** | ✅ Opcache | ✅ Opcache | File cache | ✅ Opcache | ✅ Compiled |
+| **Pipes/Filters** | ✅ PHP 8.5 `\|>` | Helpers | `\|upper` | `\|upper` | Native funcs |
+
 ### Before & After
 
 **Your existing PHP template:**
@@ -301,13 +321,14 @@ Use `s:empty` and `s:isset` to conditionally render content based on variable st
 
 ## Why Sugar?
 
-- **🎯 Clean Syntax** - `s:if`, `s:foreach`, `s:switch` directives that feel natural in HTML
-- **🛡️ Auto-Escaping** - Context-aware escaping (HTML/JS/CSS/URL) defeats XSS automatically
-- **⚡ Pure PHP** - Compiles to optimized PHP code with opcache support
+- **🎯 `s:` Attribute Syntax** - Clean HTML-like directives (`s:if`, `s:foreach`, `s:switch`) - no template language to learn
+- **🛡️ Context-Aware Auto-Escaping** - Detects HTML/JS/CSS/URL contexts and escapes automatically - defeats XSS by default
+- **⚡ Native PHP Performance** - Compiles to pure PHP with opcache support - zero runtime overhead
+- **🔒 Scope Isolation** - Templates run in closures - no accidental access to parent scope variables
 - **🔧 Framework-Agnostic** - Use standalone or integrate with CakePHP, Laravel, Symfony
-- **📦 Zero Dependencies** - Core engine has no external requirements (except brick/varexporter)
-- **🧪 Battle-Tested** - 360 tests, PHPStan level 8, 95%+ code coverage
-- **🎨 Fragment Elements** - `<s-template>` for applying directives without wrapper elements
+- **📦 Zero Dependencies** - Core engine requires only PHP 8.2+ - nothing else
+- **🧪 Battle-Tested** - 568 tests, PHPStan level 8, 96%+ code coverage
+- **🔄 100% PHP Compatible** - Mix Sugar directives with regular PHP - incrementally adoptable
 
 ## Features
 

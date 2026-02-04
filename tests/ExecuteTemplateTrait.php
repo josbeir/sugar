@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests;
 
+use Closure;
 use RuntimeException;
 
 /**
@@ -15,14 +16,24 @@ trait ExecuteTemplateTrait
      *
      * @param string $compiledCode The compiled PHP template code
      * @param array<string, mixed> $variables Variables to make available in template scope
+     * @param object|null $context Optional context object to bind as $this
      * @return string The rendered output
      */
-    private function executeTemplate(string $compiledCode, array $variables = []): string
+    private function executeTemplate(string $compiledCode, array $variables = [], ?object $context = null): string
     {
-        ob_start();
-        $this->executePhpCode($compiledCode, $variables, 'sugar_test_');
+        $closure = $this->executePhpCode($compiledCode, [], 'sugar_test_');
 
-        return (string)ob_get_clean();
+        // If template returns a closure, bind context (if provided) and execute it
+        if ($closure instanceof Closure) {
+            if ($context !== null) {
+                $closure = $closure->bindTo($context, $context);
+            }
+
+            return $closure($variables);
+        }
+
+        // Legacy: If template doesn't return closure, output was already buffered
+        return (string)$closure;
     }
 
     /**

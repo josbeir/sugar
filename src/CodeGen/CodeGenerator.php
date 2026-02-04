@@ -57,12 +57,21 @@ final class CodeGenerator
             $buffer->writeln('// DO NOT EDIT - auto-generated');
         }
 
-        $buffer->writeln('?>');
+        $buffer->writeln('');
+        $buffer->writeln('return function(array|object $__data = []): string {');
+        $buffer->writeln('    ob_start();');
+        $buffer->writeln('    extract((array)$__data, EXTR_SKIP);');
+        $buffer->write('    ?>');
 
         // Generate code for each node
         foreach ($ast->children as $node) {
             $this->generateNode($node, $buffer);
         }
+
+        $buffer->write('<?php');
+        $buffer->writeln('');
+        $buffer->writeln('    return ob_get_clean();');
+        $buffer->writeln('};');
 
         return $buffer->getContent();
     }
