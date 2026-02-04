@@ -5,6 +5,8 @@ namespace Sugar\Extension;
 
 use RuntimeException;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\DidYouMean;
+use Sugar\Exception\UnknownDirectiveException;
 
 /**
  * Unified registry for all template engine extensions
@@ -62,12 +64,17 @@ final class ExtensionRegistry
      *
      * @param string $name Directive name
      * @return \Sugar\Extension\DirectiveCompilerInterface The compiler implementation
-     * @throws \RuntimeException If directive is not registered
+     * @throws \Sugar\Exception\UnknownDirectiveException If directive is not registered
      */
     public function getDirective(string $name): DirectiveCompilerInterface
     {
         if (!$this->hasDirective($name)) {
-            throw new RuntimeException(sprintf('Directive "%s" is not registered', $name));
+            $suggestion = DidYouMean::suggest($name, array_keys($this->directives));
+
+            throw new UnknownDirectiveException(
+                directiveName: $name,
+                suggestion: $suggestion,
+            );
         }
 
         $compiler = $this->directives[$name];

@@ -8,6 +8,7 @@ use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 
@@ -37,8 +38,8 @@ final class ExtensionRegistryTest extends TestCase
 
     public function testGetDirectiveThrowsForUnregistered(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Directive "nonexistent" is not registered');
+        $this->expectException(UnknownDirectiveException::class);
+        $this->expectExceptionMessage('Unknown directive "nonexistent"');
 
         $this->registry->getDirective('nonexistent');
     }

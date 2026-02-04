@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -19,6 +18,7 @@ use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Enum\OutputContext;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 
@@ -298,7 +298,7 @@ final class DirectiveExtractionPassTest extends TestCase
 
         $ast = new DocumentNode([$element]);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
 
         $this->pass->execute($ast);

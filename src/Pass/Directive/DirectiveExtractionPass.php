@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Pass\Directive;
 
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -17,6 +16,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\InheritanceAttribute;
 use Sugar\Enum\OutputContext;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\PassInterface;
@@ -174,7 +174,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
 
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
-                    throw new RuntimeException('Directive attributes cannot contain dynamic output expressions');
+                    throw new SyntaxException(
+                        message: 'Directive attributes cannot contain dynamic output expressions',
+                        templateLine: $attr->line,
+                        templateColumn: $attr->column,
+                    );
                 }
 
                 $expression = $attr->value ?? 'true';
@@ -292,7 +296,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
                 $name = $this->prefixHelper->stripPrefix($attr->name);
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
-                    throw new RuntimeException('Directive attributes cannot contain dynamic output expressions');
+                    throw new SyntaxException(
+                        message: 'Directive attributes cannot contain dynamic output expressions',
+                        templateLine: $attr->line,
+                        templateColumn: $attr->column,
+                    );
                 }
 
                 $expression = $attr->value ?? 'true';
@@ -308,18 +316,22 @@ final readonly class DirectiveExtractionPass implements PassInterface
                         'name' => $name,
                         'expression' => $expression,
                     ],
-                    DirectiveType::ATTRIBUTE => throw new RuntimeException(
-                        sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
-                        'Only control flow and content directives are allowed.',
+                    DirectiveType::ATTRIBUTE => throw new SyntaxException(
+                        message: sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
+                            'Only control flow and content directives are allowed.',
+                        templateLine: $attr->line,
+                        templateColumn: $attr->column,
                     ),
                 };
             } elseif (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
                 // These are processed by TemplateInheritancePass before DirectiveExtractionPass
-                throw new RuntimeException(
-                    sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
-                    'Only s: directives and template inheritance attributes ' .
-                    '(s:block, s:include, etc.) are allowed.',
+                throw new SyntaxException(
+                    message: sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
+                        'Only s: directives and template inheritance attributes ' .
+                        '(s:block, s:include, etc.) are allowed.',
+                    templateLine: $attr->line,
+                    templateColumn: $attr->column,
                 );
             }
         }
@@ -336,7 +348,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
             }
 
             if (!$hasInheritanceAttr) {
-                throw new RuntimeException('<s-template> must have at least one directive or inheritance attribute');
+                throw new SyntaxException(
+                    message: '<s-template> must have at least one directive or inheritance attribute',
+                    templateLine: $node->line,
+                    templateColumn: $node->column,
+                );
             }
 
             // Fragment with only inheritance attributes - return children directly

@@ -986,8 +986,7 @@ Output includes helpful comments:
 ### Core Features
 - [x] **Template Inheritance** - Layouts, blocks, extends, and includes (✅ Completed)
 - [x] **Custom Components** - Reusable template components with slots, props, and attribute merging (✅ Completed)
-- [ ] **Custom Filter Functions** - Pipe data through custom transformations
-- [ ] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
+- [x] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
 
 ### Developer Experience
 - [ ] **Source Maps** - Map compiled PHP errors back to original Sugar templates
@@ -1002,7 +1001,7 @@ Sugar is actively developed and welcomes contributions! Check out the issues or 
 - **PHP 8.2+** (tested on 8.2, 8.3, 8.4, 8.5)
 - Composer
 
-**Note:** Sugar uses PHP 8.2+ features (readonly classes, enums) but compiles templates that work on PHP 8.2+. The pipe syntax (`|>`) is a compile-time feature - you can use PHP 8.5 syntax even on PHP 8.2!
+**Note:** The pipe syntax (`|>`) is a compile-time feature - you can use PHP 8.5 syntax even on PHP 8.2!
 
 ## License
 

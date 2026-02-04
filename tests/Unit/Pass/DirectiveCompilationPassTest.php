@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -12,6 +11,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
@@ -175,8 +175,8 @@ final class DirectiveCompilationPassTest extends TestCase
 
         $ast = new DocumentNode([$directive]);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Directive "unknown" is not registered');
+        $this->expectException(UnknownDirectiveException::class);
+        $this->expectExceptionMessage('Unknown directive "unknown"');
 
         $this->pass->execute($ast);
     }

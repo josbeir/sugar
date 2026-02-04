@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -17,6 +16,7 @@ use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Enum\OutputContext;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 
@@ -41,7 +41,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
 
     public function testThrowsWhenDirectiveAttributeContainsDynamicOutput(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
 
         $element = new ElementNode(
@@ -66,7 +66,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
 
     public function testThrowsWhenFragmentAttributeContainsDynamicOutput(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
 
         $fragment = new FragmentNode(
@@ -89,7 +89,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
 
     public function testThrowsWhenFragmentHasRegularHtmlAttribute(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('<s-template> cannot have regular HTML attributes');
 
         $fragment = new FragmentNode(
@@ -108,7 +108,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
 
     public function testThrowsWhenFragmentHasAttributeDirective(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('<s-template> cannot have attribute directives like s:class');
 
         $fragment = new FragmentNode(
