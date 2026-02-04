@@ -14,12 +14,15 @@ use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 /**
  * Integration test: Parser → DirectiveExtractionPass → DirectiveCompilationPass → CodeGenerator
  */
 final class DirectiveIntegrationTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private Parser $parser;
 
     private DirectiveExtractionPass $extractionPass;
@@ -38,7 +41,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         $this->extractionPass = new DirectiveExtractionPass($registry);
         $this->compilationPass = new DirectiveCompilationPass($registry);
-        $this->generator = new CodeGenerator(new Escaper());
+        $this->generator = new CodeGenerator(new Escaper(), $this->createContext());
     }
 
     public function testIfDirectiveFullPipeline(): void

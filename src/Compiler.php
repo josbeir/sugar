@@ -109,14 +109,12 @@ final class Compiler implements CompilerInterface
      * @param string $source Template source code
      * @param string|null $templatePath Template path for inheritance resolution and debug info (default: null)
      * @param bool $debug Enable debug mode with inline source comments (default: false)
-     * @param string|null $sourceFile Override source file path for debug info (default: uses templatePath)
      * @return string Compiled PHP code
      */
     public function compile(
         string $source,
         ?string $templatePath = null,
         bool $debug = false,
-        ?string $sourceFile = null,
     ): string {
         // Create compilation context for error handling with snippets
         $context = new CompilationContext(
@@ -151,8 +149,7 @@ final class Compiler implements CompilerInterface
         $analyzedAst = $this->contextPass->execute($transformedAst, $context);
 
         // Step 5: Generate executable PHP code with inline escaping
-        // Use templatePath as sourceFile for debug info if sourceFile not explicitly provided
-        $generator = new CodeGenerator($this->escaper, $debug, $sourceFile ?? $templatePath);
+        $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);
     }

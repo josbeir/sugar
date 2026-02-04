@@ -23,13 +23,11 @@ interface CompilerInterface
      * @param string $source Template source code
      * @param string|null $templatePath Template path for inheritance resolution and debug info (default: null)
      * @param bool $debug Enable debug mode with inline source comments (default: false)
-     * @param string|null $sourceFile Override source file path for debug info (default: uses templatePath)
      * @return string Compiled PHP code
      */
     public function compile(
         string $source,
         ?string $templatePath = null,
         bool $debug = false,
-        ?string $sourceFile = null,
     ): string;
 }

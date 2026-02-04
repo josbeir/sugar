@@ -13,6 +13,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
 
 /**
@@ -24,13 +25,11 @@ final class CodeGenerator
      * Constructor
      *
      * @param \Sugar\Escape\Escaper $escaper Escaper instance
-     * @param bool $debug Enable debug comments with line numbers (default: false)
-     * @param string|null $sourceFile Source template filename for debug comments
+     * @param \Sugar\Context\CompilationContext $context Compilation context with debug info and template path
      */
     public function __construct(
         private readonly Escaper $escaper,
-        private readonly bool $debug = false,
-        private readonly ?string $sourceFile = null,
+        private readonly CompilationContext $context,
     ) {
     }
 
@@ -49,8 +48,11 @@ final class CodeGenerator
         $buffer->writeln('declare(strict_types=1);');
         $buffer->writeln('// Compiled Sugar template');
 
-        if ($this->debug && $this->sourceFile !== null) {
-            $buffer->writeln('// Source: ' . $this->sourceFile);
+        $hasRealPath = $this->context->templatePath !== ''
+            && $this->context->templatePath !== 'inline-template';
+
+        if ($this->context->debug && $hasRealPath) {
+            $buffer->writeln('// Source: ' . $this->context->templatePath);
             $buffer->writeln('// Compiled: ' . date('Y-m-d H:i:s'));
             $buffer->writeln('// Debug mode: enabled');
         } else {
@@ -141,7 +143,7 @@ final class CodeGenerator
         // Pass through trimmed code (removes excess whitespace from token parsing)
         $trimmedCode = trim($node->code);
 
-        if ($this->debug) {
+        if ($this->context->debug) {
             // Add debug comment before closing tag
             $buffer->write(sprintf('<?php %s%s ?>', $trimmedCode, $this->debugComment($node)));
         } else {
@@ -170,14 +172,14 @@ final class CodeGenerator
             $buffer->write(' />');
 
             // Add debug comment after self-closing tag
-            if ($this->debug) {
+            if ($this->context->debug) {
                 $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
             }
         } else {
             $buffer->write('>');
 
             // Add debug comment after opening tag
-            if ($this->debug) {
+            if ($this->context->debug) {
                 $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
             }
 
@@ -260,7 +262,7 @@ final class CodeGenerator
      */
     private function debugComment(Node $node, string $context = ''): string
     {
-        if (!$this->debug) {
+        if (!$this->context->debug) {
             return '';
         }
 
