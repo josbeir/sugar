@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\IssetCompiler;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class IssetCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private IssetCompiler $compiler;
 
     protected function setUp(): void
@@ -28,7 +31,7 @@ final class IssetCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(3, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -48,7 +51,7 @@ final class IssetCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertSame('if (isset($user, $profile)):', $result[0]->code);
@@ -64,7 +67,7 @@ final class IssetCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertSame('if (isset($data[\'key\'])):', $result[0]->code);
@@ -80,7 +83,7 @@ final class IssetCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertSame('if (isset($user->email)):', $result[0]->code);
@@ -99,7 +102,7 @@ final class IssetCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(4, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]); // if

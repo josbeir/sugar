@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\HtmlAttributeHelper;
@@ -46,7 +47,7 @@ final readonly class SpreadCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         // s:spread is handled as attribute output, not control structure
         return [

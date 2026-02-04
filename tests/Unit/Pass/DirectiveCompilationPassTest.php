@@ -12,7 +12,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
-use Sugar\Exception\UnknownDirectiveException;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
@@ -32,7 +32,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testCompilesSimpleDirective(): void
     {
         $compiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php if ($condition): ?>', 1, 0),
@@ -69,7 +69,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testCompilesNestedDirectives(): void
     {
         $ifCompiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php if ($x): ?>', 1, 0),
@@ -85,7 +85,7 @@ final class DirectiveCompilationPassTest extends TestCase
         };
 
         $foreachCompiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php foreach ($items as $item): ?>', 1, 0),
@@ -176,7 +176,7 @@ final class DirectiveCompilationPassTest extends TestCase
 
         $ast = new DocumentNode([$directive]);
 
-        $this->expectException(UnknownDirectiveException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Unknown directive "unknown"');
 
         $this->pass->execute($ast, $this->createContext());
@@ -185,7 +185,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testHandlesCompilerReturningMultipleNodes(): void
     {
         $compiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php // Start ?>', 1, 0),
@@ -226,7 +226,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testProcessesMultipleTopLevelDirectives(): void
     {
         $compiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode(sprintf('<?php // %s ?>', $node->expression), 1, 0),
@@ -271,7 +271,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testHandlesDirectiveWithinElementChildren(): void
     {
         $compiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php if (true): ?>', 1, 0),
@@ -319,7 +319,7 @@ final class DirectiveCompilationPassTest extends TestCase
     public function testHandlesMixedContentWithDirectives(): void
     {
         $compiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php /* compiled */ ?>', 1, 0),
@@ -392,7 +392,7 @@ final class DirectiveCompilationPassTest extends TestCase
     {
         // Compiler that returns a node containing another directive
         $outerCompiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php // Outer start ?>', 1, 0),
@@ -414,7 +414,7 @@ final class DirectiveCompilationPassTest extends TestCase
         };
 
         $innerCompiler = new class implements DirectiveCompilerInterface {
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [
                     new RawPhpNode('<?php // Inner ?>', 1, 0),

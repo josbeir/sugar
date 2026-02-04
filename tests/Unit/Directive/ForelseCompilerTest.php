@@ -10,9 +10,12 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Enum\DirectiveType;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class ForelseCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private ForelseCompiler $compiler;
 
     protected function setUp(): void
@@ -40,7 +43,7 @@ final class ForelseCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Should contain: loopStack push, LoopMetadata creation, foreach, content, next(), endforeach, loopStack pop
         // No if/else wrapper when elseChildren is null
@@ -101,7 +104,7 @@ final class ForelseCompilerTest extends TestCase
         // Wire the pairing
         $node->setPairedSibling($emptyNode);
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Should contain: if, loopStack push, LoopMetadata, foreach, content, next(), endforeach, loopStack pop, else, elseChildren, endif
         $this->assertCount(12, $result);
@@ -155,7 +158,7 @@ final class ForelseCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Check LoopMetadata uses correct collection
         $this->assertInstanceOf(RawPhpNode::class, $result[2]);
@@ -176,7 +179,7 @@ final class ForelseCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Check LoopMetadata uses correct collection (range(1, 10))
         $this->assertInstanceOf(RawPhpNode::class, $result[2]);

@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\IfCompiler;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class IfCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private IfCompiler $compiler;
 
     protected function setUp(): void
@@ -28,7 +31,7 @@ final class IfCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(3, $result); // if, content, endif
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -47,7 +50,7 @@ final class IfCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(2, $result); // elseif, content (no endif for elseif)
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -64,7 +67,7 @@ final class IfCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(2, $result); // else, content (no endif for else)
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -91,7 +94,7 @@ final class IfCompilerTest extends TestCase
 
         $ifNode->setPairedSibling($elseNode);
 
-        $result = $this->compiler->compile($ifNode);
+        $result = $this->compiler->compile($ifNode, $this->createContext());
 
         $this->assertCount(5, $result); // if, true content, else, false content, endif
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);

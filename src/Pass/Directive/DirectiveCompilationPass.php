@@ -9,6 +9,8 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
+use Sugar\Exception\SyntaxException;
+use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\PassInterface;
 
@@ -22,15 +24,17 @@ use Sugar\Pass\PassInterface;
  *
  * This pass does NOT extract directives - that's handled by DirectiveExtractionPass.
  */
-final readonly class DirectiveCompilationPass implements PassInterface
+final class DirectiveCompilationPass implements PassInterface
 {
+    private CompilationContext $context;
+
     /**
      * Constructor
      *
      * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry with directive compilers
      */
     public function __construct(
-        private ExtensionRegistry $registry,
+        private readonly ExtensionRegistry $registry,
     ) {
     }
 
@@ -43,6 +47,7 @@ final readonly class DirectiveCompilationPass implements PassInterface
      */
     public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
+        $this->context = $context;
         $newChildren = [];
 
         foreach ($ast->children as $node) {
@@ -67,10 +72,20 @@ final readonly class DirectiveCompilationPass implements PassInterface
             }
 
             // Get compiler for this directive
-            $compiler = $this->registry->getDirective($node->name);
+            try {
+                $compiler = $this->registry->getDirective($node->name);
+            } catch (UnknownDirectiveException $e) {
+                // Wrap with context to add snippet showing the problematic directive
+                throw $this->context->createException(
+                    SyntaxException::class,
+                    $e->getMessage(),
+                    $node->line,
+                    $node->column,
+                );
+            }
 
             // Compile the directive - this returns an array of nodes
-            $compiledNodes = $compiler->compile($node);
+            $compiledNodes = $compiler->compile($node, $this->context);
 
             // Recursively process the compiled nodes to handle nested directives
             $processedNodes = [];

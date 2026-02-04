@@ -12,20 +12,45 @@ use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\InheritanceAttribute;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
-final readonly class TemplateInheritancePass
+final class TemplateInheritancePass implements PassInterface
 {
+    /**
+     * Stack of loaded templates for circular detection
+     *
+     * @var array<string>
+     */
+    private array $loadedTemplates = [];
+
     /**
      * Constructor.
      *
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader
      */
     public function __construct(
-        private TemplateLoaderInterface $loader,
+        private readonly TemplateLoaderInterface $loader,
     ) {
+    }
+
+    /**
+     * Execute the pass: process template inheritance (s:extends, s:block, s:include)
+     *
+     * @param \Sugar\Ast\DocumentNode $ast Document to process
+     * @param \Sugar\Context\CompilationContext $context Compilation context
+     * @return \Sugar\Ast\DocumentNode Processed document
+     * @throws \RuntimeException On circular inheritance
+     * @throws \Sugar\Exception\TemplateNotFoundException If template not found
+     */
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    {
+        // Reset loaded templates stack for this execution
+        $this->loadedTemplates = [];
+
+        return $this->process($ast, $context->templatePath, $this->loadedTemplates);
     }
 
     /**
@@ -38,10 +63,10 @@ final readonly class TemplateInheritancePass
      * @throws \RuntimeException On circular inheritance
      * @throws \Sugar\Exception\TemplateNotFoundException If template not found
      */
-    public function process(
+    private function process(
         DocumentNode $document,
         string $currentTemplate,
-        array $loadedTemplates = [],
+        array &$loadedTemplates,
     ): DocumentNode {
         // Check for circular inheritance
         if (in_array($currentTemplate, $loadedTemplates, true)) {
@@ -100,7 +125,7 @@ final readonly class TemplateInheritancePass
         ElementNode $extendsElement,
         DocumentNode $childDocument,
         string $currentTemplate,
-        array $loadedTemplates,
+        array &$loadedTemplates,
     ): DocumentNode {
         // Get parent template path
         $parentPath = $this->getAttributeValue($extendsElement, InheritanceAttribute::EXTENDS->value);
@@ -132,7 +157,7 @@ final readonly class TemplateInheritancePass
     private function processIncludes(
         DocumentNode $document,
         string $currentTemplate,
-        array $loadedTemplates,
+        array &$loadedTemplates,
     ): DocumentNode {
         $newChildren = [];
 
@@ -181,7 +206,7 @@ final readonly class TemplateInheritancePass
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return array<\Sugar\Ast\Node> Processed children
      */
-    private function processChildrenIncludes(array $children, string $currentTemplate, array $loadedTemplates): array
+    private function processChildrenIncludes(array $children, string $currentTemplate, array &$loadedTemplates): array
     {
         $doc = new DocumentNode($children);
         $processed = $this->processIncludes($doc, $currentTemplate, $loadedTemplates);

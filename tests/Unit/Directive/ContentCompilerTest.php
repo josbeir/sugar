@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Enum\OutputContext;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class ContentCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     public function testCompilesTextDirectiveWithEscaping(): void
     {
         $compiler = new ContentCompiler(escape: true);
@@ -23,7 +26,7 @@ final class ContentCompilerTest extends TestCase
             column: 5,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(OutputNode::class, $result[0]);
@@ -42,7 +45,7 @@ final class ContentCompilerTest extends TestCase
             column: 5,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(OutputNode::class, $result[0]);
@@ -61,7 +64,7 @@ final class ContentCompilerTest extends TestCase
             column: 10,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertTrue($result[0]->escape);
@@ -80,7 +83,7 @@ final class ContentCompilerTest extends TestCase
             column: 10,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertFalse($result[0]->escape);
@@ -99,7 +102,7 @@ final class ContentCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(OutputContext::HTML, $result[0]->context);
@@ -117,7 +120,7 @@ final class ContentCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(OutputContext::RAW, $result[0]->context);
@@ -135,7 +138,7 @@ final class ContentCompilerTest extends TestCase
             column: 12,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(5, $result[0]->line);
@@ -154,7 +157,7 @@ final class ContentCompilerTest extends TestCase
             column: 15,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(8, $result[0]->line);
@@ -173,7 +176,7 @@ final class ContentCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame('$user->profile->getDisplayName()', $result[0]->expression);
@@ -192,7 +195,7 @@ final class ContentCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame('$formatter->renderHtml($data)', $result[0]->expression);
@@ -212,7 +215,7 @@ final class ContentCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $compiler->compile($node);
+        $result = $compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result[0]->context);

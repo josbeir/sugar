@@ -3,12 +3,13 @@ declare(strict_types=1);
 
 namespace Sugar\Directive;
 
-use RuntimeException;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
@@ -45,7 +46,7 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         // Extract case and default children
         $cases = [];
@@ -57,14 +58,24 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
             if ($child instanceof DirectiveNode) {
                 if ($child->name === 'case') {
                     if (trim($child->expression) === '') {
-                        throw new RuntimeException('Case directive requires a value expression');
+                        throw $context->createException(
+                            SyntaxException::class,
+                            'Case directive requires a value expression',
+                            $child->line,
+                            $child->column,
+                        );
                     }
 
                     $cases[] = $child;
                     $hasValidCases = true;
                 } elseif ($child->name === 'default') {
                     if ($default instanceof DirectiveNode) {
-                        throw new RuntimeException('Switch directive can only have one default case');
+                        throw $context->createException(
+                            SyntaxException::class,
+                            'Switch directive can only have one default case',
+                            $child->line,
+                            $child->column,
+                        );
                     }
 
                     $default = $child;
@@ -78,14 +89,24 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
                     if ($grandchild instanceof DirectiveNode) {
                         if ($grandchild->name === 'case') {
                             if (trim($grandchild->expression) === '') {
-                                throw new RuntimeException('Case directive requires a value expression');
+                                throw $context->createException(
+                                    SyntaxException::class,
+                                    'Case directive requires a value expression',
+                                    $grandchild->line,
+                                    $grandchild->column,
+                                );
                             }
 
                             $cases[] = $grandchild;
                             $hasValidCases = true;
                         } elseif ($grandchild->name === 'default') {
                             if ($default instanceof DirectiveNode) {
-                                throw new RuntimeException('Switch directive can only have one default case');
+                                throw $context->createException(
+                                    SyntaxException::class,
+                                    'Switch directive can only have one default case',
+                                    $grandchild->line,
+                                    $grandchild->column,
+                                );
                             }
 
                             $default = $grandchild;
@@ -97,7 +118,12 @@ final readonly class SwitchCompiler implements DirectiveCompilerInterface
         }
 
         if (!$hasValidCases) {
-            throw new RuntimeException('Switch directive must contain at least one case or default');
+            throw $context->createException(
+                SyntaxException::class,
+                'Switch directive must contain at least one case or default',
+                $node->line,
+                $node->column,
+            );
         }
 
         $parts = [];

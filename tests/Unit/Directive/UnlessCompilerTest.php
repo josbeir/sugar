@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\UnlessCompiler;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class UnlessCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private UnlessCompiler $compiler;
 
     protected function setUp(): void
@@ -28,7 +31,7 @@ final class UnlessCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(3, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -48,7 +51,7 @@ final class UnlessCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertSame('if (!($user->isAdmin() && $user->isActive())):', $result[0]->code);
@@ -64,7 +67,7 @@ final class UnlessCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertSame('if (!(empty($cart))):', $result[0]->code);
@@ -83,7 +86,7 @@ final class UnlessCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(4, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]); // if

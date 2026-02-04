@@ -7,6 +7,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\Trait\ForeachLoopTrait;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
@@ -54,7 +55,7 @@ final readonly class WhileCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         // Check if we should use wrapper mode (element as container)
         if ($this->shouldUseWrapperMode($node)) {

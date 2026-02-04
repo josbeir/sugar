@@ -5,6 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Extension\PairedDirectiveCompilerInterface;
 
 /**
@@ -81,14 +82,14 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         // Check if we have a paired s:empty sibling
         $emptyNode = $node->getPairedSibling();
 
         // If no paired empty clause, behave exactly like foreach
         if ($emptyNode === null) {
-            return parent::compile($node);
+            return parent::compile($node, $context);
         }
 
         // Otherwise, wrap the foreach logic in if/else
@@ -103,7 +104,7 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
         );
 
         // Compile the foreach loop (wrapper or repeat mode)
-        array_push($parts, ...parent::compile($node));
+        array_push($parts, ...parent::compile($node, $context));
 
         // Else clause
         $parts[] = new RawPhpNode('else:', $node->line, $node->column);

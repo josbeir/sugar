@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Runtime\HtmlAttributeHelper;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class ClassCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private ClassCompiler $compiler;
 
     protected function setUp(): void
@@ -28,7 +31,7 @@ final class ClassCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -46,7 +49,7 @@ final class ClassCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);

@@ -23,11 +23,12 @@ final class ContextAnalysisPass implements PassInterface
      * Execute the pass: analyze AST and update OutputNode contexts
      *
      * @param \Sugar\Ast\DocumentNode $ast Document to analyze
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @return \Sugar\Ast\DocumentNode New document with updated contexts
      */
     public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
-        $context = new AnalysisContext();
+        $analysisContext = new AnalysisContext();
         $inAttribute = false;
 
         $newChildren = NodeTraverser::walk(
@@ -36,17 +37,17 @@ final class ContextAnalysisPass implements PassInterface
                 Node $node,
                 callable $recurse,
             ) use (
-                &$context,
+                &$analysisContext,
                 &$inAttribute,
             ): ElementNode|TextNode|OutputNode|Node {
                 if ($node instanceof ElementNode) {
-                    return $this->processElementNode($node, $context, $recurse);
+                    return $this->processElementNode($node, $analysisContext, $recurse);
                 } elseif ($node instanceof TextNode) {
-                    [$context, $inAttribute] = $this->processTextNode($node, $context, $inAttribute);
+                    [$analysisContext, $inAttribute] = $this->processTextNode($node, $analysisContext, $inAttribute);
 
                     return $node;
                 } elseif ($node instanceof OutputNode) {
-                    return $this->updateOutputNode($node, $context, $inAttribute);
+                    return $this->updateOutputNode($node, $analysisContext, $inAttribute);
                 }
 
                 // Other node types pass through unchanged
@@ -61,25 +62,25 @@ final class ContextAnalysisPass implements PassInterface
      * Process element node and its children
      *
      * @param \Sugar\Ast\ElementNode $node Element to process
-     * @param \Sugar\Context\AnalysisContext $context Current context
+     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
      * @param callable $recurse Recursion callback
      * @return \Sugar\Ast\ElementNode Processed element
      */
     private function processElementNode(
         ElementNode $node,
-        AnalysisContext &$context,
+        AnalysisContext &$analysisContext,
         callable $recurse,
     ): ElementNode {
         // Push tag onto context stack
-        $childContext = $context->push($node->tag);
-        $savedContext = $context;
-        $context = $childContext;
+        $childContext = $analysisContext->push($node->tag);
+        $savedContext = $analysisContext;
+        $analysisContext = $childContext;
 
         // Process children with updated context (recurse handles traversal)
         $processedNode = $recurse($node);
 
         // Restore context
-        $context = $savedContext;
+        $analysisContext = $savedContext;
 
         return $processedNode;
     }
@@ -88,13 +89,13 @@ final class ContextAnalysisPass implements PassInterface
      * Process text node to extract HTML tags and update context
      *
      * @param \Sugar\Ast\TextNode $node Text node
-     * @param \Sugar\Context\AnalysisContext $context Current context
+     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
      * @param bool $inAttribute Whether currently in attribute
      * @return array{\Sugar\Context\AnalysisContext, bool} Updated context and attribute flag
      */
     private function processTextNode(
         TextNode $node,
-        AnalysisContext $context,
+        AnalysisContext $analysisContext,
         bool $inAttribute,
     ): array {
         $text = $node->content;
@@ -117,7 +118,7 @@ final class ContextAnalysisPass implements PassInterface
                     // Extract tag name
                     if (preg_match('/<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>/i', substr($text, $i), $matches)) {
                         $tagName = strtolower($matches[1]);
-                        $context = $context->pop($tagName);
+                        $analysisContext = $analysisContext->pop($tagName);
                     }
                 } elseif (preg_match('/<([a-zA-Z][a-zA-Z0-9-]*)/i', substr($text, $i), $matches)) {
                     // Opening tag - extract tag name
@@ -128,7 +129,7 @@ final class ContextAnalysisPass implements PassInterface
                     if ($closePos !== false) {
                         $tagPart = substr($remaining, 0, $closePos);
                         if (!str_ends_with(trim($tagPart), '/')) {
-                            $context = $context->push($tagName);
+                            $analysisContext = $analysisContext->push($tagName);
                         }
                     }
                 }
@@ -153,20 +154,20 @@ final class ContextAnalysisPass implements PassInterface
             $inAttribute = true;
         }
 
-        return [$context, $inAttribute];
+        return [$analysisContext, $inAttribute];
     }
 
     /**
      * Update OutputNode with proper context
      *
      * @param \Sugar\Ast\OutputNode $node Output node
-     * @param \Sugar\Context\AnalysisContext $context Current context
+     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
      * @param bool $inAttribute Whether in attribute
      * @return \Sugar\Ast\OutputNode New output node with updated context
      */
     private function updateOutputNode(
         OutputNode $node,
-        AnalysisContext $context,
+        AnalysisContext $analysisContext,
         bool $inAttribute,
     ): OutputNode {
         // Don't modify raw output - return as-is
@@ -177,7 +178,7 @@ final class ContextAnalysisPass implements PassInterface
         // Determine context based on position
         $newContext = $inAttribute
             ? OutputContext::HTML_ATTRIBUTE
-            : $context->determineContext();
+            : $analysisContext->determineContext();
 
         return new OutputNode(
             expression: $node->expression,

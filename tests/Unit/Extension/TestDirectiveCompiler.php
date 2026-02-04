@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Extension;
 
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
@@ -16,7 +17,7 @@ final class TestDirectiveCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         return [];
     }

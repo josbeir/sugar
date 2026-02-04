@@ -8,9 +8,12 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\ForeachCompiler;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class ForeachCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private ForeachCompiler $compiler;
 
     protected function setUp(): void
@@ -28,7 +31,7 @@ final class ForeachCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Should contain: loopStack push, LoopMetadata creation, foreach, content, next(), endforeach, loopStack pop
         $this->assertCount(8, $result);
@@ -67,7 +70,7 @@ final class ForeachCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(8, $result);
 

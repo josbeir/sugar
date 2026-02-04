@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\Trait\ForeachLoopTrait;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
@@ -68,7 +69,7 @@ class ForeachCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    public function compile(Node $node): array
+    public function compile(Node $node, CompilationContext $context): array
     {
         // Check if we should use wrapper mode (element as container)
         if ($this->shouldUseWrapperMode($node)) {

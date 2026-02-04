@@ -445,7 +445,7 @@ final class DirectiveExtractionPass implements PassInterface
         );
 
         // Compile the directive - attribute directives return nodes that represent attribute output
-        $compiledNodes = $compiler->compile($directiveNode);
+        $compiledNodes = $compiler->compile($directiveNode, $this->context);
 
         // Convert compiled nodes to attribute format
         // Attribute compilers can return two formats:

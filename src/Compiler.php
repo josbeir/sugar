@@ -128,7 +128,7 @@ final class Compiler implements CompilerInterface
 
         // Step 1.5: Process template inheritance if enabled
         if ($this->templateInheritancePass instanceof TemplateInheritancePass && $templatePath !== null) {
-            $ast = $this->templateInheritancePass->process($ast, $templatePath);
+            $ast = $this->templateInheritancePass->execute($ast, $context);
         }
 
         // Step 1.75: Expand components (s-button → template content)

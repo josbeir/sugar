@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveCompilerInterface;
@@ -176,7 +177,7 @@ final class ExtensionRegistryTest extends TestCase
              * @param \Sugar\Ast\DirectiveNode $node
              * @return array<\Sugar\Ast\Node>
              */
-            public function compile(Node $node): array
+            public function compile(Node $node, CompilationContext $context): array
             {
                 return [];
             }

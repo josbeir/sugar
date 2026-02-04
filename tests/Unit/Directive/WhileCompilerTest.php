@@ -12,9 +12,12 @@ use Sugar\Ast\TextNode;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class WhileCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private WhileCompiler $compiler;
 
     protected function setUp(): void
@@ -32,7 +35,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(3, $result); // while, content, endwhile
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
@@ -73,7 +76,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         // Wrapper mode: should return 1 element with while/endwhile inside
         $this->assertCount(1, $result);
@@ -97,7 +100,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
         $this->assertStringContainsString('while (($i < 10) && !empty($items[$i])):', $result[0]->code);
@@ -117,7 +120,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(5, $result); // while, text, output, text, endwhile
         $this->assertInstanceOf(TextNode::class, $result[1]);
@@ -142,7 +145,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node);
+        $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertCount(2, $result); // while, endwhile (no content)
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);

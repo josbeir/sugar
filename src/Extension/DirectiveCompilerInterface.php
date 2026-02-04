@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 
 /**
@@ -12,7 +13,7 @@ use Sugar\Enum\DirectiveType;
  * Directive compilers transform DirectiveNodes (s:if, s:foreach, etc.)
  * into arrays of AST nodes (typically RawPhpNodes).
  */
-interface DirectiveCompilerInterface extends ExtensionCompilerInterface
+interface DirectiveCompilerInterface
 {
     /**
      * Compile a directive node into an array of AST nodes
@@ -21,9 +22,10 @@ interface DirectiveCompilerInterface extends ExtensionCompilerInterface
      * but accepts Node to maintain contravariance.
      *
      * @param \Sugar\Ast\DirectiveNode $node The directive node to compile
+     * @param \Sugar\Context\CompilationContext $context Compilation context for error reporting
      * @return array<\Sugar\Ast\Node> The compiled AST nodes
      */
-    public function compile(Node $node): array;
+    public function compile(Node $node, CompilationContext $context): array;
 
     /**
      * Get the directive type classification

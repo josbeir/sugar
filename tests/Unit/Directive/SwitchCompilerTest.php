@@ -4,16 +4,19 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Directive;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\SyntaxException;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class SwitchCompilerTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     private SwitchCompiler $compiler;
 
     protected function setUp(): void
@@ -46,7 +49,7 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($switch);
+        $result = $this->compiler->compile($switch, $this->createContext());
 
         // Should generate: switch, case admin, content, break, case moderator, content, break, endswitch
         $this->assertGreaterThanOrEqual(8, count($result));
@@ -80,7 +83,7 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($switch);
+        $result = $this->compiler->compile($switch, $this->createContext());
 
         $this->assertGreaterThanOrEqual(6, count($result));
 
@@ -106,10 +109,10 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Switch directive must contain at least one case or default');
 
-        $this->compiler->compile($switch);
+        $this->compiler->compile($switch, $this->createContext());
     }
 
     public function testMultipleDefaultsThrowException(): void
@@ -137,10 +140,10 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Switch directive can only have one default case');
 
-        $this->compiler->compile($switch);
+        $this->compiler->compile($switch, $this->createContext());
     }
 
     public function testSwitchWithMixedChildren(): void
@@ -170,7 +173,7 @@ final class SwitchCompilerTest extends TestCase
         );
 
         // Should ignore non-directive children between cases
-        $result = $this->compiler->compile($switch);
+        $result = $this->compiler->compile($switch, $this->createContext());
         $this->assertGreaterThan(1, count($result));
     }
 
@@ -192,10 +195,10 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Case directive requires a value expression');
 
-        $this->compiler->compile($switch);
+        $this->compiler->compile($switch, $this->createContext());
     }
 
     public function testCompilesNestedCasesInsideElementNodes(): void
@@ -266,7 +269,7 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($switch);
+        $result = $this->compiler->compile($switch, $this->createContext());
 
         // Should successfully compile nested cases
         $this->assertGreaterThanOrEqual(8, count($result));
@@ -318,7 +321,7 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($switch);
+        $result = $this->compiler->compile($switch, $this->createContext());
 
         // Should find and compile the nested default
         $hasDefault = false;
@@ -375,10 +378,10 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Switch directive can only have one default case');
 
-        $this->compiler->compile($switch);
+        $this->compiler->compile($switch, $this->createContext());
     }
 
     public function testNestedCaseWithEmptyExpressionThrowsException(): void
@@ -408,9 +411,9 @@ final class SwitchCompilerTest extends TestCase
             column: 0,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Case directive requires a value expression');
 
-        $this->compiler->compile($switch);
+        $this->compiler->compile($switch, $this->createContext());
     }
 }
