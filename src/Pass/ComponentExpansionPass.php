@@ -15,6 +15,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
@@ -57,7 +58,7 @@ final readonly class ComponentExpansionPass implements PassInterface
      * @return \Sugar\Ast\DocumentNode Processed document with expanded components
      * @throws \Sugar\Exception\ComponentNotFoundException If component template not found
      */
-    public function execute(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
         $expandedChildren = NodeTraverser::walk($ast->children, function (Node $node, callable $recurse) {
             if ($node instanceof ComponentNode) {

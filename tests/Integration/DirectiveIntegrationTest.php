@@ -6,6 +6,7 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Escape\Escaper;
@@ -49,10 +50,10 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertInstanceOf(DocumentNode::class, $ast);
 
         // Extract directives
-        $extracted = $this->extractionPass->execute($ast);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
 
         // Compile directives
-        $transformed = $this->compilationPass->execute($extracted);
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
 
         // Generate code
         $code = $this->generator->generate($transformed);
@@ -73,8 +74,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast);
-        $transformed = $this->compilationPass->execute($extracted);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain foreach/endforeach
@@ -89,8 +90,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast);
-        $transformed = $this->compilationPass->execute($extracted);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
         $code = $this->generator->generate($transformed);
 
@@ -109,8 +110,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast);
-        $transformed = $this->compilationPass->execute($extracted);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should unwrap raw() and output without htmlspecialchars
@@ -125,8 +126,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast);
-        $transformed = $this->compilationPass->execute($extracted);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should unwrap r() and output without escaping
@@ -141,12 +142,20 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast);
-        $transformed = $this->compilationPass->execute($extracted);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Regular output should use htmlspecialchars
         $this->assertStringContainsString('htmlspecialchars', $code);
         $this->assertStringContainsString('$userInput', $code);
+    }
+
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }

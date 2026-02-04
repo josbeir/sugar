@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests;
 
 use RuntimeException;
+use Sugar\Context\CompilationContext;
 
 /**
  * Test helper trait for loading template fixtures
@@ -73,5 +74,20 @@ trait TemplateTestHelperTrait
         }
 
         return $content;
+    }
+
+    /**
+     * Create a compilation context for testing
+     *
+     * @param string $source Template source code
+     * @param string $templatePath Template path (default: 'test.sugar.php')
+     * @param bool $debug Debug mode (default: false)
+     */
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }

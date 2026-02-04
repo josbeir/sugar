@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\ContextAnalysisPass;
 
@@ -29,7 +30,7 @@ final class ContextAnalysisPassTest extends TestCase
             new OutputNode('$name', true, OutputContext::HTML, 1, 7),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML, $result->children[1]->context);
@@ -43,7 +44,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script>', 1, 15),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -57,7 +58,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</style>', 1, 13),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::CSS, $result->children[1]->context);
@@ -71,7 +72,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script></div>', 1, 20),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -86,7 +87,7 @@ final class ContextAnalysisPassTest extends TestCase
             new OutputNode('$html', true, OutputContext::HTML, 1, 22),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -104,7 +105,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</style></div>', 1, 41),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -120,7 +121,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</script>', 1, 14),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Raw output should not be modified
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -135,7 +136,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('" />', 1, 16),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Should detect attribute context
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -150,7 +151,7 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('">', 1, 15),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
@@ -166,11 +167,19 @@ final class ContextAnalysisPassTest extends TestCase
             new TextNode('</a>', 1, 23),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
         $this->assertInstanceOf(OutputNode::class, $result->children[3]);
         $this->assertSame(OutputContext::HTML, $result->children[3]->context);
+    }
+
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }

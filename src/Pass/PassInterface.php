@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass;
 
 use Sugar\Ast\DocumentNode;
+use Sugar\Context\CompilationContext;
 
 /**
  * Interface for AST transformation passes
@@ -31,7 +32,8 @@ interface PassInterface
      * Implementations should maintain immutability where possible.
      *
      * @param \Sugar\Ast\DocumentNode $ast The document to process
+     * @param \Sugar\Context\CompilationContext $context Compilation context with template metadata
      * @return \Sugar\Ast\DocumentNode The transformed document
      */
-    public function execute(DocumentNode $ast): DocumentNode;
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode;
 }

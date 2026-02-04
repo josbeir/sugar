@@ -8,6 +8,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\PassInterface;
 
@@ -37,9 +38,10 @@ final readonly class DirectiveCompilationPass implements PassInterface
      * Execute the pass: compile DirectiveNodes into PHP structures
      *
      * @param \Sugar\Ast\DocumentNode $ast Document to transform
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @return \Sugar\Ast\DocumentNode New document with directives compiled
      */
-    public function execute(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
         $newChildren = [];
 

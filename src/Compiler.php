@@ -5,6 +5,7 @@ namespace Sugar;
 
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\EmptyCompiler;
@@ -117,6 +118,13 @@ final class Compiler implements CompilerInterface
         bool $debug = false,
         ?string $sourceFile = null,
     ): string {
+        // Create compilation context for error handling with snippets
+        $context = new CompilationContext(
+            $templatePath ?? 'inline-template',
+            $source,
+            $debug,
+        );
+
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
 
@@ -127,20 +135,20 @@ final class Compiler implements CompilerInterface
 
         // Step 1.75: Expand components (s-button → template content)
         if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $ast = $this->componentExpansionPass->execute($ast);
+            $ast = $this->componentExpansionPass->execute($ast, $context);
         }
 
         // Step 2: Extract directives from elements (s:if → DirectiveNode)
-        $extractedAst = $this->directiveExtractionPass->execute($ast);
+        $extractedAst = $this->directiveExtractionPass->execute($ast, $context);
 
         // Step 3: Wire up parent references and pair sibling directives
-        $pairedAst = $this->directivePairingPass->execute($extractedAst);
+        $pairedAst = $this->directivePairingPass->execute($extractedAst, $context);
 
         // Step 4: Compile DirectiveNodes into PHP control structures
-        $transformedAst = $this->directiveCompilationPass->execute($pairedAst);
+        $transformedAst = $this->directiveCompilationPass->execute($pairedAst, $context);
 
         // Step 4: Analyze context and update OutputNode contexts
-        $analyzedAst = $this->contextPass->execute($transformedAst);
+        $analyzedAst = $this->contextPass->execute($transformedAst, $context);
 
         // Step 5: Generate executable PHP code with inline escaping
         // Use templatePath as sourceFile for debug info if sourceFile not explicitly provided

@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveCompilerInterface;
@@ -57,7 +58,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(3, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -128,7 +129,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$outerDirective]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Should compile both directives
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]); // foreach open
@@ -156,7 +157,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
@@ -178,7 +179,7 @@ final class DirectiveCompilationPassTest extends TestCase
         $this->expectException(UnknownDirectiveException::class);
         $this->expectExceptionMessage('Unknown directive "unknown"');
 
-        $this->pass->execute($ast);
+        $this->pass->execute($ast, $this->createContext());
     }
 
     public function testHandlesCompilerReturningMultipleNodes(): void
@@ -212,7 +213,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(5, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -258,7 +259,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive1, $directive2]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(4, $result->children);
         $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
@@ -305,7 +306,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $divElement = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $divElement);
@@ -356,7 +357,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $sectionElement = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $sectionElement);
@@ -379,7 +380,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $inputElement = $result->children[0];
@@ -439,7 +440,7 @@ final class DirectiveCompilationPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$directive]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Should compile both outer and inner directives
         $this->assertCount(4, $result->children);
@@ -447,5 +448,13 @@ final class DirectiveCompilationPassTest extends TestCase
         $this->assertInstanceOf(RawPhpNode::class, $result->children[1]); // Inner
         $this->assertInstanceOf(TextNode::class, $result->children[2]); // Nested content
         $this->assertInstanceOf(RawPhpNode::class, $result->children[3]); // Outer end
+    }
+
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }

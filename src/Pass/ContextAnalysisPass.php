@@ -10,6 +10,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\AnalysisContext;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\OutputContext;
 
 /**
@@ -24,7 +25,7 @@ final class ContextAnalysisPass implements PassInterface
      * @param \Sugar\Ast\DocumentNode $ast Document to analyze
      * @return \Sugar\Ast\DocumentNode New document with updated contexts
      */
-    public function execute(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
         $context = new AnalysisContext();
         $inAttribute = false;

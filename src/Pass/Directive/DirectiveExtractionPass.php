@@ -13,6 +13,7 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\InheritanceAttribute;
 use Sugar\Enum\OutputContext;
@@ -44,9 +45,11 @@ use Sugar\Pass\PassInterface;
  * DirectiveNode(name: 'if', expression: '$user', children: [<div>Content</div>])
  * ```
  */
-final readonly class DirectiveExtractionPass implements PassInterface
+final class DirectiveExtractionPass implements PassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
+
+    private CompilationContext $context;
 
     /**
      * Constructor
@@ -55,7 +58,7 @@ final readonly class DirectiveExtractionPass implements PassInterface
      * @param string $directivePrefix Prefix for directive attributes (e.g., 's', 'x', 'v')
      */
     public function __construct(
-        private ExtensionRegistry $registry,
+        private readonly ExtensionRegistry $registry,
         string $directivePrefix = 's',
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
@@ -65,10 +68,12 @@ final readonly class DirectiveExtractionPass implements PassInterface
      * Execute the pass: extract directive attributes into DirectiveNodes
      *
      * @param \Sugar\Ast\DocumentNode $ast Document to transform
+     * @param \Sugar\Context\CompilationContext $context Compilation context
      * @return \Sugar\Ast\DocumentNode New document with directives extracted
      */
-    public function execute(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
+        $this->context = $context;
         $children = $this->transformChildren($ast->children);
 
         return new DocumentNode($children);
@@ -174,10 +179,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
 
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
-                    throw new SyntaxException(
-                        message: 'Directive attributes cannot contain dynamic output expressions',
-                        templateLine: $attr->line,
-                        templateColumn: $attr->column,
+                    throw $this->context->createException(
+                        SyntaxException::class,
+                        'Directive attributes cannot contain dynamic output expressions',
+                        $attr->line,
+                        $attr->column,
                     );
                 }
 
@@ -296,10 +302,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
                 $name = $this->prefixHelper->stripPrefix($attr->name);
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
-                    throw new SyntaxException(
-                        message: 'Directive attributes cannot contain dynamic output expressions',
-                        templateLine: $attr->line,
-                        templateColumn: $attr->column,
+                    throw $this->context->createException(
+                        SyntaxException::class,
+                        'Directive attributes cannot contain dynamic output expressions',
+                        $attr->line,
+                        $attr->column,
                     );
                 }
 
@@ -316,22 +323,24 @@ final readonly class DirectiveExtractionPass implements PassInterface
                         'name' => $name,
                         'expression' => $expression,
                     ],
-                    DirectiveType::ATTRIBUTE => throw new SyntaxException(
-                        message: sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
+                    DirectiveType::ATTRIBUTE => throw $this->context->createException(
+                        SyntaxException::class,
+                        sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
                             'Only control flow and content directives are allowed.',
-                        templateLine: $attr->line,
-                        templateColumn: $attr->column,
+                        $attr->line,
+                        $attr->column,
                     ),
                 };
             } elseif (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
                 // These are processed by TemplateInheritancePass before DirectiveExtractionPass
-                throw new SyntaxException(
-                    message: sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
+                throw $this->context->createException(
+                    SyntaxException::class,
+                    sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
                         'Only s: directives and template inheritance attributes ' .
                         '(s:block, s:include, etc.) are allowed.',
-                    templateLine: $attr->line,
-                    templateColumn: $attr->column,
+                    $attr->line,
+                    $attr->column,
                 );
             }
         }
@@ -348,10 +357,11 @@ final readonly class DirectiveExtractionPass implements PassInterface
             }
 
             if (!$hasInheritanceAttr) {
-                throw new SyntaxException(
-                    message: '<s-template> must have at least one directive or inheritance attribute',
-                    templateLine: $node->line,
-                    templateColumn: $node->column,
+                throw $this->context->createException(
+                    SyntaxException::class,
+                    '<s-template> must have at least one directive or inheritance attribute',
+                    $node->line,
+                    $node->column,
                 );
             }
 

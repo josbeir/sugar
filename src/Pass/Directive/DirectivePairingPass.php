@@ -8,6 +8,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
+use Sugar\Context\CompilationContext;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Extension\PairedDirectiveCompilerInterface;
 use Sugar\Pass\PassInterface;
@@ -40,7 +41,7 @@ final class DirectivePairingPass implements PassInterface
      * @param \Sugar\Ast\DocumentNode $ast Document to transform
      * @return \Sugar\Ast\DocumentNode Same document with paired directives linked
      */
-    public function execute(DocumentNode $ast): DocumentNode
+    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
         // First pass: wire up all parent references
         $this->wireParents($ast, null);

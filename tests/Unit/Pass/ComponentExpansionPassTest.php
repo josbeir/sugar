@@ -11,6 +11,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
@@ -58,7 +59,7 @@ final class ComponentExpansionPassTest extends TestCase
             ),
         ]);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Component should be expanded to multiple nodes (RawPhpNode for variables + template content)
         $this->assertGreaterThan(0, count($result->children));
@@ -77,7 +78,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button>Save</s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -91,7 +92,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button></s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $code);
@@ -108,7 +109,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-panel>Submit</s-panel>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<div class="panel">', $code);
@@ -132,7 +133,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectException(ComponentNotFoundException::class);
         $this->expectExceptionMessage('Component "nonexistent" not found');
 
-        $this->pass->execute($ast);
+        $this->pass->execute($ast, $this->createContext());
     }
 
     public function testPreservesComponentAttributes(): void
@@ -141,7 +142,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-alert s-bind:type="\'warning\'">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -165,7 +166,7 @@ final class ComponentExpansionPassTest extends TestCase
             '</s-card>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -241,5 +242,13 @@ final class ComponentExpansionPassTest extends TestCase
         }
 
         return '';
+    }
+
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }

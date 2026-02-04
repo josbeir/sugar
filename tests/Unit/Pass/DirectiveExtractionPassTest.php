@@ -10,6 +10,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
@@ -66,7 +67,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
@@ -98,7 +99,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -127,7 +128,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$outerElement]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Outer directive
         $outerDirective = $result->children[0];
@@ -162,7 +163,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -187,7 +188,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -216,7 +217,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element1, $element2]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(2, $result->children);
         $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
@@ -237,7 +238,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
@@ -266,7 +267,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$outerElement]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -301,7 +302,7 @@ final class DirectiveExtractionPassTest extends TestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
 
-        $this->pass->execute($ast);
+        $this->pass->execute($ast, $this->createContext());
     }
 
     public function testHandlesSelfClosingElementWithDirective(): void
@@ -319,7 +320,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -359,7 +360,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$topElement]);
-        $result = $this->pass->execute($ast);
+        $result = $this->pass->execute($ast, $this->createContext());
 
         // Top level: s:if directive
         $topDirective = $result->children[0];
@@ -396,7 +397,7 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $pass->execute($ast);
+        $result = $pass->execute($ast, $this->createContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -418,11 +419,19 @@ final class DirectiveExtractionPassTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $pass->execute($ast);
+        $result = $pass->execute($ast, $this->createContext());
 
         // Should not be extracted since we're using 'x' prefix
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
         $this->assertCount(1, $result->children[0]->attributes);
+    }
+
+    protected function createContext(
+        string $source = '',
+        string $templatePath = 'test.sugar.php',
+        bool $debug = false,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug);
     }
 }
