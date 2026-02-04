@@ -5,7 +5,8 @@ namespace Sugar\Pass;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\Helper\NodeCloner;
+use Sugar\Ast\Helper\NodeTraverser;
+use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\AnalysisContext;
@@ -26,38 +27,33 @@ final class ContextAnalysisPass implements PassInterface
     public function execute(DocumentNode $ast): DocumentNode
     {
         $context = new AnalysisContext();
-        $newChildren = $this->processNodes($ast->children, $context, false);
+        $inAttribute = false;
+
+        $newChildren = NodeTraverser::walk(
+            $ast->children,
+            function (
+                Node $node,
+                callable $recurse,
+            ) use (
+                &$context,
+                &$inAttribute,
+            ): ElementNode|TextNode|OutputNode|Node {
+                if ($node instanceof ElementNode) {
+                    return $this->processElementNode($node, $context, $recurse);
+                } elseif ($node instanceof TextNode) {
+                    [$context, $inAttribute] = $this->processTextNode($node, $context, $inAttribute);
+
+                    return $node;
+                } elseif ($node instanceof OutputNode) {
+                    return $this->updateOutputNode($node, $context, $inAttribute);
+                }
+
+                // Other node types pass through unchanged
+                return $node;
+            },
+        );
 
         return new DocumentNode($newChildren);
-    }
-
-    /**
-     * Process array of nodes recursively
-     *
-     * @param array<\Sugar\Ast\Node> $nodes Nodes to process
-     * @param \Sugar\Context\AnalysisContext $context Current context
-     * @param bool $inAttribute Whether currently in attribute
-     * @return array<\Sugar\Ast\Node> Processed nodes
-     */
-    private function processNodes(array $nodes, AnalysisContext $context, bool $inAttribute): array
-    {
-        $newNodes = [];
-
-        foreach ($nodes as $node) {
-            if ($node instanceof ElementNode) {
-                $newNodes[] = $this->processElementNode($node, $context, $inAttribute);
-            } elseif ($node instanceof TextNode) {
-                [$context, $inAttribute] = $this->processTextNode($node, $context, $inAttribute);
-                $newNodes[] = $node;
-            } elseif ($node instanceof OutputNode) {
-                $newNodes[] = $this->updateOutputNode($node, $context, $inAttribute);
-            } else {
-                // Other node types pass through unchanged
-                $newNodes[] = $node;
-            }
-        }
-
-        return $newNodes;
     }
 
     /**
@@ -65,22 +61,26 @@ final class ContextAnalysisPass implements PassInterface
      *
      * @param \Sugar\Ast\ElementNode $node Element to process
      * @param \Sugar\Context\AnalysisContext $context Current context
-     * @param bool $inAttribute Whether in attribute
+     * @param callable $recurse Recursion callback
      * @return \Sugar\Ast\ElementNode Processed element
      */
     private function processElementNode(
         ElementNode $node,
-        AnalysisContext $context,
-        bool $inAttribute,
+        AnalysisContext &$context,
+        callable $recurse,
     ): ElementNode {
         // Push tag onto context stack
         $childContext = $context->push($node->tag);
+        $savedContext = $context;
+        $context = $childContext;
 
-        // Process children with updated context
-        $newChildren = $this->processNodes($node->children, $childContext, $inAttribute);
+        // Process children with updated context (recurse handles traversal)
+        $processedNode = $recurse($node);
 
-        // Return new element with updated children
-        return NodeCloner::withChildren($node, $newChildren);
+        // Restore context
+        $context = $savedContext;
+
+        return $processedNode;
     }
 
     /**

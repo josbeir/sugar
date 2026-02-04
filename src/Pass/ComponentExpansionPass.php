@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -58,36 +59,17 @@ final readonly class ComponentExpansionPass implements PassInterface
      */
     public function execute(DocumentNode $ast): DocumentNode
     {
-        $expandedChildren = $this->expandNodes($ast->children);
+        $expandedChildren = NodeTraverser::walk($ast->children, function (Node $node, callable $recurse) {
+            if ($node instanceof ComponentNode) {
+                // Expand component - return array of nodes
+                return $this->expandComponent($node);
+            }
+
+            // Recurse into children for other nodes
+            return $recurse($node);
+        });
 
         return new DocumentNode($expandedChildren);
-    }
-
-    /**
-     * Expand nodes, replacing ComponentNode with expanded content
-     *
-     * @param array<\Sugar\Ast\Node> $nodes Nodes to process
-     * @return array<\Sugar\Ast\Node> Processed nodes
-     */
-    private function expandNodes(array $nodes): array
-    {
-        $result = [];
-
-        foreach ($nodes as $node) {
-            if ($node instanceof ComponentNode) {
-                // Expand component
-                $expanded = $this->expandComponent($node);
-                array_push($result, ...$expanded);
-            } elseif ($node instanceof ElementNode || $node instanceof FragmentNode) {
-                // Process children recursively for nodes with children
-                $node->children = $this->expandNodes($node->children);
-                $result[] = $node;
-            } else {
-                $result[] = $node;
-            }
-        }
-
-        return $result;
     }
 
     /**
@@ -153,6 +135,23 @@ final readonly class ComponentExpansionPass implements PassInterface
         }
 
         return $expandedContent;
+    }
+
+    /**
+     * Recursively expand components in a list of nodes
+     *
+     * @param array<\Sugar\Ast\Node> $nodes Nodes to process
+     * @return array<\Sugar\Ast\Node> Processed nodes with expanded components
+     */
+    private function expandNodes(array $nodes): array
+    {
+        return NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
+            if ($node instanceof ComponentNode) {
+                return $this->expandComponent($node);
+            }
+
+            return $recurse($node);
+        });
     }
 
     /**

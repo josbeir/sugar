@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Tests\Unit\Enum;
+
+use PHPUnit\Framework\TestCase;
+use Sugar\Enum\DirectiveType;
+
+final class DirectiveTypeTest extends TestCase
+{
+    public function testEnumCases(): void
+    {
+        $cases = DirectiveType::cases();
+
+        $this->assertCount(3, $cases);
+        $this->assertContains(DirectiveType::CONTROL_FLOW, $cases);
+        $this->assertContains(DirectiveType::ATTRIBUTE, $cases);
+        $this->assertContains(DirectiveType::CONTENT, $cases);
+    }
+
+    public function testEnumComparison(): void
+    {
+        $this->assertSame(DirectiveType::CONTROL_FLOW, DirectiveType::CONTROL_FLOW);
+        $this->assertNotSame(DirectiveType::CONTROL_FLOW, DirectiveType::ATTRIBUTE);
+        $this->assertNotSame(DirectiveType::ATTRIBUTE, DirectiveType::CONTENT);
+    }
+}

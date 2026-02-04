@@ -120,9 +120,57 @@ final class ExtensionRegistryTest extends TestCase
         $this->registry->getDirective('invalid');
     }
 
-    private function createMockDirectiveCompiler(): DirectiveCompilerInterface
+    public function testGetDirectivesByType(): void
     {
-        return new class implements DirectiveCompilerInterface {
+        $controlFlow = $this->createMockDirectiveCompiler(DirectiveType::CONTROL_FLOW);
+        $attribute = $this->createMockDirectiveCompiler(DirectiveType::ATTRIBUTE);
+
+        $this->registry->registerDirective('if', $controlFlow);
+        $this->registry->registerDirective('class', $attribute);
+        $this->registry->registerDirective('foreach', $controlFlow);
+
+        $controlFlowDirectives = $this->registry->getDirectivesByType(DirectiveType::CONTROL_FLOW);
+
+        $this->assertCount(2, $controlFlowDirectives);
+        $this->assertArrayHasKey('if', $controlFlowDirectives);
+        $this->assertArrayHasKey('foreach', $controlFlowDirectives);
+        $this->assertArrayNotHasKey('class', $controlFlowDirectives);
+    }
+
+    public function testGetDirectivesByTypeWithLazyLoading(): void
+    {
+        $this->registry->registerDirective('test', TestDirectiveCompiler::class);
+        $this->registry->registerDirective('test2', TestDirectiveCompiler::class);
+
+        $controlFlowDirectives = $this->registry->getDirectivesByType(DirectiveType::CONTROL_FLOW);
+
+        $this->assertCount(2, $controlFlowDirectives);
+        $this->assertArrayHasKey('test', $controlFlowDirectives);
+        $this->assertArrayHasKey('test2', $controlFlowDirectives);
+    }
+
+    public function testAllDirectivesWithLazyLoading(): void
+    {
+        $compiler1 = $this->createMockDirectiveCompiler();
+        $this->registry->registerDirective('eager', $compiler1);
+        $this->registry->registerDirective('lazy', TestDirectiveCompiler::class);
+
+        $all = $this->registry->allDirectives();
+
+        $this->assertCount(2, $all);
+        $this->assertSame($compiler1, $all['eager']);
+        $this->assertInstanceOf(TestDirectiveCompiler::class, $all['lazy']);
+    }
+
+    private function createMockDirectiveCompiler(?DirectiveType $type = null): DirectiveCompilerInterface
+    {
+        $type ??= DirectiveType::CONTROL_FLOW;
+
+        return new class ($type) implements DirectiveCompilerInterface {
+            public function __construct(private DirectiveType $type)
+            {
+            }
+
             /**
              * @param \Sugar\Ast\DirectiveNode $node
              * @return array<\Sugar\Ast\Node>
@@ -134,7 +182,7 @@ final class ExtensionRegistryTest extends TestCase
 
             public function getType(): DirectiveType
             {
-                return DirectiveType::CONTROL_FLOW;
+                return $this->type;
             }
         };
     }

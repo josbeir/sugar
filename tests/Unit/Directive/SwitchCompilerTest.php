@@ -290,4 +290,127 @@ final class SwitchCompilerTest extends TestCase
 
         $this->assertSame(DirectiveType::CONTROL_FLOW, $type);
     }
+
+    public function testNestedDefaultInsideElementNode(): void
+    {
+        $switch = new DirectiveNode(
+            name: 'switch',
+            expression: '$role',
+            children: [
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        new DirectiveNode(
+                            name: 'default',
+                            expression: '',
+                            children: [new TextNode('Default content', 1, 0)],
+                            line: 1,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 1,
+                    column: 0,
+                ),
+            ],
+            line: 1,
+            column: 0,
+        );
+
+        $result = $this->compiler->compile($switch);
+
+        // Should find and compile the nested default
+        $hasDefault = false;
+        foreach ($result as $node) {
+            if ($node instanceof RawPhpNode && str_contains($node->code, 'default:')) {
+                $hasDefault = true;
+                break;
+            }
+        }
+
+        $this->assertTrue($hasDefault);
+    }
+
+    public function testMultipleNestedDefaultsThrowException(): void
+    {
+        $switch = new DirectiveNode(
+            name: 'switch',
+            expression: '$role',
+            children: [
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        new DirectiveNode(
+                            name: 'default',
+                            expression: '',
+                            children: [new TextNode('First', 1, 0)],
+                            line: 1,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 1,
+                    column: 0,
+                ),
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        new DirectiveNode(
+                            name: 'default',
+                            expression: '',
+                            children: [new TextNode('Second', 1, 0)],
+                            line: 2,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 2,
+                    column: 0,
+                ),
+            ],
+            line: 1,
+            column: 0,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Switch directive can only have one default case');
+
+        $this->compiler->compile($switch);
+    }
+
+    public function testNestedCaseWithEmptyExpressionThrowsException(): void
+    {
+        $switch = new DirectiveNode(
+            name: 'switch',
+            expression: '$role',
+            children: [
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [
+                        new DirectiveNode(
+                            name: 'case',
+                            expression: '   ',
+                            children: [new TextNode('Content', 1, 0)],
+                            line: 1,
+                            column: 0,
+                        ),
+                    ],
+                    selfClosing: false,
+                    line: 1,
+                    column: 0,
+                ),
+            ],
+            line: 1,
+            column: 0,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Case directive requires a value expression');
+
+        $this->compiler->compile($switch);
+    }
 }

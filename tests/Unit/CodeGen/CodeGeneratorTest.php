@@ -4,7 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\CodeGen;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\AttributeNode;
+use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
+use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
@@ -249,5 +253,180 @@ final class CodeGeneratorTest extends TestCase
         $this->assertStringNotContainsString('/* L', $code);
         $this->assertStringNotContainsString('s:text', $code);
         $this->assertStringNotContainsString('<!-- L', $code);
+    }
+
+    public function testDebugModeWithoutSourceFile(): void
+    {
+        $generator = new CodeGenerator(new Escaper(), debug: true);
+        $ast = new DocumentNode([new TextNode('Hello', 1, 0)]);
+
+        $code = $generator->generate($ast);
+
+        // Should not include source file info when sourceFile is null
+        $this->assertStringContainsString('// DO NOT EDIT - auto-generated', $code);
+        $this->assertStringNotContainsString('// Source:', $code);
+        $this->assertStringNotContainsString('// Debug mode:', $code);
+    }
+
+    public function testGenerateElementWithAttributes(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'div',
+                [
+                    new AttributeNode('id', 'main', 1, 1),
+                    new AttributeNode('class', 'container', 1, 1),
+                ],
+                [new TextNode('Content', 1, 1)],
+                false,
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('<div id="main" class="container">', $code);
+        $this->assertStringContainsString('Content', $code);
+        $this->assertStringContainsString('</div>', $code);
+    }
+
+    public function testGenerateSelfClosingElement(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'img',
+                [new AttributeNode('src', 'image.jpg', 1, 1)],
+                [],
+                true,
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('<img src="image.jpg" />', $code);
+    }
+
+    public function testGenerateElementWithDynamicAttribute(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'div',
+                [
+                    new AttributeNode(
+                        'title',
+                        new OutputNode('$title', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                        1,
+                        1,
+                    ),
+                ],
+                [],
+                false,
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('<div title="', $code);
+        $this->assertStringContainsString('htmlspecialchars', $code);
+    }
+
+    public function testGenerateBooleanAttribute(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'input',
+                [new AttributeNode('disabled', null, 1, 1)],
+                [],
+                true,
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('<input disabled />', $code);
+    }
+
+    public function testGenerateFragmentNode(): void
+    {
+        $ast = new DocumentNode([
+            new FragmentNode(
+                [],
+                [
+                    new TextNode('First', 1, 1),
+                    new TextNode('Second', 1, 1),
+                ],
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('First', $code);
+        $this->assertStringContainsString('Second', $code);
+        // Fragment itself should not be rendered
+        $this->assertStringNotContainsString('<fragment', $code);
+    }
+
+    public function testGenerateDirectiveNode(): void
+    {
+        $ast = new DocumentNode([
+            new DirectiveNode(
+                'if',
+                '$condition',
+                [new TextNode('Content', 1, 1)],
+                1,
+                1,
+            ),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // DirectiveNode outputs as comment in current implementation
+        $this->assertStringContainsString('<!-- Directive: if', $code);
+        $this->assertStringContainsString('$condition', $code);
+    }
+
+    public function testGenerateElementInDebugMode(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'div',
+                [],
+                [new TextNode('Content', 1, 1)],
+                false,
+                5,
+                10,
+            ),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('<!-- L5:C10 -->', $code);
+    }
+
+    public function testGenerateSelfClosingElementInDebugMode(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                'br',
+                [],
+                [],
+                true,
+                3,
+                8,
+            ),
+        ]);
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('<br /> <!-- L3:C8 -->', $code);
     }
 }
