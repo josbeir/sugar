@@ -339,4 +339,77 @@ final class ParserTest extends TestCase
         $this->assertSame('strtoupper($var)', $ast->children[0]->expression);
         $this->assertTrue($ast->children[0]->escape, 'Other functions should not disable escaping');
     }
+
+    public function testParseSimplePipe(): void
+    {
+        $source = '<?= $name |> upper(...) ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$name', $output->expression);
+        $this->assertNotNull($output->pipes);
+        $this->assertSame(['upper(...)'], $output->pipes);
+    }
+
+    public function testParseMultiplePipes(): void
+    {
+        $source = '<?= $name |> upper(...) |> truncate(..., 20) ?>';
+        $ast = $this->parser->parse($source);
+
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$name', $output->expression);
+        $this->assertNotNull($output->pipes);
+        $this->assertSame(['upper(...)', 'truncate(..., 20)'], $output->pipes);
+    }
+
+    public function testParsePipeWithMultipleArguments(): void
+    {
+        $source = '<?= $price |> money(..., "USD", 2) ?>';
+        $ast = $this->parser->parse($source);
+
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$price', $output->expression);
+        $this->assertNotNull($output->pipes);
+        $this->assertSame(['money(..., "USD", 2)'], $output->pipes);
+    }
+
+    public function testParsePipeWithWhitespace(): void
+    {
+        $source = '<?= $name  |>  upper(...)  |>  truncate(..., 10) ?>';
+        $ast = $this->parser->parse($source);
+
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$name', $output->expression);
+        $this->assertNotNull($output->pipes);
+        $this->assertSame(['upper(...)', 'truncate(..., 10)'], $output->pipes);
+    }
+
+    public function testParseExpressionWithoutPipes(): void
+    {
+        $source = '<?= $name ?>';
+        $ast = $this->parser->parse($source);
+
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$name', $output->expression);
+        $this->assertNull($output->pipes);
+    }
+
+    public function testParsePipeWithRawFunction(): void
+    {
+        $source = '<?= raw($html |> upper(...)) ?>';
+        $ast = $this->parser->parse($source);
+
+        $output = $ast->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame('$html', $output->expression);
+        $this->assertFalse($output->escape); // raw() disables escaping
+        $this->assertNotNull($output->pipes);
+        $this->assertSame(['upper(...)'], $output->pipes);
+    }
 }

@@ -105,13 +105,19 @@ final class CodeGenerator
      */
     private function generateOutput(OutputNode $node, OutputBuffer $buffer): void
     {
+        // Compile pipe chain if present
+        $expression = $node->expression;
+        if ($node->pipes !== null) {
+            $expression = $this->compilePipes($expression, $node->pipes);
+        }
+
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
-            $escapedCode = $this->escaper->generateEscapeCode($node->expression, $node->context);
+            $escapedCode = $this->escaper->generateEscapeCode($expression, $node->context);
             $buffer->write(sprintf('<?php echo %s;%s ?>', $escapedCode, $this->debugComment($node, 's:text')));
         } else {
             // Raw output
-            $buffer->write(sprintf('<?php echo %s;%s ?>', $node->expression, $this->debugComment($node, 's:html')));
+            $buffer->write(sprintf('<?php echo %s;%s ?>', $expression, $this->debugComment($node, 's:html')));
         }
     }
 
@@ -256,5 +262,30 @@ final class CodeGenerator
         }
 
         return sprintf(' /* %s */', $location);
+    }
+
+    /**
+     * Compile pipe chain to nested function calls
+     *
+     * Transforms pipe syntax into nested function calls:
+     * - Input: "$name", ["upper(...)", "truncate(..., 20)"]
+     * - Output: "truncate(upper($name), 20)"
+     *
+     * The ... placeholder in each pipe is replaced with the result of the previous expression.
+     *
+     * @param string $baseExpression The initial expression
+     * @param array<string> $pipes Array of pipe transformations
+     * @return string Compiled nested function call expression
+     */
+    private function compilePipes(string $baseExpression, array $pipes): string
+    {
+        $result = $baseExpression;
+
+        foreach ($pipes as $pipe) {
+            // Replace ... placeholder with the current result
+            $result = str_replace('...', $result, $pipe);
+        }
+
+        return $result;
     }
 }

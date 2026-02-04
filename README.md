@@ -2,7 +2,7 @@
 [![Build Status](https://github.com/josbeir/sugar/actions/workflows/ci.yml/badge.svg)](https://github.com/josbeir/sugar/actions)
 [![PHPStan Level 8](https://img.shields.io/badge/PHPStan-level%208-brightgreen)](https://github.com/josbeir/sugar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PHP Version](https://img.shields.io/badge/php-8.4%2B-blue.svg)](https://www.php.net/releases/8.2/en.php)
+[![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue.svg)](https://www.php.net/releases/8.2/en.php)
 [![codecov](https://codecov.io/github/josbeir/sugar/graph/badge.svg?token=4VGWJQTWH5)](https://codecov.io/github/josbeir/sugar)
 
 # 🍬 Sugar
@@ -17,6 +17,7 @@
 - [What is Sugar?](#what-is-sugar)
   - [Before & After](#before--after)
   - [More Examples](#more-examples)
+    - [PHP Pipe Syntax](#php-pipe-syntax)
     - [Context-Aware Escaping](#context-aware-escaping)
     - [Loop Metadata](#loop-metadata)
     - [Switch Statements](#switch-statements)
@@ -26,8 +27,9 @@
 - [Why Sugar?](#why-sugar)
 - [Features](#features)
   - [Directives](#directives)
-  - [Context-Aware Escaping](#context-aware-escaping)
-  - [Loop Metadata](#loop-metadata)
+  - [Pipe Syntax](#pipe-syntax)
+  - [Context-Aware Escaping](#context-aware-escaping-1)
+  - [Loop Metadata](#loop-metadata-1)
   - [Fragment Elements (`<s-template>`)](#fragment-elements-s-template)
   - [Template Inheritance & Composition](#template-inheritance--composition)
   - [Components](#components)
@@ -42,7 +44,7 @@
 
 ## What is Sugar?
 
-Sugar is a modern PHP (8.4+) templating engine that **compiles to pure, optimized PHP code**. It takes your existing PHP templates and supercharges them with:
+Sugar is a modern PHP (8.2+) templating engine that **compiles to pure, optimized PHP code**. It takes your existing PHP templates and supercharges them with:
 
 - **Clean `s:directive` syntax** for control structures (no more `<?php if/foreach/endforeach ?>`  clutter)
 - **Automatic context-aware XSS escaping** - Sugar detects whether you're in HTML, JavaScript, CSS, or URLs and applies the right escaping automatically
@@ -100,6 +102,24 @@ Notice:
 - ✅ **Mix and match** - Regular `<?php if/foreach ?>` and Sugar directives work together seamlessly
 
 ### More Examples
+
+#### PHP Pipe Syntax
+
+> **Note:** Use modern PHP 8.5 pipe syntax even on PHP 8.2+! Sugar compiles pipes to standard function calls at compile time.
+
+```html
+<h1><?= $title |> strtoupper(...) |> substr(..., 0, 50) ?></h1>
+<p><?= $product->price |> number_format(..., 2) ?></p>
+<div><?= $text |> strip_tags(...) |> trim(...) ?></div>
+```
+
+Compiles to nested function calls with auto-escaping preserved:
+
+```php
+<h1><?= htmlspecialchars((string)(substr(strtoupper($title), 0, 50)), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></h1>
+<p><?= htmlspecialchars((string)(number_format($product->price, 2)), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></p>
+<div><?= htmlspecialchars((string)(trim(strip_tags($text))), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></div>
+```
 
 #### Context-Aware Escaping
 
@@ -319,6 +339,20 @@ Sugar provides familiar control structures as HTML attributes:
 #### Utility Directives
 - **`s:class`** - Dynamic CSS classes with conditional arrays
 - **`s:spread`** - Spread attributes from arrays
+
+### Pipe Syntax
+
+Use PHP 8.5 pipe operator syntax (`|>`) in output expressions - works on PHP 8.2+ through compile-time transformation:
+
+```html
+<?= $name |> strtoupper(...) |> substr(..., 0, 10) ?>
+```
+
+- **PHP 8.5 syntax** - Use modern pipe operators today
+- **Backwards compatible** - Compiles to nested function calls for PHP 8.2+
+- **Zero overhead** - Pure compile-time transformation
+- **Auto-escaping preserved** - Works seamlessly with context detection
+- **Works everywhere** - Output tags (`<?= ?>`), directives, all contexts
 
 ### Context-Aware Escaping
 
@@ -944,8 +978,10 @@ Sugar is actively developed and welcomes contributions! Check out the issues or 
 
 ## Requirements
 
-- PHP 8.4+
+- **PHP 8.2+** (tested on 8.2, 8.3, 8.4, 8.5)
 - Composer
+
+**Note:** Sugar uses PHP 8.2+ features (readonly classes, enums) but compiles templates that work on PHP 8.2+. The pipe syntax (`|>`) is a compile-time feature - you can use PHP 8.5 syntax even on PHP 8.2!
 
 ## License
 

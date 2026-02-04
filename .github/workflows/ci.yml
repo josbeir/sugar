@@ -16,10 +16,10 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        php-version: [8.4, 8.5]
+        php-version: [8.2, 8.3, 8.4, 8.5]
         prefer-lowest: ['']
         include:
-          - php-version: '8.4'
+          - php-version: '8.2'
             os: ubuntu-latest
             prefer-lowest: 'prefer-lowest'
 

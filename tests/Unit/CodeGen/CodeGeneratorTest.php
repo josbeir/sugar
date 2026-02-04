@@ -429,4 +429,68 @@ final class CodeGeneratorTest extends TestCase
 
         $this->assertStringContainsString('<br /> <!-- L3:C8 -->', $code);
     }
+
+    public function testGenerateSimplePipe(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)']),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // Should compile to upper($name)
+        $this->assertStringContainsString('upper($name)', $code);
+        $this->assertStringContainsString('htmlspecialchars', $code);
+    }
+
+    public function testGenerateMultiplePipes(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)', 'truncate(..., 20)']),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // Should compile to truncate(upper($name), 20)
+        $this->assertStringContainsString('truncate(upper($name), 20)', $code);
+        $this->assertStringContainsString('htmlspecialchars', $code);
+    }
+
+    public function testGeneratePipeWithMultipleArguments(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$price', true, OutputContext::HTML, 1, 1, ['money(..., "USD", 2)']),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // Should compile to money($price, "USD", 2)
+        $this->assertStringContainsString('money($price, "USD", 2)', $code);
+    }
+
+    public function testGeneratePipeWithoutEscaping(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$html', false, OutputContext::RAW, 1, 1, ['upper(...)']),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // Should compile to upper($html) without escaping
+        $this->assertStringContainsString('echo upper($html)', $code);
+        $this->assertStringNotContainsString('htmlspecialchars', $code);
+    }
+
+    public function testGeneratePipeInJavascriptContext(): void
+    {
+        $ast = new DocumentNode([
+            new OutputNode('$data', true, OutputContext::JAVASCRIPT, 1, 1, ['upper(...)']),
+        ]);
+
+        $code = $this->generator->generate($ast);
+
+        // Should compile to json_encode(upper($data))
+        $this->assertStringContainsString('json_encode(upper($data)', $code);
+        $this->assertStringContainsString('JSON_HEX_TAG', $code);
+    }
 }

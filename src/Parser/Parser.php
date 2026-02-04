@@ -79,12 +79,18 @@ final readonly class Parser
                 // Check if expression is wrapped in raw() or r() function
                 [$unwrappedExpression, $shouldEscape] = $this->unwrapRawFunction($expression);
 
+                // Parse pipe syntax if present
+                $pipes = $this->parsePipes($unwrappedExpression);
+                $finalExpression = $pipes['expression'];
+                $pipeChain = $pipes['pipes'];
+
                 $nodes[] = new OutputNode(
-                    expression: $unwrappedExpression,
+                    expression: $finalExpression,
                     escape: $shouldEscape,
                     context: OutputContext::HTML,
                     line: $token->line,
                     column: $token->pos,
+                    pipes: $pipeChain,
                 );
                 $i = $nextIndex;
                 continue;
@@ -171,6 +177,37 @@ final readonly class Parser
         }
 
         return [$expression, true]; // Return as-is with escaping enabled
+    }
+
+    /**
+     * Parse pipe syntax from expression
+     *
+     * Splits expression on |> operator and extracts pipe chain.
+     * Example: "$name |> upper(...) |> truncate(..., 20)"
+     * Returns: ['expression' => '$name', 'pipes' => ['upper(...)', 'truncate(..., 20)']]
+     *
+     * @param string $expression The expression to parse
+     * @return array{expression: string, pipes: array<string>|null} Base expression and pipe chain
+     */
+    private function parsePipes(string $expression): array
+    {
+        // Check if expression contains pipe operator
+        if (!str_contains($expression, '|>')) {
+            return ['expression' => $expression, 'pipes' => null];
+        }
+
+        // Split by pipe operator (with optional whitespace)
+        $parts = preg_split('/\s*\|\>\s*/', $expression);
+
+        if ($parts === false || count($parts) < 2) {
+            return ['expression' => $expression, 'pipes' => null];
+        }
+
+        // First part is the base expression, rest are pipe transformations
+        $baseExpression = trim(array_shift($parts));
+        $pipes = array_map('trim', $parts);
+
+        return ['expression' => $baseExpression, 'pipes' => $pipes];
     }
 
     /**

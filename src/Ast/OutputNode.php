@@ -18,6 +18,7 @@ final class OutputNode extends Node
      * @param \Sugar\Enum\OutputContext $context Pre-determined at compile-time
      * @param int $line Line number
      * @param int $column Column number
+     * @param array<string>|null $pipes Pipe transformations (e.g., ['upper(...)', 'truncate(..., 20)'])
      */
     public function __construct(
         public string $expression,
@@ -25,6 +26,7 @@ final class OutputNode extends Node
         public OutputContext $context,
         int $line,
         int $column,
+        public ?array $pipes = null,
     ) {
         parent::__construct($line, $column);
     }
