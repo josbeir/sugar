@@ -155,6 +155,9 @@ final class TemplateInheritancePass implements PassInterface
         $parentPath = $this->getAttributeValue($extendsElement, $this->prefixHelper->buildName('extends'));
         $resolvedPath = $this->loader->resolve($parentPath, $context->templatePath);
 
+        // Track parent template as dependency
+        $context->tracker?->addDependency($resolvedPath);
+
         // Load and parse parent template
         $parentContent = $this->loader->load($resolvedPath);
         $parser = new Parser($this->config);
@@ -171,6 +174,7 @@ final class TemplateInheritancePass implements PassInterface
             templatePath: $resolvedPath,
             source: $parentContent,
             debug: $context->debug,
+            tracker: $context->tracker,
         );
 
         // Recursively process parent (for multi-level inheritance)
@@ -199,6 +203,10 @@ final class TemplateInheritancePass implements PassInterface
             ) {
                 $includePath = $this->getAttributeValue($child, $this->prefixHelper->buildName('include'));
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
+
+                // Track included template as dependency
+                $context->tracker?->addDependency($resolvedPath);
+
                 // Load and parse included template
                 $includeContent = $this->loader->load($resolvedPath);
                 $parser = new Parser($this->config);
@@ -209,6 +217,7 @@ final class TemplateInheritancePass implements PassInterface
                     templatePath: $resolvedPath,
                     source: $includeContent,
                     debug: $context->debug,
+                    tracker: $context->tracker,
                 );
 
                 // Process includes recursively

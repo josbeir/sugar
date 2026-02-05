@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Context;
 
+use Sugar\Cache\DependencyTracker;
 use Sugar\Exception\SnippetGenerator;
 use Sugar\Exception\SugarException;
 
@@ -12,7 +13,7 @@ use Sugar\Exception\SugarException;
  * Provides template path, source code, and utilities for creating
  * exceptions with automatic snippet generation.
  */
-final readonly class CompilationContext
+final class CompilationContext
 {
     /**
      * Constructor
@@ -20,11 +21,13 @@ final readonly class CompilationContext
      * @param string $templatePath Path to the template file
      * @param string $source Template source code
      * @param bool $debug Enable debug mode
+     * @param \Sugar\Cache\DependencyTracker|null $tracker Dependency tracker for cache invalidation
      */
     public function __construct(
-        public string $templatePath,
-        public string $source,
-        public bool $debug = false,
+        public readonly string $templatePath,
+        public readonly string $source,
+        public readonly bool $debug = false,
+        public readonly ?DependencyTracker $tracker = null,
     ) {
     }
 

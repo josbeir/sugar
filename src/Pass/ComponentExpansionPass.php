@@ -61,15 +61,18 @@ final readonly class ComponentExpansionPass implements PassInterface
      */
     public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
-        $expandedChildren = NodeTraverser::walk($ast->children, function (Node $node, callable $recurse) {
-            if ($node instanceof ComponentNode) {
-                // Expand component - return array of nodes
-                return $this->expandComponent($node);
-            }
+        $expandedChildren = NodeTraverser::walk(
+            $ast->children,
+            function (Node $node, callable $recurse) use ($context) {
+                if ($node instanceof ComponentNode) {
+                    // Expand component - return array of nodes
+                    return $this->expandComponent($node, $context);
+                }
 
-            // Recurse into children for other nodes
-            return $recurse($node);
-        });
+                // Recurse into children for other nodes
+                return $recurse($node);
+            },
+        );
 
         return new DocumentNode($expandedChildren);
     }
@@ -78,12 +81,16 @@ final readonly class ComponentExpansionPass implements PassInterface
      * Expand a single component node
      *
      * @param \Sugar\Ast\ComponentNode $component Component to expand
+     * @param \Sugar\Context\CompilationContext|null $context Compilation context for dependency tracking
      * @return array<\Sugar\Ast\Node> Expanded nodes
      */
-    private function expandComponent(ComponentNode $component): array
+    private function expandComponent(ComponentNode $component, ?CompilationContext $context = null): array
     {
         // Load component template
         $templateContent = $this->loader->loadComponent($component->name);
+
+        // Track component as dependency
+        $context?->tracker?->addComponent($component->name);
 
         // Parse component template
         $templateAst = $this->parser->parse($templateContent);
@@ -110,10 +117,10 @@ final readonly class ComponentExpansionPass implements PassInterface
         // NOW expand any nested components in the slot contents
         $expandedSlots = [];
         foreach ($slots as $name => $nodes) {
-            $expandedSlots[$name] = $this->expandNodes($nodes);
+            $expandedSlots[$name] = $this->expandNodes($nodes, $context);
         }
 
-        $expandedDefaultSlot = $this->expandNodes($defaultSlot);
+        $expandedDefaultSlot = $this->expandNodes($defaultSlot, $context);
 
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
@@ -124,7 +131,7 @@ final readonly class ComponentExpansionPass implements PassInterface
         );
 
         // Recursively expand any nested components in the wrapped template itself
-        $expandedContent = $this->expandNodes($wrappedTemplate->children);
+        $expandedContent = $this->expandNodes($wrappedTemplate->children, $context);
 
         // If component has control flow directives, wrap in FragmentNode
         if ($categorized['controlFlow'] !== []) {
@@ -143,13 +150,14 @@ final readonly class ComponentExpansionPass implements PassInterface
      * Recursively expand components in a list of nodes
      *
      * @param array<\Sugar\Ast\Node> $nodes Nodes to process
+     * @param \Sugar\Context\CompilationContext|null $context Compilation context for dependency tracking
      * @return array<\Sugar\Ast\Node> Processed nodes with expanded components
      */
-    private function expandNodes(array $nodes): array
+    private function expandNodes(array $nodes, ?CompilationContext $context = null): array
     {
-        return NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
+        return NodeTraverser::walk($nodes, function (Node $node, callable $recurse) use ($context) {
             if ($node instanceof ComponentNode) {
-                return $this->expandComponent($node);
+                return $this->expandComponent($node, $context);
             }
 
             return $recurse($node);

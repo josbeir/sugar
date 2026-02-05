@@ -7,7 +7,7 @@
 
 # 🍬 Sugar
 
-> PHP templates that don't suck. Write `s:if`, get auto-escaping. Zero magic, pure sweetness.
+> A modern PHP templating engine that compiles to pure PHP. Write `s:if`, get auto-escaping. Zero magic, pure sweetness.
 
 > [!WARNING]
 > **Work in Progress** - Sugar is under active development. Core features are stable, but the API may change before 1.0.
@@ -34,7 +34,9 @@
   - [Template Inheritance & Composition](#template-inheritance--composition)
   - [Components](#components)
 - [Quick Start](#quick-start)
-  - [Configuration](#configuration)
+- [Caching](#caching)
+- [Template Context](#template-context)
+- [Configuration](#configuration)
 - [Architecture](#architecture)
 - [Debug Mode](#debug-mode)
 - [Roadmap](#roadmap)
@@ -325,7 +327,7 @@ Use `s:empty` and `s:isset` to conditionally render content based on variable st
 - **🛡️ Context-Aware Auto-Escaping** - Detects HTML/JS/CSS/URL contexts and escapes automatically - defeats XSS by default
 - **⚡ Native PHP Performance** - Compiles to pure PHP with opcache support - zero runtime overhead
 - **🔒 Scope Isolation** - Templates run in closures - no accidental access to parent scope variables
-- **🔧 Framework-Agnostic** - Use standalone or integrate with CakePHP, Laravel, Symfony
+- **🔧 Framework-Agnostic** - Use standalone or integrate with any PHP framework
 - **📦 Zero Dependencies** - Core engine requires only PHP 8.2+ - nothing else
 - **🧪 Battle-Tested** - 568 tests, PHPStan level 8, 96%+ code coverage
 - **🔄 100% PHP Compatible** - Mix Sugar directives with regular PHP - incrementally adoptable
@@ -877,20 +879,45 @@ Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansi
 ## Quick Start
 
 ```bash
-composer require cakephp/sugar
+composer require sugar/templating
 ```
+
+### Basic Usage (Recommended)
+
+The high-level `Engine` API provides caching, template loading, and context binding out of the box:
+
+```php
+use Sugar\Engine;
+use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Cache\FileCache;
+
+// Create engine with fluent builder
+$engine = Engine::builder()
+    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates'))
+    ->withCache(new FileCache(__DIR__ . '/cache'))
+    ->withDebug(true) // Enable during development
+    ->build();
+
+// Render templates directly
+echo $engine->render('pages/home', [
+    'title' => 'Welcome',
+    'user' => $currentUser
+]);
+```
+
+### Low-Level Compiler API
+
+For advanced use cases where you need direct control over compilation:
 
 ```php
 use Sugar\Compiler;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Escape\Escaper;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 
 // Basic compiler
 $compiler = new Compiler(
     new Parser(),
-    new ContextAnalysisPass(),
     new Escaper()
 );
 
@@ -898,7 +925,6 @@ $compiler = new Compiler(
 $loader = new FileTemplateLoader(__DIR__ . '/templates');
 $compiler = new Compiler(
     new Parser(),
-    new ContextAnalysisPass(),
     new Escaper(),
     templateLoader: $loader
 );
@@ -906,7 +932,219 @@ $compiler = new Compiler(
 $compiled = $compiler->compile('<div s:if="$show"><?= $message ?></div>');
 ```
 
+## Caching
+
+Sugar includes a powerful file-based caching system with automatic dependency tracking and cascade invalidation.
+
+### FileCache with Dependency Tracking
+
+The `FileCache` automatically tracks template dependencies (layouts, includes, components) and invalidates cached templates when any dependency changes:
+
+```php
+use Sugar\Engine;
+use Sugar\Cache\FileCache;
+use Sugar\TemplateInheritance\FileTemplateLoader;
+
+$cache = new FileCache(__DIR__ . '/cache/templates');
+
+$engine = Engine::builder()
+    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates'))
+    ->withCache($cache)
+    ->build();
+```
+
+**How it works:**
+1. Template is compiled and cached with metadata tracking all dependencies
+2. On subsequent renders, cache returns compiled template if still fresh
+3. If any dependency changes (layout, include, component), cache automatically invalidates
+4. Changed template and all templates that depend on it are recompiled
+
+### Debug vs Production Modes
+
+Sugar supports two cache modes optimized for different environments:
+
+**Debug Mode** (development):
+```php
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withCache($cache)
+    ->withDebug(true) // Enable freshness checking
+    ->build();
+```
+
+**In debug mode**, the cache checks file timestamps on every render:
+- ✅ Instant updates when you change templates
+- ✅ Cascade invalidation when dependencies change
+- ✅ No manual cache clearing needed
+- ⚠️ Small performance overhead from `filemtime()` checks
+
+**Production Mode** (default):
+```php
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withCache($cache)
+    ->withDebug(false) // Disable freshness checking
+    ->build();
+```
+
+**In production mode**, the cache assumes all cached templates are fresh:
+- ✅ Maximum performance - zero filesystem checks
+- ✅ Optimal for opcache with preloading
+- ⚠️ Requires cache clearing on deployment
+
+**Clear cache on deployment:**
+```php
+$cache = new FileCache(__DIR__ . '/cache/templates');
+$cache->flush(); // Remove all cached templates
+```
+
+### Cache Metadata
+
+Each cached template stores metadata for intelligent invalidation:
+
+```php
+use Sugar\Cache\CacheMetadata;
+
+// Metadata tracked automatically:
+// - Template path and last modified time
+// - All included templates (s:include)
+// - Layout template (s:extends)
+// - All components used (<s-button>, etc.)
+```
+
+**Example dependency chain:**
+```
+pages/profile.sugar.php
+├─ extends: layouts/app.sugar.php
+│  └─ extends: layouts/base.sugar.php
+├─ includes: partials/user-card.sugar.php
+└─ components: button.sugar.php, modal.sugar.php
+```
+
+If you modify `layouts/base.sugar.php`, Sugar automatically invalidates:
+- `layouts/app.sugar.php` (extends base)
+- `pages/profile.sugar.php` (extends app)
+- Any other pages extending these layouts
+
+## Template Context
+
+Sugar supports binding a context object to templates, enabling `$this` access for helper methods and utilities.
+
+### Basic Usage
+
+Pass a context object when building the engine:
+
+```php
+use Sugar\Engine;
+
+// Create a view context with helper methods
+$viewContext = new class {
+    public function url(string $path): string
+    {
+        return '/app' . $path;
+    }
+
+    public function formatDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
+    }
+
+    public function asset(string $path): string
+    {
+        return '/assets/' . $path;
+    }
+};
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withTemplateContext($viewContext)
+    ->build();
+
+// Now $this is available in all templates
+echo $engine->render('pages/home', ['user' => $user]);
+```
+
+**In template** (`pages/home.sugar.php`):
+```html
+<link rel="stylesheet" href="<?= $this->asset('css/app.css') ?>">
+
+<header>
+    <a href="<?= $this->url('/profile') ?>">Profile</a>
+</header>
+
+<div>
+    <p>Last login: <?= $this->formatDate($user->lastLogin) ?></p>
+</div>
+```
+
+### Context Inheritance in Components
+
+Template context automatically flows into components, so `$this` works consistently throughout your component tree:
+
+**Component** (`components/link.sugar.php`):
+```html
+<a href="<?= $this->url($href) ?>" class="btn">
+    <?= $slot ?>
+</a>
+```
+
+**Usage**:
+```html
+<s-link s-bind:href="'/dashboard'">Go to Dashboard</s-link>
+```
+
+**Compiled Output**:
+```html
+<a href="/app/dashboard" class="btn">
+    Go to Dashboard
+</a>
+```
+
+The context object is bound to the template closure using `Closure->bindTo()`, providing native PHP performance with zero overhead.
+
 ### Configuration
+
+#### Engine Configuration
+
+The `EngineBuilder` provides a fluent API for configuring all aspects of the template engine:
+
+```php
+use Sugar\Engine;
+use Sugar\Cache\FileCache;
+use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Config\SugarConfig;
+
+$engine = Engine::builder()
+    // Template loading
+    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates', [
+        'componentPaths' => [
+            __DIR__ . '/templates/components',
+            __DIR__ . '/vendor/ui-library/components'
+        ]
+    ]))
+
+    // Caching
+    ->withCache(new FileCache(__DIR__ . '/cache/templates'))
+    ->withDebug($_ENV['APP_DEBUG'] ?? false)
+
+    // Context binding
+    ->withTemplateContext($viewHelpers)
+
+    // Custom configuration
+    ->withConfig(SugarConfig::withPrefix('x'))
+
+    ->build();
+```
+
+**Available options:**
+
+| Method | Description | Default |
+|--------|-------------|---------|
+| `withTemplateLoader()` | Set template loader (required) | None |
+| `withCache()` | Set cache implementation | `FileCache` in temp dir |
+| `withDebug()` | Enable debug mode with freshness checks | `false` |
+| `withTemplateContext()` | Bind context object to templates | `null` |
+| `withConfig()` | Set custom configuration | Default config |
 
 #### Custom Directive Prefix
 
@@ -924,10 +1162,15 @@ $config = new SugarConfig(
     fragmentElement: 'v-fragment'  // Optional, defaults to "{prefix}-template"
 );
 
-// Pass config to Parser and Compiler
+// Pass config to Engine builder
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withConfig($config)
+    ->build();
+
+// Or pass to Parser and Compiler directly (low-level API)
 $compiler = new Compiler(
     parser: new Parser($config),
-    contextPass: new ContextAnalysisPass(),
     escaper: new Escaper(),
     config: $config
 );
@@ -951,13 +1194,49 @@ $compiled = $compiler->compile($template);
 
 ## Architecture
 
-Sugar follows a clear compilation pipeline:
+Sugar follows a clear compilation pipeline with integrated caching:
+
+### Compilation Pipeline
 
 1. **Parser** - Converts template source to an Abstract Syntax Tree (AST)
 2. **DirectiveExtractionPass** - Extracts `s:*` attributes into directive nodes
 3. **DirectiveCompilationPass** - Compiles directives to PHP control structures
 4. **ContextAnalysisPass** - Detects output contexts (HTML/JS/CSS/URL)
-5. **CodeGenerator** - Generates optimized PHP code with inline escaping
+5. **ComponentExpansionPass** - Resolves component includes and merges attributes
+6. **CodeGenerator** - Generates optimized PHP code with inline escaping
+
+### Caching Layer
+
+The `Engine` API wraps the compiler with intelligent caching:
+
+```
+Template Request
+      ↓
+Cache Lookup (by path hash)
+      ↓
+  Cache Hit? ──Yes──→ Load Cached Template
+      ↓                      ↓
+     No               Check Freshness (debug mode)
+      ↓                      ↓
+Compile Template        Fresh? ──No──→ Recompile
+      ↓                      ↓
+Track Dependencies          Yes
+      ↓                      ↓
+Cache Result          Return Compiled Code
+      ↓                      ↓
+Return Compiled Code   Execute Template
+```
+
+**Cache metadata tracks:**
+- Template path and last modified time
+- Layout templates (s:extends dependencies)
+- Included templates (s:include dependencies)
+- Components used (<s-button>, etc.)
+
+**Cascade invalidation:**
+- Changing a layout invalidates all child templates
+- Changing a component invalidates all templates using it
+- Changing an include invalidates all templates including it
 
 The compiled output is pure PHP that can be cached and executed with opcache for maximum performance.
 
@@ -987,6 +1266,8 @@ Output includes helpful comments:
 - [x] **Template Inheritance** - Layouts, blocks, extends, and includes (✅ Completed)
 - [x] **Custom Components** - Reusable template components with slots, props, and attribute merging (✅ Completed)
 - [x] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
+- [x] **Template Caching** - File-based cache with dependency tracking and cascade invalidation (✅ Completed)
+- [x] **Template Context** - Bind context objects to templates for `$this` access (✅ Completed)
 
 ### Developer Experience
 - [ ] **Source Maps** - Map compiled PHP errors back to original Sugar templates

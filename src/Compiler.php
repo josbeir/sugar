@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar;
 
+use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
@@ -110,18 +111,21 @@ final class Compiler implements CompilerInterface
      * @param string $source Template source code
      * @param string|null $templatePath Template path for inheritance resolution and debug info (default: null)
      * @param bool $debug Enable debug mode with inline source comments (default: false)
+     * @param \Sugar\Cache\DependencyTracker|null $tracker Optional dependency tracker for cache metadata
      * @return string Compiled PHP code
      */
     public function compile(
         string $source,
         ?string $templatePath = null,
         bool $debug = false,
+        ?DependencyTracker $tracker = null,
     ): string {
         // Create compilation context for error handling with snippets
         $context = new CompilationContext(
             $templatePath ?? 'inline-template',
             $source,
             $debug,
+            $tracker,
         );
 
         // Step 1: Parse template source into AST

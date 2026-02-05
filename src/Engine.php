@@ -5,7 +5,7 @@ namespace Sugar;
 
 use Closure;
 use Sugar\Cache\CachedTemplate;
-use Sugar\Cache\CacheMetadata;
+use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
@@ -84,18 +84,15 @@ final class Engine implements EngineInterface
 
         // Cache miss or stale - compile and cache
         $source = $this->loader->load($template);
-        $compiled = $this->compiler->compile($source);
 
-        // Build metadata with source timestamp (if template is absolute path)
-        $sourceTimestamp = 0;
-        if (file_exists($template)) {
-            $mtime = filemtime($template);
-            $sourceTimestamp = $mtime !== false ? $mtime : 0;
-        }
+        // Create dependency tracker
+        $tracker = new DependencyTracker();
 
-        $metadata = new CacheMetadata(
-            sourceTimestamp: $sourceTimestamp,
-        );
+        // Compile with dependency tracking
+        $compiled = $this->compiler->compile($source, $template, $this->debug, $tracker);
+
+        // Build metadata from tracker
+        $metadata = $tracker->getMetadata($template);
 
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);
