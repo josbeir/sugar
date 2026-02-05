@@ -8,6 +8,7 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
@@ -18,6 +19,8 @@ final readonly class Parser
 {
     private SugarConfig $config;
 
+    private DirectivePrefixHelper $prefixHelper;
+
     /**
      * Constructor
      *
@@ -26,22 +29,7 @@ final readonly class Parser
     public function __construct(?SugarConfig $config = null)
     {
         $this->config = $config ?? new SugarConfig();
-    }
-
-    /**
-     * Check if tag name has element prefix
-     */
-    private function hasElementPrefix(string $tagName): bool
-    {
-        return str_starts_with($tagName, $this->config->elementPrefix);
-    }
-
-    /**
-     * Strip element prefix from tag name
-     */
-    private function stripElementPrefix(string $tagName): string
-    {
-        return substr($tagName, strlen($this->config->elementPrefix));
+        $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
     }
 
     /**
@@ -352,8 +340,8 @@ final readonly class Parser
 
         // Handle component elements (e.g., <s-button>, <x-alert>)
         // Components start with elementPrefix but are NOT the fragment element
-        if ($this->hasElementPrefix($tagName) && $tagName !== $this->config->getFragmentElement()) {
-            $componentName = $this->stripElementPrefix($tagName);
+        if ($this->prefixHelper->hasElementPrefix($tagName) && $tagName !== $this->config->getFragmentElement()) {
+            $componentName = $this->prefixHelper->stripElementPrefix($tagName);
             $element = new ComponentNode(
                 name: $componentName,
                 attributes: $attributes,

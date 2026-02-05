@@ -6,6 +6,7 @@ namespace Sugar\TemplateInheritance;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\TemplateNotFoundException;
 
@@ -22,6 +23,8 @@ final class FileTemplateLoader implements TemplateLoaderInterface
      */
     private array $components = [];
 
+    private DirectivePrefixHelper $prefixHelper;
+
     /**
      * Constructor.
      *
@@ -32,22 +35,9 @@ final class FileTemplateLoader implements TemplateLoaderInterface
         private readonly string $basePath,
         private readonly string $elementPrefix = 's-',
     ) {
-    }
-
-    /**
-     * Check if a basename starts with the element prefix
-     */
-    private function hasElementPrefix(string $basename): bool
-    {
-        return str_starts_with($basename, $this->elementPrefix);
-    }
-
-    /**
-     * Strip element prefix from basename
-     */
-    private function stripElementPrefix(string $basename): string
-    {
-        return substr($basename, strlen($this->elementPrefix));
+        // Extract directive prefix from element prefix (e.g., 's-' -> 's')
+        $directivePrefix = rtrim($this->elementPrefix, '-');
+        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
     }
 
     /**
@@ -181,7 +171,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
             $basename = $file->getBasename('.sugar.php');
 
             // Must start with element prefix
-            if (!$this->hasElementPrefix($basename)) {
+            if (!$this->prefixHelper->hasElementPrefix($basename)) {
                 continue;
             }
 
@@ -191,7 +181,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
             }
 
             // Extract component name (e.g., "button" from "s-button")
-            $componentName = $this->stripElementPrefix($basename);
+            $componentName = $this->prefixHelper->stripElementPrefix($basename);
 
             // Store relative path from basePath
             $relativePath = str_replace($this->basePath . '/', '', $file->getPathname());
@@ -238,7 +228,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
     public function isComponent(string $elementName): bool
     {
         // Must start with element prefix
-        if (!$this->hasElementPrefix($elementName)) {
+        if (!$this->prefixHelper->hasElementPrefix($elementName)) {
             return false;
         }
 
@@ -248,7 +238,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
         }
 
         // Extract component name and check if registered
-        $componentName = $this->stripElementPrefix($elementName);
+        $componentName = $this->prefixHelper->stripElementPrefix($elementName);
 
         return $this->hasComponent($componentName);
     }
@@ -261,7 +251,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
      */
     public function getComponentName(string $elementName): string
     {
-        return $this->stripElementPrefix($elementName);
+        return $this->prefixHelper->stripElementPrefix($elementName);
     }
 
     /**

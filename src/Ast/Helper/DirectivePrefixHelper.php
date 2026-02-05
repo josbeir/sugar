@@ -136,4 +136,34 @@ final readonly class DirectivePrefixHelper
     {
         return $this->bindingPrefix;
     }
+
+    /**
+     * Check if element/filename uses element prefix
+     *
+     * Element prefix is used for components:
+     * - Tags: <s-button>, <s-card>
+     * - Files: s-button.sugar.php, s-card.sugar.php
+     *
+     * @param string $name Element tag name or filename
+     */
+    public function hasElementPrefix(string $name): bool
+    {
+        return str_starts_with($name, $this->prefix . '-');
+    }
+
+    /**
+     * Strip element prefix from element/filename
+     *
+     * Examples:
+     * - "s-button" -> "button"
+     * - "s-card.sugar.php" -> "card.sugar.php"
+     *
+     * @param string $name Element tag name or filename
+     */
+    public function stripElementPrefix(string $name): string
+    {
+        $elementPrefix = $this->prefix . '-';
+
+        return substr($name, strlen($elementPrefix));
+    }
 }

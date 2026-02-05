@@ -6,6 +6,7 @@ namespace Sugar\Directive;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\Trait\ForeachLoopTrait;
+use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
@@ -63,6 +64,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  */
 class ForeachCompiler implements DirectiveCompilerInterface
 {
+    use WrapperModeTrait;
     use ForeachLoopTrait;
 
     /**

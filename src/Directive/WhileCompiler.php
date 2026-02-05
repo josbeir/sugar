@@ -8,7 +8,7 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\Trait\ForeachLoopTrait;
+use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
 
@@ -49,7 +49,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  */
 final readonly class WhileCompiler implements DirectiveCompilerInterface
 {
-    use ForeachLoopTrait;
+    use WrapperModeTrait;
 
     /**
      * @param \Sugar\Ast\DirectiveNode $node
