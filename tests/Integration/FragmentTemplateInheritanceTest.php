@@ -9,7 +9,6 @@ use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 use Sugar\Tests\ExecuteTemplateTrait;
 
@@ -48,7 +47,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );
@@ -72,7 +70,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
         );
 
@@ -96,7 +93,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );
@@ -124,7 +120,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );
@@ -148,7 +143,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );
@@ -173,7 +167,6 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );

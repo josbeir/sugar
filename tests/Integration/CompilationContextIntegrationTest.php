@@ -8,7 +8,6 @@ use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Exception\SyntaxException;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 
 /**
  * Integration test: Verify CompilationContext creates exceptions with automatic snippets
@@ -21,7 +20,6 @@ final class CompilationContextIntegrationTest extends TestCase
     {
         $this->compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
         );
     }

@@ -8,7 +8,6 @@ use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
@@ -29,14 +28,14 @@ final class ComponentIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
-
-        // Discover components in the components subdirectory
-        $loader->discoverComponents('components');
+        $loader = new FileTemplateLoader(
+            (new SugarConfig())
+                ->withTemplatePaths($this->templatesPath)
+                ->withComponentPaths('components'),
+        );
 
         $this->compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );
@@ -48,13 +47,14 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        // Should use closure with ob_start/ob_get_clean pattern (same as main templates)
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
         $this->assertStringContainsString("'slot' => 'Click me'", $compiled);
 
         // Should have button template HTML
         $this->assertStringContainsString('<button class="btn">', $compiled);
-        // Slots are output with raw() now
+        // Slots are output with raw now
         $this->assertStringContainsString('echo $slot;', $compiled);
     }
 
@@ -66,7 +66,9 @@ final class ComponentIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use closure with extract and pass variables in array
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
+        $this->assertStringContainsString('->bindTo($this ?? null)', $compiled);
         $this->assertStringContainsString("'type' => 'warning'", $compiled);
         $this->assertStringContainsString("'title' => 'Important'", $compiled);
         $this->assertStringContainsString("'slot' => 'Important message'", $compiled);
@@ -88,7 +90,8 @@ final class ComponentIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
         // Should have named slots in array
         $this->assertStringContainsString("'header' =>", $compiled);
         $this->assertStringContainsString('Card Title', $compiled);
@@ -119,7 +122,8 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('<button class="btn">', $compiled);
 
         // Should use closure for isolation (nested components each get their own closure)
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
         $this->assertStringContainsString("'slot' =>", $compiled);
     }
 
@@ -131,7 +135,8 @@ final class ComponentIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
         $this->assertStringContainsString("'slot' => 'Save'", $compiled);
         $this->assertStringContainsString('<button class="btn">', $compiled);
 
@@ -158,7 +163,8 @@ final class ComponentIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
         // The slot content should be in the array as string
         $this->assertStringContainsString("'slot' =>", $compiled);
         $this->assertStringContainsString('alert("XSS")', $compiled);
@@ -210,7 +216,8 @@ final class ComponentIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Component should use closure for isolation
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean();', $compiled);
 
         // Execute and verify parent $slot is not overwritten
         $output = $this->executeTemplate($compiled);

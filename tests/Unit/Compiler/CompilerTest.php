@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
@@ -26,7 +25,6 @@ final class CompilerTest extends TestCase
     {
         $this->compiler = new Compiler(
             new Parser(),
-            new ContextAnalysisPass(),
             new Escaper(),
         );
     }

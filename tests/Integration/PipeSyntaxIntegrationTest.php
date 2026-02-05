@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
@@ -23,7 +22,6 @@ final class PipeSyntaxIntegrationTest extends TestCase
     {
         $this->compiler = new Compiler(
             new Parser(),
-            new ContextAnalysisPass(),
             new Escaper(),
         );
     }

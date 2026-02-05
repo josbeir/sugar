@@ -47,6 +47,11 @@ class FileTemplateLoader implements TemplateLoaderInterface
         }
 
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
+
+        // Auto-discover components from config paths
+        foreach ($this->config->componentPaths as $path) {
+            $this->discoverComponents($path);
+        }
     }
 
     /**

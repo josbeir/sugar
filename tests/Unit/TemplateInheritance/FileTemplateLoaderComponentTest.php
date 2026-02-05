@@ -220,6 +220,56 @@ final class FileTemplateLoaderComponentTest extends TestCase
         $this->assertArrayHasKey('alert', $components);
     }
 
+    public function testAutoDiscoversComponentsFromConfigPaths(): void
+    {
+        // TDD: Test that components are auto-discovered from config.componentPaths
+        mkdir($this->tempDir . '/components', 0777, true);
+        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
+        file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
+
+        // Create loader with componentPaths in config
+        $config = (new SugarConfig())
+            ->withTemplatePaths($this->tempDir)
+            ->withComponentPaths('components');
+
+        $loader = new FileTemplateLoader($config);
+
+        // Should auto-discover without manual discoverComponents() call
+        $this->assertTrue($loader->hasComponent('button'));
+        $this->assertTrue($loader->hasComponent('alert'));
+    }
+
+    public function testAutoDiscoversFromMultipleComponentPaths(): void
+    {
+        // TDD: Test auto-discovery from multiple component directories
+        mkdir($this->tempDir . '/components', 0777, true);
+        mkdir($this->tempDir . '/widgets', 0777, true);
+        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
+        file_put_contents($this->tempDir . '/widgets/s-widget.sugar.php', '<div>Widget</div>');
+
+        $config = (new SugarConfig())
+            ->withTemplatePaths($this->tempDir)
+            ->withComponentPaths('components', 'widgets');
+
+        $loader = new FileTemplateLoader($config);
+
+        $this->assertTrue($loader->hasComponent('button'));
+        $this->assertTrue($loader->hasComponent('widget'));
+    }
+
+    public function testEmptyComponentPathsDoesNotAutodiscover(): void
+    {
+        // TDD: Empty componentPaths should not trigger auto-discovery
+        mkdir($this->tempDir . '/components', 0777, true);
+        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
+
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $loader = new FileTemplateLoader($config);
+
+        // Should NOT be discovered automatically
+        $this->assertFalse($loader->hasComponent('button'));
+    }
+
     private function removeDirectory(string $path): void
     {
         if (!file_exists($path)) {

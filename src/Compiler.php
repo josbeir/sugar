@@ -44,6 +44,8 @@ final class Compiler implements CompilerInterface
 
     private readonly DirectiveCompilationPass $directiveCompilationPass;
 
+    private readonly ContextAnalysisPass $contextPass;
+
     private readonly Escaper $escaper;
 
     private readonly ?TemplateInheritancePass $templateInheritancePass;
@@ -54,7 +56,6 @@ final class Compiler implements CompilerInterface
      * Constructor
      *
      * @param \Sugar\Parser\Parser $parser Template parser
-     * @param \Sugar\Pass\ContextAnalysisPass $contextPass Context analysis pass
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
@@ -62,7 +63,6 @@ final class Compiler implements CompilerInterface
      */
     public function __construct(
         private readonly Parser $parser,
-        private readonly ContextAnalysisPass $contextPass,
         Escaper $escaper,
         ?ExtensionRegistry $registry = null,
         ?TemplateLoaderInterface $templateLoader = null,
@@ -81,6 +81,7 @@ final class Compiler implements CompilerInterface
             config: $config,
         );
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
+        $this->contextPass = new ContextAnalysisPass();
 
         // Create template inheritance pass if loader is provided
         $this->templateInheritancePass = $templateLoader instanceof TemplateLoaderInterface
@@ -145,10 +146,10 @@ final class Compiler implements CompilerInterface
         // Step 4: Compile DirectiveNodes into PHP control structures
         $transformedAst = $this->directiveCompilationPass->execute($pairedAst, $context);
 
-        // Step 4: Analyze context and update OutputNode contexts
+        // Step 5: Analyze context and update OutputNode contexts
         $analyzedAst = $this->contextPass->execute($transformedAst, $context);
 
-        // Step 5: Generate executable PHP code with inline escaping
+        // Step 6: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);

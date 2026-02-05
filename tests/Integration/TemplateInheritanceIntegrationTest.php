@@ -8,7 +8,6 @@ use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
@@ -29,7 +28,6 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
         $this->compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             templateLoader: $loader,
         );

@@ -146,8 +146,9 @@ final class ComponentExpansionPassTest extends TestCase
 
         $code = $this->astToString($result);
 
-        // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
+        // Should use closure with ob_start/ob_get_clean pattern (same as main templates)
+        $this->assertStringContainsString('echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $code);
+        $this->assertStringContainsString('return ob_get_clean();', $code);
         $this->assertStringContainsString("'type' => 'warning'", $code);
         $this->assertStringContainsString("'slot' => 'Important message'", $code);
         // s-alert component has static "alert alert-info" class (parser limitation with dynamic attributes)
@@ -170,8 +171,9 @@ final class ComponentExpansionPassTest extends TestCase
 
         $code = $this->astToString($result);
 
-        // Should use closure with extract
-        $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
+        // Should use closure with ob_start/ob_get_clean pattern (same as main templates)
+        $this->assertStringContainsString('echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $code);
+        $this->assertStringContainsString('return ob_get_clean();', $code);
         // Should have named slots in array
         $this->assertStringContainsString("'header' =>", $code);
         $this->assertStringContainsString("'footer' =>", $code);

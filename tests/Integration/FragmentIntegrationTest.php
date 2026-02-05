@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 final class FragmentIntegrationTest extends TestCase
@@ -20,7 +19,6 @@ final class FragmentIntegrationTest extends TestCase
     {
         $this->compiler = new Compiler(
             parser: new Parser(),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
         );
     }

@@ -8,7 +8,6 @@ use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ContextAnalysisPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 use Sugar\Tests\ExecuteTemplateTrait;
 
@@ -128,7 +127,6 @@ TEMPLATE;
             $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tmpDir));
             $compiler = new Compiler(
                 parser: new Parser($config),
-                contextPass: new ContextAnalysisPass(),
                 escaper: new Escaper(),
                 templateLoader: $loader,
                 config: $config,
@@ -181,7 +179,6 @@ TEMPLATE;
             $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tmpDir));
             $compiler = new Compiler(
                 parser: new Parser($config),
-                contextPass: new ContextAnalysisPass(),
                 escaper: new Escaper(),
                 templateLoader: $loader,
                 config: $config,
@@ -209,7 +206,6 @@ TEMPLATE;
     {
         return new Compiler(
             parser: new Parser($config),
-            contextPass: new ContextAnalysisPass(),
             escaper: new Escaper(),
             config: $config,
         );

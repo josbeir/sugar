@@ -426,9 +426,12 @@ final readonly class ComponentExpansionPass implements PassInterface
         // Automatically disable escaping for slot variable outputs in component template
         $this->processNodeForSlotWrapping($template, $slotVars);
 
-        // Build closure with extract pattern for isolated scope
-        $openingCode = '(function($__vars) { extract($__vars);';
-        $closingCode = '})([' . implode(', ', $arrayItems) . ']);';
+        // Build closure using same pattern as main templates (ob_start/ob_get_clean)
+        // This allows bindTo() to work consistently
+        // Components bind to $this from parent scope (which may be Engine's templateContext)
+        // RawPhpNode automatically wraps code in PHP tags, so don't include them here
+        $openingCode = 'echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);';
+        $closingCode = 'return ob_get_clean(); })->bindTo($this ?? null)([' . implode(', ', $arrayItems) . ']);';
 
         // Wrap template in closure
         $openingNode = new RawPhpNode($openingCode, 0, 0);
