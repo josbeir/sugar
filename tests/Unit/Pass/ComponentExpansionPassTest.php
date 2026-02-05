@@ -34,8 +34,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     protected function setUp(): void
     {
-        $componentsPath = __DIR__ . '/../../fixtures/templates/components';
-        $this->loader = new FileTemplateLoader($componentsPath);
+        $this->loader = new FileTemplateLoader(SUGAR_TEST_COMPONENTS_PATH);
         $this->loader->discoverComponents('.');
 
         $this->parser = new Parser();

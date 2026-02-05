@@ -13,7 +13,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->fixturesPath = __DIR__ . '/../../fixtures/templates/template-inheritance';
+        $this->fixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
     }
 
     public function testLoadsTemplateFromBasePath(): void

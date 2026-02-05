@@ -23,7 +23,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->templatesPath = __DIR__ . '/../fixtures/templates/template-inheritance';
+        $this->templatesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
         $loader = new FileTemplateLoader($this->templatesPath);
 
         $this->compiler = new Compiler(

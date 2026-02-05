@@ -27,7 +27,7 @@ final class ComponentIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->templatesPath = __DIR__ . '/../fixtures/templates';
+        $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
         $loader = new FileTemplateLoader($this->templatesPath);
 
         // Discover components in the components subdirectory
