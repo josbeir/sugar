@@ -28,7 +28,7 @@ use Sugar\Runtime\EmptyHelper;
  * <?php endif; ?>
  * ```
  */
-final readonly class EmptyCompiler implements DirectiveCompilerInterface
+readonly class EmptyCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

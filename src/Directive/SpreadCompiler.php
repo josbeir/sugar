@@ -41,7 +41,7 @@ use Sugar\Runtime\HtmlAttributeHelper;
  * <div id="user-123" class="card" disabled>Content</div>
  * ```
  */
-final readonly class SpreadCompiler implements DirectiveCompilerInterface
+readonly class SpreadCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

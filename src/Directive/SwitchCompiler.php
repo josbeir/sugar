@@ -40,7 +40,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  * <?php endswitch; ?>
  * ```
  */
-final readonly class SwitchCompiler implements DirectiveCompilerInterface
+readonly class SwitchCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

@@ -47,7 +47,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  * <?php endwhile; ?>
  * ```
  */
-final readonly class WhileCompiler implements DirectiveCompilerInterface
+readonly class WhileCompiler implements DirectiveCompilerInterface
 {
     use WrapperModeTrait;
 
@@ -73,7 +73,7 @@ final readonly class WhileCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\ElementNode $wrapper The wrapper element
      * @return array<\Sugar\Ast\Node>
      */
-    private function compileWithWrapper(Node $node, ElementNode $wrapper): array
+    protected function compileWithWrapper(Node $node, ElementNode $wrapper): array
     {
         return [NodeCloner::withChildren($wrapper, [
             // Opening while
@@ -91,7 +91,7 @@ final readonly class WhileCompiler implements DirectiveCompilerInterface
      * @param \Sugar\Ast\DirectiveNode $node
      * @return array<\Sugar\Ast\Node>
      */
-    private function compileWithoutWrapper(Node $node): array
+    protected function compileWithoutWrapper(Node $node): array
     {
         $parts = [];
 

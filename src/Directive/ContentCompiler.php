@@ -32,7 +32,7 @@ use Sugar\Parser\PipeParser;
  * <div><?= $trustedContent ?></div>
  * ```
  */
-final readonly class ContentCompiler implements DirectiveCompilerInterface
+readonly class ContentCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param bool $escape Whether to escape output (true for s:text, false for s:html)

@@ -48,8 +48,10 @@ abstract class SugarException extends Exception
 
     /**
      * Format error message with location and snippet
+     *
+     * Protected to allow child classes to customize message formatting
      */
-    private function formatMessage(string $message): string
+    protected function formatMessage(string $message): string
     {
         $parts = [];
 

@@ -33,7 +33,7 @@ use Sugar\Runtime\HtmlAttributeHelper;
  * Note: s:class is compiled into a class="..." attribute, not a directive node.
  * This compilation happens in DirectiveExtractionPass.
  */
-final readonly class ClassCompiler implements DirectiveCompilerInterface
+readonly class ClassCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

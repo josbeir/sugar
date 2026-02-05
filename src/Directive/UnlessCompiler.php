@@ -26,7 +26,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  * <?php endif; ?>
  * ```
  */
-final readonly class UnlessCompiler implements DirectiveCompilerInterface
+readonly class UnlessCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

@@ -77,7 +77,7 @@ use Sugar\Runtime\EmptyHelper;
  * <?php endif; ?>
  * ```
  */
-final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCompilerInterface
+class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node

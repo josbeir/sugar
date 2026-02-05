@@ -33,7 +33,7 @@ use Sugar\Extension\DirectiveCompilerInterface;
  * <?php endif; ?>
  * ```
  */
-final readonly class IfCompiler implements DirectiveCompilerInterface
+readonly class IfCompiler implements DirectiveCompilerInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node
