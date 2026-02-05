@@ -144,7 +144,7 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString('<?php endforeach; ?>', $result);
 
         // Check s:forelse directive compiles with if/else wrapper
-        $this->assertStringContainsString('<?php if (!empty($products)): ?>', $result);
+        $this->assertStringContainsString('<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($products)): ?>', $result);
         $this->assertStringContainsString('<?php foreach ($products as $product): ?>', $result);
         $this->assertStringContainsString('<?php else: ?>', $result);
         $this->assertStringContainsString('No products available', $result);
@@ -538,7 +538,7 @@ TEMPLATE;
         $result = $this->compiler->compile($source);
 
         // Should contain if/else wrapper
-        $this->assertStringContainsString('<?php if (!empty($items)): ?>', $result);
+        $this->assertStringContainsString('<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($items)): ?>', $result);
         $this->assertStringContainsString('<?php foreach ($items as $item): ?>', $result);
         $this->assertStringContainsString('<?php endforeach; ?>', $result);
         $this->assertStringContainsString('<?php else: ?>', $result);

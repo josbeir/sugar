@@ -39,7 +39,7 @@ final readonly class EmptyCompiler implements DirectiveCompilerInterface
 
         // Opening control structure with empty check
         $parts[] = new RawPhpNode(
-            'if (empty(' . $node->expression . ')):',
+            'if (\Sugar\Runtime\EmptyHelper::isEmpty(' . $node->expression . ')):',
             $node->line,
             $node->column,
         );

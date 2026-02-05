@@ -111,7 +111,7 @@ final class ForelseCompilerTest extends TestCase
 
         // Check opening if
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('if (!empty($items)):', $result[0]->code);
+        $this->assertStringContainsString('if (!\Sugar\Runtime\EmptyHelper::isEmpty($items)):', $result[0]->code);
 
         // Check for loop setup
         $this->assertInstanceOf(RawPhpNode::class, $result[2]);

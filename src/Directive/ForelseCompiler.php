@@ -98,7 +98,7 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
 
         // Opening if (!empty($collection))
         $parts[] = new RawPhpNode(
-            sprintf('if (!empty(%s)):', $collection),
+            sprintf('if (!\Sugar\Runtime\EmptyHelper::isEmpty(%s)):', $collection),
             $node->line,
             $node->column,
         );

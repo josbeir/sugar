@@ -35,7 +35,7 @@ final class EmptyCompilerTest extends TestCase
 
         $this->assertCount(3, $result);
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (empty($cart)):', $result[0]->code);
+        $this->assertSame('if (\Sugar\Runtime\EmptyHelper::isEmpty($cart)):', $result[0]->code);
         $this->assertInstanceOf(TextNode::class, $result[1]);
         $this->assertInstanceOf(RawPhpNode::class, $result[2]);
         $this->assertSame('endif;', $result[2]->code);
@@ -54,7 +54,7 @@ final class EmptyCompilerTest extends TestCase
         $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (empty($data[\'items\'])):', $result[0]->code);
+        $this->assertSame('if (\Sugar\Runtime\EmptyHelper::isEmpty($data[\'items\'])):', $result[0]->code);
     }
 
     public function testEmptyWithPropertyAccess(): void
@@ -70,7 +70,7 @@ final class EmptyCompilerTest extends TestCase
         $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (empty($user->posts)):', $result[0]->code);
+        $this->assertSame('if (\Sugar\Runtime\EmptyHelper::isEmpty($user->posts)):', $result[0]->code);
     }
 
     public function testEmptyWithComplexExpression(): void
@@ -86,7 +86,7 @@ final class EmptyCompilerTest extends TestCase
         $result = $this->compiler->compile($node, $this->createContext());
 
         $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (empty(trim($input))):', $result[0]->code);
+        $this->assertSame('if (\Sugar\Runtime\EmptyHelper::isEmpty(trim($input))):', $result[0]->code);
     }
 
     public function testEmptyWithMultipleChildren(): void
