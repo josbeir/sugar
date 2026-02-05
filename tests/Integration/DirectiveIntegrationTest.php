@@ -6,6 +6,7 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
@@ -39,7 +40,7 @@ final class DirectiveIntegrationTest extends TestCase
         $registry->registerDirective('if', new IfCompiler());
         $registry->registerDirective('foreach', new ForeachCompiler());
 
-        $this->extractionPass = new DirectiveExtractionPass($registry);
+        $this->extractionPass = new DirectiveExtractionPass($registry, new SugarConfig());
         $this->compilationPass = new DirectiveCompilationPass($registry);
         $this->generator = new CodeGenerator(new Escaper(), $this->createContext());
     }

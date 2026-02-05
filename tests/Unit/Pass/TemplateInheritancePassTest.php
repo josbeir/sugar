@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Pass\TemplateInheritancePass;
@@ -35,7 +36,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testProcessesTemplateWithoutInheritance(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         $document = new DocumentNode([
             new ElementNode('div', [], [new TextNode('Hello', 1, 1)], false, 1, 1),
@@ -50,7 +51,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testExtendsReplacesBlockContent(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Child template with s:extends
         $document = new DocumentNode([
@@ -94,7 +95,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testMultiLevelInheritance(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create grandparent template file
         file_put_contents(
@@ -129,7 +130,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testIncludeInsertsTemplateContent(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create include file
         file_put_contents(
@@ -154,7 +155,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testIncludeWithIsolatedScope(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create include file
         file_put_contents(
@@ -182,7 +183,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testThrowsOnCircularInheritance(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create circular reference: a.sugar.php extends b.sugar.php, b.sugar.php extends a.sugar.php
         file_put_contents(
@@ -213,7 +214,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testThrowsOnTemplateNotFound(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         $document = new DocumentNode([
             new ElementNode('div', [$this->attr('s:extends', 'nonexistent.sugar.php')], [], false, 1, 1),
@@ -227,7 +228,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testRelativePathResolution(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Existing fixture at layouts/base.sugar.php
         $document = new DocumentNode([
@@ -245,7 +246,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testAbsolutePathResolution(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Existing fixture at layouts/base.sugar.php
         $document = new DocumentNode([
@@ -263,7 +264,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testPreservesNonInheritanceDirectives(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         $document = new DocumentNode([
             new ElementNode('div', [$this->attr('s:if', '$show')], [
@@ -286,7 +287,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testIncludeWithoutWithHasOpenScope(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create a simple included template
         $includePath = $this->inheritanceFixturesPath . '/temp-include.sugar.php';
@@ -314,7 +315,7 @@ final class TemplateInheritancePassTest extends TestCase
     public function testIncludeWithWithHasIsolatedScope(): void
     {
         $loader = new FileTemplateLoader($this->inheritanceFixturesPath);
-        $pass = new TemplateInheritancePass($loader);
+        $pass = new TemplateInheritancePass($loader, new SugarConfig());
 
         // Create a simple included template
         $includePath = $this->inheritanceFixturesPath . '/temp-include-with.sugar.php';

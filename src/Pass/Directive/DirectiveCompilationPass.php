@@ -6,6 +6,7 @@ namespace Sugar\Pass\Directive;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
@@ -119,6 +120,17 @@ final class DirectiveCompilationPass implements PassInterface
             }
 
             return NodeCloner::withChildren($node, $newChildren);
+        }
+
+        // Handle fragments with children
+        if ($node instanceof FragmentNode) {
+            $newChildren = [];
+            foreach ($node->children as $child) {
+                $compiled = $this->compileNode($child);
+                array_push($newChildren, ...is_array($compiled) ? $compiled : [$compiled]);
+            }
+
+            return NodeCloner::fragmentWithChildren($node, $newChildren);
         }
 
         // All other nodes pass through unchanged

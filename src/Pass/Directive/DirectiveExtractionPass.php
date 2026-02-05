@@ -13,9 +13,9 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
-use Sugar\Enum\InheritanceAttribute;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
@@ -55,13 +55,13 @@ final class DirectiveExtractionPass implements PassInterface
      * Constructor
      *
      * @param \Sugar\Extension\ExtensionRegistry $registry Directive registry for type checking
-     * @param string $directivePrefix Prefix for directive attributes (e.g., 's', 'x', 'v')
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private readonly ExtensionRegistry $registry,
-        string $directivePrefix = 's',
+        SugarConfig $config,
     ) {
-        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
+        $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
     }
 
     /**
@@ -335,6 +335,12 @@ final class DirectiveExtractionPass implements PassInterface
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
                 $name = $this->prefixHelper->stripPrefix($attr->name);
+
+                // Skip inheritance attributes - they're processed by TemplateInheritancePass
+                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
+                    continue;
+                }
+
                 // Directive expressions must be strings, not OutputNodes
                 if ($attr->value instanceof OutputNode) {
                     throw $this->context->createException(
@@ -366,7 +372,7 @@ final class DirectiveExtractionPass implements PassInterface
                         $attr->column,
                     ),
                 };
-            } elseif (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
+            } elseif (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
                 // These are processed by TemplateInheritancePass before DirectiveExtractionPass
                 throw $this->context->createException(
@@ -385,7 +391,7 @@ final class DirectiveExtractionPass implements PassInterface
             // Check if there's at least one inheritance attribute
             $hasInheritanceAttr = false;
             foreach ($node->attributes as $attr) {
-                if (InheritanceAttribute::isInheritanceAttribute($attr->name)) {
+                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
                     $hasInheritanceAttr = true;
                     break;
                 }
@@ -400,9 +406,11 @@ final class DirectiveExtractionPass implements PassInterface
                 );
             }
 
-            // Fragment with only inheritance attributes - return children directly
+            // Fragment with only inheritance attributes - transform children and return
             // TemplateInheritancePass will handle these attributes
-            return $node;
+            $transformedChildren = $this->transformChildren($node->children);
+
+            return NodeCloner::fragmentWithChildren($node, $transformedChildren);
         }
 
         // Transform children recursively

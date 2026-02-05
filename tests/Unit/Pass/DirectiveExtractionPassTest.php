@@ -10,6 +10,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
@@ -33,7 +34,7 @@ final class DirectiveExtractionPassTest extends TestCase
     {
         // Create registry with test directives
         $this->registry = $this->createTestRegistry();
-        $this->pass = new DirectiveExtractionPass($this->registry);
+        $this->pass = new DirectiveExtractionPass($this->registry, new SugarConfig());
     }
 
     private function createTestRegistry(): ExtensionRegistry
@@ -385,7 +386,7 @@ final class DirectiveExtractionPassTest extends TestCase
     public function testUsesCustomDirectivePrefix(): void
     {
         $registry = $this->createTestRegistry();
-        $pass = new DirectiveExtractionPass($registry, 'x');
+        $pass = new DirectiveExtractionPass($registry, SugarConfig::withPrefix('x'));
 
         $element = new ElementNode(
             tag: 'div',
@@ -407,7 +408,7 @@ final class DirectiveExtractionPassTest extends TestCase
     public function testDoesNotExtractNonPrefixedAttributes(): void
     {
         $registry = $this->createTestRegistry();
-        $pass = new DirectiveExtractionPass($registry, 'x');
+        $pass = new DirectiveExtractionPass($registry, SugarConfig::withPrefix('x'));
 
         $element = new ElementNode(
             tag: 'div',

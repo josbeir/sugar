@@ -11,6 +11,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
@@ -45,7 +46,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->registry->registerDirective('foreach', ForeachCompiler::class);
         $this->registry->registerDirective('while', WhileCompiler::class);
 
-        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $this->registry, 's');
+        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $this->registry, new SugarConfig());
     }
 
     public function testExpandsSimpleComponent(): void

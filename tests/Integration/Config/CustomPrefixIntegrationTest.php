@@ -9,6 +9,7 @@ use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
+use Sugar\TemplateInheritance\FileTemplateLoader;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 final class CustomPrefixIntegrationTest extends TestCase
@@ -91,6 +92,117 @@ final class CustomPrefixIntegrationTest extends TestCase
         $this->assertStringContainsString('<div>', $result);
         $this->assertStringNotContainsString('<script>', $result);
         $this->assertStringContainsString('&lt;script&gt;', $result);
+    }
+
+    public function testCustomPrefixWithTemplateInheritance(): void
+    {
+        $config = SugarConfig::withPrefix('v');
+        $tmpDir = sys_get_temp_dir() . '/sugar-test-' . uniqid();
+        mkdir($tmpDir);
+
+        try {
+            // Create parent template with v:block
+            $parent = <<<'TEMPLATE'
+<!DOCTYPE html>
+<html>
+<head>
+    <title><v-template v:block="title">Default Title</v-template></title>
+</head>
+<body>
+    <v-template v:block="content">Default content</v-template>
+</body>
+</html>
+TEMPLATE;
+            file_put_contents($tmpDir . '/layout.sugar.php', $parent);
+
+            // Create child template with v:extends and v:block
+            $child = <<<'TEMPLATE'
+<v-template v:extends="layout.sugar.php">
+    <v-template v:block="title">Custom Title</v-template>
+    <v-template v:block="content">
+        <div v:if="$show">Hello <?= $name ?></div>
+    </v-template>
+</v-template>
+TEMPLATE;
+
+            $loader = new FileTemplateLoader($tmpDir);
+            $compiler = new Compiler(
+                parser: new Parser($config),
+                contextPass: new ContextAnalysisPass(),
+                escaper: new Escaper(),
+                templateLoader: $loader,
+                config: $config,
+            );
+
+            $compiled = $compiler->compile($child, 'child.sugar.php');
+
+            // Verify inheritance worked
+            $result = $this->executeTemplate($compiled, ['show' => true, 'name' => 'World']);
+            $this->assertStringContainsString('Custom Title', $result);
+            $this->assertStringContainsString('Hello World', $result);
+            $this->assertStringNotContainsString('Default content', $result);
+
+            // Verify v:if directive works
+            $result = $this->executeTemplate($compiled, ['show' => false, 'name' => 'World']);
+            $this->assertStringNotContainsString('Hello', $result);
+        } finally {
+            // Cleanup
+            if (file_exists($tmpDir . '/layout.sugar.php')) {
+                unlink($tmpDir . '/layout.sugar.php');
+            }
+
+            if (is_dir($tmpDir)) {
+                rmdir($tmpDir);
+            }
+        }
+    }
+
+    public function testCustomPrefixWithInclude(): void
+    {
+        $config = SugarConfig::withPrefix('x');
+        $tmpDir = sys_get_temp_dir() . '/sugar-test-' . uniqid();
+        mkdir($tmpDir);
+
+        try {
+            // Create partial template
+            $partial = '<p>User: <?= $username ?></p>';
+            file_put_contents($tmpDir . '/user.sugar.php', $partial);
+
+            // Create main template with x:include
+            $template = <<<'TEMPLATE'
+<div>
+    <h1>Users</h1>
+    <x-template x:foreach="$users as $user">
+        <x-template x:include="user.sugar.php" x:with="['username' => $user]"></x-template>
+    </x-template>
+</div>
+TEMPLATE;
+
+            $loader = new FileTemplateLoader($tmpDir);
+            $compiler = new Compiler(
+                parser: new Parser($config),
+                contextPass: new ContextAnalysisPass(),
+                escaper: new Escaper(),
+                templateLoader: $loader,
+                config: $config,
+            );
+
+            $compiled = $compiler->compile($template, 'main.sugar.php');
+            $result = $this->executeTemplate($compiled, ['users' => ['Alice', 'Bob', 'Charlie']]);
+
+            $this->assertStringContainsString('User: Alice', $result);
+            $this->assertStringContainsString('User: Bob', $result);
+            $this->assertStringContainsString('User: Charlie', $result);
+        } finally {
+            // Cleanup
+            if (file_exists($tmpDir . '/user.sugar.php')) {
+                unlink($tmpDir . '/user.sugar.php');
+            }
+
+            if (is_dir($tmpDir)) {
+                rmdir($tmpDir);
+            }
+        }
     }
 
     private function createCompiler(SugarConfig $config): Compiler

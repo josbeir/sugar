@@ -78,18 +78,18 @@ final class Compiler implements CompilerInterface
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveExtractionPass = new DirectiveExtractionPass(
             registry: $this->registry,
-            directivePrefix: $config->directivePrefix,
+            config: $config,
         );
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
 
         // Create template inheritance pass if loader is provided
         $this->templateInheritancePass = $templateLoader instanceof TemplateLoaderInterface
-            ? new TemplateInheritancePass($templateLoader)
+            ? new TemplateInheritancePass($templateLoader, $config)
             : null;
 
         // Create component expansion pass if loader is provided
         $this->componentExpansionPass = $templateLoader instanceof TemplateLoaderInterface
-            ? new ComponentExpansionPass($templateLoader, $this->parser, $this->registry, $config->directivePrefix)
+            ? new ComponentExpansionPass($templateLoader, $this->parser, $this->registry, $config)
             : null;
     }
 

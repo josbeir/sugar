@@ -11,6 +11,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
@@ -37,7 +38,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         $registry->registerDirective('text', new ContentCompiler(escape: true));
         $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
 
-        $this->pass = new DirectiveExtractionPass($registry);
+        $this->pass = new DirectiveExtractionPass($registry, new SugarConfig());
     }
 
     public function testThrowsWhenDirectiveAttributeContainsDynamicOutput(): void

@@ -8,17 +8,22 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Enum\InheritanceAttribute;
 use Sugar\Exception\SyntaxException;
 use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\TemplateLoaderInterface;
 
 final class TemplateInheritancePass implements PassInterface
 {
+    private DirectivePrefixHelper $prefixHelper;
+
+    private SugarConfig $config;
+
     /**
      * Stack of loaded templates for circular detection
      *
@@ -30,10 +35,14 @@ final class TemplateInheritancePass implements PassInterface
      * Constructor.
      *
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
+        SugarConfig $config,
     ) {
+        $this->config = $config;
+        $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
     }
 
     /**
@@ -77,7 +86,7 @@ final class TemplateInheritancePass implements PassInterface
 
             // Find the s:extends attribute for better error positioning
             $extendsAttr = $extendsElement instanceof ElementNode
-                ? AttributeHelper::findAttribute($extendsElement->attributes, InheritanceAttribute::EXTENDS->value)
+                ? AttributeHelper::findAttribute($extendsElement->attributes, $this->prefixHelper->buildName('extends'))
                 : null;
 
             $line = $extendsAttr instanceof AttributeNode ? $extendsAttr->line : $extendsElement?->line;
@@ -118,7 +127,7 @@ final class TemplateInheritancePass implements PassInterface
         foreach ($document->children as $child) {
             if (
                 $child instanceof ElementNode &&
-                AttributeHelper::hasAttribute($child, InheritanceAttribute::EXTENDS->value)
+                AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('extends'))
             ) {
                 return $child;
             }
@@ -143,12 +152,12 @@ final class TemplateInheritancePass implements PassInterface
         array &$loadedTemplates,
     ): DocumentNode {
         // Get parent template path
-        $parentPath = $this->getAttributeValue($extendsElement, InheritanceAttribute::EXTENDS->value);
+        $parentPath = $this->getAttributeValue($extendsElement, $this->prefixHelper->buildName('extends'));
         $resolvedPath = $this->loader->resolve($parentPath, $context->templatePath);
 
         // Load and parse parent template
         $parentContent = $this->loader->load($resolvedPath);
-        $parser = new Parser();
+        $parser = new Parser($this->config);
         $parentDocument = $parser->parse($parentContent);
 
         // Collect blocks from child
@@ -184,12 +193,15 @@ final class TemplateInheritancePass implements PassInterface
         $newChildren = [];
 
         foreach ($document->children as $child) {
-            if ($child instanceof ElementNode && $this->hasAttribute($child, InheritanceAttribute::INCLUDE->value)) {
-                $includePath = $this->getAttributeValue($child, InheritanceAttribute::INCLUDE->value);
+            if (
+                ($child instanceof ElementNode || $child instanceof FragmentNode) &&
+                $this->hasAttribute($child, $this->prefixHelper->buildName('include'))
+            ) {
+                $includePath = $this->getAttributeValue($child, $this->prefixHelper->buildName('include'));
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
                 // Load and parse included template
                 $includeContent = $this->loader->load($resolvedPath);
-                $parser = new Parser();
+                $parser = new Parser($this->config);
                 $includeDocument = $parser->parse($includeContent);
 
                 // Create new context for included template
@@ -202,23 +214,25 @@ final class TemplateInheritancePass implements PassInterface
                 // Process includes recursively
                 $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
                 // Check for s:with (scope isolation)
-                if ($this->hasAttribute($child, InheritanceAttribute::WITH->value)) {
+                if ($this->hasAttribute($child, $this->prefixHelper->buildName('with'))) {
                     // Wrap in scope isolation with variables from s:with
-                    $withValue = $this->getAttributeValue($child, InheritanceAttribute::WITH->value);
+                    $withValue = $this->getAttributeValue($child, $this->prefixHelper->buildName('with'));
                     $wrapped = $this->wrapInScope($includeDocument, $withValue);
                     array_push($newChildren, ...$wrapped->children);
                 } else {
                     // Open scope - add children directly
                     array_push($newChildren, ...$includeDocument->children);
                 }
-            } elseif ($child instanceof ElementNode) {
+            } elseif ($child instanceof ElementNode || $child instanceof FragmentNode) {
                 // Recursively process children
                 $processedChildren = $this->processChildrenIncludes(
                     $child->children,
                     $context,
                     $loadedTemplates,
                 );
-                $processedChild = NodeCloner::withChildren($child, $processedChildren);
+                $processedChild = $child instanceof FragmentNode
+                    ? NodeCloner::fragmentWithChildren($child, $processedChildren)
+                    : NodeCloner::withChildren($child, $processedChildren);
                 $newChildren[] = $processedChild;
             } else {
                 $newChildren[] = $child;
@@ -259,7 +273,7 @@ final class TemplateInheritancePass implements PassInterface
 
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                $blockName = AttributeHelper::getAttributeValue($child, InheritanceAttribute::BLOCK->value);
+                $blockName = AttributeHelper::getAttributeValue($child, $this->prefixHelper->buildName('block'));
 
                 if (is_string($blockName) && $blockName !== '') {
                     $blocks[$blockName] = $child;
@@ -318,7 +332,7 @@ final class TemplateInheritancePass implements PassInterface
         }
 
         // Check if this node has s:block attribute
-        $blockName = AttributeHelper::getAttributeValue($node, InheritanceAttribute::BLOCK->value);
+        $blockName = AttributeHelper::getAttributeValue($node, $this->prefixHelper->buildName('block'));
 
         if (!is_string($blockName) || $blockName === '') {
             $blockName = null;
@@ -340,10 +354,10 @@ final class TemplateInheritancePass implements PassInterface
                 // Child is fragment: check if it has directive attributes
                 $hasDirectives = false;
                 foreach ($childBlock->attributes as $attr) {
-                    // Check for s: attributes that are NOT inheritance attributes
+                    // Check for directive attributes that are NOT inheritance attributes
                     if (
-                        str_starts_with($attr->name, 's:') &&
-                        !InheritanceAttribute::isInheritanceAttribute($attr->name)
+                        $this->prefixHelper->isDirective($attr->name) &&
+                        !$this->prefixHelper->isInheritanceAttribute($attr->name)
                     ) {
                         $hasDirectives = true;
                         break;
@@ -357,7 +371,7 @@ final class TemplateInheritancePass implements PassInterface
                         // Remove s:block since it's already been processed
                         $cleanAttrs = [];
                         foreach ($childBlock->attributes as $attr) {
-                            if ($attr->name !== InheritanceAttribute::BLOCK->value) {
+                            if ($attr->name !== $this->prefixHelper->buildName('block')) {
                                 $cleanAttrs[] = $attr;
                             }
                         }
@@ -381,7 +395,7 @@ final class TemplateInheritancePass implements PassInterface
                     // Child fragment has directives: return it for later processing
                     $cleanAttrs = [];
                     foreach ($childBlock->attributes as $attr) {
-                        if ($attr->name !== InheritanceAttribute::BLOCK->value) {
+                        if ($attr->name !== $this->prefixHelper->buildName('block')) {
                             $cleanAttrs[] = $attr;
                         }
                     }
@@ -436,7 +450,7 @@ final class TemplateInheritancePass implements PassInterface
      * @param string $name Attribute name
      * @return bool True if attribute exists
      */
-    private function hasAttribute(ElementNode $element, string $name): bool
+    private function hasAttribute(ElementNode|FragmentNode $element, string $name): bool
     {
         return AttributeHelper::hasAttribute($element, $name);
     }
@@ -444,11 +458,11 @@ final class TemplateInheritancePass implements PassInterface
     /**
      * Get attribute value from element.
      *
-     * @param \Sugar\Ast\ElementNode $element Element to search
+     * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $element Element to search
      * @param string $name Attribute name
      * @return string Attribute value
      */
-    private function getAttributeValue(ElementNode $element, string $name): string
+    private function getAttributeValue(ElementNode|FragmentNode $element, string $name): string
     {
         $value = AttributeHelper::getAttributeValue($element, $name, '');
 
@@ -489,7 +503,7 @@ final class TemplateInheritancePass implements PassInterface
         foreach ($node->attributes as $attr) {
             if ($attr instanceof AttributeNode) {
                 // Keep all attributes except inheritance attributes
-                if (!InheritanceAttribute::isInheritanceAttribute($attr->name)) {
+                if (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
                     $cleanAttributes[] = $attr;
                 }
             } else {

@@ -15,6 +15,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\ExtensionRegistry;
@@ -39,16 +40,16 @@ final readonly class ComponentExpansionPass implements PassInterface
      * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader for loading components
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry for directive type checking
-     * @param string $directivePrefix Directive prefix (e.g., 's' for s:if, s:class)
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private TemplateLoaderInterface $loader,
         private Parser $parser,
         private ExtensionRegistry $registry,
-        string $directivePrefix = 's',
+        SugarConfig $config,
     ) {
-        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
-        $this->slotAttrName = $directivePrefix . ':slot';
+        $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $this->slotAttrName = $config->directivePrefix . ':slot';
     }
 
     /**
