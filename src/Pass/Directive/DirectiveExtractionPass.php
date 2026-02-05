@@ -172,6 +172,8 @@ final class DirectiveExtractionPass implements PassInterface
         $controlFlowDirective = null;
         $contentDirective = null;
         $remainingAttrs = [];
+        $controlFlowCount = 0;
+        $contentCount = 0;
 
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
@@ -197,10 +199,12 @@ final class DirectiveExtractionPass implements PassInterface
                     DirectiveType::CONTROL_FLOW => $controlFlowDirective = [
                         'name' => $name,
                         'expression' => $expression,
+                        'attr' => $attr,
                     ],
                     DirectiveType::CONTENT => $contentDirective = [
                         'name' => $name,
                         'expression' => $expression,
+                        'attr' => $attr,
                     ],
                     // Attribute directives are compiled inline and added to remaining attributes
                     DirectiveType::ATTRIBUTE => $this->compileAttributeDirective(
@@ -212,6 +216,37 @@ final class DirectiveExtractionPass implements PassInterface
                         $remainingAttrs,
                     ),
                 };
+
+                // Count directive types for validation
+                if ($type === DirectiveType::CONTROL_FLOW) {
+                    $controlFlowCount++;
+                    if ($controlFlowCount > 1) {
+                        throw $this->context->createException(
+                            SyntaxException::class,
+                            'Only one control flow directive allowed per element. ' .
+                            'Nest elements to combine directives. Example: ' .
+                            '<div ' . $this->prefixHelper->getPrefix() . ':if="$condition">' .
+                            '<div ' . $this->prefixHelper->getPrefix() . ':foreach="$items as $item">...</div>' .
+                            '</div>',
+                            $attr->line,
+                            $attr->column,
+                        );
+                    }
+                }
+
+                if ($type === DirectiveType::CONTENT) {
+                    $contentCount++;
+                    if ($contentCount > 1) {
+                        throw $this->context->createException(
+                            SyntaxException::class,
+                            'Only one content directive allowed per element. ' .
+                            'Use either ' . $this->prefixHelper->getPrefix() . ':text or ' .
+                            $this->prefixHelper->getPrefix() . ':html, not both.',
+                            $attr->line,
+                            $attr->column,
+                        );
+                    }
+                }
             } else {
                 $remainingAttrs[] = $attr;
             }

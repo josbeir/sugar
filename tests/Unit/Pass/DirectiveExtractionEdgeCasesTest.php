@@ -258,6 +258,48 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         $this->assertSame('text', $element->children[0]->name);
     }
 
+    public function testThrowsOnMultipleControlFlowDirectives(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one control flow directive allowed per element');
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:if', '$condition', 1, 5),
+                new AttributeNode('s:foreach', '$items as $item', 1, 20),
+            ],
+            children: [new TextNode('Content', 1, 50)],
+            selfClosing: false,
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $this->pass->execute($ast, $this->createContext());
+    }
+
+    public function testThrowsOnMultipleContentDirectives(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one content directive allowed per element');
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:text', '$text', 1, 5),
+                new AttributeNode('s:html', '$html', 1, 20),
+            ],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $this->pass->execute($ast, $this->createContext());
+    }
+
     protected function createContext(
         string $source = '',
         string $templatePath = 'test.sugar.php',
