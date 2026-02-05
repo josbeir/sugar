@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\CodeGen;
 
-use RuntimeException;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -15,6 +14,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
+use Sugar\Exception\UnsupportedNodeException;
 
 /**
  * Generates PHP code from AST with inline escaping
@@ -93,7 +93,12 @@ final class CodeGenerator
             ElementNode::class => $this->generateElement($node, $buffer),
             FragmentNode::class => $this->generateFragment($node, $buffer),
             DirectiveNode::class => $this->generateDirective($node, $buffer),
-            default => throw new RuntimeException('Unsupported node type: ' . $node::class),
+            default => throw UnsupportedNodeException::forNodeType(
+                $node::class,
+                $this->context->templatePath,
+                $node->line,
+                $node->column,
+            ),
         };
     }
 

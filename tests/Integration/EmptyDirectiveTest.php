@@ -10,6 +10,7 @@ use Sugar\Compiler;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
+use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
@@ -210,49 +211,13 @@ final class EmptyDirectiveTest extends TestCase
         $this->assertStringNotContainsString('No items', $output);
     }
 
-    public function testForelseWithEmptyGenerator(): void
-    {
-        $template = '<li s:forelse="$generator as $item"><?= $item ?></li>' .
-            '<div s:empty>No items</div>';
-        $compiled = $this->compiler->compile($template);
-
-        $generator = (function () {
-            if (false) { // @phpstan-ignore if.alwaysFalse (intentional - makes function a generator)
-                yield;
-            }
-        })();
-
-        $output = $this->executeTemplate($compiled, ['generator' => $generator]);
-
-        $this->assertStringContainsString('<div>No items</div>', $output);
-        $this->assertStringNotContainsString('<li>', $output);
-    }
-
-    public function testForelseWithNonEmptyGenerator(): void
-    {
-        $template = '<li s:forelse="$generator as $item"><?= $item ?></li>' .
-            '<div s:empty>No items</div>';
-        $compiled = $this->compiler->compile($template);
-
-        $generator = (function () {
-            yield 'First';
-            yield 'Second';
-        })();
-
-        $output = $this->executeTemplate($compiled, ['generator' => $generator]);
-
-        $this->assertStringContainsString('<li>First</li>', $output);
-        $this->assertStringContainsString('<li>Second</li>', $output);
-        $this->assertStringNotContainsString('No items', $output);
-    }
-
     public function testEmptyDirectiveCompiledOutput(): void
     {
         $template = '<div s:empty="$items">Empty</div>';
         $compiled = $this->compiler->compile($template);
 
         // Should use EmptyHelper::isEmpty()
-        $this->assertStringContainsString('\\Sugar\\Runtime\\EmptyHelper::isEmpty($items)', $compiled);
+        $this->assertStringContainsString(EmptyHelper::class . '::isEmpty($items)', $compiled);
     }
 
     public function testForelseCompiledOutput(): void
@@ -262,6 +227,6 @@ final class EmptyDirectiveTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use EmptyHelper::isEmpty()
-        $this->assertStringContainsString('\\Sugar\\Runtime\\EmptyHelper::isEmpty($items)', $compiled);
+        $this->assertStringContainsString(EmptyHelper::class . '::isEmpty($items)', $compiled);
     }
 }

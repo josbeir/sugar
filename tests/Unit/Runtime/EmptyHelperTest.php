@@ -7,6 +7,7 @@ use ArrayIterator;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+use Sugar\Exception\GeneratorNotSupportedException;
 use Sugar\Runtime\EmptyHelper;
 
 final class EmptyHelperTest extends TestCase
@@ -101,25 +102,31 @@ final class EmptyHelperTest extends TestCase
 
     // Generator Tests
 
-    public function testIsEmptyWithEmptyGenerator(): void
+    public function testIsEmptyWithEmptyGeneratorThrowsException(): void
     {
+        // phpcs:disable Generic.CodeAnalysis.UnconditionalIfStatement.Found
         $generator = (function () {
             if (false) { // @phpstan-ignore if.alwaysFalse (intentional - makes function a generator)
                 yield;
             }
         })();
+        // phpcs:enable Generic.CodeAnalysis.UnconditionalIfStatement.Found
 
-        $this->assertTrue(EmptyHelper::isEmpty($generator));
+        $this->expectException(GeneratorNotSupportedException::class);
+        $this->expectExceptionMessage('Generators cannot be used with s:empty or s:forelse directives');
+        EmptyHelper::isEmpty($generator);
     }
 
-    public function testIsEmptyWithNonEmptyGenerator(): void
+    public function testIsEmptyWithNonEmptyGeneratorThrowsException(): void
     {
         $generator = (function () {
             yield 1;
             yield 2;
         })();
 
-        $this->assertFalse(EmptyHelper::isEmpty($generator));
+        $this->expectException(GeneratorNotSupportedException::class);
+        $this->expectExceptionMessage('Generators cannot be used with s:empty or s:forelse directives');
+        EmptyHelper::isEmpty($generator);
     }
 
     // Object Tests

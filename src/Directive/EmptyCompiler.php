@@ -8,6 +8,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Runtime\EmptyHelper;
 
 /**
  * Compiler for empty directive
@@ -39,7 +40,7 @@ final readonly class EmptyCompiler implements DirectiveCompilerInterface
 
         // Opening control structure with empty check
         $parts[] = new RawPhpNode(
-            'if (\Sugar\Runtime\EmptyHelper::isEmpty(' . $node->expression . ')):',
+            'if (' . EmptyHelper::class . '::isEmpty(' . $node->expression . ')):',
             $node->line,
             $node->column,
         );

@@ -7,6 +7,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Extension\PairedDirectiveCompilerInterface;
+use Sugar\Runtime\EmptyHelper;
 
 /**
  * Compiler for forelse directive
@@ -98,7 +99,7 @@ final class ForelseCompiler extends ForeachCompiler implements PairedDirectiveCo
 
         // Opening if (!empty($collection))
         $parts[] = new RawPhpNode(
-            sprintf('if (!\Sugar\Runtime\EmptyHelper::isEmpty(%s)):', $collection),
+            sprintf('if (!' . EmptyHelper::class . '::isEmpty(%s)):', $collection),
             $node->line,
             $node->column,
         );
