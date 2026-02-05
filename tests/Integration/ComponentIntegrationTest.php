@@ -5,6 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Compiler;
+use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
@@ -28,7 +29,7 @@ final class ComponentIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
-        $loader = new FileTemplateLoader($this->templatesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
 
         // Discover components in the components subdirectory
         $loader->discoverComponents('components');
@@ -78,7 +79,7 @@ final class ComponentIntegrationTest extends TestCase
 
     public function testCompilesComponentWithNamedSlots(): void
     {
-        $template = '<s-card>' .
+        $template = '<div class="bla"></div><s-card>' .
             '<div s:slot="header">Card Title</div>' .
             '<p>Card body content</p>' .
             '<span s:slot="footer">Footer text</span>' .

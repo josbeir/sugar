@@ -30,7 +30,7 @@ final class TemplateInheritancePassTest extends TestCase
     protected function setUp(): void
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $this->loader = new FileTemplateLoader($this->inheritanceFixturesPath);
+        $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->inheritanceFixturesPath));
         $this->pass = new TemplateInheritancePass($this->loader, new SugarConfig());
     }
 

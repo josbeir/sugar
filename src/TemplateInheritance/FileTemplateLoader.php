@@ -7,6 +7,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\TemplateNotFoundException;
 
@@ -16,7 +17,7 @@ use Sugar\Exception\TemplateNotFoundException;
  * Handles both regular template loading (s:include, s:extends) and
  * component discovery and loading (s-button, s-alert).
  */
-final class FileTemplateLoader implements TemplateLoaderInterface
+class FileTemplateLoader implements TemplateLoaderInterface
 {
     /**
      * @var array<string, string> Component name → relative path from basePath
@@ -26,18 +27,26 @@ final class FileTemplateLoader implements TemplateLoaderInterface
     private DirectivePrefixHelper $prefixHelper;
 
     /**
+     * @var array<string> Template paths to search
+     */
+    private array $templatePaths;
+
+    /**
      * Constructor.
      *
-     * @param string $basePath Base path for template files
-     * @param string $elementPrefix Prefix for custom elements (e.g., 's-')
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
-        private readonly string $basePath,
-        private readonly string $elementPrefix = 's-',
+        private readonly SugarConfig $config = new SugarConfig(),
     ) {
-        // Extract directive prefix from element prefix (e.g., 's-' -> 's')
-        $directivePrefix = rtrim($this->elementPrefix, '-');
-        $this->prefixHelper = new DirectivePrefixHelper($directivePrefix);
+        if ($this->config->templatePaths === []) {
+            $cwd = getcwd();
+            $this->templatePaths = [$cwd !== false ? $cwd : '.'];
+        } else {
+            $this->templatePaths = $this->config->templatePaths;
+        }
+
+        $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
     }
 
     /**
@@ -46,40 +55,47 @@ final class FileTemplateLoader implements TemplateLoaderInterface
     public function load(string $path): string
     {
         $resolvedPath = $this->resolve($path);
-        $fullPath = $this->basePath . '/' . ltrim($resolvedPath, '/');
 
-        // Try with the path as-is first
-        if (!file_exists($fullPath)) {
+        // Search all template paths in order
+        foreach ($this->templatePaths as $basePath) {
+            $fullPath = $basePath . '/' . ltrim($resolvedPath, '/');
+
+            // Try with the path as-is first
+            if (file_exists($fullPath)) {
+                $content = file_get_contents($fullPath);
+                if ($content === false) {
+                    throw new TemplateNotFoundException(
+                        sprintf('Failed to read template "%s" at path "%s"', $path, $fullPath),
+                    );
+                }
+
+                return $content;
+            }
+
             // If not found and doesn't end with .sugar.php, try adding the extension
             if (!str_ends_with($fullPath, '.sugar.php')) {
                 $fullPathWithExtension = $fullPath . '.sugar.php';
                 if (file_exists($fullPathWithExtension)) {
-                    $fullPath = $fullPathWithExtension;
-                } else {
-                    throw new TemplateNotFoundException(
-                        sprintf(
-                            'Template "%s" not found at path "%s" or "%s"',
-                            $path,
-                            $fullPath,
-                            $fullPathWithExtension,
-                        ),
-                    );
+                    $content = file_get_contents($fullPathWithExtension);
+                    if ($content === false) {
+                        throw new TemplateNotFoundException(
+                            sprintf('Failed to read template "%s" at path "%s"', $path, $fullPathWithExtension),
+                        );
+                    }
+
+                    return $content;
                 }
-            } else {
-                throw new TemplateNotFoundException(
-                    sprintf('Template "%s" not found at path "%s"', $path, $fullPath),
-                );
             }
         }
 
-        $content = file_get_contents($fullPath);
-        if ($content === false) {
-            throw new TemplateNotFoundException(
-                sprintf('Failed to read template "%s" at path "%s"', $path, $fullPath),
-            );
-        }
-
-        return $content;
+        // Not found in any path
+        throw new TemplateNotFoundException(
+            sprintf(
+                'Template "%s" not found in paths: %s',
+                $path,
+                implode(', ', $this->templatePaths),
+            ),
+        );
     }
 
     /**
@@ -139,22 +155,35 @@ final class FileTemplateLoader implements TemplateLoaderInterface
      * Scans recursively for {elementPrefix}*.sugar.php files (e.g., s-button.sugar.php)
      * Excludes {elementPrefix}template.sugar.php (that's the fragment element)
      *
-     * @param string $path Relative path from basePath (e.g., 'components')
+     * @param string $path Relative path from template paths (e.g., 'components')
      */
     public function discoverComponents(string $path): void
     {
-        $fullPath = $this->basePath . '/' . ltrim($path, '/');
+        // Scan each template path for components
+        foreach ($this->templatePaths as $basePath) {
+            $fullPath = $basePath . '/' . ltrim($path, '/');
 
-        if (!is_dir($fullPath)) {
-            return;
+            if (!is_dir($fullPath)) {
+                continue;
+            }
+
+            $this->scanComponentDirectory($fullPath);
         }
+    }
 
+    /**
+     * Scan a directory for component files
+     *
+     * @param string $fullPath Full path to directory to scan
+     */
+    private function scanComponentDirectory(string $fullPath): void
+    {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($fullPath, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::LEAVES_ONLY,
         );
 
-        $fragmentElement = $this->elementPrefix . 'template';
+        $fragmentElement = $this->config->getFragmentElement();
 
         foreach ($iterator as $file) {
             if (!$file instanceof SplFileInfo || !$file->isFile()) {
@@ -183,8 +212,9 @@ final class FileTemplateLoader implements TemplateLoaderInterface
             // Extract component name (e.g., "button" from "s-button")
             $componentName = $this->prefixHelper->stripElementPrefix($basename);
 
-            // Store relative path from basePath
-            $relativePath = str_replace($this->basePath . '/', '', $file->getPathname());
+            // Find relative path from first template path
+            $basePath = $this->templatePaths[0];
+            $relativePath = str_replace($basePath . '/', '', $file->getPathname());
             $this->components[$componentName] = $relativePath;
         }
     }
@@ -233,7 +263,7 @@ final class FileTemplateLoader implements TemplateLoaderInterface
         }
 
         // Fragment element (s-template) is not a component
-        if ($elementName === $this->elementPrefix . 'template') {
+        if ($elementName === $this->config->getFragmentElement()) {
             return false;
         }
 

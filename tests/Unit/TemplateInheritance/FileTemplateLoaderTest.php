@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Config\SugarConfig;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 
@@ -18,7 +19,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testLoadsTemplateFromBasePath(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $content = $loader->load('base.sugar.php');
 
@@ -27,7 +28,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testThrowsExceptionWhenTemplateNotFound(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $this->expectException(TemplateNotFoundException::class);
         $this->expectExceptionMessage('not found');
@@ -37,7 +38,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testResolvesAbsolutePath(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $resolved = $loader->resolve('/layouts/base.sugar.php', '');
 
@@ -46,7 +47,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testResolvesRelativePathFromCurrentTemplate(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $resolved = $loader->resolve('header.sugar.php', 'pages/home.sugar.php');
 
@@ -55,7 +56,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testResolvesParentDirectoryPath(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $resolved = $loader->resolve('../layouts/base.sugar.php', 'pages/home.sugar.php');
 
@@ -64,7 +65,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testNormalizesPathWithMultipleDots(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $resolved = $loader->resolve('../../layouts/base.sugar.php', 'pages/admin/dashboard.sugar.php');
 
@@ -73,7 +74,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testLoadsTemplateWithoutExtension(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $content = $loader->load('base');
 
@@ -82,7 +83,7 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testLoadsTemplateWithoutExtensionFromSubdirectory(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $content = $loader->load('layouts/base');
 
@@ -95,7 +96,7 @@ final class FileTemplateLoaderTest extends TestCase
         file_put_contents($this->fixturesPath . '/test', 'content without extension');
         file_put_contents($this->fixturesPath . '/test.sugar.php', 'content with extension');
 
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $content = $loader->load('test');
 
@@ -108,11 +109,92 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testThrowsExceptionWhenTemplateNotFoundWithOrWithoutExtension(): void
     {
-        $loader = new FileTemplateLoader($this->fixturesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->fixturesPath));
 
         $this->expectException(TemplateNotFoundException::class);
-        $this->expectExceptionMessage('not found at path');
+        $this->expectExceptionMessage('not found in paths');
 
         $loader->load('nonexistent');
+    }
+
+    public function testLoadsFromMultipleTemplatePaths(): void
+    {
+        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        mkdir($tempDir1, 0777, true);
+        mkdir($tempDir2, 0777, true);
+
+        // Create template in second path
+        file_put_contents($tempDir2 . '/test.sugar.php', '<div>From path 2</div>');
+
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tempDir1, $tempDir2));
+
+        $content = $loader->load('test.sugar.php');
+
+        $this->assertSame('<div>From path 2</div>', $content);
+
+        // Cleanup
+        unlink($tempDir2 . '/test.sugar.php');
+        rmdir($tempDir2);
+        rmdir($tempDir1);
+    }
+
+    public function testFirstPathTakesPrecedenceInMultiplePaths(): void
+    {
+        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        mkdir($tempDir1, 0777, true);
+        mkdir($tempDir2, 0777, true);
+
+        // Create same template in both paths
+        file_put_contents($tempDir1 . '/test.sugar.php', '<div>From path 1</div>');
+        file_put_contents($tempDir2 . '/test.sugar.php', '<div>From path 2</div>');
+
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tempDir1, $tempDir2));
+
+        $content = $loader->load('test.sugar.php');
+
+        // Should load from first path
+        $this->assertSame('<div>From path 1</div>', $content);
+
+        // Cleanup
+        unlink($tempDir1 . '/test.sugar.php');
+        unlink($tempDir2 . '/test.sugar.php');
+        rmdir($tempDir1);
+        rmdir($tempDir2);
+    }
+
+    public function testEmptyTemplatePathsDefaultsToCurrentDirectory(): void
+    {
+        $loader = new FileTemplateLoader(new SugarConfig());
+
+        // Should use getcwd() as default
+        // We can't easily test this without changing the current directory
+        // This test just verifies it doesn't throw an exception
+        $this->expectException(TemplateNotFoundException::class);
+        $loader->load('nonexistent-template-that-should-not-exist.sugar.php');
+    }
+
+    public function testMultiplePathsInExceptionMessage(): void
+    {
+        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
+        mkdir($tempDir1, 0777, true);
+        mkdir($tempDir2, 0777, true);
+
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tempDir1, $tempDir2));
+
+        try {
+            $loader->load('nonexistent.sugar.php');
+            $this->fail('Expected TemplateNotFoundException');
+        } catch (TemplateNotFoundException $templateNotFoundException) {
+            $this->assertStringContainsString($tempDir1, $templateNotFoundException->getMessage());
+            $this->assertStringContainsString($tempDir2, $templateNotFoundException->getMessage());
+            $this->assertStringContainsString('not found in paths:', $templateNotFoundException->getMessage());
+        }
+
+        // Cleanup
+        rmdir($tempDir1);
+        rmdir($tempDir2);
     }
 }

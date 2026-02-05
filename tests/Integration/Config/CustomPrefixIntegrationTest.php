@@ -125,7 +125,7 @@ TEMPLATE;
 </v-template>
 TEMPLATE;
 
-            $loader = new FileTemplateLoader($tmpDir);
+            $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tmpDir));
             $compiler = new Compiler(
                 parser: new Parser($config),
                 contextPass: new ContextAnalysisPass(),
@@ -178,7 +178,7 @@ TEMPLATE;
 </div>
 TEMPLATE;
 
-            $loader = new FileTemplateLoader($tmpDir);
+            $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($tmpDir));
             $compiler = new Compiler(
                 parser: new Parser($config),
                 contextPass: new ContextAnalysisPass(),

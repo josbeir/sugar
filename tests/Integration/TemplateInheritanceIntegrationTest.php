@@ -5,6 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Compiler;
+use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
@@ -24,7 +25,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $loader = new FileTemplateLoader($this->templatesPath);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
 
         $this->compiler = new Compiler(
             parser: new Parser(),

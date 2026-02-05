@@ -6,6 +6,7 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Compiler;
+use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ContextAnalysisPass;
@@ -44,7 +45,7 @@ final class FragmentTemplateInheritanceTest extends TestCase
         // Test if s:block works on fragment elements
         $template = '<s-template s:block="content">Default content</s-template>';
 
-        $loader = new FileTemplateLoader($this->tempDir);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
             contextPass: new ContextAnalysisPass(),
@@ -92,7 +93,7 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader($this->tempDir);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
             contextPass: new ContextAnalysisPass(),
@@ -120,7 +121,7 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader($this->tempDir);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
             contextPass: new ContextAnalysisPass(),
@@ -144,7 +145,7 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader($this->tempDir);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
             contextPass: new ContextAnalysisPass(),
@@ -169,7 +170,7 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader($this->tempDir);
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
         $compiler = new Compiler(
             parser: new Parser(),
             contextPass: new ContextAnalysisPass(),

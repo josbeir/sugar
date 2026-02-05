@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Test\Unit\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\TemplateInheritance\FileTemplateLoader;
 
@@ -17,8 +18,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
     {
         $this->tempDir = sys_get_temp_dir() . '/sugar_test_' . uniqid();
         mkdir($this->tempDir, 0777, true);
-
-        $this->loader = new FileTemplateLoader($this->tempDir);
+        $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
     }
 
     protected function tearDown(): void
@@ -93,7 +93,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
     public function testDiscoverComponentsWithCustomPrefix(): void
     {
-        $loader = new FileTemplateLoader($this->tempDir, 'x-');
+        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x')->withTemplatePaths($this->tempDir));
 
         mkdir($this->tempDir . '/components', 0777, true);
         file_put_contents($this->tempDir . '/components/x-button.sugar.php', '<button>Button</button>');
@@ -198,7 +198,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
     public function testGetComponentNameWorksWithCustomPrefix(): void
     {
-        $loader = new FileTemplateLoader($this->tempDir, 'x-');
+        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x')->withTemplatePaths($this->tempDir));
 
         $name = $loader->getComponentName('x-alert');
 
