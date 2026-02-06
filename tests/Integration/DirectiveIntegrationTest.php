@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
+use Sugar\Directive\BooleanAttributeCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
@@ -148,5 +149,59 @@ final class DirectiveIntegrationTest extends TestCase
         // Regular output should use htmlspecialchars
         $this->assertStringContainsString('htmlspecialchars', $code);
         $this->assertStringContainsString('$userInput', $code);
+    }
+
+    public function testBooleanAttributeCheckedFullPipeline(): void
+    {
+        $this->registry->register('checked', new BooleanAttributeCompiler());
+
+        $template = '<input type="checkbox" s:checked="$isSubscribed">';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Should contain call to booleanAttribute helper
+        $this->assertStringContainsString('HtmlAttributeHelper::booleanAttribute', $code);
+        $this->assertStringContainsString("'checked'", $code);
+        $this->assertStringContainsString('$isSubscribed', $code);
+    }
+
+    public function testBooleanAttributeSelectedFullPipeline(): void
+    {
+        $this->registry->register('selected', new BooleanAttributeCompiler());
+
+        $template = '<option s:selected="$value === \'premium\'">Premium</option>';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Should contain call to booleanAttribute helper
+        $this->assertStringContainsString('HtmlAttributeHelper::booleanAttribute', $code);
+        $this->assertStringContainsString("'selected'", $code);
+        $this->assertStringContainsString('$value === \'premium\'', $code);
+    }
+
+    public function testBooleanAttributeDisabledFullPipeline(): void
+    {
+        $this->registry->register('disabled', new BooleanAttributeCompiler());
+
+        $template = '<button s:disabled="$isProcessing">Submit</button>';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Should contain call to booleanAttribute helper
+        $this->assertStringContainsString('HtmlAttributeHelper::booleanAttribute', $code);
+        $this->assertStringContainsString("'disabled'", $code);
+        $this->assertStringContainsString('$isProcessing', $code);
     }
 }

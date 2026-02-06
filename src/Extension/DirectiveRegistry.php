@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use RuntimeException;
+use Sugar\Directive\BooleanAttributeCompiler;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\EmptyCompiler;
@@ -70,6 +71,10 @@ final class DirectiveRegistry
         // Attributes
         'class' => ClassCompiler::class,
         'spread' => SpreadCompiler::class,
+        // Boolean attributes
+        'checked' => BooleanAttributeCompiler::class,
+        'selected' => BooleanAttributeCompiler::class,
+        'disabled' => BooleanAttributeCompiler::class,
         // HTML manipulation
         'tag' => TagCompiler::class,
         'ifcontent' => IfContentCompiler::class,

@@ -221,4 +221,89 @@ final class AttributeHelperTest extends TestCase
 
         $this->assertSame('aria-label="Close button" aria-expanded="true" role="button"', $result);
     }
+
+    // ===== booleanAttribute() tests =====
+
+    public function testBooleanAttributeWithTrueCondition(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('checked', true);
+
+        $this->assertSame('checked', $result);
+    }
+
+    public function testBooleanAttributeWithFalseCondition(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('checked', false);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testBooleanAttributeWithTruthyValue(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('disabled', 1);
+
+        $this->assertSame('disabled', $result);
+    }
+
+    public function testBooleanAttributeWithFalsyValue(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('disabled', 0);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testBooleanAttributeWithNullValue(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('required', null);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testBooleanAttributeWithEmptyString(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('selected', '');
+
+        $this->assertSame('', $result);
+    }
+
+    public function testBooleanAttributeWithNonEmptyString(): void
+    {
+        $result = HtmlAttributeHelper::booleanAttribute('selected', 'yes');
+
+        $this->assertSame('selected', $result);
+    }
+
+    public function testBooleanAttributeDisabled(): void
+    {
+        $isProcessing = true;
+        $result = HtmlAttributeHelper::booleanAttribute('disabled', $isProcessing);
+
+        $this->assertSame('disabled', $result);
+    }
+
+    public function testBooleanAttributeSelected(): void
+    {
+        // Test with truthy condition
+        $selectedValue = 'premium'; // Value that would come from user data
+        /** @phpstan-ignore identical.alwaysTrue */
+        $result = HtmlAttributeHelper::booleanAttribute('selected', $selectedValue === 'premium');
+
+        $this->assertSame('selected', $result);
+
+        // Test with falsy condition
+        $selectedValue = 'basic';
+        /** @phpstan-ignore identical.alwaysFalse */
+        $result = HtmlAttributeHelper::booleanAttribute('selected', $selectedValue === 'premium');
+
+        $this->assertSame('', $result);
+    }
+
+    public function testBooleanAttributeChecked(): void
+    {
+        $items = [1, 2, 3];
+        $item = 2;
+        $result = HtmlAttributeHelper::booleanAttribute('checked', in_array($item, $items));
+
+        $this->assertSame('checked', $result);
+    }
 }

@@ -411,6 +411,83 @@ Sugar provides familiar control structures as HTML attributes:
 #### Utility Directives
 - **`s:class`** - Dynamic CSS classes with conditional arrays
 - **`s:spread`** - Spread attributes from arrays
+- **`s:checked`** - Conditionally add `checked` attribute to checkboxes/radios
+- **`s:selected`** - Conditionally add `selected` attribute to options
+- **`s:disabled`** - Conditionally add `disabled` attribute to form elements
+
+### Boolean HTML Attributes
+
+Sugar provides convenient directives for conditionally adding boolean HTML attributes (attributes whose presence indicates `true` and absence indicates `false`):
+
+#### `s:checked`
+Conditionally add the `checked` attribute to checkboxes or radio buttons:
+
+```html
+<!-- Checkbox -->
+<input type="checkbox" s:checked="$newsletter" name="subscribe">
+
+<!-- Radio button -->
+<input type="radio" s:checked="$plan === 'premium'" name="plan" value="premium">
+<input type="radio" s:checked="$plan === 'basic'" name="plan" value="basic">
+
+<!-- With complex conditions -->
+<input type="checkbox" s:checked="in_array($item->id, $selectedIds)">
+```
+
+#### `s:selected`
+Conditionally add the `selected` attribute to `<option>` elements:
+
+```html
+<select name="country">
+    <option s:selected="$country === 'US'" value="US">United States</option>
+    <option s:selected="$country === 'CA'" value="CA">Canada</option>
+    <option s:selected="$country === 'MX'" value="MX">Mexico</option>
+</select>
+
+<!-- In loops -->
+<select name="category">
+    <option s:foreach="$categories as $cat"
+            s:selected="$cat->id === $selectedCategoryId"
+            value="<?= $cat->id ?>">
+        <?= $cat->name ?>
+    </option>
+</select>
+```
+
+#### `s:disabled`
+Conditionally add the `disabled` attribute to any form element:
+
+```html
+<!-- Disable during processing -->
+<button s:disabled="$isProcessing" type="submit">Submit</button>
+
+<!-- Disable based on validation -->
+<input s:disabled="!$canEdit" type="text" name="username">
+
+<!-- Disable form sections -->
+<fieldset s:disabled="$isReadOnly">
+    <input type="text" name="field1">
+    <input type="text" name="field2">
+</fieldset>
+```
+
+**How It Works:**
+
+These directives compile to calls to `HtmlAttributeHelper::booleanAttribute()`, which returns the attribute name if the condition is truthy, or an empty string if falsy:
+
+```php
+// Sugar template
+<input type="checkbox" s:checked="$subscribed">
+
+// Compiles to
+<input type="checkbox" <?= \Sugar\Runtime\HtmlAttributeHelper::booleanAttribute('checked', $subscribed) ?>>
+
+// Runtime output when $subscribed = true
+<input type="checkbox" checked>
+
+// Runtime output when $subscribed = false
+<input type="checkbox" >
+```
 
 ### Pipe Syntax
 

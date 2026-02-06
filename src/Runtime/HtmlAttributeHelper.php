@@ -104,4 +104,31 @@ final class HtmlAttributeHelper
 
         return implode(' ', $result);
     }
+
+    /**
+     * Conditionally output a boolean HTML attribute
+     *
+     * Boolean attributes are attributes whose presence represents true
+     * and absence represents false (e.g., checked, disabled, selected).
+     *
+     * Examples:
+     * ```php
+     * HtmlAttributeHelper::booleanAttribute('checked', true)
+     * // → "checked"
+     *
+     * HtmlAttributeHelper::booleanAttribute('checked', false)
+     * // → ""
+     *
+     * HtmlAttributeHelper::booleanAttribute('disabled', $isProcessing)
+     * // → "disabled" if $isProcessing is truthy, "" otherwise
+     * ```
+     *
+     * @param string $name Attribute name
+     * @param mixed $condition Condition to check
+     * @return string Attribute name if condition is truthy, empty string otherwise
+     */
+    public static function booleanAttribute(string $name, mixed $condition): string
+    {
+        return $condition ? $name : '';
+    }
 }
