@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\CacheMetadata;
 use Sugar\Cache\FileCache;
-use Sugar\Tests\TempDirectoryTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
  * Tests for FileCache implementation

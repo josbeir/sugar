@@ -11,8 +11,8 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
  * Integration test: Parser → DirectiveExtractionPass → DirectiveCompilationPass → CodeGenerator

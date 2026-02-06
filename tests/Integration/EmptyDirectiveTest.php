@@ -7,8 +7,8 @@ use ArrayIterator;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use Sugar\Runtime\EmptyHelper;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 /**
  * Integration tests for s:empty and s:forelse directives with various data types

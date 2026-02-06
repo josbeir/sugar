@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\TemplateInheritance\FileTemplateLoader;
-use Sugar\Tests\EngineTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 
 /**
  * Test template context binding ($this support)

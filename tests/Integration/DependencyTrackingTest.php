@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Config\SugarConfig;
 use Sugar\TemplateInheritance\FileTemplateLoader;
-use Sugar\Tests\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
  * Integration tests for dependency tracking during compilation

@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 /**
  * Integration tests for pipe syntax

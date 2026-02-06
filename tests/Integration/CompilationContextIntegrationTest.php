@@ -5,7 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Exception\SyntaxException;
-use Sugar\Tests\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
  * Integration test: Verify CompilationContext creates exceptions with automatic snippets

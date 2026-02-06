@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Constraint;
+namespace Sugar\Tests\Helper\Constraint;
 
 use PHPUnit\Framework\Constraint\Constraint;
 use Sugar\Ast\DocumentNode;

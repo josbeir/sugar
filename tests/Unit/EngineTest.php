@@ -9,7 +9,7 @@ use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\TemplateInheritance\FileTemplateLoader;
-use Sugar\Tests\TempDirectoryTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
  * Tests for Engine class

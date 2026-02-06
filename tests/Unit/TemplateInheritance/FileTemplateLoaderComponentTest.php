@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\TemplateInheritance\FileTemplateLoader;
-use Sugar\Tests\TempDirectoryTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class FileTemplateLoaderComponentTest extends TestCase
 {

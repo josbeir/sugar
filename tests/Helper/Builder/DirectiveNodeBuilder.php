@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Builder;
+namespace Sugar\Tests\Helper\Builder;
 
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\Node;

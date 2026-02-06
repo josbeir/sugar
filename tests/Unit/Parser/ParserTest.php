@@ -10,7 +10,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
-use Sugar\Tests\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class ParserTest extends TestCase
 {

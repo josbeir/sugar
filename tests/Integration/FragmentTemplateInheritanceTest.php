@@ -7,9 +7,9 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Config\SugarConfig;
 use Sugar\TemplateInheritance\FileTemplateLoader;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\ExecuteTemplateTrait;
-use Sugar\Tests\TempDirectoryTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
  * Test template inheritance features on fragment elements

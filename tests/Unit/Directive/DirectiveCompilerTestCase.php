@@ -8,10 +8,10 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Extension\DirectiveCompilerInterface;
-use Sugar\Tests\AstAssertionsTrait;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\CustomConstraintsTrait;
-use Sugar\Tests\NodeBuildersTrait;
+use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\CustomConstraintsTrait;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 /**
  * Base class for directive compiler tests

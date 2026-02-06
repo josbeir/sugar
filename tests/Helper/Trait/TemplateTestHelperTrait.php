@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests;
+namespace Sugar\Tests\Helper\Trait;
 
 use RuntimeException;
 use Sugar\Config\SugarConfig;
@@ -15,11 +15,11 @@ use Sugar\TemplateInheritance\FileTemplateLoader;
  */
 trait TemplateTestHelperTrait
 {
-    private string $fixturesPath = __DIR__ . '/fixtures/templates/';
+    private string $fixturesPath = SUGAR_TEST_TEMPLATES_PATH . '/';
 
-    private string $expectedCompiledPath = __DIR__ . '/fixtures/expected/compiled/';
+    private string $expectedCompiledPath = SUGAR_TEST_FIXTURES_PATH . '/expected/compiled/';
 
-    private string $expectedRenderedPath = __DIR__ . '/fixtures/expected/rendered/';
+    private string $expectedRenderedPath = SUGAR_TEST_FIXTURES_PATH . '/expected/rendered/';
 
     /**
      * Load a template fixture

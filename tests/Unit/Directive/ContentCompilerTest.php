@@ -8,7 +8,7 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Enum\OutputContext;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ContentCompilerTest extends TestCase
 {

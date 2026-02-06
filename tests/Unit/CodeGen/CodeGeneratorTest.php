@@ -11,10 +11,10 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\ExecuteTemplateTrait;
-use Sugar\Tests\NodeBuildersTrait;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
  * Test code generation from AST

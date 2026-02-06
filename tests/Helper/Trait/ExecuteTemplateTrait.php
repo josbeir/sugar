@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests;
+namespace Sugar\Tests\Helper\Trait;
 
 use Closure;
 use RuntimeException;

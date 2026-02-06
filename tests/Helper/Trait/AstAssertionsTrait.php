@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests;
+namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Ast\DocumentNode;
-use Sugar\Tests\Assertion\AstAssertionBuilder;
+use Sugar\Tests\Helper\Assertion\AstAssertionBuilder;
 
 /**
  * Trait providing fluent AST assertions

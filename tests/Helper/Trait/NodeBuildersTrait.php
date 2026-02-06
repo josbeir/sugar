@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests;
+namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Enum\OutputContext;
-use Sugar\Tests\Builder\DirectiveNodeBuilder;
-use Sugar\Tests\Builder\DocumentNodeBuilder;
-use Sugar\Tests\Builder\ElementNodeBuilder;
+use Sugar\Tests\Helper\Builder\DirectiveNodeBuilder;
+use Sugar\Tests\Helper\Builder\DocumentNodeBuilder;
+use Sugar\Tests\Helper\Builder\ElementNodeBuilder;
 
 /**
  * Trait providing fluent builders for test node creation

@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests;
+namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Tests\Constraint\ContainsPhpCode;
-use Sugar\Tests\Constraint\HasValidPhpSyntax;
-use Sugar\Tests\Constraint\MatchesAstStructure;
+use Sugar\Tests\Helper\Constraint\ContainsPhpCode;
+use Sugar\Tests\Helper\Constraint\HasValidPhpSyntax;
+use Sugar\Tests\Helper\Constraint\MatchesAstStructure;
 
 /**
  * Trait providing custom PHPUnit constraints for Sugar tests

@@ -5,9 +5,9 @@ namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Runtime\EmptyHelper;
-use Sugar\Tests\CompilerTestTrait;
-use Sugar\Tests\ExecuteTemplateTrait;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
  * Test compiler orchestration

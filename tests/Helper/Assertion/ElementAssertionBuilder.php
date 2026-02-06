@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Assertion;
+namespace Sugar\Tests\Helper\Assertion;
 
 use PHPUnit\Framework\Assert;
 use Sugar\Ast\ElementNode;

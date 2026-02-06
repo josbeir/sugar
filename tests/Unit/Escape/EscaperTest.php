@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
-use Sugar\Tests\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 /**
  * Test context-aware escaping (security-critical - 100% coverage required)
