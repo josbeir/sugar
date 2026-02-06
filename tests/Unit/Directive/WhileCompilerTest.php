@@ -5,10 +5,10 @@ namespace Sugar\Tests\Unit\Directive\Compiler;
 
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
 final class WhileCompilerTest extends DirectiveCompilerTestCase

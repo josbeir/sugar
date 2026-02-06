@@ -8,9 +8,9 @@ use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\DirectiveRegistry;
 
 final class DirectiveRegistryTest extends TestCase

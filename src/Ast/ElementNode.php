@@ -25,6 +25,7 @@ final class ElementNode extends Node implements SiblingNavigationInterface
      * @param bool $selfClosing Whether element is self-closing (<img /> vs <div></div>)
      * @param int $line Line number in source template
      * @param int $column Column number in source template
+     * @param ?string $dynamicTag Dynamic tag variable name for s:tag directive (when set, this PHP variable contains the runtime tag name)
      */
     public function __construct(
         public string $tag,
@@ -33,6 +34,7 @@ final class ElementNode extends Node implements SiblingNavigationInterface
         public bool $selfClosing,
         int $line,
         int $column,
+        public ?string $dynamicTag = null,
     ) {
         parent::__construct($line, $column);
     }

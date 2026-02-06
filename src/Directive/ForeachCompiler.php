@@ -5,10 +5,10 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\Trait\ForeachLoopTrait;
 use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
  * Compiler for foreach directive

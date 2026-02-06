@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Extension;
+namespace Sugar\Directive\Interface;
 
 /**
  * Interface for directive compilers that require sibling pairing

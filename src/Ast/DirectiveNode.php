@@ -29,6 +29,11 @@ final class DirectiveNode extends Node implements SiblingNavigationInterface
     private bool $consumedByPairing = false;
 
     /**
+     * Element metadata for directives that need to wrap the element itself
+     */
+    private ?ElementNode $elementNode = null;
+
+    /**
      * @param string $name Directive name (e.g., 'if', 'foreach', 'while')
      * @param string $expression PHP expression for the directive
      * @param array<\Sugar\Ast\Node> $children Child nodes to render when condition is true
@@ -43,6 +48,22 @@ final class DirectiveNode extends Node implements SiblingNavigationInterface
         int $column,
     ) {
         parent::__construct($line, $column);
+    }
+
+    /**
+     * Set element node metadata (for directives that need to wrap the element)
+     */
+    public function setElementNode(ElementNode $element): void
+    {
+        $this->elementNode = $element;
+    }
+
+    /**
+     * Get element node metadata
+     */
+    public function getElementNode(): ?ElementNode
+    {
+        return $this->elementNode;
     }
 
     /**

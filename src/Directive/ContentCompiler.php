@@ -8,9 +8,9 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Parser\PipeParser;
 
 /**

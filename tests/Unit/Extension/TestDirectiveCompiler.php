@@ -5,8 +5,8 @@ namespace Sugar\Tests\Unit\Extension;
 
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
  * Test compiler for testing class-name registration

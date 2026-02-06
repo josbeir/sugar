@@ -5,8 +5,8 @@ namespace Sugar\Tests\Unit\Directive;
 
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\UnlessCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 final class UnlessCompilerTest extends DirectiveCompilerTestCase
 {

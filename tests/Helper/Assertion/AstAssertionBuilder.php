@@ -38,6 +38,17 @@ final class AstAssertionBuilder
     }
 
     /**
+     * Assert the AST has more than a specific number of nodes
+     */
+    public function hasCountGreaterThan(int $minimum): self
+    {
+        $actual = is_array($this->ast) ? count($this->ast) : count($this->ast->children);
+        Assert::assertGreaterThan($minimum, $actual, sprintf('Expected more than %d nodes, got %d', $minimum, $actual));
+
+        return $this;
+    }
+
+    /**
      * Assert the AST contains at least one node of the given type
      */
     public function containsNodeType(string $class): self

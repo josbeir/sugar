@@ -15,10 +15,11 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\ElementExtractionInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\PassInterface;
 
@@ -163,14 +164,16 @@ final class DirectiveExtractionPass implements PassInterface
      * Separates directives by type:
      * - Control Flow: Only one allowed, wraps the element
      * - Content: Only one allowed, injects into children
+     * - Custom Extraction: Directives implementing ElementExtractionInterface (multiple allowed, processed in order)
      * - Attribute: Multiple allowed, remain as element attributes
      *
-     * @return array{controlFlow: array{name: string, expression: string}|null, content: array{name: string, expression: string}|null, remaining: array<\Sugar\Ast\AttributeNode>}
+     * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementExtractionInterface}>, remaining: array<\Sugar\Ast\AttributeNode>}
      */
     private function extractDirective(ElementNode $node): array
     {
         $controlFlowDirective = null;
         $contentDirective = null;
+        $customExtractionDirectives = [];
         $remainingAttrs = [];
         $controlFlowCount = 0;
         $contentCount = 0;
@@ -195,6 +198,17 @@ final class DirectiveExtractionPass implements PassInterface
                 $compiler = $this->registry->get($name);
                 $type = $compiler->getType();
 
+                // Check if directive needs custom extraction
+                if ($compiler instanceof ElementExtractionInterface) {
+                    $customExtractionDirectives[] = [
+                        'name' => $name,
+                        'expression' => $expression,
+                        'attr' => $attr,
+                        'compiler' => $compiler,
+                    ];
+                    continue;
+                }
+
                 match ($type) {
                     DirectiveType::CONTROL_FLOW => $controlFlowDirective = [
                         'name' => $name,
@@ -206,7 +220,6 @@ final class DirectiveExtractionPass implements PassInterface
                         'expression' => $expression,
                         'attr' => $attr,
                     ],
-                    // Attribute directives are compiled inline and added to remaining attributes
                     DirectiveType::ATTRIBUTE => $this->compileAttributeDirective(
                         $compiler,
                         $name,
@@ -255,6 +268,7 @@ final class DirectiveExtractionPass implements PassInterface
         return [
             'controlFlow' => $controlFlowDirective,
             'content' => $contentDirective,
+            'customExtraction' => $customExtractionDirectives,
             'remaining' => $remainingAttrs,
         ];
     }
@@ -265,12 +279,71 @@ final class DirectiveExtractionPass implements PassInterface
      * If the element only has attribute directives (s:class, s:spread), it remains an ElementNode
      * with those directives in its attributes array. The DirectiveCompilationPass will handle them.
      */
-    private function elementToDirective(ElementNode $node): DirectiveNode|ElementNode
+    private function elementToDirective(ElementNode $node): DirectiveNode|ElementNode|FragmentNode
     {
         $directives = $this->extractDirective($node);
 
         // Transform children recursively
         $transformedChildren = $this->transformChildren($node->children);
+
+        // If directive needs custom extraction, chain them all together
+        if ($directives['customExtraction'] !== []) {
+            // Start with current element and remaining attrs
+            $currentNode = NodeCloner::withAttributesAndChildren($node, $directives['remaining'], $transformedChildren);
+            $prefixNodes = []; // Collect nodes that should be siblings before the element
+
+            // Apply each custom extraction directive in order
+            foreach ($directives['customExtraction'] as $customDir) {
+                $result = $customDir['compiler']->extractFromElement(
+                    $currentNode,
+                    $customDir['expression'],
+                    $currentNode->children,
+                    $currentNode->attributes,
+                );
+
+                // Handle different result types
+                if ($result instanceof FragmentNode) {
+                    // FragmentNode may contain prefix nodes (like s:tag validation) + the element
+                    // Extract the element for further processing, keep prefix nodes
+                    $newElement = null;
+                    foreach ($result->children as $child) {
+                        if ($child instanceof ElementNode) {
+                            $newElement = $child;
+                        } else {
+                            // Non-element children are prefix nodes
+                            $prefixNodes[] = $child;
+                        }
+                    }
+
+                    if ($newElement instanceof ElementNode) {
+                        $currentNode = $newElement;
+                    } else {
+                        // No element found in fragment - use the fragment itself
+                        $currentNode = $result;
+                        break;
+                    }
+                } elseif ($result instanceof ElementNode) {
+                    // Simple case - element transformed to element
+                    $currentNode = $result;
+                } else {
+                    // Result is DirectiveNode or other - can't extract further
+                    $currentNode = $result;
+                    break;
+                }
+            }
+
+            // Wrap in fragment if we have prefix nodes
+            if ($prefixNodes !== []) {
+                return new FragmentNode(
+                    attributes: [],
+                    children: [...$prefixNodes, $currentNode],
+                    line: $node->line,
+                    column: $node->column,
+                );
+            }
+
+            return $currentNode;
+        }
 
         // If there are only attribute directives, return ElementNode with them
         if ($directives['controlFlow'] === null && $directives['content'] === null) {
@@ -463,7 +536,7 @@ final class DirectiveExtractionPass implements PassInterface
      * Attribute directives like s:class and s:spread are compiled immediately
      * and added back as regular attributes with OutputNode values.
      *
-     * @param \Sugar\Extension\DirectiveCompilerInterface $compiler Directive compiler
+     * @param \Sugar\Directive\Interface\DirectiveCompilerInterface $compiler Directive compiler
      * @param string $name Directive name
      * @param string $expression Directive expression
      * @param int $line Line number

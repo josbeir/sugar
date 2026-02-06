@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\CustomConstraintsTrait;

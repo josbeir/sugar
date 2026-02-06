@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
 use Sugar\Directive\ForeachCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
 final class ForeachCompilerTest extends DirectiveCompilerTestCase

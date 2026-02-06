@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\IssetCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 final class IssetCompilerTest extends DirectiveCompilerTestCase
 {

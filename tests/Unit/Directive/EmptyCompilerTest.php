@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Directive;
 
 use Sugar\Directive\EmptyCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Runtime\EmptyHelper;
 
 final class EmptyCompilerTest extends DirectiveCompilerTestCase

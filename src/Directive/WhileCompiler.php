@@ -8,9 +8,9 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
  * Compiler for while directive

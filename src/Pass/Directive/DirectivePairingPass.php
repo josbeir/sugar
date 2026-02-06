@@ -9,8 +9,8 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\PairedDirectiveCompilerInterface;
 use Sugar\Extension\DirectiveRegistry;
-use Sugar\Extension\PairedDirectiveCompilerInterface;
 use Sugar\Pass\PassInterface;
 
 /**

@@ -6,7 +6,7 @@ namespace Sugar\Tests\Unit\Directive;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ClassCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Runtime\HtmlAttributeHelper;
 
 final class ClassCompilerTest extends DirectiveCompilerTestCase

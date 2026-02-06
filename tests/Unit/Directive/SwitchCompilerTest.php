@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Directive;
 
 use Sugar\Ast\RawPhpNode;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 final class SwitchCompilerTest extends DirectiveCompilerTestCase
 {

@@ -10,9 +10,12 @@ use Sugar\Directive\EmptyCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\IfCompiler;
+use Sugar\Directive\IfContentCompiler;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\TagCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
@@ -47,7 +50,7 @@ final class DirectiveRegistry
      *
      * Maps directive names to their compiler class names or instances.
      *
-     * @var array<string, class-string<\Sugar\Extension\DirectiveCompilerInterface>>
+     * @var array<string, class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface>>
      */
     private const DEFAULT_DIRECTIVES = [
         // Control flow
@@ -67,10 +70,13 @@ final class DirectiveRegistry
         // Attributes
         'class' => ClassCompiler::class,
         'spread' => SpreadCompiler::class,
+        // HTML manipulation
+        'tag' => TagCompiler::class,
+        'ifcontent' => IfContentCompiler::class,
     ];
 
     /**
-     * @var array<string, \Sugar\Extension\DirectiveCompilerInterface|class-string<\Sugar\Extension\DirectiveCompilerInterface>>
+     * @var array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface|class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface>>
      */
     private array $directives = [];
 
@@ -104,7 +110,7 @@ final class DirectiveRegistry
      * Accepts either an instance or a class name for lazy instantiation.
      *
      * @param string $name Directive name (e.g., 'if', 'foreach', 'while')
-     * @param \Sugar\Extension\DirectiveCompilerInterface|class-string<\Sugar\Extension\DirectiveCompilerInterface> $compiler The compiler instance or class name
+     * @param \Sugar\Directive\Interface\DirectiveCompilerInterface|class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface> $compiler The compiler instance or class name
      */
     public function register(string $name, DirectiveCompilerInterface|string $compiler): void
     {
@@ -128,7 +134,7 @@ final class DirectiveRegistry
      * Instantiates the compiler if a class name was registered.
      *
      * @param string $name Directive name
-     * @return \Sugar\Extension\DirectiveCompilerInterface The compiler implementation
+     * @return \Sugar\Directive\Interface\DirectiveCompilerInterface The compiler implementation
      * @throws \Sugar\Exception\UnknownDirectiveException If directive is not registered
      */
     public function get(string $name): DirectiveCompilerInterface
@@ -158,7 +164,7 @@ final class DirectiveRegistry
      *
      * Resolves all lazy-loaded class strings to instances.
      *
-     * @return array<string, \Sugar\Extension\DirectiveCompilerInterface>
+     * @return array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface>
      */
     public function all(): array
     {
@@ -167,7 +173,7 @@ final class DirectiveRegistry
             $this->get($name); // This will instantiate and cache it
         }
 
-        /** @var array<string, \Sugar\Extension\DirectiveCompilerInterface> $directives */
+        /** @var array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface> $directives */
         $directives = $this->directives;
 
         return $directives;
@@ -177,7 +183,7 @@ final class DirectiveRegistry
      * Get directives of a specific type
      *
      * @param \Sugar\Enum\DirectiveType $type Directive type to filter by
-     * @return array<string, \Sugar\Extension\DirectiveCompilerInterface> Filtered directives
+     * @return array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface> Filtered directives
      */
     public function getByType(DirectiveType $type): array
     {

@@ -6,7 +6,7 @@ namespace Sugar\Tests\Unit\Directive\Compiler;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\IfCompiler;
-use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
 final class IfCompilerTest extends DirectiveCompilerTestCase

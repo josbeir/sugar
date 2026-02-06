@@ -8,9 +8,9 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\DirectiveCompilerInterface;
 
 /**
  * Compiler for switch/case/default directives

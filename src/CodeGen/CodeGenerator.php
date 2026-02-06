@@ -62,8 +62,9 @@ final class CodeGenerator
         $buffer->writeln('');
         $buffer->writeln('return function(array|object $__data = []): string {');
         $buffer->writeln('    ob_start();');
-        $buffer->writeln('    extract((array)$__data, EXTR_SKIP);');
-        $buffer->write('    ?>');
+        $buffer->writeln('    try {');
+        $buffer->writeln('        extract((array)$__data, EXTR_SKIP);');
+        $buffer->write('        ?>');
 
         // Generate code for each node
         foreach ($ast->children as $node) {
@@ -72,7 +73,11 @@ final class CodeGenerator
 
         $buffer->write('<?php');
         $buffer->writeln('');
-        $buffer->writeln('    return ob_get_clean();');
+        $buffer->writeln('        return ob_get_clean();');
+        $buffer->writeln('    } catch (\Throwable $__e) {');
+        $buffer->writeln('        ob_end_clean();');
+        $buffer->writeln('        throw $__e;');
+        $buffer->writeln('    }');
         $buffer->writeln('};');
 
         return $buffer->getContent();
@@ -165,7 +170,14 @@ final class CodeGenerator
     private function generateElement(ElementNode $node, OutputBuffer $buffer): void
     {
         // Opening tag
-        $buffer->write('<' . $node->tag);
+        if ($node->dynamicTag !== null) {
+            // Dynamic tag name (from s:tag directive)
+            $buffer->write('<');
+            $buffer->write('<?= ' . $node->dynamicTag . ' ?>');
+        } else {
+            // Static tag name
+            $buffer->write('<' . $node->tag);
+        }
 
         // Attributes
         foreach ($node->attributes as $attribute) {
@@ -194,7 +206,15 @@ final class CodeGenerator
             }
 
             // Closing tag
-            $buffer->write('</' . $node->tag . '>');
+            if ($node->dynamicTag !== null) {
+                // Dynamic closing tag
+                $buffer->write('</');
+                $buffer->write('<?= ' . $node->dynamicTag . ' ?>');
+                $buffer->write('>');
+            } else {
+                // Static closing tag
+                $buffer->write('</' . $node->tag . '>');
+            }
         }
     }
 

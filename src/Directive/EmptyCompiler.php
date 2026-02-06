@@ -6,8 +6,8 @@ namespace Sugar\Directive;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\EmptyHelper;
 
 /**

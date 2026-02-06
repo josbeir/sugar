@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Directive;
 
 use Sugar\Ast\RawPhpNode;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\HtmlAttributeHelper;
 
 final class SpreadCompilerTest extends DirectiveCompilerTestCase

@@ -31,6 +31,7 @@ final class NodeCloner
             selfClosing: $node->selfClosing,
             line: $node->line,
             column: $node->column,
+            dynamicTag: $node->dynamicTag,
         );
     }
 
@@ -50,6 +51,7 @@ final class NodeCloner
             selfClosing: $node->selfClosing,
             line: $node->line,
             column: $node->column,
+            dynamicTag: $node->dynamicTag,
         );
     }
 
@@ -73,6 +75,7 @@ final class NodeCloner
             selfClosing: $node->selfClosing,
             line: $node->line,
             column: $node->column,
+            dynamicTag: $node->dynamicTag,
         );
     }
 

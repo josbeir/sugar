@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Extension;
+namespace Sugar\Directive\Interface;
 
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;

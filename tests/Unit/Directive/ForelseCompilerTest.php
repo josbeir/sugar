@@ -6,8 +6,8 @@ namespace Sugar\Tests\Unit\Directive\Compiler;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
