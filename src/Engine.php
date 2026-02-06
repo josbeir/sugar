@@ -7,7 +7,7 @@ use Closure;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
-use Sugar\TemplateInheritance\TemplateLoaderInterface;
+use Sugar\Loader\TemplateLoaderInterface;
 
 /**
  * Sugar template engine
@@ -19,7 +19,7 @@ final class Engine implements EngineInterface
 {
     /**
      * @param \Sugar\Compiler $compiler Template compiler
-     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Cache\TemplateCacheInterface $cache Template cache
      * @param bool $debug Debug mode (enables freshness checking)
      * @param object|null $templateContext Optional context object to bind to templates (for $this access)

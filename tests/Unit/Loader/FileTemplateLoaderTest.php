@@ -6,7 +6,7 @@ namespace Sugar\Tests\Unit\TemplateInheritance;
 use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\TemplateNotFoundException;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 
 final class FileTemplateLoaderTest extends TestCase
 {

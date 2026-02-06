@@ -888,7 +888,7 @@ The high-level `Engine` API provides caching, template loading, and context bind
 
 ```php
 use Sugar\Engine;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Cache\FileCache;
 
 // Create engine with fluent builder
@@ -913,7 +913,7 @@ For advanced use cases where you need direct control over compilation:
 use Sugar\Compiler;
 use Sugar\Parser\Parser;
 use Sugar\Escape\Escaper;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 
 // Basic compiler
 $compiler = new Compiler(
@@ -943,7 +943,7 @@ The `FileCache` automatically tracks template dependencies (layouts, includes, c
 ```php
 use Sugar\Engine;
 use Sugar\Cache\FileCache;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 
 $cache = new FileCache(__DIR__ . '/cache/templates');
 
@@ -1111,7 +1111,7 @@ The `EngineBuilder` provides a fluent API for configuring all aspects of the tem
 ```php
 use Sugar\Engine;
 use Sugar\Cache\FileCache;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Config\SugarConfig;
 
 $engine = Engine::builder()

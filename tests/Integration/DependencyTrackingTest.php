@@ -6,7 +6,7 @@ namespace Sugar\Test\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Config\SugarConfig;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**

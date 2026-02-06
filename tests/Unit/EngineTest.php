@@ -8,7 +8,7 @@ use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**

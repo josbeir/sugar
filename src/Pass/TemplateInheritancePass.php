@@ -16,7 +16,7 @@ use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\TemplateLoaderInterface;
+use Sugar\Loader\TemplateLoaderInterface;
 
 final class TemplateInheritancePass implements PassInterface
 {
@@ -34,7 +34,7 @@ final class TemplateInheritancePass implements PassInterface
     /**
      * Constructor.
      *
-     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(

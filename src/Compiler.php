@@ -28,7 +28,7 @@ use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
 use Sugar\Pass\TemplateInheritancePass;
-use Sugar\TemplateInheritance\TemplateLoaderInterface;
+use Sugar\Loader\TemplateLoaderInterface;
 
 /**
  * Orchestrates template compilation pipeline
@@ -59,7 +59,7 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
-     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
+     * @param \Sugar\Loader\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(

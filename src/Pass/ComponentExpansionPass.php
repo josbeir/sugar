@@ -20,7 +20,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\TemplateLoaderInterface;
+use Sugar\Loader\TemplateLoaderInterface;
 
 /**
  * Expands component invocations into their template content
@@ -37,7 +37,7 @@ final readonly class ComponentExpansionPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader for loading components
+     * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader for loading components
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry for directive type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration

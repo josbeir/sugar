@@ -9,7 +9,7 @@ use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\TemplateLoaderInterface;
+use Sugar\Loader\TemplateLoaderInterface;
 
 /**
  * Builder for Engine configuration
@@ -39,7 +39,7 @@ final class EngineBuilder
     /**
      * Set template loader
      *
-     * @param \Sugar\TemplateInheritance\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @return $this
      */
     public function withTemplateLoader(TemplateLoaderInterface $loader)

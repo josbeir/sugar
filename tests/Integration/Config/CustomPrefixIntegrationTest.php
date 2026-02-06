@@ -8,7 +8,7 @@ use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class CustomPrefixIntegrationTest extends TestCase

@@ -18,7 +18,7 @@ use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Pass\ComponentExpansionPass;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 

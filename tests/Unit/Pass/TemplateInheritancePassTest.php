@@ -14,7 +14,7 @@ use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Pass\PassInterface;
 use Sugar\Pass\TemplateInheritancePass;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 
 final class TemplateInheritancePassTest extends PassTestCase
 {

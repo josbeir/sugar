@@ -8,7 +8,7 @@ use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Loader\FileTemplateLoader;
 
 /**
  * Helper trait for setting up compiler-related objects in tests

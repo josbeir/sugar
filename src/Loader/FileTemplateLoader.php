@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\TemplateInheritance;
+namespace Sugar\Loader;
 
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
