@@ -86,23 +86,4 @@ final class EmptyHelper
         // All other values (objects, resources, etc.) are considered non-empty
         return false;
     }
-
-    /**
-     * Ensure value is iterable for foreach loops
-     *
-     * Converts non-iterable values to empty arrays to prevent foreach errors.
-     * Used internally by foreach-based directives.
-     *
-     * @param mixed $value Value to convert
-     * @return iterable<array-key, mixed> Iterable value (array or Traversable)
-     */
-    public static function ensureIterable(mixed $value): iterable
-    {
-        if (is_array($value) || $value instanceof Traversable) {
-            return $value;
-        }
-
-        // Return empty array for non-iterable values
-        return [];
-    }
 }

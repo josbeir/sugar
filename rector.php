@@ -16,7 +16,6 @@ return RectorConfig::configure()
     ->withSkip([
         DisallowedEmptyRuleFixerRector::class,
         SimplifyIfElseToTernaryRector::class,
-        ReturnTypeFromStrictFluentReturnRector::class,
     ])
     ->withImportNames(
         importNames: true,
