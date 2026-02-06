@@ -15,6 +15,7 @@
 ## Table of Contents
 
 - [What is Sugar?](#what-is-sugar)
+- [Feature Comparison](#feature-comparison)
   - [Before & After](#before--after)
   - [More Examples](#more-examples)
     - [PHP Pipe Syntax](#php-pipe-syntax)
@@ -24,9 +25,12 @@
     - [Output Directives](#output-directives)
     - [Reusable Components](#reusable-components)
     - [Standalone Variable Checks](#standalone-variable-checks)
+    - [Dynamic HTML Tags](#dynamic-html-tags)
+    - [Conditional Wrappers](#conditional-wrappers)
 - [Why Sugar?](#why-sugar)
 - [Features](#features)
   - [Directives](#directives)
+  - [Boolean HTML Attributes](#boolean-html-attributes)
   - [Pipe Syntax](#pipe-syntax)
   - [Context-Aware Escaping](#context-aware-escaping-1)
   - [Loop Metadata](#loop-metadata-1)
@@ -1019,7 +1023,11 @@ use Sugar\Cache\FileCache;
 
 // Create engine with fluent builder
 $engine = Engine::builder()
-    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates'))
+    ->withTemplateLoader(new FileTemplateLoader(
+        config: new SugarConfig(),
+        templatePaths: __DIR__ . '/templates',  // or ['/path1', '/path2']
+        componentPaths: 'components'  // optional, relative to template paths
+    ))
     ->withCache(new FileCache(__DIR__ . '/cache'))
     ->withDebug(true) // Enable during development
     ->build();
@@ -1048,7 +1056,10 @@ $compiler = new Compiler(
 );
 
 // With template inheritance support
-$loader = new FileTemplateLoader(__DIR__ . '/templates');
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: __DIR__ . '/templates'
+);
 $compiler = new Compiler(
     new Parser(),
     new Escaper(),
@@ -1074,7 +1085,10 @@ use Sugar\Loader\FileTemplateLoader;
 $cache = new FileCache(__DIR__ . '/cache/templates');
 
 $engine = Engine::builder()
-    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates'))
+    ->withTemplateLoader(new FileTemplateLoader(
+        config: new SugarConfig(),
+        templatePaths: __DIR__ . '/templates'
+    ))
     ->withCache($cache)
     ->build();
 ```
@@ -1240,14 +1254,21 @@ use Sugar\Cache\FileCache;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Config\SugarConfig;
 
-$engine = Engine::builder()
+$config = SugarConfig::withPrefix('x');  // or: new SugarConfig() for defaults
+
+$engine = Engine::builder($config)
     // Template loading
-    ->withTemplateLoader(new FileTemplateLoader(__DIR__ . '/templates', [
-        'componentPaths' => [
-            __DIR__ . '/templates/components',
-            __DIR__ . '/vendor/ui-library/components'
+    ->withTemplateLoader(new FileTemplateLoader(
+        config: $config,
+        templatePaths: [
+            __DIR__ . '/templates',
+            __DIR__ . '/vendor/shared-templates'
+        ],
+        componentPaths: [
+            'components',                    // Relative to template paths
+            'vendor/ui-library/components'   // Also relative
         ]
-    ]))
+    ))
 
     // Caching
     ->withCache(new FileCache(__DIR__ . '/cache/templates'))
@@ -1255,9 +1276,6 @@ $engine = Engine::builder()
 
     // Context binding
     ->withTemplateContext($viewHelpers)
-
-    // Custom configuration
-    ->withConfig(SugarConfig::withPrefix('x'))
 
     ->build();
 ```
@@ -1270,7 +1288,61 @@ $engine = Engine::builder()
 | `withCache()` | Set cache implementation | `FileCache` in temp dir |
 | `withDebug()` | Enable debug mode with freshness checks | `false` |
 | `withTemplateContext()` | Bind context object to templates | `null` |
-| `withConfig()` | Set custom configuration | Default config |
+
+**Note:** Configuration is passed to `Engine::builder($config)` in the constructor, not via a method.
+
+#### FileTemplateLoader Configuration
+
+The `FileTemplateLoader` accepts template paths and component paths directly in its constructor:
+
+```php
+use Sugar\Loader\FileTemplateLoader;
+use Sugar\Config\SugarConfig;
+
+// Basic usage with single path
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: __DIR__ . '/templates'
+);
+
+// Multiple template search paths (searched in order)
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: [
+        __DIR__ . '/templates',
+        __DIR__ . '/vendor/shared-templates'
+    ]
+);
+
+// With component paths for auto-discovery
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: __DIR__ . '/templates',
+    componentPaths: [
+        'components',              // Relative to template paths
+        'vendor/ui-components'     // Also relative
+    ]
+);
+
+// All parameters accept both string and array
+$loader = new FileTemplateLoader(
+    templatePaths: '/templates',   // single string
+    componentPaths: 'components'   // or array for multiple paths
+);
+```
+
+**Constructor parameters:**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `config` | `SugarConfig` | Sugar configuration (prefix settings) | `new SugarConfig()` |
+| `templatePaths` | `string\|array<string>` | Paths to search for templates | Current working directory |
+| `componentPaths` | `string\|array<string>` | Paths **relative to template paths** to scan for components | `[]` (no components) |
+
+**How template resolution works:**
+1. When a template is requested (e.g., `pages/home`), the loader searches each path in `templatePaths` in order
+2. The first matching file is returned (supports both `.sugar.php` and `.php` extensions)
+3. Component paths are **relative to each template path** - for each template path, the loader appends the component path and scans for components
 
 #### Custom Directive Prefix
 
@@ -1288,10 +1360,9 @@ $config = new SugarConfig(
     fragmentElement: 'v-fragment'  // Optional, defaults to "{prefix}-template"
 );
 
-// Pass config to Engine builder
-$engine = Engine::builder()
+// Pass config to Engine builder constructor
+$engine = Engine::builder($config)
     ->withTemplateLoader($loader)
-    ->withConfig($config)
     ->build();
 
 // Or pass to Parser and Compiler directly (low-level API)

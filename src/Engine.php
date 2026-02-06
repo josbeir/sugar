@@ -7,6 +7,7 @@ use Closure;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
+use Sugar\Config\SugarConfig;
 use Sugar\Loader\TemplateLoaderInterface;
 
 /**
@@ -36,11 +37,12 @@ final class Engine implements EngineInterface
     /**
      * Create a builder for fluent engine configuration
      *
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      * @return \Sugar\EngineBuilder Builder instance
      */
-    public static function builder(): EngineBuilder
+    public static function builder(SugarConfig $config = new SugarConfig()): EngineBuilder
     {
-        return new EngineBuilder();
+        return new EngineBuilder($config);
     }
 
     /**

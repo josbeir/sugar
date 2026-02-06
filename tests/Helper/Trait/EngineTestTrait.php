@@ -33,9 +33,8 @@ trait EngineTestTrait
         $config = new SugarConfig();
         $loader = new FileTemplateLoader($config, [$templatePath]);
 
-        $builder = Engine::builder()
+        $builder = Engine::builder($config)
             ->withTemplateLoader($loader)
-            ->withConfig($config)
             ->withDebug($debug);
 
         if ($context !== null) {

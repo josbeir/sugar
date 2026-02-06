@@ -34,10 +34,12 @@ final class EngineBuilder
 
     /**
      * Constructor
+     *
+     * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
-    public function __construct()
+    public function __construct(SugarConfig $config = new SugarConfig())
     {
-        $this->config = new SugarConfig();
+        $this->config = $config;
     }
 
     /**
@@ -78,19 +80,6 @@ final class EngineBuilder
     public function withDirectiveRegistry(DirectiveRegistry $registry)
     {
         $this->registry = $registry;
-
-        return $this;
-    }
-
-    /**
-     * Set configuration
-     *
-     * @param \Sugar\Config\SugarConfig $config Configuration
-     * @return $this
-     */
-    public function withConfig(SugarConfig $config)
-    {
-        $this->config = $config;
 
         return $this;
     }

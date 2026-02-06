@@ -82,16 +82,6 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * Get the directive registry for framework customization
-     *
-     * Allows frameworks to register custom directives.
-     */
-    public function getDirectiveRegistry(): DirectiveRegistry
-    {
-        return $this->registry;
-    }
-
-    /**
      * Compile template source to executable PHP code
      *
      * @param string $source Template source code
