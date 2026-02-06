@@ -6,7 +6,6 @@ namespace Sugar\Loader;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
-use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\TemplateNotFoundException;
@@ -17,15 +16,8 @@ use Sugar\Exception\TemplateNotFoundException;
  * Handles both regular template loading (s:include, s:extends) and
  * component discovery and loading (s-button, s-alert).
  */
-class FileTemplateLoader implements TemplateLoaderInterface
+class FileTemplateLoader extends AbstractTemplateLoader
 {
-    /**
-     * @var array<string, string> Component name → relative path from basePath
-     */
-    private array $components = [];
-
-    private DirectivePrefixHelper $prefixHelper;
-
     /**
      * @var array<string> Template paths to search
      */
@@ -39,10 +31,12 @@ class FileTemplateLoader implements TemplateLoaderInterface
      * @param array<string>|string $componentPaths Paths to scan for component templates
      */
     public function __construct(
-        private readonly SugarConfig $config = new SugarConfig(),
+        SugarConfig $config = new SugarConfig(),
         string|array $templatePaths = [],
         string|array $componentPaths = [],
     ) {
+        parent::__construct($config);
+
         $templatePaths = is_string($templatePaths) ? [$templatePaths] : $templatePaths;
         $componentPaths = is_string($componentPaths) ? [$componentPaths] : $componentPaths;
 
@@ -52,8 +46,6 @@ class FileTemplateLoader implements TemplateLoaderInterface
         } else {
             $this->templatePaths = $templatePaths;
         }
-
-        $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
 
         // Auto-discover components from provided paths
         foreach ($componentPaths as $path) {
@@ -108,61 +100,6 @@ class FileTemplateLoader implements TemplateLoaderInterface
                 implode(', ', $this->templatePaths),
             ),
         );
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function resolve(string $path, string $currentTemplate = ''): string
-    {
-        // Absolute paths (starting with /)
-        if (str_starts_with($path, '/')) {
-            return $this->normalizePath($path);
-        }
-
-        // Relative paths
-        if ($currentTemplate !== '') {
-            $currentDir = dirname($currentTemplate);
-            $combined = $currentDir . '/' . $path;
-
-            return $this->normalizePath($combined);
-        }
-
-        return $this->normalizePath($path);
-    }
-
-    /**
-     * Normalize path by resolving . and .. segments.
-     *
-     * @param string $path Path to normalize
-     * @return string Normalized path
-     */
-    private function normalizePath(string $path): string
-    {
-        $parts = explode('/', $path);
-        $result = [];
-
-        foreach ($parts as $part) {
-            if ($part === '') {
-                continue;
-            }
-
-            if ($part === '.') {
-                continue;
-            }
-
-            if ($part === '..') {
-                if ($result !== []) {
-                    array_pop($result);
-                }
-
-                continue;
-            }
-
-            $result[] = $part;
-        }
-
-        return implode('/', $result);
     }
 
     /**
@@ -267,50 +204,5 @@ class FileTemplateLoader implements TemplateLoaderInterface
 
         // Reuse existing load() method with relative path
         return $this->load($this->components[$name]);
-    }
-
-    /**
-     * Check if element name is a registered component
-     *
-     * @param string $elementName Full element name (e.g., "s-button")
-     * @return bool True if registered component, false otherwise
-     */
-    public function isComponent(string $elementName): bool
-    {
-        // Must start with element prefix
-        if (!$this->prefixHelper->hasElementPrefix($elementName)) {
-            return false;
-        }
-
-        // Fragment element (s-template) is not a component
-        if ($elementName === $this->config->getFragmentElement()) {
-            return false;
-        }
-
-        // Extract component name and check if registered
-        $componentName = $this->prefixHelper->stripElementPrefix($elementName);
-
-        return $this->hasComponent($componentName);
-    }
-
-    /**
-     * Get component name from element name
-     *
-     * @param string $elementName Full element name (e.g., "s-button")
-     * @return string Component name (e.g., "button")
-     */
-    public function getComponentName(string $elementName): string
-    {
-        return $this->prefixHelper->stripElementPrefix($elementName);
-    }
-
-    /**
-     * Get all registered components
-     *
-     * @return array<string, string> Component name → relative path
-     */
-    public function getComponents(): array
-    {
-        return $this->components;
     }
 }

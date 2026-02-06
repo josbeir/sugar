@@ -38,6 +38,9 @@
   - [Template Inheritance & Composition](#template-inheritance--composition)
   - [Components](#components)
 - [Quick Start](#quick-start)
+- [Template Loaders](#template-loaders)
+  - [FileTemplateLoader](#filetemplateloader)
+  - [StringTemplateLoader](#stringtemplateloader)
 - [Caching](#caching)
 - [Template Context](#template-context)
 - [Configuration](#configuration)
@@ -1069,6 +1072,109 @@ $compiler = new Compiler(
 $compiled = $compiler->compile('<div s:if="$show"><?= $message ?></div>');
 ```
 
+## Template Loaders
+
+Sugar provides two built-in template loaders for different use cases. Both implement the same interface and can be used interchangeably.
+
+### FileTemplateLoader
+
+Loads templates from the filesystem. Ideal for production applications.
+
+**Basic Usage:**
+```php
+use Sugar\Loader\FileTemplateLoader;
+use Sugar\Config\SugarConfig;
+
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: __DIR__ . '/templates',      // or ['/path1', '/path2']
+    componentPaths: 'components'                 // optional, relative to template paths
+);
+```
+
+**Multiple Paths:**
+```php
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: [
+        __DIR__ . '/templates',
+        __DIR__ . '/vendor/shared-ui/templates'
+    ],
+    componentPaths: [
+        'components',                            // Relative to each template path
+        'vendor/ui-library/components'
+    ]
+);
+```
+
+**Features:**
+- Searches template paths in order (first match wins)
+- Auto-discovers components in specified directories
+- Supports `.sugar.php` and `.php` extensions with fallback
+- Component paths are relative to each template path
+- Handles `s:include`, `s:extends`, and component loading
+
+### StringTemplateLoader
+
+Loads templates from memory. Perfect for testing, database-stored templates, or dynamic content.
+
+**Basic Usage:**
+```php
+use Sugar\Loader\StringTemplateLoader;
+
+$loader = new StringTemplateLoader(
+    config: new SugarConfig(),
+    templates: [
+        'email/welcome' => '<h1>Welcome <?= $name ?>!</h1>',
+        'email/confirm' => '<p>Please confirm your email: <?= $email ?></p>'
+    ],
+    components: [
+        'button' => '<button class="btn"><?= $slot ?></button>'
+    ]
+);
+```
+
+**Dynamic Templates:**
+```php
+$loader = new StringTemplateLoader(config: new SugarConfig());
+
+// Add templates at runtime
+$loader->addTemplate('user/profile', $templateFromDatabase);
+$loader->addComponent('custom-widget', $componentSource);
+```
+
+**Use Cases:**
+- **Testing:** Write templates inline without file I/O
+- **CMS/Database:** Store templates in database, load at runtime
+- **Dynamic Generation:** Generate templates programmatically
+- **Prototyping:** Quickly test template logic without files
+
+**Features:**
+- In-memory storage (zero filesystem access)
+- Same component support as FileTemplateLoader
+- Path resolution and normalization
+- Extension fallback (`.sugar.php`, `.php`)
+- Full support for `s:include`, `s:extends`, components
+
+**Example with Engine:**
+```php
+use Sugar\Engine;
+
+// Load templates from database
+$templates = $db->query('SELECT path, source FROM templates')->fetchAll();
+
+$loader = new StringTemplateLoader(
+    config: new SugarConfig(),
+    templates: array_column($templates, 'source', 'path')
+);
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->build();
+
+echo $engine->render('user/dashboard', ['user' => $currentUser]);
+```
+
 ## Caching
 
 Sugar includes a powerful file-based caching system with automatic dependency tracking and cascade invalidation.
@@ -1291,62 +1397,9 @@ $engine = Engine::builder($config)
 
 **Note:** Configuration is passed to `Engine::builder($config)` in the constructor, not via a method.
 
-#### FileTemplateLoader Configuration
-
-The `FileTemplateLoader` accepts template paths and component paths directly in its constructor:
-
-```php
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Config\SugarConfig;
-
-// Basic usage with single path
-$loader = new FileTemplateLoader(
-    config: new SugarConfig(),
-    templatePaths: __DIR__ . '/templates'
-);
-
-// Multiple template search paths (searched in order)
-$loader = new FileTemplateLoader(
-    config: new SugarConfig(),
-    templatePaths: [
-        __DIR__ . '/templates',
-        __DIR__ . '/vendor/shared-templates'
-    ]
-);
-
-// With component paths for auto-discovery
-$loader = new FileTemplateLoader(
-    config: new SugarConfig(),
-    templatePaths: __DIR__ . '/templates',
-    componentPaths: [
-        'components',              // Relative to template paths
-        'vendor/ui-components'     // Also relative
-    ]
-);
-
-// All parameters accept both string and array
-$loader = new FileTemplateLoader(
-    templatePaths: '/templates',   // single string
-    componentPaths: 'components'   // or array for multiple paths
-);
-```
-
-**Constructor parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `config` | `SugarConfig` | Sugar configuration (prefix settings) | `new SugarConfig()` |
-| `templatePaths` | `string\|array<string>` | Paths to search for templates | Current working directory |
-| `componentPaths` | `string\|array<string>` | Paths **relative to template paths** to scan for components | `[]` (no components) |
-
-**How template resolution works:**
-1. When a template is requested (e.g., `pages/home`), the loader searches each path in `templatePaths` in order
-2. The first matching file is returned (supports both `.sugar.php` and `.php` extensions)
-3. Component paths are **relative to each template path** - for each template path, the loader appends the component path and scans for components
-
 #### Custom Directive Prefix
 
-By default, Sugar uses the `s:` prefix for directives (e.g., `s:if`, `s:foreach`). You can customize this to match your preferences or integrate with other frameworks:
+By default, Sugar uses the `s:` prefix for directives (e.g., `s:if`, `s:foreach`). You can customize this to match your preferences:
 
 ```php
 use Sugar\Config\SugarConfig;
@@ -1364,17 +1417,6 @@ $config = new SugarConfig(
 $engine = Engine::builder($config)
     ->withTemplateLoader($loader)
     ->build();
-
-// Or pass to Parser and Compiler directly (low-level API)
-$compiler = new Compiler(
-    parser: new Parser($config),
-    escaper: new Escaper(),
-    config: $config
-);
-
-// Now use your custom prefix
-$template = '<div x:if="$show">Hello</div>';  // Using 'x' prefix
-$compiled = $compiler->compile($template);
 ```
 
 **Common prefix conventions:**
@@ -1382,12 +1424,6 @@ $compiled = $compiler->compile($template);
 - `x:` - Inspired by JSX conventions
 - `v:` - Vue.js style directives
 - `tw:` - Tailwind-style naming
-
-**Benefits:**
-- ✅ Avoid conflicts with other attribute-based frameworks
-- ✅ Match your team's naming conventions
-- ✅ Support multiple template styles in the same project
-- ✅ Backward compatible - defaults to `s:` prefix
 
 ## Architecture
 
