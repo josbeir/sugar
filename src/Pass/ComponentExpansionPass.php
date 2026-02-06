@@ -13,7 +13,6 @@ use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
@@ -21,6 +20,7 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 /**
  * Expands component invocations into their template content
@@ -30,6 +30,8 @@ use Sugar\Parser\Parser;
  */
 final readonly class ComponentExpansionPass implements PassInterface
 {
+    use ScopeIsolationTrait;
+
     private DirectivePrefixHelper $prefixHelper;
 
     private string $slotAttrName;
@@ -434,22 +436,8 @@ final readonly class ComponentExpansionPass implements PassInterface
         // Automatically disable escaping for slot variable outputs in component template
         $this->processNodeForSlotWrapping($template, $slotVars);
 
-        // Build closure using same pattern as main templates (ob_start/ob_get_clean)
-        // This allows bindTo() to work consistently
-        // Components bind to $this from parent scope (which may be Engine's templateContext)
-        // RawPhpNode automatically wraps code in PHP tags, so don't include them here
-        $openingCode = 'echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);';
-        $closingCode = 'return ob_get_clean(); })->bindTo($this ?? null)([' . implode(', ', $arrayItems) . ']);';
-
-        // Wrap template in closure
-        $openingNode = new RawPhpNode($openingCode, 0, 0);
-        $closingNode = new RawPhpNode($closingCode, 0, 0);
-
-        return new DocumentNode([
-            $openingNode,
-            ...$template->children,
-            $closingNode,
-        ]);
+        // Use trait method for consistent closure wrapping with parent passes
+        return $this->wrapInIsolatedScope($template, '[' . implode(', ', $arrayItems) . ']');
     }
 
     /**

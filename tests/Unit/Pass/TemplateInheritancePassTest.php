@@ -301,8 +301,10 @@ final class TemplateInheritancePassTest extends PassTestCase
             // Convert to string to check for closure pattern
             $code = $this->documentToString($result);
 
-            $this->assertStringContainsString('(function($__vars) { extract($__vars);', $code);
-            $this->assertStringContainsString("})(['title' => 'Hello']);", $code);
+            // Should use new scope isolation pattern with bindTo and type hints
+            $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $code);
+            $this->assertStringContainsString('return ob_get_clean(); })->bindTo($this ?? null)', $code);
+            $this->assertStringContainsString("(['title' => 'Hello']);", $code);
         } finally {
             unlink($includePath);
         }

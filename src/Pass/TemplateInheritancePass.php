@@ -11,15 +11,17 @@ use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
-use Sugar\Ast\RawPhpNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 final class TemplateInheritancePass implements PassInterface
 {
+    use ScopeIsolationTrait;
+
     private DirectivePrefixHelper $prefixHelper;
 
     private SugarConfig $config;
@@ -226,7 +228,7 @@ final class TemplateInheritancePass implements PassInterface
                 if ($this->hasAttribute($child, $this->prefixHelper->buildName('with'))) {
                     // Wrap in scope isolation with variables from s:with
                     $withValue = $this->getAttributeValue($child, $this->prefixHelper->buildName('with'));
-                    $wrapped = $this->wrapInScope($includeDocument, $withValue);
+                    $wrapped = $this->wrapInIsolatedScope($includeDocument, $withValue);
                     array_push($newChildren, ...$wrapped->children);
                 } else {
                     // Open scope - add children directly
@@ -431,28 +433,6 @@ final class TemplateInheritancePass implements PassInterface
         }
 
         return NodeCloner::fragmentWithChildren($node, $newChildren);
-    }
-
-    /**
-     * Wrap included document in scope isolation.
-     *
-     * @param \Sugar\Ast\DocumentNode $document Document to wrap
-     * @param string $withExpression PHP expression that evaluates to array of variables
-     * @return \Sugar\Ast\DocumentNode Wrapped document with closure
-     */
-    private function wrapInScope(DocumentNode $document, string $withExpression): DocumentNode
-    {
-        // Wrap in closure with extract for variable isolation
-        // Pattern: (function($__vars) { extract($__vars); ...template... })([...]);
-
-        $openingCode = '(function($__vars) { extract($__vars);';
-        $closingCode = '})(' . $withExpression . ');';
-
-        return new DocumentNode([
-            new RawPhpNode($openingCode, 0, 0),
-            ...$document->children,
-            new RawPhpNode($closingCode, 0, 0),
-        ]);
     }
 
     /**

@@ -28,6 +28,9 @@ final class SnippetGenerator
             return '';
         }
 
+        // Normalize line endings to \n for cross-platform consistency
+        $source = str_replace(["\r\n", "\r"], "\n", $source);
+
         $lines = explode("\n", $source);
         $totalLines = count($lines);
 

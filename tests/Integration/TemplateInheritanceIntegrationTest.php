@@ -126,9 +126,10 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
             $compiled = $this->compiler->compile($template, 'home.sugar.php');
 
-            // Should contain closure for isolation
-            $this->assertStringContainsString('(function($__vars) { extract($__vars);', $compiled);
-            $this->assertStringContainsString("})(['message' => 'included message']);", $compiled);
+            // Should contain closure for isolation with bindTo and type hints
+            $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+            $this->assertStringContainsString('return ob_get_clean(); })->bindTo($this ?? null)', $compiled);
+            $this->assertStringContainsString("(['message' => 'included message']);", $compiled);
 
             // Execute to verify isolation
             $output = $this->executeTemplate($compiled, ['message' => 'parent message']);
