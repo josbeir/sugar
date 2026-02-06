@@ -204,4 +204,61 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertStringContainsString("'disabled'", $code);
         $this->assertStringContainsString('$isProcessing', $code);
     }
+
+    public function testAttributeDirectivesNoTrailingSpaces(): void
+    {
+        $this->registry->register('checked', new BooleanAttributeCompiler());
+
+        $template = '<input type="text" name="email" s:checked="$subscribed">';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Check that there's no trailing space before the closing tag
+        // The CodeGenerator should trim any trailing spaces after attributes
+        $this->assertStringContainsString('name="email"', $code);
+        $this->assertStringContainsString('booleanAttribute', $code);
+
+        // Should NOT have space before closing tag after PHP code
+        $this->assertStringNotContainsString('?> >', $code);
+        // Should end cleanly with no space between PHP close tag and angle bracket
+        $this->assertStringContainsString('?>>', $code);
+    }
+
+    public function testMultipleAttributeDirectivesNoTrailingSpaces(): void
+    {
+        $this->registry->register('checked', new BooleanAttributeCompiler());
+
+        $template = '<input type="checkbox" s:checked="$isActive" s:checked="$isEnabled">';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Should NOT have trailing space before closing angle bracket
+        $this->assertStringNotContainsString(' >', $code);
+    }
+
+    public function testSelfClosingElementsNoTrailingSpaces(): void
+    {
+        $this->registry->register('checked', new BooleanAttributeCompiler());
+
+        $template = '<input type="checkbox" s:checked="$subscribed" />';
+
+        // Parse → Extract → Compile → Generate
+        $ast = $this->parser->parse($template);
+        $extracted = $this->extractionPass->execute($ast, $this->createContext());
+        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        // Should NOT have trailing double space before self-closing tag
+        $this->assertStringNotContainsString('  />', $code);
+        // Should have correct spacing for self-closing tag
+        $this->assertStringContainsString(' />', $code);
+    }
 }

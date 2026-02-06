@@ -486,7 +486,7 @@ These directives compile to calls to `HtmlAttributeHelper::booleanAttribute()`, 
 <input type="checkbox" checked>
 
 // Runtime output when $subscribed = false
-<input type="checkbox" >
+<input type="checkbox">
 ```
 
 ### Pipe Syntax

@@ -184,6 +184,15 @@ final class CodeGenerator
             $this->generateAttribute($attribute, $buffer);
         }
 
+        // Clean up trailing spaces before closing tag
+        // Handles cases where conditional attributes output nothing
+        $content = $buffer->getContent();
+        if (str_ends_with($content, ' ')) {
+            $cleaned = rtrim($content);
+            $buffer->clear();
+            $buffer->write($cleaned);
+        }
+
         // Close opening tag
         if ($node->selfClosing) {
             $buffer->write(' />');
