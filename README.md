@@ -1,6 +1,6 @@
 
 [![Build Status](https://github.com/josbeir/sugar/actions/workflows/ci.yml/badge.svg)](https://github.com/josbeir/sugar/actions)
-[![PHPStan Level 8](https://img.shields.io/badge/PHPStan-level%208-brightgreen)](https://github.com/josbeir/sugar)
+[![PHPStan Level 9](https://img.shields.io/badge/PHPStan-level%209-brightgreen)](https://github.com/josbeir/sugar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue.svg)](https://www.php.net/releases/8.2/en.php)
 [![codecov](https://codecov.io/github/josbeir/sugar/graph/badge.svg?token=4VGWJQTWH5)](https://codecov.io/github/josbeir/sugar)
@@ -321,12 +321,57 @@ Use `s:empty` and `s:isset` to conditionally render content based on variable st
 <?php endif; ?>
 ```
 
+#### Dynamic HTML Tags
+
+Render dynamic HTML elements based on variables or expressions:
+
+```html
+<!-- s:tag - Dynamic tag names -->
+<div s:tag="$headingLevel">Page Title</div>
+<!-- When $headingLevel = 'h1', compiles to: -->
+<?php \Sugar\Runtime\HtmlTagHelper::validateTag($headingLevel); ?>
+<h1>Page Title</h1>
+
+<!-- Combine with other directives -->
+<div s:tag="$element" s:class="['active' => $isActive]">
+    Content
+</div>
+```
+
+#### Conditional Wrappers
+
+Render wrapper elements only when they contain non-empty content:
+
+```html
+<!-- s:ifcontent - Only render wrapper if content exists -->
+<div s:ifcontent class="card">
+    <?php if ($showContent): ?>
+        <p>Some content here</p>
+    <?php endif; ?>
+</div>
+```
+
+**Compiles to:**
+```php
+<!-- If $showContent is false, nothing renders (not even the wrapper div) -->
+<!-- If $showContent is true, compiles to: -->
+<?php ob_start(); ?>
+    <p>Some content here</p>
+<?php $__content = ob_get_clean(); if (trim($__content) !== ''): ?>
+    <div class="card">
+        <?php echo $__content; ?>
+    </div>
+<?php endif; ?>
+```
+
 ## Why Sugar?
 
 - **🎯 `s:` Attribute Syntax** - Clean HTML-like directives (`s:if`, `s:foreach`, `s:switch`) - no template language to learn
 - **🛡️ Context-Aware Auto-Escaping** - Detects HTML/JS/CSS/URL contexts and escapes automatically - defeats XSS by default
 - **⚡ Native PHP Performance** - Compiles to pure PHP with opcache support - zero runtime overhead
-- **🔒 Scope Isolation** - Templates run in closures - no accidental access to parent scope variables
+- **🔒 Scope Isolation** - Templates run in clos
+- **`s:tag`** - Dynamic HTML tag names
+- **`s:ifcontent`** - Conditional wrapper elementsures - no accidental access to parent scope variables
 - **🔧 Framework-Agnostic** - Use standalone or integrate with any PHP framework
 - **📦 Zero Dependencies** - Core engine requires only PHP 8.2+ - nothing else
 - **🧪 Battle-Tested** - 568 tests, PHPStan level 8, 96%+ code coverage
@@ -345,6 +390,10 @@ Sugar provides familiar control structures as HTML attributes:
 - **`s:switch` / `s:case` / `s:default`** - Switch statements
 - **`s:unless`** - Inverse conditionals
 - **`s:isset` / `s:empty`** - Variable checks (standalone usage)
+
+#### HTML Manipulation
+- **`s:tag`** - Dynamic HTML tag names (e.g., `<div s:tag="$element">` renders as `<h1>` if `$element = 'h1'`)
+- **`s:ifcontent`** - Conditional wrapper (only renders element if content is non-empty)
 
 #### Output Directives
 - **`s:text`** - Escaped output (alternative to `<?= ?>`)

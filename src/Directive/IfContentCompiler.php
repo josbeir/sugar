@@ -13,6 +13,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\Interface\ElementExtractionInterface;
 use Sugar\Enum\DirectiveType;
+use Sugar\Util\Hash;
 
 /**
  * Compiler for s:ifcontent directive (conditional wrapper)
@@ -55,7 +56,7 @@ readonly class IfContentCompiler implements DirectiveCompilerInterface, ElementE
     public function compile(Node $node, CompilationContext $context): array
     {
         // Generate unique variable name for this ifcontent instance
-        $varName = '$__content_' . substr(md5($node->expression . $node->line . $node->column), 0, 8);
+        $varName = '$__content_' . Hash::short($node->expression . $node->line . $node->column);
 
         $parts = [];
 

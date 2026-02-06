@@ -215,8 +215,12 @@ final class FileCache implements TemplateCacheInterface
             return new CacheMetadata();
         }
 
+        $dependencies = $data['dependencies'] ?? [];
+        assert(is_array($dependencies));
+        /** @var array<string> $dependencies */
+
         return new CacheMetadata(
-            dependencies: $data['dependencies'] ?? [],
+            dependencies: $dependencies,
             components: $data['components'] ?? [],
             sourceTimestamp: $data['sourceTimestamp'] ?? 0,
             compiledTimestamp: $data['compiledTimestamp'] ?? 0,
@@ -292,7 +296,12 @@ final class FileCache implements TemplateCacheInterface
 
         $data = json_decode($json, true);
 
-        return is_array($data) ? $data : [];
+        if (!is_array($data)) {
+            return [];
+        }
+
+        /** @phpstan-ignore return.type */
+        return $data;
     }
 
     /**

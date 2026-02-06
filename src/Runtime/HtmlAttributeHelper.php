@@ -96,6 +96,8 @@ final class HtmlAttributeHelper
 
             // Regular attribute: key="value"
             $escapedKey = htmlspecialchars($key, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+            // After checking null, false, true above, value must be stringable
+            assert(is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
             $escapedValue = htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
             $result[] = sprintf('%s="%s"', $escapedKey, $escapedValue);
         }

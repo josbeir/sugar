@@ -33,6 +33,8 @@ trait ExecuteTemplateTrait
         }
 
         // Legacy: If template doesn't return closure, output was already buffered
+        assert(is_scalar($closure) || (is_object($closure) && method_exists($closure, '__toString')));
+
         return (string)$closure;
     }
 

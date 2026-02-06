@@ -27,7 +27,7 @@ final class Escaper implements EscaperInterface
             OutputContext::JSON => $this->escapeJson($value),
             OutputContext::CSS => $this->escapeCss($value),
             OutputContext::URL => $this->escapeUrl($value),
-            OutputContext::RAW => (string)$value,
+            OutputContext::RAW => $this->escapeRaw($value),
         };
     }
 
@@ -75,6 +75,8 @@ final class Escaper implements EscaperInterface
             throw new InvalidArgumentException('Cannot auto-escape arrays/objects in HTML context');
         }
 
+        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
@@ -87,6 +89,8 @@ final class Escaper implements EscaperInterface
     private function escapeAttribute(mixed $value): string
     {
         // Attributes use same escaping as HTML but we're explicit about context
+        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
@@ -129,6 +133,8 @@ final class Escaper implements EscaperInterface
      */
     private function escapeCss(mixed $value): string
     {
+        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+
         $string = (string)$value;
 
         // Remove potentially dangerous CSS constructs
@@ -153,6 +159,23 @@ final class Escaper implements EscaperInterface
      */
     private function escapeUrl(mixed $value): string
     {
+        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+
         return rawurlencode((string)$value);
+    }
+
+    /**
+     * No escaping (raw output)
+     *
+     * @param mixed $value Value to convert
+     * @return string String representation
+     */
+    private function escapeRaw(mixed $value): string
+    {
+        if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
+            return (string)$value;
+        }
+
+        return '';
     }
 }

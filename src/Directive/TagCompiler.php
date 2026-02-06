@@ -12,6 +12,7 @@ use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\Interface\ElementExtractionInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\HtmlTagHelper;
+use Sugar\Util\Hash;
 
 /**
  * Compiler for s:tag directive (dynamic tag names)
@@ -53,7 +54,7 @@ readonly class TagCompiler implements DirectiveCompilerInterface, ElementExtract
         array $remainingAttrs,
     ): FragmentNode {
         // Generate unique variable name for this tag instance
-        $varName = '$__tag_' . substr(md5($expression . $element->line . $element->column), 0, 8);
+        $varName = '$__tag_' . Hash::short($expression . $element->line . $element->column);
 
         // Create validation node
         $validation = new RawPhpNode(
@@ -96,7 +97,7 @@ readonly class TagCompiler implements DirectiveCompilerInterface, ElementExtract
         // This method should never be called because s:tag uses extractFromElement
         // But we implement it for completeness
         // Generate unique variable name for this tag instance
-        $varName = '$__tag_' . substr(md5($node->expression . $node->line . $node->column), 0, 8);
+        $varName = '$__tag_' . Hash::short($node->expression . $node->line . $node->column);
 
         // Generate PHP code to validate and store tag name
         $code = sprintf(

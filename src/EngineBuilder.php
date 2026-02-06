@@ -11,6 +11,7 @@ use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Util\Hash;
 
 /**
  * Builder for Engine configuration
@@ -135,7 +136,7 @@ final class EngineBuilder
         // Provide default cache if not set
         if (!$this->cache instanceof TemplateCacheInterface) {
             $this->cache = new FileCache(
-                cacheDir: sys_get_temp_dir() . '/sugar_cache_' . md5(__DIR__),
+                cacheDir: sys_get_temp_dir() . '/sugar_cache_' . Hash::make(__DIR__),
             );
         }
 

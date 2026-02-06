@@ -29,6 +29,7 @@ final class MatchesAstStructure extends Constraint
         }
 
         if (is_array($other)) {
+            /** @var array<\Sugar\Ast\Node> $other */
             return $this->matchesStructure($other, $this->expectedStructure);
         }
 
