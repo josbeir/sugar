@@ -35,9 +35,7 @@ final class NodeTraverserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $result[1]);
         $this->assertInstanceOf(TextNode::class, $result[2]);
 
-        /** @var \Sugar\Ast\TextNode $firstNode */
         $firstNode = $result[0];
-        /** @var \Sugar\Ast\TextNode $lastNode */
         $lastNode = $result[2];
 
         $this->assertSame('HELLO', $firstNode->content);
@@ -65,9 +63,7 @@ final class NodeTraverserTest extends TestCase
         $this->assertInstanceOf(TextNode::class, $result[0]);
         $this->assertInstanceOf(TextNode::class, $result[1]);
 
-        /** @var \Sugar\Ast\TextNode $firstNode */
         $firstNode = $result[0];
-        /** @var \Sugar\Ast\TextNode $secondNode */
         $secondNode = $result[1];
 
         $this->assertSame('First', $firstNode->content);
@@ -93,12 +89,10 @@ final class NodeTraverserTest extends TestCase
         $this->assertCount(1, $result);
         $this->assertInstanceOf(ElementNode::class, $result[0]);
 
-        /** @var \Sugar\Ast\ElementNode $element */
         $element = $result[0];
         $this->assertCount(1, $element->children);
         $this->assertInstanceOf(TextNode::class, $element->children[0]);
 
-        /** @var \Sugar\Ast\TextNode $child */
         $child = $element->children[0];
         $this->assertSame('Transformed', $child->content);
     }
@@ -157,7 +151,6 @@ final class NodeTraverserTest extends TestCase
 
         $this->assertInstanceOf(ElementNode::class, $result);
 
-        /** @var \Sugar\Ast\ElementNode $element */
         $element = $result;
         $this->assertSame('div', $element->tag);
     }
@@ -191,7 +184,6 @@ final class NodeTraverserTest extends TestCase
 
         $this->assertInstanceOf(ElementNode::class, $result);
 
-        /** @var \Sugar\Ast\ElementNode $element */
         $element = $result;
         $this->assertSame('target', $element->tag);
     }
@@ -214,11 +206,8 @@ final class NodeTraverserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $result[1]);
         $this->assertInstanceOf(ElementNode::class, $result[2]);
 
-        /** @var \Sugar\Ast\ElementNode $first */
         $first = $result[0];
-        /** @var \Sugar\Ast\ElementNode $second */
         $second = $result[1];
-        /** @var \Sugar\Ast\ElementNode $third */
         $third = $result[2];
 
         $this->assertSame('div', $first->tag);
@@ -259,13 +248,9 @@ final class NodeTraverserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $result[2]);
         $this->assertInstanceOf(ElementNode::class, $result[3]);
 
-        /** @var \Sugar\Ast\ElementNode $first */
         $first = $result[0];
-        /** @var \Sugar\Ast\ElementNode $second */
         $second = $result[1];
-        /** @var \Sugar\Ast\ElementNode $third */
         $third = $result[2];
-        /** @var \Sugar\Ast\ElementNode $fourth */
         $fourth = $result[3];
 
         $this->assertSame('root', $first->tag);
