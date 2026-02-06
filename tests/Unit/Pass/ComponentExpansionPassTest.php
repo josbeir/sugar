@@ -17,26 +17,27 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Exception\ComponentNotFoundException;
-use Sugar\Extension\ExtensionRegistry;
-use Sugar\Parser\Parser;
 use Sugar\Pass\ComponentExpansionPass;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\CompilerTestTrait;
+use Sugar\Tests\TemplateTestHelperTrait;
 
 final class ComponentExpansionPassTest extends TestCase
 {
-    private FileTemplateLoader $loader;
+    use CompilerTestTrait;
+    use TemplateTestHelperTrait;
 
-    private Parser $parser;
+    private FileTemplateLoader $loader;
 
     private ComponentExpansionPass $pass;
 
     protected function setUp(): void
     {
-        $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths(SUGAR_TEST_COMPONENTS_PATH));
+        $this->loader = $this->createComponentLoader();
         $this->loader->discoverComponents('.');
 
-        $this->parser = new Parser();
-        $registry = new ExtensionRegistry();
+        $this->parser = $this->createParser();
+        $registry = $this->createRegistry();
 
         // Register standard directives for testing
         $registry->registerDirective('if', IfCompiler::class);

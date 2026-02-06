@@ -4,11 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
@@ -18,27 +15,20 @@ use Sugar\Tests\TemplateTestHelperTrait;
  */
 final class ComponentIntegrationTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
-
-    private Compiler $compiler;
 
     private string $templatesPath;
 
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
-        $loader = new FileTemplateLoader(
-            (new SugarConfig())
-                ->withTemplatePaths($this->templatesPath)
-                ->withComponentPaths('components'),
-        );
+        $config = (new SugarConfig())
+            ->withTemplatePaths($this->templatesPath)
+            ->withComponentPaths('components');
 
-        $this->compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
     }
 
     public function testCompilesSimpleComponent(): void

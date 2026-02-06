@@ -9,43 +9,23 @@ use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\TempDirectoryTrait;
 
 /**
  * Tests for Engine class
  */
 final class EngineTest extends TestCase
 {
+    use TempDirectoryTrait;
+
     private string $cacheDir;
 
     private string $templateDir;
 
     protected function setUp(): void
     {
-        $this->cacheDir = sys_get_temp_dir() . '/sugar_engine_cache_' . uniqid();
-        $this->templateDir = sys_get_temp_dir() . '/sugar_engine_templates_' . uniqid();
-        mkdir($this->cacheDir, 0755, true);
-        mkdir($this->templateDir, 0755, true);
-    }
-
-    protected function tearDown(): void
-    {
-        $this->removeDirectory($this->cacheDir);
-        $this->removeDirectory($this->templateDir);
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-
-        $files = array_diff(scandir($dir) ?: [], ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
-        }
-
-        rmdir($dir);
+        $this->cacheDir = $this->createTempDir('sugar_engine_cache_');
+        $this->templateDir = $this->createTempDir('sugar_engine_templates_');
     }
 
     public function testBuilderCreatesEngine(): void

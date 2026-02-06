@@ -4,33 +4,25 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
-use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
 final class TemplateInheritanceIntegrationTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
-
-    private Compiler $compiler;
 
     private string $templatesPath;
 
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
+        $config = (new SugarConfig())->withTemplatePaths($this->templatesPath);
 
-        $this->compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
     }
 
     public function testSimpleInheritanceWithBlockReplacement(): void

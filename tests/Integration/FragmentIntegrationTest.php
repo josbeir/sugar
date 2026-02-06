@@ -4,23 +4,17 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 final class FragmentIntegrationTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
-
-    private Compiler $compiler;
 
     protected function setUp(): void
     {
-        $this->compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-        );
+        $this->setUpCompiler();
     }
 
     public function testCompilesFragmentWithForeach(): void

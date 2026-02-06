@@ -14,7 +14,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
-use Sugar\Escape\Escaper;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
@@ -23,6 +23,7 @@ use Sugar\Tests\TemplateTestHelperTrait;
  */
 final class CodeGeneratorTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
 
@@ -32,7 +33,7 @@ final class CodeGeneratorTest extends TestCase
 
     protected function setUp(): void
     {
-        $escaper = new Escaper();
+        $escaper = $this->createEscaper();
         $this->generator = new CodeGenerator($escaper, $this->createContext());
         $this->debugGenerator = new CodeGenerator($escaper, $this->createContext(debug: true));
     }
@@ -259,7 +260,7 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugModeWithoutSourceFile(): void
     {
-        $generator = new CodeGenerator(new Escaper(), $this->createContext(templatePath: ''));
+        $generator = new CodeGenerator($this->createEscaper(), $this->createContext(templatePath: ''));
         $ast = new DocumentNode([new TextNode('Hello', 1, 0)]);
 
         $code = $generator->generate($ast);

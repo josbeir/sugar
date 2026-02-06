@@ -7,42 +7,21 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\CacheMetadata;
 use Sugar\Cache\FileCache;
+use Sugar\Tests\TempDirectoryTrait;
 
 /**
  * Tests for FileCache implementation
  */
 final class FileCacheTest extends TestCase
 {
-    private string $cacheDir;
+    use TempDirectoryTrait;
 
     private FileCache $cache;
 
     protected function setUp(): void
     {
-        // Create temporary cache directory
-        $this->cacheDir = sys_get_temp_dir() . '/sugar_cache_test_' . uniqid();
-        mkdir($this->cacheDir, 0755, true);
-
-        $this->cache = new FileCache($this->cacheDir);
-    }
-
-    protected function tearDown(): void
-    {
-        // Clean up cache directory
-        if (is_dir($this->cacheDir)) {
-            $this->removeDirectory($this->cacheDir);
-        }
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        $files = array_diff(scandir($dir) ?: [], ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
-        }
-
-        rmdir($dir);
+        $cacheDir = $this->createTempDir('sugar_cache_test_');
+        $this->cache = new FileCache($cacheDir);
     }
 
     public function testPutCreatesCache(): void

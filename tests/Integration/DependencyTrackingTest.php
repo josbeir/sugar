@@ -5,60 +5,50 @@ namespace Sugar\Test\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\DependencyTracker;
-use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\CompilerTestTrait;
 
 /**
  * Integration tests for dependency tracking during compilation
  */
 final class DependencyTrackingTest extends TestCase
 {
+    use CompilerTestTrait;
+
+    protected function setUp(): void
+    {
+        $this->setUpCompiler();
+    }
+
     public function testTrackerIsPassedThroughCompilationPipeline(): void
     {
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-        );
-
         $tracker = new DependencyTracker();
         $source = '<div><?= $message ?></div>';
 
         // Compile with tracker - should not throw
-        $result = $compiler->compile($source, 'test-template', false, $tracker);
+        $result = $this->compiler->compile($source, 'test-template', false, $tracker);
 
         $this->assertStringContainsString('$message', $result);
     }
 
     public function testTrackerCanBeNull(): void
     {
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-        );
-
         $source = '<div><?= $message ?></div>';
 
         // Compile without tracker - should still work
-        $result = $compiler->compile($source, 'test-template', false);
+        $result = $this->compiler->compile($source, 'test-template', false);
 
         $this->assertStringContainsString('$message', $result);
     }
 
     public function testTrackerReturnsMetadata(): void
     {
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-        );
-
         $tracker = new DependencyTracker();
         $source = '<div><?= $message ?></div>';
 
         // Compile with tracker
-        $compiler->compile($source, 'test-template', false, $tracker);
+        $this->compiler->compile($source, 'test-template', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('test-template');
@@ -74,17 +64,13 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATE_INHERITANCE_PATH);
 
         $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
         $source = $loader->load('simple-child.sugar.php');
 
         // Compile child template that extends base
-        $compiler->compile($source, 'simple-child.sugar.php', false, $tracker);
+        $this->compiler->compile($source, 'simple-child.sugar.php', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('simple-child.sugar.php');
@@ -99,17 +85,13 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATE_INHERITANCE_PATH);
 
         $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
         $source = $loader->load('include-test.sugar.php');
 
         // Compile template that includes header partial
-        $compiler->compile($source, 'include-test.sugar.php', false, $tracker);
+        $this->compiler->compile($source, 'include-test.sugar.php', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('include-test.sugar.php');
@@ -124,18 +106,14 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
             ->withComponentPaths('components');
 
-        $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        new FileTemplateLoader($config);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Click me</s-button>';
 
         // Compile template with component
-        $compiler->compile($source, 'page-with-button', false, $tracker);
+        $this->compiler->compile($source, 'page-with-button', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('page-with-button');
@@ -150,18 +128,14 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
             ->withComponentPaths('components');
 
-        $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        new FileTemplateLoader($config);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Save</s-button><s-badge>New</s-badge><s-alert>Done!</s-alert>';
 
         // Compile template with multiple components
-        $compiler->compile($source, 'multi-component', false, $tracker);
+        $this->compiler->compile($source, 'multi-component', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('multi-component');
@@ -179,18 +153,14 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
             ->withComponentPaths('components');
 
-        $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        new FileTemplateLoader($config);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Save</s-button><s-button>Cancel</s-button><s-button>Delete</s-button>';
 
         // Compile template with same component used multiple times
-        $compiler->compile($source, 'duplicate-components', false, $tracker);
+        $this->compiler->compile($source, 'duplicate-components', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('duplicate-components');
@@ -207,12 +177,8 @@ final class DependencyTrackingTest extends TestCase
             ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
             ->withComponentPaths('components');
 
-        $loader = new FileTemplateLoader($config);
-        $compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-            templateLoader: $loader,
-        );
+        new FileTemplateLoader($config);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         $tracker = new DependencyTracker();
 
@@ -228,7 +194,7 @@ final class DependencyTrackingTest extends TestCase
 SUGAR;
 
         // Compile complex template
-        $compiler->compile($source, 'complex-template', false, $tracker);
+        $this->compiler->compile($source, 'complex-template', false, $tracker);
 
         // Get metadata
         $metadata = $tracker->getMetadata('complex-template');

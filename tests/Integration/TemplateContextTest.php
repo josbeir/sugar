@@ -7,12 +7,15 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\EngineTestTrait;
 
 /**
  * Test template context binding ($this support)
  */
 final class TemplateContextTest extends TestCase
 {
+    use EngineTestTrait;
+
     private string $templatesPath;
 
     protected function setUp(): void
@@ -35,12 +38,7 @@ final class TemplateContextTest extends TestCase
             }
         };
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
-
-        $engine = Engine::builder()
-            ->withTemplateLoader($loader)
-            ->withTemplateContext($viewContext)
-            ->build();
+        $engine = $this->createEngine($this->templatesPath, $viewContext);
 
         $output = $engine->render('context-test.sugar.php');
 
@@ -49,11 +47,7 @@ final class TemplateContextTest extends TestCase
 
     public function testTemplateContextIsOptional(): void
     {
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
-
-        $engine = Engine::builder()
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngine($this->templatesPath);
 
         $output = $engine->render('simple-output.sugar.php', ['name' => 'Alice']);
 
@@ -71,12 +65,7 @@ final class TemplateContextTest extends TestCase
             }
         };
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->templatesPath));
-
-        $engine = Engine::builder()
-            ->withTemplateLoader($loader)
-            ->withTemplateContext($viewContext)
-            ->build();
+        $engine = $this->createEngine($this->templatesPath, $viewContext);
 
         $output = $engine->render('context-mixed.sugar.php', ['linkText' => 'About Us']);
 

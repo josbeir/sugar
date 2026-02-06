@@ -7,23 +7,20 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\TempDirectoryTrait;
 
 final class FileTemplateLoaderComponentTest extends TestCase
 {
+    use TempDirectoryTrait;
+
     private string $tempDir;
 
     private FileTemplateLoader $loader;
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        mkdir($this->tempDir, 0777, true);
+        $this->tempDir = $this->createTempDir('sugar_component_test_');
         $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-    }
-
-    protected function tearDown(): void
-    {
-        $this->removeDirectory($this->tempDir);
     }
 
     public function testDiscoverComponentsFindsComponentsInDirectory(): void
@@ -268,23 +265,5 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
         // Should NOT be discovered automatically
         $this->assertFalse($loader->hasComponent('button'));
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        if (!file_exists($path)) {
-            return;
-        }
-
-        if (is_dir($path)) {
-            $files = array_diff(scandir($path), ['.', '..']);
-            foreach ($files as $file) {
-                $this->removeDirectory($path . '/' . $file);
-            }
-
-            rmdir($path);
-        } else {
-            unlink($path);
-        }
     }
 }

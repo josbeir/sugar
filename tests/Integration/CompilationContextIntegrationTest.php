@@ -4,24 +4,19 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
-use Sugar\Escape\Escaper;
 use Sugar\Exception\SyntaxException;
-use Sugar\Parser\Parser;
+use Sugar\Tests\CompilerTestTrait;
 
 /**
  * Integration test: Verify CompilationContext creates exceptions with automatic snippets
  */
 final class CompilationContextIntegrationTest extends TestCase
 {
-    private Compiler $compiler;
+    use CompilerTestTrait;
 
     protected function setUp(): void
     {
-        $this->compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-        );
+        $this->setUpCompiler();
     }
 
     public function testExceptionIncludesSnippetOnSyntaxError(): void

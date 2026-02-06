@@ -5,38 +5,26 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
 use Sugar\TemplateInheritance\FileTemplateLoader;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
+use Sugar\Tests\TempDirectoryTrait;
 
 /**
  * Test template inheritance features on fragment elements
  */
 final class FragmentTemplateInheritanceTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
+    use TempDirectoryTrait;
 
     private string $tempDir;
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        mkdir($this->tempDir);
-    }
-
-    protected function tearDown(): void
-    {
-        if (is_dir($this->tempDir)) {
-            $files = glob($this->tempDir . '/*');
-            if ($files !== false) {
-                array_map('unlink', $files);
-            }
-
-            rmdir($this->tempDir);
-        }
+        $this->tempDir = $this->createTempDir('sugar_test_');
     }
 
     public function testFragmentWithBlockAttribute(): void
@@ -44,15 +32,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
         // Test if s:block works on fragment elements
         $template = '<s-template s:block="content">Default content</s-template>';
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
         try {
-            $compiled = $compiler->compile($template, 'test.sugar.php');
+            $compiled = $this->compiler->compile($template, 'test.sugar.php');
 
             // If it compiles, test execution
             $result = $this->executeTemplate($compiled);
@@ -68,12 +53,9 @@ final class FragmentTemplateInheritanceTest extends TestCase
         // Verify that regular directives work on fragments
         $template = '<s-template s:if="$show">Visible</s-template>';
 
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-        );
+        $this->setUpCompiler();
 
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['show' => true]);
         $this->assertStringContainsString('Visible', $result);
@@ -90,14 +72,10 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
-        $compiled = $compiler->compile($child, 'child.sugar.php');
+        $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);
 
         // Should have div wrapper from parent, fragment children inserted
@@ -117,14 +95,10 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
-        $compiled = $compiler->compile($child, 'child.sugar.php');
+        $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);
 
         $this->assertStringContainsString('<h1>Override</h1>', $result);
@@ -140,14 +114,10 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
-        $compiled = $compiler->compile($child, 'child.sugar.php');
+        $compiled = $this->compiler->compile($child, 'child.sugar.php');
 
         // Test with items
         $result = $this->executeTemplate($compiled, ['items' => ['X', 'Y']]);
@@ -164,14 +134,10 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-            templateLoader: $loader,
-        );
+        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
+        $this->setUpCompiler(config: $config, withTemplateLoader: true);
 
-        $compiled = $compiler->compile($child, 'child.sugar.php');
+        $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);
 
         $this->assertStringContainsString('Custom sidebar', $result);

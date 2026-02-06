@@ -7,14 +7,11 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
-use Sugar\Escape\Escaper;
-use Sugar\Extension\ExtensionRegistry;
-use Sugar\Parser\Parser;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
 /**
@@ -22,9 +19,8 @@ use Sugar\Tests\TemplateTestHelperTrait;
  */
 final class DirectiveIntegrationTest extends TestCase
 {
+    use CompilerTestTrait;
     use TemplateTestHelperTrait;
-
-    private Parser $parser;
 
     private DirectiveExtractionPass $extractionPass;
 
@@ -34,15 +30,14 @@ final class DirectiveIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new Parser();
+        $this->setUpCompiler(withDefaultDirectives: false);
 
-        $registry = new ExtensionRegistry();
-        $registry->registerDirective('if', new IfCompiler());
-        $registry->registerDirective('foreach', new ForeachCompiler());
+        $this->registry->registerDirective('if', new IfCompiler());
+        $this->registry->registerDirective('foreach', new ForeachCompiler());
 
-        $this->extractionPass = new DirectiveExtractionPass($registry, new SugarConfig());
-        $this->compilationPass = new DirectiveCompilationPass($registry);
-        $this->generator = new CodeGenerator(new Escaper(), $this->createContext());
+        $this->extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
+        $this->compilationPass = new DirectiveCompilationPass($this->registry);
+        $this->generator = new CodeGenerator($this->escaper, $this->createContext());
     }
 
     public function testIfDirectiveFullPipeline(): void
@@ -153,13 +148,5 @@ final class DirectiveIntegrationTest extends TestCase
         // Regular output should use htmlspecialchars
         $this->assertStringContainsString('htmlspecialchars', $code);
         $this->assertStringContainsString('$userInput', $code);
-    }
-
-    protected function createContext(
-        string $source = '',
-        string $templatePath = 'test.sugar.php',
-        bool $debug = false,
-    ): CompilationContext {
-        return new CompilationContext($templatePath, $source, $debug);
     }
 }

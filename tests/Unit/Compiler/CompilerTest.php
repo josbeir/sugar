@@ -4,10 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
 use Sugar\Runtime\EmptyHelper;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
@@ -16,17 +14,13 @@ use Sugar\Tests\TemplateTestHelperTrait;
  */
 final class CompilerTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
 
-    private Compiler $compiler;
-
     protected function setUp(): void
     {
-        $this->compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-        );
+        $this->setUpCompiler();
     }
 
     public function testCompileStaticText(): void

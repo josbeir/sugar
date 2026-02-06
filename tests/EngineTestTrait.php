@@ -1,0 +1,72 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Tests;
+
+use Sugar\Cache\TemplateCacheInterface;
+use Sugar\Config\SugarConfig;
+use Sugar\Engine;
+use Sugar\TemplateInheritance\FileTemplateLoader;
+
+/**
+ * Helper trait for creating Engine instances in tests
+ *
+ * Provides factory methods for common engine configurations
+ */
+trait EngineTestTrait
+{
+    /**
+     * Create an Engine with a file-based template loader
+     *
+     * @param string $templatePath Path to templates directory
+     * @param object|null $context Optional context object to bind as $this
+     * @param TemplateCacheInterface|null $cache Optional cache implementation
+     * @param bool $debug Debug mode (default: false)
+     * @return Engine Configured engine instance
+     */
+    protected function createEngine(
+        string $templatePath,
+        ?object $context = null,
+        ?TemplateCacheInterface $cache = null,
+        bool $debug = false,
+    ): Engine {
+        $config = (new SugarConfig())->withTemplatePaths($templatePath);
+        $loader = new FileTemplateLoader($config);
+
+        $builder = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withConfig($config)
+            ->withDebug($debug);
+
+        if ($context !== null) {
+            $builder = $builder->withTemplateContext($context);
+        }
+
+        if ($cache instanceof TemplateCacheInterface) {
+            $builder = $builder->withCache($cache);
+        }
+
+        return $builder->build();
+    }
+
+    /**
+     * Create an Engine using fixture templates
+     *
+     * @param object|null $context Optional context object
+     * @param TemplateCacheInterface|null $cache Optional cache
+     * @param bool $debug Debug mode
+     * @return Engine Configured engine instance
+     */
+    protected function createFixtureEngine(
+        ?object $context = null,
+        ?TemplateCacheInterface $cache = null,
+        bool $debug = false,
+    ): Engine {
+        return $this->createEngine(
+            SUGAR_TEST_TEMPLATES_PATH,
+            $context,
+            $cache,
+            $debug,
+        );
+    }
+}

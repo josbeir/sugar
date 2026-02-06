@@ -6,10 +6,8 @@ namespace Sugar\Tests\Integration;
 use ArrayIterator;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
 use Sugar\Runtime\EmptyHelper;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
@@ -19,16 +17,12 @@ use Sugar\Tests\ExecuteTemplateTrait;
  */
 final class EmptyDirectiveTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
-
-    private Compiler $compiler;
 
     protected function setUp(): void
     {
-        $this->compiler = new Compiler(
-            parser: new Parser(),
-            escaper: new Escaper(),
-        );
+        $this->setUpCompiler();
     }
 
     // s:empty directive tests

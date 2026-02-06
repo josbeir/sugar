@@ -4,9 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
-use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
+use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
 
 /**
@@ -14,16 +12,12 @@ use Sugar\Tests\ExecuteTemplateTrait;
  */
 final class PipeSyntaxIntegrationTest extends TestCase
 {
+    use CompilerTestTrait;
     use ExecuteTemplateTrait;
-
-    private Compiler $compiler;
 
     protected function setUp(): void
     {
-        $this->compiler = new Compiler(
-            new Parser(),
-            new Escaper(),
-        );
+        $this->setUpCompiler();
     }
 
     public function testSimplePipeExecution(): void

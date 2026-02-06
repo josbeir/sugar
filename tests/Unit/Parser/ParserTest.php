@@ -10,15 +10,15 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
-use Sugar\Parser\Parser;
+use Sugar\Tests\CompilerTestTrait;
 
 final class ParserTest extends TestCase
 {
-    private Parser $parser;
+    use CompilerTestTrait;
 
     protected function setUp(): void
     {
-        $this->parser = new Parser();
+        $this->parser = $this->createParser();
     }
 
     public function testParseReturnsDocumentNode(): void
