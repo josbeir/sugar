@@ -19,7 +19,7 @@ final class DirectiveRegistryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->registry = new DirectiveRegistry();
+        $this->registry = DirectiveRegistry::empty();
     }
 
     public function testRegisterDirective(): void

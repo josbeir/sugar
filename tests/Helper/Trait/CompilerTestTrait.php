@@ -5,18 +5,6 @@ namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Directive\ClassCompiler;
-use Sugar\Directive\ContentCompiler;
-use Sugar\Directive\EmptyCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\ForelseCompiler;
-use Sugar\Directive\IfCompiler;
-use Sugar\Directive\IssetCompiler;
-use Sugar\Directive\SpreadCompiler;
-use Sugar\Directive\SwitchCompiler;
-use Sugar\Directive\UnlessCompiler;
-use Sugar\Directive\WhileCompiler;
-use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\FileTemplateLoader;
@@ -55,8 +43,8 @@ trait CompilerTestTrait
 
         // Create registry - either with defaults or empty for custom directives
         $registry = $withDefaultDirectives
-            ? $this->createDefaultRegistry()
-            : new DirectiveRegistry();
+            ? new DirectiveRegistry()
+            : DirectiveRegistry::empty();
 
         if ($withTemplateLoader && $config instanceof SugarConfig) {
             $this->templateLoader = new FileTemplateLoader($config);
@@ -107,35 +95,5 @@ trait CompilerTestTrait
     protected function createRegistry(): DirectiveRegistry
     {
         return new DirectiveRegistry();
-    }
-
-    /**
-     * Create default directive registry with all built-in directives
-     *
-     * @return DirectiveRegistry Registry with built-in directives
-     */
-    private function createDefaultRegistry(): DirectiveRegistry
-    {
-        $registry = new DirectiveRegistry();
-
-        // Register built-in directives (same as EngineBuilder)
-        $registry->register('if', IfCompiler::class);
-        $registry->register('elseif', IfCompiler::class);
-        $registry->register('else', IfCompiler::class);
-        $registry->register('unless', UnlessCompiler::class);
-        $registry->register('isset', IssetCompiler::class);
-        $registry->register('empty', EmptyCompiler::class);
-        $registry->register('switch', SwitchCompiler::class);
-        $registry->register('case', SwitchCompiler::class);
-        $registry->register('default', SwitchCompiler::class);
-        $registry->register('foreach', ForeachCompiler::class);
-        $registry->register('forelse', ForelseCompiler::class);
-        $registry->register('while', WhileCompiler::class);
-        $registry->register('class', ClassCompiler::class);
-        $registry->register('spread', SpreadCompiler::class);
-        $registry->register('text', new ContentCompiler(escape: true));
-        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
-
-        return $registry;
     }
 }

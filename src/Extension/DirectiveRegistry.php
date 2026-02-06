@@ -4,7 +4,19 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use RuntimeException;
+use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
+use Sugar\Directive\EmptyCompiler;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\IfCompiler;
+use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\SpreadCompiler;
+use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\UnlessCompiler;
+use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
+use Sugar\Enum\OutputContext;
 use Sugar\Exception\DidYouMean;
 use Sugar\Exception\UnknownDirectiveException;
 
@@ -14,23 +26,77 @@ use Sugar\Exception\UnknownDirectiveException;
  * Manages all registered directive compilers (s:if, s:foreach, s:class, etc.).
  * Provides a single source of truth for directive resolution during compilation.
  *
+ * By default, comes pre-loaded with all built-in Sugar directives.
+ * For a clean slate, use DirectiveRegistry::empty().
+ *
  * Supports lazy instantiation by accepting class names:
  * ```php
- * $registry = new DirectiveRegistry();
- * $registry->register('if', IfCompiler::class);
- * $registry->register('foreach', new ForeachCompiler());
+ * $registry = new DirectiveRegistry(); // Has all built-in directives
+ * $registry->register('custom', CustomCompiler::class); // Add custom
+ * $registry->register('if', MyIfCompiler::class); // Override built-in
  *
- * // Later, in compilation:
- * $compiler = $registry->get('if');
- * $code = $compiler->compile($directiveNode);
+ * // Empty registry for complete customization:
+ * $registry = DirectiveRegistry::empty();
+ * $registry->register('if', IfCompiler::class);
  * ```
  */
 final class DirectiveRegistry
 {
     /**
+     * Built-in directive mappings
+     *
+     * Maps directive names to their compiler class names or instances.
+     *
+     * @var array<string, class-string<\Sugar\Extension\DirectiveCompilerInterface>>
+     */
+    private const DEFAULT_DIRECTIVES = [
+        // Control flow
+        'if' => IfCompiler::class,
+        'elseif' => IfCompiler::class,
+        'else' => IfCompiler::class,
+        'unless' => UnlessCompiler::class,
+        'isset' => IssetCompiler::class,
+        'empty' => EmptyCompiler::class,
+        'switch' => SwitchCompiler::class,
+        'case' => SwitchCompiler::class,
+        'default' => SwitchCompiler::class,
+        // Loops
+        'foreach' => ForeachCompiler::class,
+        'forelse' => ForelseCompiler::class,
+        'while' => WhileCompiler::class,
+        // Attributes
+        'class' => ClassCompiler::class,
+        'spread' => SpreadCompiler::class,
+    ];
+
+    /**
      * @var array<string, \Sugar\Extension\DirectiveCompilerInterface|class-string<\Sugar\Extension\DirectiveCompilerInterface>>
      */
     private array $directives = [];
+
+    /**
+     * Constructor - registers all built-in directives by default
+     *
+     * @param bool $withDefaults Whether to register built-in directives (default: true)
+     */
+    public function __construct(bool $withDefaults = true)
+    {
+        if ($withDefaults) {
+            $this->registerDefaults();
+        }
+    }
+
+    /**
+     * Create an empty registry without built-in directives
+     *
+     * Use this when you want complete control over directive registration.
+     *
+     * @return self Empty registry instance
+     */
+    public static function empty(): self
+    {
+        return new self(withDefaults: false);
+    }
 
     /**
      * Register a directive compiler
@@ -125,6 +191,23 @@ final class DirectiveRegistry
         }
 
         return $filtered;
+    }
+
+    /**
+     * Register all built-in Sugar directives
+     *
+     * Called automatically by constructor unless withDefaults=false.
+     */
+    private function registerDefaults(): void
+    {
+        // Register all class-based directives
+        foreach (self::DEFAULT_DIRECTIVES as $name => $compiler) {
+            $this->register($name, $compiler);
+        }
+
+        // Register instance-based directives (ContentCompiler with different configs)
+        $this->register('text', new ContentCompiler(escape: true));
+        $this->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
     }
 
     /**
