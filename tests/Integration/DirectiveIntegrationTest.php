@@ -32,8 +32,8 @@ final class DirectiveIntegrationTest extends TestCase
     {
         $this->setUpCompiler(withDefaultDirectives: false);
 
-        $this->registry->registerDirective('if', new IfCompiler());
-        $this->registry->registerDirective('foreach', new ForeachCompiler());
+        $this->registry->register('if', new IfCompiler());
+        $this->registry->register('foreach', new ForeachCompiler());
 
         $this->extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
         $this->compilationPass = new DirectiveCompilationPass($this->registry);

@@ -17,8 +17,8 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Exception\ComponentNotFoundException;
-use Sugar\Pass\ComponentExpansionPass;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Pass\ComponentExpansionPass;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -40,9 +40,9 @@ final class ComponentExpansionPassTest extends TestCase
         $registry = $this->createRegistry();
 
         // Register standard directives for testing
-        $registry->registerDirective('if', IfCompiler::class);
-        $registry->registerDirective('foreach', ForeachCompiler::class);
-        $registry->registerDirective('while', WhileCompiler::class);
+        $registry->register('if', IfCompiler::class);
+        $registry->register('foreach', ForeachCompiler::class);
+        $registry->register('while', WhileCompiler::class);
 
         $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
     }

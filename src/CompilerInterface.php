@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar;
 
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 
 /**
  * Template compiler interface
@@ -11,11 +11,11 @@ use Sugar\Extension\ExtensionRegistry;
 interface CompilerInterface
 {
     /**
-     * Get the extension registry for framework customization
+     * Get the directive registry for framework customization
      *
-     * Allows frameworks to register custom directives, components, etc.
+     * Allows frameworks to register custom directives.
      */
-    public function getExtensionRegistry(): ExtensionRegistry;
+    public function getDirectiveRegistry(): DirectiveRegistry;
 
     /**
      * Compile template source to executable PHP code

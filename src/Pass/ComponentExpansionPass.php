@@ -18,9 +18,9 @@ use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\ExtensionRegistry;
-use Sugar\Parser\Parser;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Parser\Parser;
 
 /**
  * Expands component invocations into their template content
@@ -39,13 +39,13 @@ final readonly class ComponentExpansionPass implements PassInterface
      *
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader for loading components
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
-     * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry for directive type checking
+     * @param \Sugar\Extension\DirectiveRegistry $registry Extension registry for directive type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private TemplateLoaderInterface $loader,
         private Parser $parser,
-        private ExtensionRegistry $registry,
+        private DirectiveRegistry $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
@@ -221,11 +221,11 @@ final readonly class ComponentExpansionPass implements PassInterface
     {
         $name = $this->prefixHelper->stripPrefix($directiveName);
 
-        if (!$this->registry->hasDirective($name)) {
+        if (!$this->registry->has($name)) {
             return false;
         }
 
-        $compiler = $this->registry->getDirective($name);
+        $compiler = $this->registry->get($name);
 
         return $compiler->getType() === DirectiveType::CONTROL_FLOW;
     }

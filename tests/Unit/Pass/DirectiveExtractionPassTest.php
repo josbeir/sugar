@@ -19,7 +19,7 @@ use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\PassInterface;
 
@@ -33,18 +33,18 @@ final class DirectiveExtractionPassTest extends PassTestCase
         return new DirectiveExtractionPass($registry, new SugarConfig());
     }
 
-    private function createTestRegistry(): ExtensionRegistry
+    private function createTestRegistry(): DirectiveRegistry
     {
-        $registry = new ExtensionRegistry();
+        $registry = new DirectiveRegistry();
         // Register built-in directives needed for tests
-        $registry->registerDirective('if', IfCompiler::class);
-        $registry->registerDirective('foreach', ForeachCompiler::class);
-        $registry->registerDirective('class', ClassCompiler::class);
-        $registry->registerDirective('spread', SpreadCompiler::class);
-        $registry->registerDirective('text', new ContentCompiler(escape: true));
-        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
-        $registry->registerDirective('isset', IssetCompiler::class);
-        $registry->registerDirective('unless', UnlessCompiler::class);
+        $registry->register('if', IfCompiler::class);
+        $registry->register('foreach', ForeachCompiler::class);
+        $registry->register('class', ClassCompiler::class);
+        $registry->register('spread', SpreadCompiler::class);
+        $registry->register('text', new ContentCompiler(escape: true));
+        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+        $registry->register('isset', IssetCompiler::class);
+        $registry->register('unless', UnlessCompiler::class);
 
         return $registry;
     }

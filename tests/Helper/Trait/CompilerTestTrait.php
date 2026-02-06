@@ -5,10 +5,22 @@ namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
+use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
+use Sugar\Directive\EmptyCompiler;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\IfCompiler;
+use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\SpreadCompiler;
+use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\UnlessCompiler;
+use Sugar\Directive\WhileCompiler;
+use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
-use Sugar\Extension\ExtensionRegistry;
-use Sugar\Parser\Parser;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Parser\Parser;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -21,7 +33,7 @@ trait CompilerTestTrait
 
     protected Escaper $escaper;
 
-    protected ExtensionRegistry $registry;
+    protected DirectiveRegistry $registry;
 
     protected Compiler $compiler;
 
@@ -41,9 +53,10 @@ trait CompilerTestTrait
         $this->parser = new Parser($config);
         $this->escaper = new Escaper();
 
-        // Create registry for tests that need to register custom directives
-        // For tests using defaults, pass null to Compiler (it creates its own)
-        $registry = $withDefaultDirectives ? null : new ExtensionRegistry();
+        // Create registry - either with defaults or empty for custom directives
+        $registry = $withDefaultDirectives
+            ? $this->createDefaultRegistry()
+            : new DirectiveRegistry();
 
         if ($withTemplateLoader && $config instanceof SugarConfig) {
             $this->templateLoader = new FileTemplateLoader($config);
@@ -62,13 +75,7 @@ trait CompilerTestTrait
         }
 
         // Set registry property for tests that need access
-        // Get it from compiler or create new one
-        if (!$withDefaultDirectives && $registry instanceof ExtensionRegistry) {
-            $this->registry = $registry;
-        } else {
-            // For tests using default directives, create a throwaway registry
-            $this->registry = new ExtensionRegistry();
-        }
+        $this->registry = $registry;
     }
 
     /**
@@ -95,10 +102,40 @@ trait CompilerTestTrait
     /**
      * Create a standalone extension registry
      *
-     * @return ExtensionRegistry Extension registry instance
+     * @return DirectiveRegistry Extension registry instance
      */
-    protected function createRegistry(): ExtensionRegistry
+    protected function createRegistry(): DirectiveRegistry
     {
-        return new ExtensionRegistry();
+        return new DirectiveRegistry();
+    }
+
+    /**
+     * Create default directive registry with all built-in directives
+     *
+     * @return DirectiveRegistry Registry with built-in directives
+     */
+    private function createDefaultRegistry(): DirectiveRegistry
+    {
+        $registry = new DirectiveRegistry();
+
+        // Register built-in directives (same as EngineBuilder)
+        $registry->register('if', IfCompiler::class);
+        $registry->register('elseif', IfCompiler::class);
+        $registry->register('else', IfCompiler::class);
+        $registry->register('unless', UnlessCompiler::class);
+        $registry->register('isset', IssetCompiler::class);
+        $registry->register('empty', EmptyCompiler::class);
+        $registry->register('switch', SwitchCompiler::class);
+        $registry->register('case', SwitchCompiler::class);
+        $registry->register('default', SwitchCompiler::class);
+        $registry->register('foreach', ForeachCompiler::class);
+        $registry->register('forelse', ForelseCompiler::class);
+        $registry->register('while', WhileCompiler::class);
+        $registry->register('class', ClassCompiler::class);
+        $registry->register('spread', SpreadCompiler::class);
+        $registry->register('text', new ContentCompiler(escape: true));
+        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+
+        return $registry;
     }
 }

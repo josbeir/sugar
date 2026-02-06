@@ -12,7 +12,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\PassInterface;
 
@@ -20,7 +20,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
 {
     protected function getPass(): PassInterface
     {
-        $this->registry = new ExtensionRegistry();
+        $this->registry = new DirectiveRegistry();
 
         return new DirectiveCompilationPass($this->registry);
     }
@@ -43,7 +43,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('if', $compiler);
+        $this->registry->register('if', $compiler);
 
         $directive = $this->directive('if')
             ->expression('$condition')
@@ -93,8 +93,8 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('if', $ifCompiler);
-        $this->registry->registerDirective('foreach', $foreachCompiler);
+        $this->registry->register('if', $ifCompiler);
+        $this->registry->register('foreach', $foreachCompiler);
 
         $innerDirective = $this->directive('if')
             ->expression('$x')
@@ -179,7 +179,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('custom', $compiler);
+        $this->registry->register('custom', $compiler);
 
         $directive = $this->directive('custom')
             ->expression('$value')
@@ -211,7 +211,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('test', $compiler);
+        $this->registry->register('test', $compiler);
 
         $directive1 = $this->directive('test')
             ->expression('first')
@@ -252,7 +252,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('if', $compiler);
+        $this->registry->register('if', $compiler);
 
         $directive = $this->directive('if')
             ->expression('$show')
@@ -293,7 +293,7 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('test', $compiler);
+        $this->registry->register('test', $compiler);
 
         $directive = $this->directive('test')
             ->expression('$x')
@@ -381,8 +381,8 @@ final class DirectiveCompilationPassTest extends PassTestCase
             }
         };
 
-        $this->registry->registerDirective('outer', $outerCompiler);
-        $this->registry->registerDirective('inner', $innerCompiler);
+        $this->registry->register('outer', $outerCompiler);
+        $this->registry->register('inner', $innerCompiler);
 
         $directive = $this->directive('outer')
             ->expression('$x')

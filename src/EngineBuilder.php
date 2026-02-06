@@ -7,9 +7,22 @@ use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
+use Sugar\Directive\ClassCompiler;
+use Sugar\Directive\ContentCompiler;
+use Sugar\Directive\EmptyCompiler;
+use Sugar\Directive\ForeachCompiler;
+use Sugar\Directive\ForelseCompiler;
+use Sugar\Directive\IfCompiler;
+use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\SpreadCompiler;
+use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\UnlessCompiler;
+use Sugar\Directive\WhileCompiler;
+use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
-use Sugar\Parser\Parser;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Parser\Parser;
 
 /**
  * Builder for Engine configuration
@@ -21,6 +34,8 @@ final class EngineBuilder
     private ?TemplateLoaderInterface $loader = null;
 
     private ?TemplateCacheInterface $cache = null;
+
+    private ?DirectiveRegistry $registry = null;
 
     private SugarConfig $config;
 
@@ -58,6 +73,22 @@ final class EngineBuilder
     public function withCache(TemplateCacheInterface $cache)
     {
         $this->cache = $cache;
+
+        return $this;
+    }
+
+    /**
+     * Set custom directive registry
+     *
+     * Use this to provide a completely custom set of directives,
+     * or to add custom directives to the default set.
+     *
+     * @param \Sugar\Extension\DirectiveRegistry $registry Custom directive registry
+     * @return $this
+     */
+    public function withDirectiveRegistry(DirectiveRegistry $registry)
+    {
+        $this->registry = $registry;
 
         return $this;
     }
@@ -124,11 +155,14 @@ final class EngineBuilder
         $parser = new Parser();
         $escaper = new Escaper();
 
+        // Use provided registry or create default with built-in directives
+        $registry = $this->registry ?? $this->createDefaultRegistry();
+
         // Create compiler with all dependencies
         $compiler = new Compiler(
             parser: $parser,
             escaper: $escaper,
-            registry: null, // Use default registry
+            registry: $registry,
             templateLoader: $this->loader,
             config: $this->config,
         );
@@ -140,5 +174,35 @@ final class EngineBuilder
             debug: $this->debug,
             templateContext: $this->templateContext,
         );
+    }
+
+    /**
+     * Create default directive registry with all built-in directives
+     *
+     * @return \Sugar\Extension\DirectiveRegistry Registry with built-in directives
+     */
+    private function createDefaultRegistry(): DirectiveRegistry
+    {
+        $registry = new DirectiveRegistry();
+
+        // Register built-in directives (lazy instantiation via class names)
+        $registry->register('if', IfCompiler::class);
+        $registry->register('elseif', IfCompiler::class);
+        $registry->register('else', IfCompiler::class);
+        $registry->register('unless', UnlessCompiler::class);
+        $registry->register('isset', IssetCompiler::class);
+        $registry->register('empty', EmptyCompiler::class);
+        $registry->register('switch', SwitchCompiler::class);
+        $registry->register('case', SwitchCompiler::class);
+        $registry->register('default', SwitchCompiler::class);
+        $registry->register('foreach', ForeachCompiler::class);
+        $registry->register('forelse', ForelseCompiler::class);
+        $registry->register('while', WhileCompiler::class);
+        $registry->register('class', ClassCompiler::class);
+        $registry->register('spread', SpreadCompiler::class);
+        $registry->register('text', new ContentCompiler(escape: true));
+        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+
+        return $registry;
     }
 }

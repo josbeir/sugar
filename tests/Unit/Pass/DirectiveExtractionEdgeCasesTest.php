@@ -19,7 +19,7 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 
 /**
@@ -31,12 +31,12 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
 
     protected function setUp(): void
     {
-        $registry = new ExtensionRegistry();
-        $registry->registerDirective('if', IfCompiler::class);
-        $registry->registerDirective('foreach', ForeachCompiler::class);
-        $registry->registerDirective('class', ClassCompiler::class);
-        $registry->registerDirective('text', new ContentCompiler(escape: true));
-        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+        $registry = new DirectiveRegistry();
+        $registry->register('if', IfCompiler::class);
+        $registry->register('foreach', ForeachCompiler::class);
+        $registry->register('class', ClassCompiler::class);
+        $registry->register('text', new ContentCompiler(escape: true));
+        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
 
         $this->pass = new DirectiveExtractionPass($registry, new SugarConfig());
     }

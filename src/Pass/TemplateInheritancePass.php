@@ -15,8 +15,8 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
-use Sugar\Parser\Parser;
 use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Parser\Parser;
 
 final class TemplateInheritancePass implements PassInterface
 {

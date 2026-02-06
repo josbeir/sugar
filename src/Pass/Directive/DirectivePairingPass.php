@@ -9,7 +9,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\PairedDirectiveCompilerInterface;
 use Sugar\Pass\PassInterface;
 
@@ -28,10 +28,10 @@ final class DirectivePairingPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry with directive compilers
+     * @param \Sugar\Extension\DirectiveRegistry $registry Extension registry with directive compilers
      */
     public function __construct(
-        private readonly ExtensionRegistry $registry,
+        private readonly DirectiveRegistry $registry,
     ) {
     }
 
@@ -102,11 +102,11 @@ final class DirectivePairingPass implements PassInterface
      */
     private function pairDirective(DirectiveNode $node): void
     {
-        if (!$this->registry->hasDirective($node->name)) {
+        if (!$this->registry->has($node->name)) {
             return;
         }
 
-        $compiler = $this->registry->getDirective($node->name);
+        $compiler = $this->registry->get($node->name);
 
         if (!($compiler instanceof PairedDirectiveCompilerInterface)) {
             return;

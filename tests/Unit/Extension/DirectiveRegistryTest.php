@@ -11,30 +11,30 @@ use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveCompilerInterface;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 
-final class ExtensionRegistryTest extends TestCase
+final class DirectiveRegistryTest extends TestCase
 {
-    private ExtensionRegistry $registry;
+    private DirectiveRegistry $registry;
 
     protected function setUp(): void
     {
-        $this->registry = new ExtensionRegistry();
+        $this->registry = new DirectiveRegistry();
     }
 
     public function testRegisterDirective(): void
     {
         $compiler = $this->createMockDirectiveCompiler();
 
-        $this->registry->registerDirective('custom', $compiler);
+        $this->registry->register('custom', $compiler);
 
-        $this->assertTrue($this->registry->hasDirective('custom'));
-        $this->assertSame($compiler, $this->registry->getDirective('custom'));
+        $this->assertTrue($this->registry->has('custom'));
+        $this->assertSame($compiler, $this->registry->get('custom'));
     }
 
     public function testHasDirectiveReturnsFalseForUnregistered(): void
     {
-        $this->assertFalse($this->registry->hasDirective('nonexistent'));
+        $this->assertFalse($this->registry->has('nonexistent'));
     }
 
     public function testGetDirectiveThrowsForUnregistered(): void
@@ -42,12 +42,12 @@ final class ExtensionRegistryTest extends TestCase
         $this->expectException(UnknownDirectiveException::class);
         $this->expectExceptionMessage('Unknown directive "nonexistent"');
 
-        $this->registry->getDirective('nonexistent');
+        $this->registry->get('nonexistent');
     }
 
     public function testAllDirectivesReturnsEmptyArrayInitially(): void
     {
-        $this->assertSame([], $this->registry->allDirectives());
+        $this->assertSame([], $this->registry->all());
     }
 
     public function testAllDirectivesReturnsRegisteredDirectives(): void
@@ -55,10 +55,10 @@ final class ExtensionRegistryTest extends TestCase
         $compiler1 = $this->createMockDirectiveCompiler();
         $compiler2 = $this->createMockDirectiveCompiler();
 
-        $this->registry->registerDirective('if', $compiler1);
-        $this->registry->registerDirective('foreach', $compiler2);
+        $this->registry->register('if', $compiler1);
+        $this->registry->register('foreach', $compiler2);
 
-        $all = $this->registry->allDirectives();
+        $all = $this->registry->all();
 
         $this->assertCount(2, $all);
         $this->assertArrayHasKey('if', $all);
@@ -72,28 +72,28 @@ final class ExtensionRegistryTest extends TestCase
         $compiler1 = $this->createMockDirectiveCompiler();
         $compiler2 = $this->createMockDirectiveCompiler();
 
-        $this->registry->registerDirective('if', $compiler1);
-        $this->registry->registerDirective('if', $compiler2);
+        $this->registry->register('if', $compiler1);
+        $this->registry->register('if', $compiler2);
 
-        $this->assertSame($compiler2, $this->registry->getDirective('if'));
+        $this->assertSame($compiler2, $this->registry->get('if'));
     }
 
     public function testRegisterDirectiveByClassName(): void
     {
-        $this->registry->registerDirective('test', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirectiveCompiler::class);
 
-        $this->assertTrue($this->registry->hasDirective('test'));
+        $this->assertTrue($this->registry->has('test'));
 
-        $compiler = $this->registry->getDirective('test');
+        $compiler = $this->registry->get('test');
         $this->assertInstanceOf(TestDirectiveCompiler::class, $compiler);
     }
 
     public function testLazyInstantiationCachesInstance(): void
     {
-        $this->registry->registerDirective('test', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirectiveCompiler::class);
 
-        $compiler1 = $this->registry->getDirective('test');
-        $compiler2 = $this->registry->getDirective('test');
+        $compiler1 = $this->registry->get('test');
+        $compiler2 = $this->registry->get('test');
 
         // Should be the same instance (cached)
         $this->assertSame($compiler1, $compiler2);
@@ -102,24 +102,24 @@ final class ExtensionRegistryTest extends TestCase
     public function testGetDirectiveThrowsForNonExistentClass(): void
     {
         /** @phpstan-ignore argument.type */
-        $this->registry->registerDirective('invalid', 'NonExistentClass');
+        $this->registry->register('invalid', 'NonExistentClass');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Extension class "NonExistentClass" does not exist');
 
-        $this->registry->getDirective('invalid');
+        $this->registry->get('invalid');
     }
 
     public function testGetDirectiveThrowsForInvalidInterface(): void
     {
         // Register a class that doesn't implement DirectiveCompilerInterface
         /** @phpstan-ignore argument.type */
-        $this->registry->registerDirective('invalid', stdClass::class);
+        $this->registry->register('invalid', stdClass::class);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Extension class "stdClass" must implement');
 
-        $this->registry->getDirective('invalid');
+        $this->registry->get('invalid');
     }
 
     public function testGetDirectivesByType(): void
@@ -127,11 +127,11 @@ final class ExtensionRegistryTest extends TestCase
         $controlFlow = $this->createMockDirectiveCompiler(DirectiveType::CONTROL_FLOW);
         $attribute = $this->createMockDirectiveCompiler(DirectiveType::ATTRIBUTE);
 
-        $this->registry->registerDirective('if', $controlFlow);
-        $this->registry->registerDirective('class', $attribute);
-        $this->registry->registerDirective('foreach', $controlFlow);
+        $this->registry->register('if', $controlFlow);
+        $this->registry->register('class', $attribute);
+        $this->registry->register('foreach', $controlFlow);
 
-        $controlFlowDirectives = $this->registry->getDirectivesByType(DirectiveType::CONTROL_FLOW);
+        $controlFlowDirectives = $this->registry->getByType(DirectiveType::CONTROL_FLOW);
 
         $this->assertCount(2, $controlFlowDirectives);
         $this->assertArrayHasKey('if', $controlFlowDirectives);
@@ -141,10 +141,10 @@ final class ExtensionRegistryTest extends TestCase
 
     public function testGetDirectivesByTypeWithLazyLoading(): void
     {
-        $this->registry->registerDirective('test', TestDirectiveCompiler::class);
-        $this->registry->registerDirective('test2', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirectiveCompiler::class);
+        $this->registry->register('test2', TestDirectiveCompiler::class);
 
-        $controlFlowDirectives = $this->registry->getDirectivesByType(DirectiveType::CONTROL_FLOW);
+        $controlFlowDirectives = $this->registry->getByType(DirectiveType::CONTROL_FLOW);
 
         $this->assertCount(2, $controlFlowDirectives);
         $this->assertArrayHasKey('test', $controlFlowDirectives);
@@ -154,10 +154,10 @@ final class ExtensionRegistryTest extends TestCase
     public function testAllDirectivesWithLazyLoading(): void
     {
         $compiler1 = $this->createMockDirectiveCompiler();
-        $this->registry->registerDirective('eager', $compiler1);
-        $this->registry->registerDirective('lazy', TestDirectiveCompiler::class);
+        $this->registry->register('eager', $compiler1);
+        $this->registry->register('lazy', TestDirectiveCompiler::class);
 
-        $all = $this->registry->allDirectives();
+        $all = $this->registry->all();
 
         $this->assertCount(2, $all);
         $this->assertSame($compiler1, $all['eager']);

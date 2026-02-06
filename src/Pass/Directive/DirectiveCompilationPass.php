@@ -12,7 +12,7 @@ use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\UnknownDirectiveException;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\PassInterface;
 
 /**
@@ -32,10 +32,10 @@ final class DirectiveCompilationPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\ExtensionRegistry $registry Extension registry with directive compilers
+     * @param \Sugar\Extension\DirectiveRegistry $registry Extension registry with directive compilers
      */
     public function __construct(
-        private readonly ExtensionRegistry $registry,
+        private readonly DirectiveRegistry $registry,
     ) {
     }
 
@@ -74,7 +74,7 @@ final class DirectiveCompilationPass implements PassInterface
 
             // Get compiler for this directive
             try {
-                $compiler = $this->registry->getDirective($node->name);
+                $compiler = $this->registry->get($node->name);
             } catch (UnknownDirectiveException $e) {
                 // Wrap with context to add snippet showing the problematic directive
                 throw $this->context->createException(

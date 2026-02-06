@@ -9,24 +9,23 @@ use Sugar\Exception\DidYouMean;
 use Sugar\Exception\UnknownDirectiveException;
 
 /**
- * Unified registry for all template engine extensions
+ * Registry for directive compilers
  *
- * This registry manages directives, components, filters, functions, and other
- * extensibility points. It provides a single source of truth for all custom
- * extensions that can be registered by frameworks or applications.
+ * Manages all registered directive compilers (s:if, s:foreach, s:class, etc.).
+ * Provides a single source of truth for directive resolution during compilation.
  *
  * Supports lazy instantiation by accepting class names:
  * ```php
- * $registry = new ExtensionRegistry();
- * $registry->registerDirective('if', IfCompiler::class);
- * $registry->registerDirective('foreach', new ForeachCompiler());
+ * $registry = new DirectiveRegistry();
+ * $registry->register('if', IfCompiler::class);
+ * $registry->register('foreach', new ForeachCompiler());
  *
  * // Later, in compilation:
- * $compiler = $registry->getDirective('if');
+ * $compiler = $registry->get('if');
  * $code = $compiler->compile($directiveNode);
  * ```
  */
-final class ExtensionRegistry
+final class DirectiveRegistry
 {
     /**
      * @var array<string, \Sugar\Extension\DirectiveCompilerInterface|class-string<\Sugar\Extension\DirectiveCompilerInterface>>
@@ -41,7 +40,7 @@ final class ExtensionRegistry
      * @param string $name Directive name (e.g., 'if', 'foreach', 'while')
      * @param \Sugar\Extension\DirectiveCompilerInterface|class-string<\Sugar\Extension\DirectiveCompilerInterface> $compiler The compiler instance or class name
      */
-    public function registerDirective(string $name, DirectiveCompilerInterface|string $compiler): void
+    public function register(string $name, DirectiveCompilerInterface|string $compiler): void
     {
         $this->directives[$name] = $compiler;
     }
@@ -52,7 +51,7 @@ final class ExtensionRegistry
      * @param string $name Directive name
      * @return bool True if registered, false otherwise
      */
-    public function hasDirective(string $name): bool
+    public function has(string $name): bool
     {
         return isset($this->directives[$name]);
     }
@@ -66,9 +65,9 @@ final class ExtensionRegistry
      * @return \Sugar\Extension\DirectiveCompilerInterface The compiler implementation
      * @throws \Sugar\Exception\UnknownDirectiveException If directive is not registered
      */
-    public function getDirective(string $name): DirectiveCompilerInterface
+    public function get(string $name): DirectiveCompilerInterface
     {
-        if (!$this->hasDirective($name)) {
+        if (!$this->has($name)) {
             $suggestion = DidYouMean::suggest($name, array_keys($this->directives));
 
             throw new UnknownDirectiveException(
@@ -95,11 +94,11 @@ final class ExtensionRegistry
      *
      * @return array<string, \Sugar\Extension\DirectiveCompilerInterface>
      */
-    public function allDirectives(): array
+    public function all(): array
     {
         // Resolve all lazy instances
         foreach (array_keys($this->directives) as $name) {
-            $this->getDirective($name); // This will instantiate and cache it
+            $this->get($name); // This will instantiate and cache it
         }
 
         /** @var array<string, \Sugar\Extension\DirectiveCompilerInterface> $directives */
@@ -114,12 +113,12 @@ final class ExtensionRegistry
      * @param \Sugar\Enum\DirectiveType $type Directive type to filter by
      * @return array<string, \Sugar\Extension\DirectiveCompilerInterface> Filtered directives
      */
-    public function getDirectivesByType(DirectiveType $type): array
+    public function getByType(DirectiveType $type): array
     {
         $filtered = [];
 
         foreach (array_keys($this->directives) as $name) {
-            $compiler = $this->getDirective($name);
+            $compiler = $this->get($name);
             if ($compiler->getType() === $type) {
                 $filtered[$name] = $compiler;
             }

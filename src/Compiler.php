@@ -7,20 +7,9 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\ClassCompiler;
-use Sugar\Directive\ContentCompiler;
-use Sugar\Directive\EmptyCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\ForelseCompiler;
-use Sugar\Directive\IfCompiler;
-use Sugar\Directive\IssetCompiler;
-use Sugar\Directive\SpreadCompiler;
-use Sugar\Directive\SwitchCompiler;
-use Sugar\Directive\UnlessCompiler;
-use Sugar\Directive\WhileCompiler;
-use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
+use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ComponentExpansionPass;
 use Sugar\Pass\ContextAnalysisPass;
@@ -28,7 +17,6 @@ use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
 use Sugar\Pass\TemplateInheritancePass;
-use Sugar\Loader\TemplateLoaderInterface;
 
 /**
  * Orchestrates template compilation pipeline
@@ -37,7 +25,7 @@ use Sugar\Loader\TemplateLoaderInterface;
  */
 final class Compiler implements CompilerInterface
 {
-    private readonly ExtensionRegistry $registry;
+    private readonly DirectiveRegistry $registry;
 
     private readonly DirectivePairingPass $directivePairingPass;
 
@@ -58,22 +46,20 @@ final class Compiler implements CompilerInterface
      *
      * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
-     * @param \Sugar\Extension\ExtensionRegistry|null $registry Extension registry (optional, creates default if null)
+     * @param \Sugar\Extension\DirectiveRegistry $registry Directive registry with registered compilers
      * @param \Sugar\Loader\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(
         private readonly Parser $parser,
         Escaper $escaper,
-        ?ExtensionRegistry $registry = null,
+        DirectiveRegistry $registry,
         ?TemplateLoaderInterface $templateLoader = null,
         ?SugarConfig $config = null,
     ) {
         $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
-
-        // Use provided registry or create default with built-in directives
-        $this->registry = $registry ?? $this->createDefaultRegistry();
+        $this->registry = $registry;
 
         // Create passes
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
@@ -96,11 +82,11 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * Get the extension registry for framework customization
+     * Get the directive registry for framework customization
      *
-     * Allows frameworks to register custom directives, components, etc.
+     * Allows frameworks to register custom directives.
      */
-    public function getExtensionRegistry(): ExtensionRegistry
+    public function getDirectiveRegistry(): DirectiveRegistry
     {
         return $this->registry;
     }
@@ -157,33 +143,5 @@ final class Compiler implements CompilerInterface
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);
-    }
-
-    /**
-     * Create default registry with built-in directives
-     */
-    private function createDefaultRegistry(): ExtensionRegistry
-    {
-        $registry = new ExtensionRegistry();
-
-        // Register built-in directives (lazy instantiation via class names)
-        $registry->registerDirective('if', IfCompiler::class);
-        $registry->registerDirective('elseif', IfCompiler::class);
-        $registry->registerDirective('else', IfCompiler::class);
-        $registry->registerDirective('unless', UnlessCompiler::class);
-        $registry->registerDirective('isset', IssetCompiler::class);
-        $registry->registerDirective('empty', EmptyCompiler::class);
-        $registry->registerDirective('switch', SwitchCompiler::class);
-        $registry->registerDirective('case', SwitchCompiler::class);
-        $registry->registerDirective('default', SwitchCompiler::class);
-        $registry->registerDirective('foreach', ForeachCompiler::class);
-        $registry->registerDirective('forelse', ForelseCompiler::class);
-        $registry->registerDirective('while', WhileCompiler::class);
-        $registry->registerDirective('class', ClassCompiler::class);
-        $registry->registerDirective('spread', SpreadCompiler::class);
-        $registry->registerDirective('text', new ContentCompiler(escape: true));
-        $registry->registerDirective('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
-
-        return $registry;
     }
 }

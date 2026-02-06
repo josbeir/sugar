@@ -12,9 +12,9 @@ use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\PassInterface;
 use Sugar\Pass\TemplateInheritancePass;
-use Sugar\Loader\FileTemplateLoader;
 
 final class TemplateInheritancePassTest extends PassTestCase
 {

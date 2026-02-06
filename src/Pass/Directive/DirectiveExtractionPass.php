@@ -19,7 +19,7 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveCompilerInterface;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\PassInterface;
 
 /**
@@ -54,11 +54,11 @@ final class DirectiveExtractionPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\ExtensionRegistry $registry Directive registry for type checking
+     * @param \Sugar\Extension\DirectiveRegistry $registry Directive registry for type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
-        private readonly ExtensionRegistry $registry,
+        private readonly DirectiveRegistry $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
@@ -192,7 +192,7 @@ final class DirectiveExtractionPass implements PassInterface
                 $expression = $attr->value ?? 'true';
 
                 // Get directive type
-                $compiler = $this->registry->getDirective($name);
+                $compiler = $this->registry->get($name);
                 $type = $compiler->getType();
 
                 match ($type) {
@@ -353,7 +353,7 @@ final class DirectiveExtractionPass implements PassInterface
 
                 $expression = $attr->value ?? 'true';
                 // Get directive type
-                $compiler = $this->registry->getDirective($name);
+                $compiler = $this->registry->get($name);
                 $type = $compiler->getType();
                 match ($type) {
                     DirectiveType::CONTROL_FLOW => $controlFlowDirective = [

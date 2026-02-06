@@ -6,7 +6,7 @@ namespace Sugar\Tests\Unit\Pass;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\SwitchCompiler;
-use Sugar\Extension\ExtensionRegistry;
+use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectivePairingPass;
 use Sugar\Pass\PassInterface;
 
@@ -14,11 +14,11 @@ final class DirectivePairingPassTest extends PassTestCase
 {
     protected function getPass(): PassInterface
     {
-        $registry = new ExtensionRegistry();
-        $registry->registerDirective('forelse', ForelseCompiler::class);
-        $registry->registerDirective('empty', ForelseCompiler::class);
-        $registry->registerDirective('switch', SwitchCompiler::class);
-        $registry->registerDirective('case', SwitchCompiler::class);
+        $registry = new DirectiveRegistry();
+        $registry->register('forelse', ForelseCompiler::class);
+        $registry->register('empty', ForelseCompiler::class);
+        $registry->register('switch', SwitchCompiler::class);
+        $registry->register('case', SwitchCompiler::class);
 
         return new DirectivePairingPass($registry);
     }
