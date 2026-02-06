@@ -3,11 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
@@ -45,34 +42,24 @@ final class WhileCompilerTest extends DirectiveCompilerTestCase
     public function testCompileWhileWithWrapperMode(): void
     {
         // Wrapper mode requires the element has ElementNode children (not leaf)
-        $innerElement = new ElementNode(
-            tag: 'span',
-            attributes: [],
-            children: [
-                new TextNode('Loop content', 2, 10),
-                new OutputNode('$counter++', true, OutputContext::HTML, 2, 25),
-            ],
-            selfClosing: false,
-            line: 2,
-            column: 5,
-        );
+        $innerElement = $this->element('span')
+            ->withChildren([
+                $this->text('Loop content', 2, 10),
+                $this->outputNode('$counter++', true, OutputContext::HTML, 2, 25),
+            ])
+            ->at(2, 5)
+            ->build();
 
-        $wrapperElement = new ElementNode(
-            tag: 'div',
-            attributes: [],
-            children: [$innerElement], // Has ElementNode child = wrapper mode
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $wrapperElement = $this->element('div')
+            ->withChild($innerElement) // Has ElementNode child = wrapper mode
+            ->at(1, 1)
+            ->build();
 
-        $node = new DirectiveNode(
-            name: 'while',
-            expression: '$counter < 5',
-            children: [$wrapperElement],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('while')
+            ->expression('$counter < 5')
+            ->withChild($wrapperElement)
+            ->at(1, 1)
+            ->build();
 
         $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
@@ -127,9 +114,7 @@ final class WhileCompilerTest extends DirectiveCompilerTestCase
 
     public function testGetType(): void
     {
-        $type = $this->directiveCompiler->getType();
-
-        $this->assertSame(DirectiveType::CONTROL_FLOW, $type);
+        $this->assertSame(DirectiveType::CONTROL_FLOW, $this->directiveCompiler->getType());
     }
 
     public function testCompileWhileWithEmptyChildren(): void

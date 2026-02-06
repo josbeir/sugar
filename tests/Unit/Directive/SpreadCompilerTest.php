@@ -67,8 +67,6 @@ final class SpreadCompilerTest extends DirectiveCompilerTestCase
 
     public function testGetType(): void
     {
-        $type = $this->directiveCompiler->getType();
-
-        $this->assertSame(DirectiveType::ATTRIBUTE, $type);
+        $this->assertSame(DirectiveType::ATTRIBUTE, $this->directiveCompiler->getType());
     }
 }

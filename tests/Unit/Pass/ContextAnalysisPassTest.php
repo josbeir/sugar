@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Pass;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
-use Sugar\Ast\TextNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Pass\PassInterface;
@@ -140,11 +139,13 @@ final class ContextAnalysisPassTest extends PassTestCase
 
     public function testHandlesSelfClosingTags(): void
     {
-        $ast = new DocumentNode([
-            $this->createText('<img src="'),
-            new OutputNode('$url', true, OutputContext::HTML, 1, 11),
-            new TextNode('" />', 1, 16),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<img src="'),
+                $this->outputNode('$url', true, OutputContext::HTML, 1, 11),
+                $this->text('" />', 1, 16),
+            ])
+            ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
@@ -155,11 +156,13 @@ final class ContextAnalysisPassTest extends PassTestCase
 
     public function testDetectsAttributeContext(): void
     {
-        $ast = new DocumentNode([
-            $this->createText('<a href="'),
-            new OutputNode('$url', true, OutputContext::HTML, 1, 10),
-            new TextNode('">', 1, 15),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<a href="'),
+                $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
+                $this->text('">', 1, 15),
+            ])
+            ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
@@ -169,13 +172,15 @@ final class ContextAnalysisPassTest extends PassTestCase
 
     public function testAttributeContextEndsAtQuote(): void
     {
-        $ast = new DocumentNode([
-            $this->createText('<a href="'),
-            new OutputNode('$url', true, OutputContext::HTML, 1, 10),
-            new TextNode('">', 1, 15),
-            new OutputNode('$text', true, OutputContext::HTML, 1, 17),
-            new TextNode('</a>', 1, 23),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<a href="'),
+                $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
+                $this->text('">', 1, 15),
+                $this->outputNode('$text', true, OutputContext::HTML, 1, 17),
+                $this->text('</a>', 1, 23),
+            ])
+            ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 

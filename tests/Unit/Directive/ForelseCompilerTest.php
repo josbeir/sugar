@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ForelseCompiler;
@@ -59,30 +58,22 @@ final class ForelseCompilerTest extends DirectiveCompilerTestCase
 
     public function testCompileForelseWithEmpty(): void
     {
-        $emptyElement = new ElementNode(
-            tag: 'div',
-            attributes: [],
-            children: [$this->createTextNode('No items')],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $emptyElement = $this->element('div')
+            ->withChild($this->text('No items'))
+            ->at(1, 1)
+            ->build();
 
-        $emptyNode = new DirectiveNode(
-            name: 'empty',
-            expression: 'true',
-            children: [$emptyElement],
-            line: 1,
-            column: 1,
-        );
+        $emptyNode = $this->directive('empty')
+            ->expression('true')
+            ->withChild($emptyElement)
+            ->at(1, 1)
+            ->build();
 
-        $node = new DirectiveNode(
-            name: 'forelse',
-            expression: '$items as $item',
-            children: [$this->createTextNode('Item')],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('forelse')
+            ->expression('$items as $item')
+            ->withChild($this->text('Item'))
+            ->at(1, 1)
+            ->build();
 
         // Wire the pairing
         $node->setPairedSibling($emptyNode);

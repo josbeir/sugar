@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\DocumentNode;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Extension\ExtensionRegistry;
@@ -28,7 +27,10 @@ final class DirectivePairingPassTest extends PassTestCase
     {
         $child1 = $this->createText('Hello');
         $child2 = $this->createText('World');
-        $doc = new DocumentNode([$child1, $child2]);
+        $doc = $this->document()
+            ->withChild($child1)
+            ->withChild($child2)
+            ->build();
 
         $this->execute($doc, $this->createTestContext());
 
@@ -39,8 +41,14 @@ final class DirectivePairingPassTest extends PassTestCase
     public function testWiresNestedParentReferences(): void
     {
         $grandchild = $this->createText('Inner');
-        $child = new DirectiveNode('if', '$x', [$grandchild], 1, 1);
-        $doc = new DocumentNode([$child]);
+        $child = $this->directive('if')
+            ->expression('$x')
+            ->withChild($grandchild)
+            ->at(1, 1)
+            ->build();
+        $doc = $this->document()
+            ->withChild($child)
+            ->build();
 
         $this->execute($doc, $this->createTestContext());
 
@@ -102,9 +110,18 @@ final class DirectivePairingPassTest extends PassTestCase
     public function testDoesNotPairNonPairedDirectiveTypes(): void
     {
         // Switch doesn't implement PairedDirectiveCompilerInterface yet
-        $switch = new DirectiveNode('switch', '$value', [], 1, 1);
-        $case1 = new DirectiveNode('case', '1', [], 2, 1);
-        $doc = new DocumentNode([$switch, $case1]);
+        $switch = $this->directive('switch')
+            ->expression('$value')
+            ->at(1, 1)
+            ->build();
+        $case1 = $this->directive('case')
+            ->expression('1')
+            ->at(2, 1)
+            ->build();
+        $doc = $this->document()
+            ->withChild($switch)
+            ->withChild($case1)
+            ->build();
 
         $this->execute($doc, $this->createTestContext());
 

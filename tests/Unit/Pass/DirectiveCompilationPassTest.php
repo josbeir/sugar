@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
@@ -97,32 +96,24 @@ final class DirectiveCompilationPassTest extends PassTestCase
         $this->registry->registerDirective('if', $ifCompiler);
         $this->registry->registerDirective('foreach', $foreachCompiler);
 
-        $innerDirective = new DirectiveNode(
-            name: 'if',
-            expression: '$x',
-            children: [new TextNode('Inner', 2, 5)],
-            line: 2,
-            column: 4,
-        );
+        $innerDirective = $this->directive('if')
+            ->expression('$x')
+            ->withChild($this->text('Inner', 2, 5))
+            ->at(2, 4)
+            ->build();
 
-        $outerDirective = new DirectiveNode(
-            name: 'foreach',
-            expression: '$items',
-            children: [
-                new ElementNode(
-                    tag: 'div',
-                    attributes: [],
-                    children: [$innerDirective],
-                    selfClosing: false,
-                    line: 1,
-                    column: 10,
-                ),
-            ],
-            line: 1,
-            column: 0,
-        );
+        $outerDirective = $this->directive('foreach')
+            ->expression('$items')
+            ->withChild(
+                $this->element('div')
+                    ->withChild($innerDirective)
+                    ->at(1, 10)
+                    ->build(),
+            )
+            ->at(1, 0)
+            ->build();
 
-        $ast = new DocumentNode([$outerDirective]);
+        $ast = $this->document()->withChild($outerDirective)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should compile both directives
@@ -190,23 +181,17 @@ final class DirectiveCompilationPassTest extends PassTestCase
 
         $this->registry->registerDirective('custom', $compiler);
 
-        $directive = new DirectiveNode(
-            name: 'custom',
-            expression: '$value',
-            children: [],
-            line: 1,
-            column: 0,
-        );
+        $directive = $this->directive('custom')
+            ->expression('$value')
+            ->build();
 
-        $ast = new DocumentNode([$directive]);
+        $ast = $this->document()->withChild($directive)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertCount(5, $result->children);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[1]);
-        $this->assertInstanceOf(TextNode::class, $result->children[2]);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[3]);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[4]);
+        $this->assertAst($result)
+            ->hasCount(5)
+            ->containsNodeType(RawPhpNode::class)
+            ->containsNodeType(TextNode::class);
     }
 
     public function testProcessesMultipleTopLevelDirectives(): void
@@ -228,30 +213,25 @@ final class DirectiveCompilationPassTest extends PassTestCase
 
         $this->registry->registerDirective('test', $compiler);
 
-        $directive1 = new DirectiveNode(
-            name: 'test',
-            expression: 'first',
-            children: [new TextNode('One', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $directive1 = $this->directive('test')
+            ->expression('first')
+            ->withChild($this->text('One', 1, 0))
+            ->at(1, 0)
+            ->build();
 
-        $directive2 = new DirectiveNode(
-            name: 'test',
-            expression: 'second',
-            children: [new TextNode('Two', 2, 0)],
-            line: 2,
-            column: 0,
-        );
+        $directive2 = $this->directive('test')
+            ->expression('second')
+            ->withChild($this->text('Two', 2, 0))
+            ->at(2, 0)
+            ->build();
 
-        $ast = new DocumentNode([$directive1, $directive2]);
+        $ast = $this->document()->withChildren([$directive1, $directive2])->build();
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertCount(4, $result->children);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[0]);
-        $this->assertInstanceOf(TextNode::class, $result->children[1]);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[2]);
-        $this->assertInstanceOf(TextNode::class, $result->children[3]);
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->containsNodeType(RawPhpNode::class)
+            ->containsNodeType(TextNode::class);
     }
 
     public function testHandlesDirectiveWithinElementChildren(): void
@@ -274,24 +254,18 @@ final class DirectiveCompilationPassTest extends PassTestCase
 
         $this->registry->registerDirective('if', $compiler);
 
-        $directive = new DirectiveNode(
-            name: 'if',
-            expression: '$show',
-            children: [new TextNode('Visible', 2, 5)],
-            line: 2,
-            column: 4,
-        );
+        $directive = $this->directive('if')
+            ->expression('$show')
+            ->withChild($this->text('Visible', 2, 5))
+            ->at(2, 4)
+            ->build();
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [],
-            children: [$directive],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->withChild($directive)
+            ->at(1, 0)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $divElement = $result->children[0];
@@ -321,28 +295,22 @@ final class DirectiveCompilationPassTest extends PassTestCase
 
         $this->registry->registerDirective('test', $compiler);
 
-        $directive = new DirectiveNode(
-            name: 'test',
-            expression: '$x',
-            children: [new TextNode('Dir', 2, 5)],
-            line: 2,
-            column: 0,
-        );
+        $directive = $this->directive('test')
+            ->expression('$x')
+            ->withChild($this->text('Dir', 2, 5))
+            ->at(2, 0)
+            ->build();
 
-        $element = new ElementNode(
-            tag: 'section',
-            attributes: [],
-            children: [
-                new TextNode('Before', 1, 10),
+        $element = $this->element('section')
+            ->withChildren([
+                $this->text('Before', 1, 10),
                 $directive,
-                new TextNode('After', 3, 10),
-            ],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+                $this->text('After', 3, 10),
+            ])
+            ->at(1, 0)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $sectionElement = $result->children[0];
@@ -356,19 +324,18 @@ final class DirectiveCompilationPassTest extends PassTestCase
 
     public function testPreservesSelfClosingElements(): void
     {
-        $element = new ElementNode(
-            tag: 'input',
-            attributes: [],
-            children: [],
-            selfClosing: true,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('input')
+            ->selfClosing()
+            ->at(1, 0)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertCount(1, $result->children);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsElement('input');
+
         $inputElement = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $inputElement);
         $this->assertTrue($inputElement->selfClosing);
@@ -417,23 +384,19 @@ final class DirectiveCompilationPassTest extends PassTestCase
         $this->registry->registerDirective('outer', $outerCompiler);
         $this->registry->registerDirective('inner', $innerCompiler);
 
-        $directive = new DirectiveNode(
-            name: 'outer',
-            expression: '$x',
-            children: [],
-            line: 1,
-            column: 0,
-        );
+        $directive = $this->directive('outer')
+            ->expression('$x')
+            ->at(1, 0)
+            ->build();
 
-        $ast = new DocumentNode([$directive]);
+        $ast = $this->document()->withChild($directive)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should compile both outer and inner directives
-        $this->assertCount(4, $result->children);
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[0]); // Outer start
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[1]); // Inner
-        $this->assertInstanceOf(TextNode::class, $result->children[2]); // Nested content
-        $this->assertInstanceOf(RawPhpNode::class, $result->children[3]); // Outer end
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->containsNodeType(RawPhpNode::class)
+            ->containsNodeType(TextNode::class);
     }
 
     protected function createContext(

@@ -6,16 +6,14 @@ namespace Sugar\Tests\Unit\CodeGen;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
 use Sugar\Tests\CompilerTestTrait;
 use Sugar\Tests\ExecuteTemplateTrait;
+use Sugar\Tests\NodeBuildersTrait;
 use Sugar\Tests\TemplateTestHelperTrait;
 
 /**
@@ -25,6 +23,7 @@ final class CodeGeneratorTest extends TestCase
 {
     use CompilerTestTrait;
     use ExecuteTemplateTrait;
+    use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
     private CodeGenerator $generator;
@@ -40,9 +39,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateSimpleTextNode(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('Hello World', 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->text('Hello World', 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -53,9 +52,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateEscapedOutput(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$userName', true, OutputContext::HTML, 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$userName', true, OutputContext::HTML, 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -66,9 +65,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateUnescapedOutput(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$htmlContent', false, OutputContext::RAW, 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$htmlContent', false, OutputContext::RAW, 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -78,9 +77,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateJavascriptContext(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$data', true, OutputContext::JAVASCRIPT, 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$data', true, OutputContext::JAVASCRIPT, 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -90,9 +89,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateUrlContext(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$url', true, OutputContext::URL, 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$url', true, OutputContext::URL, 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -101,11 +100,13 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateMixedContent(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<div>', 1, 1),
-            new OutputNode('$title', true, OutputContext::HTML, 1, 6),
-            new TextNode('</div>', 1, 13),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<div>', 1, 1),
+                $this->outputNode('$title', true, OutputContext::HTML, 1, 6),
+                $this->text('</div>', 1, 13),
+            ])
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -116,11 +117,13 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGeneratedCodeIsExecutable(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('Hello ', 1, 1),
-            new OutputNode('$name', true, OutputContext::HTML, 1, 7),
-            new TextNode('!', 1, 13),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('Hello ', 1, 1),
+                $this->outputNode('$name', true, OutputContext::HTML, 1, 7),
+                $this->text('!', 1, 13),
+            ])
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -137,7 +140,7 @@ final class CodeGeneratorTest extends TestCase
 
     public function testEmptyDocument(): void
     {
-        $ast = new DocumentNode([]);
+        $ast = $this->document()->build();
 
         $code = $this->generator->generate($ast);
 
@@ -147,9 +150,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateRawPhpCode(): void
     {
-        $ast = new DocumentNode([
-            new RawPhpNode(' $x = 42; ', 1, 1),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->rawPhp(' $x = 42; ', 1, 1))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -158,11 +161,13 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateRawPhpWithLogic(): void
     {
-        $ast = new DocumentNode([
-            new RawPhpNode(' if ($condition): ', 1, 1),
-            new TextNode('Content', 1, 20),
-            new RawPhpNode(' endif; ', 2, 1),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->rawPhp(' if ($condition): ', 1, 1),
+                $this->text('Content', 1, 20),
+                $this->rawPhp(' endif; ', 2, 1),
+            ])
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -173,10 +178,12 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateMixedPhpAndOutput(): void
     {
-        $ast = new DocumentNode([
-            new RawPhpNode(' $greeting = "Hello"; ', 1, 1),
-            new OutputNode('$greeting', true, OutputContext::HTML, 1, 24),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->rawPhp(' $greeting = "Hello"; ', 1, 1),
+                $this->outputNode('$greeting', true, OutputContext::HTML, 1, 24),
+            ])
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -186,9 +193,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugModeAddsSourceInfo(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('Hello', 1, 0),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->text('Hello', 1, 0))
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -199,9 +206,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugModeDisabledShowsDefaultHeader(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('Hello', 1, 0),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->text('Hello', 1, 0))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -212,9 +219,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugCommentOnRawPhpNode(): void
     {
-        $ast = new DocumentNode([
-            new RawPhpNode('if ($user):', 2, 4),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->rawPhp('if ($user):', 2, 4))
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -224,9 +231,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugCommentOnOutputNode(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$user->name', true, OutputContext::HTML, 3, 8),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$user->name', true, OutputContext::HTML, 3, 8))
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -235,9 +242,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testDebugCommentOnRawOutputNode(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$html', false, OutputContext::RAW, 4, 10),
-        ]);
+        $ast = $this->document()
+            ->withChild($this->outputNode('$html', false, OutputContext::RAW, 4, 10))
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -246,10 +253,12 @@ final class CodeGeneratorTest extends TestCase
 
     public function testNoDebugCommentsWhenDisabled(): void
     {
-        $ast = new DocumentNode([
-            new RawPhpNode('if ($user):', 2, 4),
-            new OutputNode('$user->name', true, OutputContext::HTML, 3, 8),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->rawPhp('if ($user):', 2, 4),
+                $this->outputNode('$user->name', true, OutputContext::HTML, 3, 8),
+            ])
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -261,7 +270,9 @@ final class CodeGeneratorTest extends TestCase
     public function testDebugModeWithoutSourceFile(): void
     {
         $generator = new CodeGenerator($this->createEscaper(), $this->createContext(templatePath: ''));
-        $ast = new DocumentNode([new TextNode('Hello', 1, 0)]);
+        $ast = $this->document()
+            ->withChild($this->text('Hello', 1, 0))
+            ->build();
 
         $code = $generator->generate($ast);
 
@@ -273,19 +284,16 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateElementWithAttributes(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'div',
-                [
-                    new AttributeNode('id', 'main', 1, 1),
-                    new AttributeNode('class', 'container', 1, 1),
-                ],
-                [new TextNode('Content', 1, 1)],
-                false,
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('id', 'main')
+                    ->attribute('class', 'container')
+                    ->withChild($this->text('Content', 1, 1))
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -296,16 +304,15 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateSelfClosingElement(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'img',
-                [new AttributeNode('src', 'image.jpg', 1, 1)],
-                [],
-                true,
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('img')
+                    ->attribute('src', 'image.jpg')
+                    ->selfClosing()
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -314,23 +321,25 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateElementWithDynamicAttribute(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'div',
-                [
-                    new AttributeNode(
-                        'title',
-                        new OutputNode('$title', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
-                        1,
-                        1,
-                    ),
-                ],
-                [],
-                false,
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ElementNode(
+                    'div',
+                    [
+                        new AttributeNode(
+                            'title',
+                            new OutputNode('$title', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                            1,
+                            1,
+                        ),
+                    ],
+                    [],
+                    false,
+                    1,
+                    1,
+                ),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -340,16 +349,18 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateBooleanAttribute(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'input',
-                [new AttributeNode('disabled', null, 1, 1)],
-                [],
-                true,
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ElementNode(
+                    'input',
+                    [new AttributeNode('disabled', null, 1, 1)],
+                    [],
+                    true,
+                    1,
+                    1,
+                ),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -358,17 +369,19 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateFragmentNode(): void
     {
-        $ast = new DocumentNode([
-            new FragmentNode(
-                [],
-                [
-                    new TextNode('First', 1, 1),
-                    new TextNode('Second', 1, 1),
-                ],
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new FragmentNode(
+                    [],
+                    [
+                        $this->text('First', 1, 1),
+                        $this->text('Second', 1, 1),
+                    ],
+                    1,
+                    1,
+                ),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -380,15 +393,17 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateDirectiveNode(): void
     {
-        $ast = new DocumentNode([
-            new DirectiveNode(
-                'if',
-                '$condition',
-                [new TextNode('Content', 1, 1)],
-                1,
-                1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new DirectiveNode(
+                    'if',
+                    '$condition',
+                    [$this->text('Content', 1, 1)],
+                    1,
+                    1,
+                ),
+            )
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -399,16 +414,14 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateElementInDebugMode(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'div',
-                [],
-                [new TextNode('Content', 1, 1)],
-                false,
-                5,
-                10,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->text('Content', 1, 1))
+                    ->at(5, 10)
+                    ->build(),
+            )
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -417,16 +430,14 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateSelfClosingElementInDebugMode(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                'br',
-                [],
-                [],
-                true,
-                3,
-                8,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('br')
+                    ->selfClosing()
+                    ->at(3, 8)
+                    ->build(),
+            )
+            ->build();
 
         $code = $this->debugGenerator->generate($ast);
 
@@ -435,9 +446,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateSimplePipe(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)']),
-        ]);
+        $ast = $this->document()
+            ->withChild(new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)']))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -448,9 +459,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGenerateMultiplePipes(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)', 'truncate(..., 20)']),
-        ]);
+        $ast = $this->document()
+            ->withChild(new OutputNode('$name', true, OutputContext::HTML, 1, 1, ['upper(...)', 'truncate(..., 20)']))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -461,9 +472,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGeneratePipeWithMultipleArguments(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$price', true, OutputContext::HTML, 1, 1, ['money(..., "USD", 2)']),
-        ]);
+        $ast = $this->document()
+            ->withChild(new OutputNode('$price', true, OutputContext::HTML, 1, 1, ['money(..., "USD", 2)']))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -473,9 +484,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGeneratePipeWithoutEscaping(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$html', false, OutputContext::RAW, 1, 1, ['upper(...)']),
-        ]);
+        $ast = $this->document()
+            ->withChild(new OutputNode('$html', false, OutputContext::RAW, 1, 1, ['upper(...)']))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
@@ -486,9 +497,9 @@ final class CodeGeneratorTest extends TestCase
 
     public function testGeneratePipeInJavascriptContext(): void
     {
-        $ast = new DocumentNode([
-            new OutputNode('$data', true, OutputContext::JAVASCRIPT, 1, 1, ['upper(...)']),
-        ]);
+        $ast = $this->document()
+            ->withChild(new OutputNode('$data', true, OutputContext::JAVASCRIPT, 1, 1, ['upper(...)']))
+            ->build();
 
         $code = $this->generator->generate($ast);
 
