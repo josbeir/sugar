@@ -28,8 +28,6 @@ final class ComponentExpansionPassTest extends TestCase
 
     private Parser $parser;
 
-    private ExtensionRegistry $registry;
-
     private ComponentExpansionPass $pass;
 
     protected function setUp(): void
@@ -38,14 +36,14 @@ final class ComponentExpansionPassTest extends TestCase
         $this->loader->discoverComponents('.');
 
         $this->parser = new Parser();
-        $this->registry = new ExtensionRegistry();
+        $registry = new ExtensionRegistry();
 
         // Register standard directives for testing
-        $this->registry->registerDirective('if', IfCompiler::class);
-        $this->registry->registerDirective('foreach', ForeachCompiler::class);
-        $this->registry->registerDirective('while', WhileCompiler::class);
+        $registry->registerDirective('if', IfCompiler::class);
+        $registry->registerDirective('foreach', ForeachCompiler::class);
+        $registry->registerDirective('while', WhileCompiler::class);
 
-        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $this->registry, new SugarConfig());
+        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
     }
 
     public function testExpandsSimpleComponent(): void

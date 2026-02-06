@@ -172,7 +172,7 @@ final class NodeTraverserTest extends TestCase
             return $node instanceof ElementNode && $node->tag === 'missing';
         });
 
-        $this->assertNull($result);
+        $this->assertNotInstanceOf(Node::class, $result);
     }
 
     public function testFindFirstSearchesRecursively(): void
@@ -305,7 +305,7 @@ final class NodeTraverserTest extends TestCase
             return $node instanceof TextNode;
         });
 
-        $this->assertNull($result);
+        $this->assertNotInstanceOf(Node::class, $result);
     }
 
     public function testFindAllHandlesEmptyArray(): void

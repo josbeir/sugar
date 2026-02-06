@@ -6,6 +6,7 @@ namespace Sugar\Test\Unit\Ast;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
+use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
 
 final class ComponentNodeTest extends TestCase
@@ -69,9 +70,9 @@ final class ComponentNodeTest extends TestCase
 
         $this->assertSame($child2, $node->getNextSibling($child1));
         $this->assertSame($child3, $node->getNextSibling($child2));
-        $this->assertNull($node->getNextSibling($child3));
+        $this->assertNotInstanceOf(Node::class, $node->getNextSibling($child3));
 
-        $this->assertNull($node->getPreviousSibling($child1));
+        $this->assertNotInstanceOf(Node::class, $node->getPreviousSibling($child1));
         $this->assertSame($child1, $node->getPreviousSibling($child2));
         $this->assertSame($child2, $node->getPreviousSibling($child3));
     }

@@ -350,16 +350,17 @@ final class TemplateInheritancePass implements PassInterface
         // If block exists in child, replace content
         if ($blockName !== null && isset($childBlocks[$blockName])) {
             $childBlock = $childBlocks[$blockName];
-
             if ($childBlock instanceof ElementNode) {
                 // Child is element: keep parent wrapper, replace children
                 if ($node instanceof ElementNode) {
                     return NodeCloner::withChildren($node, $childBlock->children);
-                } else {
-                    // Parent is fragment, child is element: use child's children
-                    return NodeCloner::fragmentWithChildren($node, $childBlock->children);
                 }
-            } elseif ($childBlock instanceof FragmentNode) {
+
+                // Parent is fragment, child is element: use child's children
+                return NodeCloner::fragmentWithChildren($node, $childBlock->children);
+            }
+
+            if ($childBlock instanceof FragmentNode) {
                 // Child is fragment: check if it has directive attributes
                 $hasDirectives = false;
                 foreach ($childBlock->attributes as $attr) {
@@ -395,11 +396,13 @@ final class TemplateInheritancePass implements PassInterface
                         );
 
                         return NodeCloner::withChildren($node, [$wrappedFragment]);
-                    } else {
-                        // No directives: just use fragment's children
-                        return NodeCloner::withChildren($node, $childBlock->children);
                     }
-                } elseif ($hasDirectives) {
+
+                    // No directives: just use fragment's children
+                    return NodeCloner::withChildren($node, $childBlock->children);
+                }
+
+                if ($hasDirectives) {
                     // Both are fragments
                     // Child fragment has directives: return it for later processing
                     $cleanAttrs = [];
@@ -410,10 +413,10 @@ final class TemplateInheritancePass implements PassInterface
                     }
 
                     return NodeCloner::fragmentWithAttributes($childBlock, $cleanAttrs);
-                } else {
-                    // No directives: merge children
-                    return NodeCloner::fragmentWithChildren($node, $childBlock->children);
                 }
+
+                // No directives: merge children
+                return NodeCloner::fragmentWithChildren($node, $childBlock->children);
             }
         }
 
@@ -425,9 +428,9 @@ final class TemplateInheritancePass implements PassInterface
 
         if ($node instanceof ElementNode) {
             return NodeCloner::withChildren($node, $newChildren);
-        } else {
-            return NodeCloner::fragmentWithChildren($node, $newChildren);
         }
+
+        return NodeCloner::fragmentWithChildren($node, $newChildren);
     }
 
     /**
@@ -528,11 +531,11 @@ final class TemplateInheritancePass implements PassInterface
 
         if ($node instanceof ElementNode) {
             return NodeCloner::withAttributesAndChildren($node, $cleanAttributes, $cleanChildren);
-        } else {
-            return NodeCloner::fragmentWithAttributes(
-                NodeCloner::fragmentWithChildren($node, $cleanChildren),
-                $cleanAttributes,
-            );
         }
+
+        return NodeCloner::fragmentWithAttributes(
+            NodeCloner::fragmentWithChildren($node, $cleanChildren),
+            $cleanAttributes,
+        );
     }
 }

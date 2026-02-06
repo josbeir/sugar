@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Test\Unit\Cache;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\CacheMetadata;
 use Sugar\Cache\FileCache;
 
@@ -63,7 +64,7 @@ final class FileCacheTest extends TestCase
         $this->cache->put('/templates/test.sugar.php', $compiled, $metadata);
         $cached = $this->cache->get('/templates/test.sugar.php');
 
-        $this->assertNotNull($cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
         $this->assertFileExists($cached->path);
     }
 
@@ -71,7 +72,7 @@ final class FileCacheTest extends TestCase
     {
         $cached = $this->cache->get('/templates/nonexistent.sugar.php');
 
-        $this->assertNull($cached);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
     }
 
     public function testDeleteRemovesCache(): void
@@ -82,7 +83,7 @@ final class FileCacheTest extends TestCase
         $result = $this->cache->delete('/templates/delete.sugar.php');
 
         $this->assertTrue($result);
-        $this->assertNull($this->cache->get('/templates/delete.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/delete.sugar.php'));
     }
 
     public function testFlushClearsAllCache(): void
@@ -92,8 +93,8 @@ final class FileCacheTest extends TestCase
 
         $this->cache->flush();
 
-        $this->assertNull($this->cache->get('/templates/a.sugar.php'));
-        $this->assertNull($this->cache->get('/templates/b.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/a.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/b.sugar.php'));
     }
 
     public function testInvalidateCascadesToDependents(): void
@@ -121,10 +122,10 @@ final class FileCacheTest extends TestCase
         $this->assertNotContains('/templates/page-c.sugar.php', $invalidated);
 
         // Verify caches are actually deleted
-        $this->assertNull($this->cache->get('/templates/layout.sugar.php'));
-        $this->assertNull($this->cache->get('/templates/page-a.sugar.php'));
-        $this->assertNull($this->cache->get('/templates/page-b.sugar.php'));
-        $this->assertNotNull($this->cache->get('/templates/page-c.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/layout.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/page-a.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('/templates/page-b.sugar.php'));
+        $this->assertInstanceOf(CachedTemplate::class, $this->cache->get('/templates/page-c.sugar.php'));
     }
 
     public function testInvalidateHandlesDeepDependencyChains(): void
@@ -177,7 +178,7 @@ final class FileCacheTest extends TestCase
 
         // Debug mode with fresh cache should return cached
         $cached = $this->cache->get($sourcePath, debug: true);
-        $this->assertNotNull($cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify source file (newer timestamp)
         sleep(1);
@@ -187,7 +188,7 @@ final class FileCacheTest extends TestCase
 
         // Debug mode with stale cache should return null
         $cached = $this->cache->get($sourcePath, debug: true);
-        $this->assertNull($cached);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
 
         unlink($sourcePath);
     }
@@ -210,7 +211,7 @@ final class FileCacheTest extends TestCase
 
         // Debug mode with fresh cache should return cached
         $cached = $this->cache->get($pagePath, debug: true);
-        $this->assertNotNull($cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify layout (dependency)
         sleep(1);
@@ -220,7 +221,7 @@ final class FileCacheTest extends TestCase
 
         // Debug mode should detect stale dependency
         $cached = $this->cache->get($pagePath, debug: true);
-        $this->assertNull($cached);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
 
         unlink($layoutPath);
         unlink($pagePath);
@@ -244,7 +245,7 @@ final class FileCacheTest extends TestCase
 
         // Production mode (debug=false) should still return cached
         $cached = $this->cache->get($sourcePath, debug: false);
-        $this->assertNotNull($cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         unlink($sourcePath);
     }

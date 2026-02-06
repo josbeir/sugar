@@ -136,7 +136,11 @@ class FileTemplateLoader implements TemplateLoaderInterface
         $result = [];
 
         foreach ($parts as $part) {
-            if ($part === '' || $part === '.') {
+            if ($part === '') {
+                continue;
+            }
+
+            if ($part === '.') {
                 continue;
             }
 
@@ -191,7 +195,11 @@ class FileTemplateLoader implements TemplateLoaderInterface
         $fragmentElement = $this->config->getFragmentElement();
 
         foreach ($iterator as $file) {
-            if (!$file instanceof SplFileInfo || !$file->isFile()) {
+            if (!$file instanceof SplFileInfo) {
+                continue;
+            }
+
+            if (!$file->isFile()) {
                 continue;
             }
 

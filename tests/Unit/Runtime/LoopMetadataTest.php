@@ -127,7 +127,7 @@ final class LoopMetadataTest extends TestCase
         $outerLoop = new LoopMetadata($outerItems);
         $innerLoop = new LoopMetadata($innerItems, $outerLoop);
 
-        $this->assertNull($outerLoop->parent);
+        $this->assertNotInstanceOf(LoopMetadata::class, $outerLoop->parent);
         $this->assertSame($outerLoop, $innerLoop->parent);
     }
 

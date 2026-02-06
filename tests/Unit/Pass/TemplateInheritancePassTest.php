@@ -23,15 +23,13 @@ final class TemplateInheritancePassTest extends TestCase
 
     private string $inheritanceFixturesPath;
 
-    private FileTemplateLoader $loader;
-
     private TemplateInheritancePass $pass;
 
     protected function setUp(): void
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->inheritanceFixturesPath));
-        $this->pass = new TemplateInheritancePass($this->loader, new SugarConfig());
+        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->inheritanceFixturesPath));
+        $this->pass = new TemplateInheritancePass($loader, new SugarConfig());
     }
 
     private function attr(string $name, string $value): AttributeNode

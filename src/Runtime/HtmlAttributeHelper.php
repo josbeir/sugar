@@ -80,7 +80,11 @@ final class HtmlAttributeHelper
 
         foreach ($attributes as $key => $value) {
             // Skip false and null values
-            if ($value === null || $value === false) {
+            if ($value === null) {
+                continue;
+            }
+
+            if ($value === false) {
                 continue;
             }
 

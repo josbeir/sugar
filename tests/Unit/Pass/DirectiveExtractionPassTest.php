@@ -28,13 +28,11 @@ final class DirectiveExtractionPassTest extends TestCase
 {
     private DirectiveExtractionPass $pass;
 
-    private ExtensionRegistry $registry;
-
     protected function setUp(): void
     {
         // Create registry with test directives
-        $this->registry = $this->createTestRegistry();
-        $this->pass = new DirectiveExtractionPass($this->registry, new SugarConfig());
+        $registry = $this->createTestRegistry();
+        $this->pass = new DirectiveExtractionPass($registry, new SugarConfig());
     }
 
     private function createTestRegistry(): ExtensionRegistry

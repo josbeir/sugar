@@ -42,11 +42,15 @@ final class ContextAnalysisPass implements PassInterface
             ): ElementNode|TextNode|OutputNode|Node {
                 if ($node instanceof ElementNode) {
                     return $this->processElementNode($node, $analysisContext, $recurse);
-                } elseif ($node instanceof TextNode) {
+                }
+
+                if ($node instanceof TextNode) {
                     [$analysisContext, $inAttribute] = $this->processTextNode($node, $analysisContext, $inAttribute);
 
                     return $node;
-                } elseif ($node instanceof OutputNode) {
+                }
+
+                if ($node instanceof OutputNode) {
                     return $this->updateOutputNode($node, $analysisContext, $inAttribute);
                 }
 

@@ -14,11 +14,9 @@ return RectorConfig::configure()
         __DIR__ . '/tests',
     ])
     ->withSkip([
-        DisallowedEmptyRuleFixerRector::class,
         SimplifyIfElseToTernaryRector::class,
     ])
     ->withImportNames(
-        importNames: true,
         importDocBlockNames: false,
         importShortClasses: false,
         removeUnusedImports: true,
@@ -28,6 +26,7 @@ return RectorConfig::configure()
         deadCode: true,
         codeQuality: true,
         codingStyle: true,
-        //naming: true,
-        typeDeclarations: true,
+		earlyReturn: true,
+		instanceOf: true,
+		phpunitCodeQuality: true,
     );

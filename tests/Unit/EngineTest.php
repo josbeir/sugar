@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
@@ -103,7 +104,7 @@ final class EngineTest extends TestCase
 
         // Verify cache was used (check with same key engine uses)
         $cached = $cache->get('cached.sugar.php');
-        $this->assertNotNull($cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
     }
 
     public function testDebugMode(): void

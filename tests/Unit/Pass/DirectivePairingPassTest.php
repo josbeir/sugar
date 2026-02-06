@@ -17,17 +17,15 @@ final class DirectivePairingPassTest extends TestCase
 {
     private DirectivePairingPass $pass;
 
-    private ExtensionRegistry $registry;
-
     protected function setUp(): void
     {
-        $this->registry = new ExtensionRegistry();
-        $this->registry->registerDirective('forelse', ForelseCompiler::class);
-        $this->registry->registerDirective('empty', ForelseCompiler::class);
-        $this->registry->registerDirective('switch', SwitchCompiler::class);
-        $this->registry->registerDirective('case', SwitchCompiler::class);
+        $registry = new ExtensionRegistry();
+        $registry->registerDirective('forelse', ForelseCompiler::class);
+        $registry->registerDirective('empty', ForelseCompiler::class);
+        $registry->registerDirective('switch', SwitchCompiler::class);
+        $registry->registerDirective('case', SwitchCompiler::class);
 
-        $this->pass = new DirectivePairingPass($this->registry);
+        $this->pass = new DirectivePairingPass($registry);
     }
 
     public function testWiresParentReferences(): void
@@ -86,7 +84,7 @@ final class DirectivePairingPassTest extends TestCase
 
         $this->pass->execute($doc, $this->createContext());
 
-        $this->assertNull($forelse->getPairedSibling());
+        $this->assertNotInstanceOf(DirectiveNode::class, $forelse->getPairedSibling());
     }
 
     public function testDoesNotPairNonPairedDirectiveTypes(): void
@@ -99,7 +97,7 @@ final class DirectivePairingPassTest extends TestCase
         $this->pass->execute($doc, $this->createContext());
 
         // Should not pair since switch doesn't implement the interface
-        $this->assertNull($switch->getPairedSibling());
+        $this->assertNotInstanceOf(DirectiveNode::class, $switch->getPairedSibling());
     }
 
     protected function createContext(

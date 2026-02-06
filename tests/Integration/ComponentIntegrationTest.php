@@ -450,7 +450,7 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('First', $output);
         $this->assertStringContainsString('Second', $output);
         $this->assertStringContainsString('Third', $output);
-        $this->assertEquals(3, substr_count($output, '<button class="btn'));
+        $this->assertSame(3, substr_count($output, '<button class="btn'));
     }
 
     public function testComponentWithVariablesAndExpressions(): void

@@ -88,7 +88,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
         $this->loader->discoverComponents('components');
 
         $this->assertTrue($this->loader->hasComponent('button'));
-        $this->assertSame(1, count($this->loader->getComponents()));
+        $this->assertCount(1, $this->loader->getComponents());
     }
 
     public function testDiscoverComponentsWithCustomPrefix(): void

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Escape;
 
+use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Sugar\Enum\OutputContext;
@@ -64,18 +65,16 @@ final class EscaperTest extends TestCase
     }
 
     /**
-     * @return array<string, array<string>>
+     * @return \Iterator<string, array<string>>
      */
-    public static function xssVectorsProvider(): array
+    public static function xssVectorsProvider(): Iterator
     {
-        return [
-            'script tag' => ['<script>alert(1)</script>'],
-            'img onerror' => ['<img src=x onerror=alert(1)>'],
-            'svg onload' => ['<svg onload=alert(1)>'],
-            'javascript protocol' => ['<a href="javascript:alert(1)">click</a>'],
-            'script with encoding' => ['<script>alert(String.fromCharCode(88,83,83))</script>'],
-            'iframe src' => ['<iframe src="javascript:alert(1)">'],
-        ];
+        yield 'script tag' => ['<script>alert(1)</script>'];
+        yield 'img onerror' => ['<img src=x onerror=alert(1)>'];
+        yield 'svg onload' => ['<svg onload=alert(1)>'];
+        yield 'javascript protocol' => ['<a href="javascript:alert(1)">click</a>'];
+        yield 'script with encoding' => ['<script>alert(String.fromCharCode(88,83,83))</script>'];
+        yield 'iframe src' => ['<iframe src="javascript:alert(1)">'];
     }
 
     // JavaScript Context Tests

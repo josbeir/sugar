@@ -6,6 +6,7 @@ namespace Sugar\Tests\Unit\Ast\Trait;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
 
 final class SiblingNavigationTraitTest extends TestCase
@@ -20,7 +21,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         $this->assertSame($child2, $doc->getNextSibling($child1));
         $this->assertSame($child3, $doc->getNextSibling($child2));
-        $this->assertNull($doc->getNextSibling($child3));
+        $this->assertNotInstanceOf(Node::class, $doc->getNextSibling($child3));
     }
 
     public function testGetPreviousSibling(): void
@@ -31,7 +32,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         $doc = new DocumentNode([$child1, $child2, $child3]);
 
-        $this->assertNull($doc->getPreviousSibling($child1));
+        $this->assertNotInstanceOf(Node::class, $doc->getPreviousSibling($child1));
         $this->assertSame($child1, $doc->getPreviousSibling($child2));
         $this->assertSame($child2, $doc->getPreviousSibling($child3));
     }
@@ -62,7 +63,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         // Try to find ElementNode that doesn't exist
         $result = $doc->findNextSibling($text1, fn($node): bool => $node instanceof ElementNode);
-        $this->assertNull($result);
+        $this->assertNotInstanceOf(Node::class, $result);
     }
 
     public function testFindNextSiblingReturnsNullForLastChild(): void
@@ -74,7 +75,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         // Last child has no next sibling
         $result = $doc->findNextSibling($text2, fn($node): bool => $node instanceof TextNode);
-        $this->assertNull($result);
+        $this->assertNotInstanceOf(Node::class, $result);
     }
 
     public function testGetNextSiblingReturnsNullForNonChild(): void
@@ -84,7 +85,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         $doc = new DocumentNode([$child]);
 
-        $this->assertNull($doc->getNextSibling($nonChild));
+        $this->assertNotInstanceOf(Node::class, $doc->getNextSibling($nonChild));
     }
 
     public function testGetPreviousSiblingReturnsNullForNonChild(): void
@@ -94,7 +95,7 @@ final class SiblingNavigationTraitTest extends TestCase
 
         $doc = new DocumentNode([$child]);
 
-        $this->assertNull($doc->getPreviousSibling($nonChild));
+        $this->assertNotInstanceOf(Node::class, $doc->getPreviousSibling($nonChild));
     }
 
     public function testFindNextSiblingReturnsNullForNonChild(): void
@@ -105,6 +106,6 @@ final class SiblingNavigationTraitTest extends TestCase
         $doc = new DocumentNode([$child]);
 
         $result = $doc->findNextSibling($nonChild, fn($node): true => true);
-        $this->assertNull($result);
+        $this->assertNotInstanceOf(Node::class, $result);
     }
 }

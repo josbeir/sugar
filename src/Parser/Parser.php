@@ -442,15 +442,15 @@ final readonly class Parser
             }
 
             return [$name, $value, $pos];
-        } else {
-            // Unquoted value
-            $value = '';
-            while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
-                $value .= $html[$pos++];
-            }
-
-            return [$name, $value, $pos];
         }
+
+        // Unquoted value
+        $value = '';
+        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
+            $value .= $html[$pos++];
+        }
+
+        return [$name, $value, $pos];
     }
 
     /**

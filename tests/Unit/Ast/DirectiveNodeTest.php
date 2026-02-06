@@ -59,7 +59,7 @@ final class DirectiveNodeTest extends TestCase
 
         $this->assertSame('if', $ifNode->name);
         $this->assertCount(1, $ifNode->children);
-        $this->assertNotNull($ifNode->getPairedSibling());
+        $this->assertInstanceOf(DirectiveNode::class, $ifNode->getPairedSibling());
         $this->assertSame($elseNode, $ifNode->getPairedSibling());
         $this->assertInstanceOf(TextNode::class, $elseNode->children[0]);
     }
@@ -179,7 +179,7 @@ final class DirectiveNodeTest extends TestCase
 
         $this->assertSame($child2, $node->getNextSibling($child1));
         $this->assertSame($child3, $node->getNextSibling($child2));
-        $this->assertNull($node->getNextSibling($child3));
+        $this->assertNotInstanceOf(Node::class, $node->getNextSibling($child3));
     }
 
     public function testGetNextSiblingReturnsNullForNonChild(): void
@@ -195,7 +195,7 @@ final class DirectiveNodeTest extends TestCase
             column: 1,
         );
 
-        $this->assertNull($node->getNextSibling($nonChild));
+        $this->assertNotInstanceOf(Node::class, $node->getNextSibling($nonChild));
     }
 
     public function testGetPreviousSibling(): void
@@ -212,7 +212,7 @@ final class DirectiveNodeTest extends TestCase
             column: 1,
         );
 
-        $this->assertNull($node->getPreviousSibling($child1));
+        $this->assertNotInstanceOf(Node::class, $node->getPreviousSibling($child1));
         $this->assertSame($child1, $node->getPreviousSibling($child2));
         $this->assertSame($child2, $node->getPreviousSibling($child3));
     }
@@ -230,7 +230,7 @@ final class DirectiveNodeTest extends TestCase
             column: 1,
         );
 
-        $this->assertNull($node->getPreviousSibling($nonChild));
+        $this->assertNotInstanceOf(Node::class, $node->getPreviousSibling($nonChild));
     }
 
     public function testFindNextSibling(): void
@@ -258,7 +258,7 @@ final class DirectiveNodeTest extends TestCase
 
         // Find next sibling that doesn't exist
         $found = $node->findNextSibling($text3, fn($n): bool => $n instanceof OutputNode);
-        $this->assertNull($found);
+        $this->assertNotInstanceOf(Node::class, $found);
     }
 
     public function testFindNextSiblingReturnsNullForNonChild(): void
@@ -275,6 +275,6 @@ final class DirectiveNodeTest extends TestCase
         );
 
         $found = $node->findNextSibling($nonChild, fn($n): true => true);
-        $this->assertNull($found);
+        $this->assertNotInstanceOf(Node::class, $found);
     }
 }

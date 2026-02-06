@@ -64,8 +64,8 @@ final class DependencyTrackingTest extends TestCase
         $metadata = $tracker->getMetadata('test-template');
 
         // Metadata should exist with proper structure
-        $this->assertEquals([], $metadata->dependencies);
-        $this->assertEquals([], $metadata->components);
+        $this->assertSame([], $metadata->dependencies);
+        $this->assertSame([], $metadata->components);
     }
 
     public function testTracksExtendsDependency(): void
