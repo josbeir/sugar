@@ -3,22 +3,22 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ClassCompiler;
+use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\HtmlAttributeHelper;
-use Sugar\Tests\TemplateTestHelperTrait;
 
-final class ClassCompilerTest extends TestCase
+final class ClassCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private ClassCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new ClassCompiler();
+        return new ClassCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'class';
     }
 
     public function testCompilesClassDirective(): void
@@ -31,12 +31,13 @@ final class ClassCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString(HtmlAttributeHelper::class . '::classNames', $result[0]->code);
-        $this->assertStringContainsString("['btn', 'active' => \$isActive]", $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode(HtmlAttributeHelper::class . '::classNames')
+            ->hasPhpCode("['btn', 'active' => \$isActive]");
     }
 
     public function testGeneratesClassAttribute(): void
@@ -49,12 +50,13 @@ final class ClassCompilerTest extends TestCase
             column: 0,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('class="', $result[0]->code);
-        $this->assertStringContainsString('<?=', $result[0]->code);
-        $this->assertStringContainsString('?>"', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode('class="')
+            ->hasPhpCode('<?=')
+            ->hasPhpCode('?>');
     }
 }

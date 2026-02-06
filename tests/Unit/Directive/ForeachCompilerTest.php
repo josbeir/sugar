@@ -3,83 +3,53 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use PHPUnit\Framework\TestCase;
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\ForeachCompiler;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
-final class ForeachCompilerTest extends TestCase
+final class ForeachCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private ForeachCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new ForeachCompiler();
+        return new ForeachCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'foreach';
     }
 
     public function testCompileForeach(): void
     {
-        $node = new DirectiveNode(
-            name: 'foreach',
-            expression: '$items as $item',
-            children: [new TextNode('Item', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('foreach')
+            ->expression('$items as $item')
+            ->withChild($this->text('Item'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        // Should contain: loopStack push, LoopMetadata creation, foreach, content, next(), endforeach, loopStack pop
-        $this->assertCount(8, $result);
-
-        // Check for loop setup
-        $this->assertInstanceOf(RawPhpNode::class, $result[1]);
-        $this->assertStringContainsString('$__loopStack', $result[1]->code);
-
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('LoopMetadata', $result[2]->code);
-
-        // Check foreach
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]);
-        $this->assertStringContainsString('foreach ($items as $item):', $result[3]->code);
-
-        // Check loop increment
-        $this->assertInstanceOf(RawPhpNode::class, $result[5]);
-        $this->assertStringContainsString('$loop->next()', $result[5]->code);
-
-        // Check endforeach
-        $this->assertInstanceOf(RawPhpNode::class, $result[6]);
-        $this->assertStringContainsString('endforeach;', $result[6]->code);
-
-        // Check loop restoration
-        $this->assertInstanceOf(RawPhpNode::class, $result[7]);
-        $this->assertStringContainsString('array_pop($__loopStack)', $result[7]->code);
+        $this->assertAst($result)
+            ->hasCount(8)
+            ->hasPhpCode('$__loopStack')
+            ->hasPhpCode('LoopMetadata')
+            ->hasPhpCode('foreach ($items as $item):')
+            ->hasPhpCode('$loop->next()')
+            ->hasPhpCode('endforeach;')
+            ->hasPhpCode('array_pop($__loopStack)');
     }
 
     public function testCompileForeachWithKey(): void
     {
-        $node = new DirectiveNode(
-            name: 'foreach',
-            expression: '$users as $id => $user',
-            children: [new TextNode('User', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('foreach')
+            ->expression('$users as $id => $user')
+            ->withChild($this->text('User'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(8, $result);
-
-        // Check LoopMetadata uses correct collection
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('LoopMetadata($users', $result[2]->code);
-
-        // Check foreach expression preserved
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]);
-        $this->assertStringContainsString('foreach ($users as $id => $user):', $result[3]->code);
+        $this->assertAst($result)
+            ->hasCount(8)
+            ->hasPhpCode('LoopMetadata($users')
+            ->hasPhpCode('foreach ($users as $id => $user):');
     }
 }

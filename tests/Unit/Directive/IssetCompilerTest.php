@@ -3,111 +3,93 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
-use PHPUnit\Framework\TestCase;
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\IssetCompiler;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Extension\DirectiveCompilerInterface;
 
-final class IssetCompilerTest extends TestCase
+final class IssetCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private IssetCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new IssetCompiler();
+        return new IssetCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'isset';
     }
 
     public function testCompilesIssetDirective(): void
     {
-        $node = new DirectiveNode(
-            name: 'isset',
-            expression: '$user',
-            children: [new TextNode('User exists', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('isset')
+            ->expression('$user')
+            ->withChild($this->text('User exists'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(3, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (isset($user)):', $result[0]->code);
-        $this->assertInstanceOf(TextNode::class, $result[1]);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertSame('endif;', $result[2]->code);
+        $this->assertAst($result)
+            ->hasCount(3)
+            ->hasPhpCode('if (isset($user)):')
+            ->containsText('User exists')
+            ->hasPhpCode('endif;');
     }
 
     public function testIssetWithMultipleVariables(): void
     {
-        $node = new DirectiveNode(
-            name: 'isset',
-            expression: '$user, $profile',
-            children: [new TextNode('Both exist', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('isset')
+            ->expression('$user, $profile')
+            ->withChild($this->text('Both exist'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (isset($user, $profile)):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (isset($user, $profile)):');
     }
 
     public function testIssetWithArrayAccess(): void
     {
-        $node = new DirectiveNode(
-            name: 'isset',
-            expression: '$data[\'key\']',
-            children: [new TextNode('Key exists', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('isset')
+            ->expression('$data[\'key\']')
+            ->withChild($this->text('Key exists'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (isset($data[\'key\'])):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (isset($data[\'key\'])):');
     }
 
     public function testIssetWithPropertyAccess(): void
     {
-        $node = new DirectiveNode(
-            name: 'isset',
-            expression: '$user->email',
-            children: [new TextNode('Email exists', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('isset')
+            ->expression('$user->email')
+            ->withChild($this->text('Email exists'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (isset($user->email)):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (isset($user->email)):');
     }
 
     public function testIssetWithMultipleChildren(): void
     {
-        $node = new DirectiveNode(
-            name: 'isset',
-            expression: '$content',
-            children: [
-                new TextNode('First line', 1, 0),
-                new TextNode('Second line', 2, 0),
-            ],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('isset')
+            ->expression('$content')
+            ->withChildren([
+                $this->text('First line'),
+                $this->text('Second line'),
+            ])
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(4, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]); // if
-        $this->assertInstanceOf(TextNode::class, $result[1]); // first child
-        $this->assertInstanceOf(TextNode::class, $result[2]); // second child
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]); // endif
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->hasPhpCode('if (isset($content)):')
+            ->containsText('First line')
+            ->containsText('Second line')
+            ->hasPhpCode('endif;');
     }
 }

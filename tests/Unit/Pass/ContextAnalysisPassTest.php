@@ -3,48 +3,48 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
-use Sugar\Context\CompilationContext;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\ContextAnalysisPass;
+use Sugar\Pass\PassInterface;
 
 /**
  * Test context analysis pass
  */
-final class ContextAnalysisPassTest extends TestCase
+final class ContextAnalysisPassTest extends PassTestCase
 {
-    private ContextAnalysisPass $pass;
-
-    protected function setUp(): void
+    protected function getPass(): PassInterface
     {
-        $this->pass = new ContextAnalysisPass();
+        return new ContextAnalysisPass();
     }
 
     public function testDefaultsToHtmlContext(): void
     {
         $ast = new DocumentNode([
-            new TextNode('Hello ', 1, 1),
+            $this->createText('Hello '),
             new OutputNode('$name', true, OutputContext::HTML, 1, 7),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::HTML, $result->children[1]->context);
+        $this->assertAst($result)
+            ->containsNodeType(OutputNode::class)
+            ->containsOutput();
     }
 
     public function testDetectsJavascriptContext(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<script>', 1, 1),
-            new OutputNode('$data', true, OutputContext::HTML, 1, 9),
-            new TextNode('</script>', 1, 15),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<script>'),
+                $this->outputNode('$data', true, OutputContext::HTML, 1, 9),
+                $this->text('</script>', 1, 15),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -52,13 +52,15 @@ final class ContextAnalysisPassTest extends TestCase
 
     public function testDetectsCssContext(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<style>', 1, 1),
-            new OutputNode('$css', true, OutputContext::HTML, 1, 8),
-            new TextNode('</style>', 1, 13),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<style>'),
+                $this->outputNode('$css', true, OutputContext::HTML, 1, 8),
+                $this->text('</style>', 1, 13),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::CSS, $result->children[1]->context);
@@ -66,13 +68,15 @@ final class ContextAnalysisPassTest extends TestCase
 
     public function testHandlesNestedTags(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<div><script>', 1, 1),
-            new OutputNode('$code', true, OutputContext::HTML, 1, 14),
-            new TextNode('</script></div>', 1, 20),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<div><script>'),
+                $this->outputNode('$code', true, OutputContext::HTML, 1, 14),
+                $this->text('</script></div>', 1, 20),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -80,14 +84,16 @@ final class ContextAnalysisPassTest extends TestCase
 
     public function testResetsContextAfterClosingTag(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<script>', 1, 1),
-            new OutputNode('$js', true, OutputContext::HTML, 1, 9),
-            new TextNode('</script>', 1, 13),
-            new OutputNode('$html', true, OutputContext::HTML, 1, 22),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<script>'),
+                $this->outputNode('$js', true, OutputContext::HTML, 1, 9),
+                $this->text('</script>', 1, 13),
+                $this->outputNode('$html', true, OutputContext::HTML, 1, 22),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -97,15 +103,17 @@ final class ContextAnalysisPassTest extends TestCase
 
     public function testHandlesMultipleTagsInSingleTextNode(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<div><script>', 1, 1),
-            new OutputNode('$data', true, OutputContext::HTML, 1, 14),
-            new TextNode('</script><style>', 1, 20),
-            new OutputNode('$css', true, OutputContext::HTML, 1, 36),
-            new TextNode('</style></div>', 1, 41),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<div><script>'),
+                $this->outputNode('$data', true, OutputContext::HTML, 1, 14),
+                $this->text('</script><style>', 1, 20),
+                $this->outputNode('$css', true, OutputContext::HTML, 1, 36),
+                $this->text('</style></div>', 1, 41),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
@@ -115,13 +123,15 @@ final class ContextAnalysisPassTest extends TestCase
 
     public function testIgnoresRawOutputNodes(): void
     {
-        $ast = new DocumentNode([
-            new TextNode('<script>', 1, 1),
-            new OutputNode('$raw', false, OutputContext::RAW, 1, 9),
-            new TextNode('</script>', 1, 14),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('<script>'),
+                $this->outputNode('$raw', false, OutputContext::RAW, 1, 9),
+                $this->text('</script>', 1, 14),
+            ])
+            ->build();
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         // Raw output should not be modified
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -131,12 +141,12 @@ final class ContextAnalysisPassTest extends TestCase
     public function testHandlesSelfClosingTags(): void
     {
         $ast = new DocumentNode([
-            new TextNode('<img src="', 1, 1),
+            $this->createText('<img src="'),
             new OutputNode('$url', true, OutputContext::HTML, 1, 11),
             new TextNode('" />', 1, 16),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         // Should detect attribute context
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
@@ -146,12 +156,12 @@ final class ContextAnalysisPassTest extends TestCase
     public function testDetectsAttributeContext(): void
     {
         $ast = new DocumentNode([
-            new TextNode('<a href="', 1, 1),
+            $this->createText('<a href="'),
             new OutputNode('$url', true, OutputContext::HTML, 1, 10),
             new TextNode('">', 1, 15),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
@@ -160,26 +170,18 @@ final class ContextAnalysisPassTest extends TestCase
     public function testAttributeContextEndsAtQuote(): void
     {
         $ast = new DocumentNode([
-            new TextNode('<a href="', 1, 1),
+            $this->createText('<a href="'),
             new OutputNode('$url', true, OutputContext::HTML, 1, 10),
             new TextNode('">', 1, 15),
             new OutputNode('$text', true, OutputContext::HTML, 1, 17),
             new TextNode('</a>', 1, 23),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(OutputNode::class, $result->children[1]);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
         $this->assertInstanceOf(OutputNode::class, $result->children[3]);
         $this->assertSame(OutputContext::HTML, $result->children[3]->context);
-    }
-
-    protected function createContext(
-        string $source = '',
-        string $templatePath = 'test.sugar.php',
-        bool $debug = false,
-    ): CompilationContext {
-        return new CompilationContext($templatePath, $source, $debug);
     }
 }

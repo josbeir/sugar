@@ -3,95 +3,84 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
-use PHPUnit\Framework\TestCase;
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Directive\UnlessCompiler;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Extension\DirectiveCompilerInterface;
 
-final class UnlessCompilerTest extends TestCase
+final class UnlessCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private UnlessCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new UnlessCompiler();
+        return new UnlessCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'unless';
     }
 
     public function testCompilesUnlessDirective(): void
     {
-        $node = new DirectiveNode(
-            name: 'unless',
-            expression: '$isAdmin',
-            children: [new TextNode('Regular user content', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('unless')
+            ->expression('$isAdmin')
+            ->withChild($this->text('Regular user content'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(3, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (!($isAdmin)):', $result[0]->code);
-        $this->assertInstanceOf(TextNode::class, $result[1]);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertSame('endif;', $result[2]->code);
+        $this->assertAst($result)
+            ->hasCount(3)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode('if (!($isAdmin)):')
+            ->containsNodeType(TextNode::class)
+            ->hasPhpCode('endif;');
     }
 
     public function testUnlessWithComplexCondition(): void
     {
-        $node = new DirectiveNode(
-            name: 'unless',
-            expression: '$user->isAdmin() && $user->isActive()',
-            children: [new TextNode('Content', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('unless')
+            ->expression('$user->isAdmin() && $user->isActive()')
+            ->withChild($this->text('Content'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (!($user->isAdmin() && $user->isActive())):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (!($user->isAdmin() && $user->isActive())):')
+            ->hasPhpCode('endif;');
     }
 
     public function testUnlessWithEmptyCondition(): void
     {
-        $node = new DirectiveNode(
-            name: 'unless',
-            expression: 'empty($cart)',
-            children: [new TextNode('Cart is not empty', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('unless')
+            ->expression('empty($cart)')
+            ->withChild($this->text('Cart is not empty'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (!(empty($cart))):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (!(empty($cart))):');
     }
 
     public function testUnlessWithMultipleChildren(): void
     {
-        $node = new DirectiveNode(
-            name: 'unless',
-            expression: '$hideContent',
-            children: [
-                new TextNode('First line', 1, 0),
-                new TextNode('Second line', 2, 0),
-            ],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('unless')
+            ->expression('$hideContent')
+            ->withChildren([
+                $this->text('First line', 1),
+                $this->text('Second line', 2),
+            ])
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(4, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]); // if
-        $this->assertInstanceOf(TextNode::class, $result[1]); // first child
-        $this->assertInstanceOf(TextNode::class, $result[2]); // second child
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]); // endif
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->hasPhpCode('if (!($hideContent)):')
+            ->containsText('First line')
+            ->containsText('Second line')
+            ->hasPhpCode('endif;');
     }
 }

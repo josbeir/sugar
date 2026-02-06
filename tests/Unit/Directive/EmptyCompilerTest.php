@@ -3,112 +3,94 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
-use PHPUnit\Framework\TestCase;
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\EmptyCompiler;
+use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\EmptyHelper;
-use Sugar\Tests\TemplateTestHelperTrait;
 
-final class EmptyCompilerTest extends TestCase
+final class EmptyCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private EmptyCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new EmptyCompiler();
+        return new EmptyCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'empty';
     }
 
     public function testCompilesEmptyDirective(): void
     {
-        $node = new DirectiveNode(
-            name: 'empty',
-            expression: '$cart',
-            children: [new TextNode('Cart is empty', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('empty')
+            ->expression('$cart')
+            ->withChild($this->text('Cart is empty'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(3, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (' . EmptyHelper::class . '::isEmpty($cart)):', $result[0]->code);
-        $this->assertInstanceOf(TextNode::class, $result[1]);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertSame('endif;', $result[2]->code);
+        $this->assertAst($result)
+            ->hasCount(3)
+            ->hasPhpCode('if (' . EmptyHelper::class . '::isEmpty($cart)):')
+            ->containsText('Cart is empty')
+            ->hasPhpCode('endif;');
     }
 
     public function testEmptyWithArrayAccess(): void
     {
-        $node = new DirectiveNode(
-            name: 'empty',
-            expression: '$data[\'items\']',
-            children: [new TextNode('No items', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('empty')
+            ->expression('$data[\'items\']')
+            ->withChild($this->text('No items'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (' . EmptyHelper::class . '::isEmpty($data[\'items\'])):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (' . EmptyHelper::class . '::isEmpty($data[\'items\'])):');
     }
 
     public function testEmptyWithPropertyAccess(): void
     {
-        $node = new DirectiveNode(
-            name: 'empty',
-            expression: '$user->posts',
-            children: [new TextNode('No posts', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('empty')
+            ->expression('$user->posts')
+            ->withChild($this->text('No posts'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (' . EmptyHelper::class . '::isEmpty($user->posts)):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (' . EmptyHelper::class . '::isEmpty($user->posts)):');
     }
 
     public function testEmptyWithComplexExpression(): void
     {
-        $node = new DirectiveNode(
-            name: 'empty',
-            expression: 'trim($input)',
-            children: [new TextNode('Input is empty', 1, 0)],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('empty')
+            ->expression('trim($input)')
+            ->withChild($this->text('Input is empty'))
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertSame('if (' . EmptyHelper::class . '::isEmpty(trim($input))):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('if (' . EmptyHelper::class . '::isEmpty(trim($input))):');
     }
 
     public function testEmptyWithMultipleChildren(): void
     {
-        $node = new DirectiveNode(
-            name: 'empty',
-            expression: '$results',
-            children: [
-                new TextNode('No results found', 1, 0),
-                new TextNode('Try a different search', 2, 0),
-            ],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('empty')
+            ->expression('$results')
+            ->withChildren([
+                $this->text('No results found'),
+                $this->text('Try a different search'),
+            ])
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(4, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]); // if
-        $this->assertInstanceOf(TextNode::class, $result[1]); // first child
-        $this->assertInstanceOf(TextNode::class, $result[2]); // second child
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]); // endif
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->hasPhpCode('if (' . EmptyHelper::class . '::isEmpty($results)):')
+            ->containsText('No results found')
+            ->containsText('Try a different search')
+            ->hasPhpCode('endif;');
     }
 }

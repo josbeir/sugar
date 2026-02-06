@@ -3,22 +3,22 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\IfCompiler;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
-final class IfCompilerTest extends TestCase
+final class IfCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private IfCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new IfCompiler();
+        return new IfCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'if';
     }
 
     public function testCompileIf(): void
@@ -26,18 +26,18 @@ final class IfCompilerTest extends TestCase
         $node = new DirectiveNode(
             name: 'if',
             expression: '$showContent',
-            children: [new TextNode('Content', 1, 1)],
+            children: [$this->createTextNode('Content')],
             line: 1,
             column: 1,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(3, $result); // if, content, endif
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('if ($showContent):', $result[0]->code);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('endif;', $result[2]->code);
+        $this->assertAst($result)
+            ->hasCount(3)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode('if ($showContent):')
+            ->hasPhpCode('endif;');
     }
 
     public function testCompileElseif(): void
@@ -45,16 +45,16 @@ final class IfCompilerTest extends TestCase
         $node = new DirectiveNode(
             name: 'elseif',
             expression: '$otherCondition',
-            children: [new TextNode('Other', 1, 1)],
+            children: [$this->createTextNode('Other')],
             line: 1,
             column: 1,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(2, $result); // elseif, content (no endif for elseif)
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('elseif ($otherCondition):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(2)
+            ->hasPhpCode('elseif ($otherCondition):');
     }
 
     public function testCompileElse(): void
@@ -62,46 +62,41 @@ final class IfCompilerTest extends TestCase
         $node = new DirectiveNode(
             name: 'else',
             expression: '',
-            children: [new TextNode('Fallback', 1, 1)],
+            children: [$this->createTextNode('Fallback')],
             line: 1,
             column: 1,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(2, $result); // else, content (no endif for else)
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('else:', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(2)
+            ->hasPhpCode('else:');
     }
 
     public function testCompileIfWithElseBranch(): void
     {
-        $ifNode = new DirectiveNode(
-            name: 'if',
-            expression: '$condition',
-            children: [new TextNode('True', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $ifNode = $this->directive('if')
+            ->expression('$condition')
+            ->withChild($this->text('True'))
+            ->at(1, 1)
+            ->build();
 
-        $elseNode = new DirectiveNode(
-            name: 'else',
-            expression: '',
-            children: [new TextNode('False', 2, 1)],
-            line: 2,
-            column: 1,
-        );
+        $elseNode = $this->directive('else')
+            ->withChild($this->text('False'))
+            ->at(2, 1)
+            ->build();
 
         $ifNode->setPairedSibling($elseNode);
 
-        $result = $this->compiler->compile($ifNode, $this->createContext());
+        $result = $this->directiveCompiler->compile($ifNode, $this->createTestContext());
 
-        $this->assertCount(5, $result); // if, true content, else, false content, endif
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('if ($condition):', $result[0]->code);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('else:', $result[2]->code);
-        $this->assertInstanceOf(RawPhpNode::class, $result[4]);
-        $this->assertStringContainsString('endif;', $result[4]->code);
+        $this->assertAst($result)
+            ->hasCount(5)
+            ->hasPhpCode('if ($condition):')
+            ->containsText('True')
+            ->hasPhpCode('else:')
+            ->containsText('False')
+            ->hasPhpCode('endif;');
     }
 }

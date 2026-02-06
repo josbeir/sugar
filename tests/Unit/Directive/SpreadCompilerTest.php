@@ -3,81 +3,71 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive;
 
-use PHPUnit\Framework\TestCase;
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Enum\DirectiveType;
+use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\HtmlAttributeHelper;
-use Sugar\Tests\TemplateTestHelperTrait;
 
-final class SpreadCompilerTest extends TestCase
+final class SpreadCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private SpreadCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new SpreadCompiler();
+        return new SpreadCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'spread';
     }
 
     public function testCompilesSpreadDirective(): void
     {
-        $node = new DirectiveNode(
-            name: 'spread',
-            expression: '$attrs',
-            children: [],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('spread')
+            ->expression('$attrs')
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString(HtmlAttributeHelper::class . '::spreadAttrs', $result[0]->code);
-        $this->assertStringContainsString('$attrs', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode(HtmlAttributeHelper::class . '::spreadAttrs')
+            ->hasPhpCode('$attrs');
     }
 
     public function testGeneratesPhpOutput(): void
     {
-        $node = new DirectiveNode(
-            name: 'spread',
-            expression: '$attributes',
-            children: [],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('spread')
+            ->expression('$attributes')
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('<?=', $result[0]->code);
-        $this->assertStringContainsString('?>', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode('<?=')
+            ->hasPhpCode('?>');
     }
 
     public function testHandlesComplexExpressions(): void
     {
-        $node = new DirectiveNode(
-            name: 'spread',
-            expression: 'array_merge($baseAttrs, $customAttrs)',
-            children: [],
-            line: 1,
-            column: 0,
-        );
+        $node = $this->directive('spread')
+            ->expression('array_merge($baseAttrs, $customAttrs)')
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('array_merge($baseAttrs, $customAttrs)', $result[0]->code);
+        $this->assertAst($result)
+            ->hasCount(1)
+            ->containsNodeType(RawPhpNode::class)
+            ->hasPhpCode('array_merge($baseAttrs, $customAttrs)');
     }
 
     public function testGetType(): void
     {
-        $type = $this->compiler->getType();
+        $type = $this->directiveCompiler->getType();
 
         $this->assertSame(DirectiveType::ATTRIBUTE, $type);
     }

@@ -3,76 +3,58 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Enum\DirectiveType;
+use Sugar\Extension\DirectiveCompilerInterface;
 use Sugar\Runtime\EmptyHelper;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
-final class ForelseCompilerTest extends TestCase
+final class ForelseCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private ForelseCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new ForelseCompiler();
+        return new ForelseCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'forelse';
     }
 
     public function testGetType(): void
     {
-        $this->assertSame(DirectiveType::CONTROL_FLOW, $this->compiler->getType());
+        $this->assertSame(DirectiveType::CONTROL_FLOW, $this->directiveCompiler->getType());
     }
 
     public function testGetPairingDirective(): void
     {
-        $this->assertSame('empty', $this->compiler->getPairingDirective());
+        /** @var \Sugar\Directive\ForelseCompiler $compiler */
+        $compiler = $this->directiveCompiler;
+        $this->assertSame('empty', $compiler->getPairingDirective());
     }
 
     public function testCompileForelseWithoutEmpty(): void
     {
-        $node = new DirectiveNode(
-            name: 'forelse',
-            expression: '$items as $item',
-            children: [new TextNode('Item', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('forelse')
+            ->expression('$items as $item')
+            ->withChild($this->text('Item'))
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        // Should contain: loopStack push, LoopMetadata creation, foreach, content, next(), endforeach, loopStack pop
-        // No if/else wrapper when elseChildren is null
-        $this->assertCount(8, $result);
-
-        // Check for loop setup
-        $this->assertInstanceOf(RawPhpNode::class, $result[1]);
-        $this->assertStringContainsString('$__loopStack', $result[1]->code);
-
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('LoopMetadata', $result[2]->code);
-        $this->assertStringContainsString('$items', $result[2]->code);
-
-        // Check foreach
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]);
-        $this->assertStringContainsString('foreach ($items as $item):', $result[3]->code);
-
-        // Check loop increment
-        $this->assertInstanceOf(RawPhpNode::class, $result[5]);
-        $this->assertStringContainsString('$loop->next()', $result[5]->code);
-
-        // Check endforeach
-        $this->assertInstanceOf(RawPhpNode::class, $result[6]);
-        $this->assertStringContainsString('endforeach;', $result[6]->code);
-
-        // Check loop restoration
-        $this->assertInstanceOf(RawPhpNode::class, $result[7]);
-        $this->assertStringContainsString('array_pop($__loopStack)', $result[7]->code);
+        $this->assertAst($result)
+            ->hasCount(8)
+            ->hasPhpCode('$__loopStack')
+            ->hasPhpCode('LoopMetadata')
+            ->hasPhpCode('$items')
+            ->hasPhpCode('foreach ($items as $item):')
+            ->hasPhpCode('$loop->next()')
+            ->hasPhpCode('endforeach;')
+            ->hasPhpCode('array_pop($__loopStack)');
     }
 
     public function testCompileForelseWithEmpty(): void
@@ -80,7 +62,7 @@ final class ForelseCompilerTest extends TestCase
         $emptyElement = new ElementNode(
             tag: 'div',
             attributes: [],
-            children: [new TextNode('No items', 1, 1)],
+            children: [$this->createTextNode('No items')],
             selfClosing: false,
             line: 1,
             column: 1,
@@ -97,7 +79,7 @@ final class ForelseCompilerTest extends TestCase
         $node = new DirectiveNode(
             name: 'forelse',
             expression: '$items as $item',
-            children: [new TextNode('Item', 1, 1)],
+            children: [$this->createTextNode('Item')],
             line: 1,
             column: 1,
         );
@@ -105,7 +87,7 @@ final class ForelseCompilerTest extends TestCase
         // Wire the pairing
         $node->setPairedSibling($emptyNode);
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
         // Should contain: if, loopStack push, LoopMetadata, foreach, content, next(), endforeach, loopStack pop, else, elseChildren, endif
         $this->assertCount(12, $result);
@@ -151,43 +133,31 @@ final class ForelseCompilerTest extends TestCase
 
     public function testCompileForelseWithKeyValue(): void
     {
-        $node = new DirectiveNode(
-            name: 'forelse',
-            expression: '$users as $id => $user',
-            children: [new TextNode('User', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('forelse')
+            ->expression('$users as $id => $user')
+            ->withChild($this->text('User'))
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        // Check LoopMetadata uses correct collection
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('LoopMetadata($users', $result[2]->code);
-
-        // Check foreach expression preserved
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]);
-        $this->assertStringContainsString('foreach ($users as $id => $user):', $result[3]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('LoopMetadata($users')
+            ->hasPhpCode('foreach ($users as $id => $user):');
     }
 
     public function testCompileForelseWithComplexExpression(): void
     {
-        $node = new DirectiveNode(
-            name: 'forelse',
-            expression: 'range(1, 10) as $num',
-            children: [new TextNode('Number', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('forelse')
+            ->expression('range(1, 10) as $num')
+            ->withChild($this->text('Number'))
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        // Check LoopMetadata uses correct collection (range(1, 10))
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('LoopMetadata(range(1, 10)', $result[2]->code);
-
-        // Check foreach expression preserved
-        $this->assertInstanceOf(RawPhpNode::class, $result[3]);
-        $this->assertStringContainsString('foreach (range(1, 10) as $num):', $result[3]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('LoopMetadata(range(1, 10)')
+            ->hasPhpCode('foreach (range(1, 10) as $num):');
     }
 }

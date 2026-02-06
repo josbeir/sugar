@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Directive\Compiler;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
@@ -12,36 +11,35 @@ use Sugar\Ast\TextNode;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Tests\TemplateTestHelperTrait;
+use Sugar\Extension\DirectiveCompilerInterface;
+use Sugar\Tests\Unit\Directive\DirectiveCompilerTestCase;
 
-final class WhileCompilerTest extends TestCase
+final class WhileCompilerTest extends DirectiveCompilerTestCase
 {
-    use TemplateTestHelperTrait;
-
-    private WhileCompiler $compiler;
-
-    protected function setUp(): void
+    protected function getDirectiveCompiler(): DirectiveCompilerInterface
     {
-        $this->compiler = new WhileCompiler();
+        return new WhileCompiler();
+    }
+
+    protected function getDirectiveName(): string
+    {
+        return 'while';
     }
 
     public function testCompileWhile(): void
     {
-        $node = new DirectiveNode(
-            name: 'while',
-            expression: '$counter < 10',
-            children: [new TextNode('Loop', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('while')
+            ->expression('$counter < 10')
+            ->withChild($this->text('Loop'))
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(3, $result); // while, content, endwhile
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('while ($counter < 10):', $result[0]->code);
-        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
-        $this->assertStringContainsString('endwhile;', $result[2]->code);
+        $this->assertAst($result)
+            ->hasCount(3)
+            ->hasPhpCode('while ($counter < 10):')
+            ->hasPhpCode('endwhile;');
     }
 
     public function testCompileWhileWithWrapperMode(): void
@@ -76,7 +74,7 @@ final class WhileCompilerTest extends TestCase
             column: 1,
         );
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
         // Wrapper mode: should return 1 element with while/endwhile inside
         $this->assertCount(1, $result);
@@ -92,63 +90,60 @@ final class WhileCompilerTest extends TestCase
 
     public function testCompileWhileWithComplexExpression(): void
     {
-        $node = new DirectiveNode(
-            name: 'while',
-            expression: '($i < 10) && !empty($items[$i])',
-            children: [new TextNode('Content', 1, 1)],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('while')
+            ->expression('($i < 10) && !empty($items[$i])')
+            ->withChild($this->text('Content'))
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertStringContainsString('while (($i < 10) && !empty($items[$i])):', $result[0]->code);
+        $this->assertAst($result)
+            ->hasPhpCode('while (($i < 10) && !empty($items[$i])):');
     }
 
     public function testCompileWhileWithMultipleChildren(): void
     {
-        $node = new DirectiveNode(
-            name: 'while',
-            expression: '$count > 0',
-            children: [
-                new TextNode('Line 1', 1, 1),
-                new OutputNode('$count--', true, OutputContext::HTML, 1, 10),
-                new TextNode('Line 2', 1, 20),
-            ],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('while')
+            ->expression('$count > 0')
+            ->withChildren([
+                $this->text('Line 1'),
+                $this->outputNode('$count--', true, OutputContext::HTML, 1, 10),
+                $this->text('Line 2', 1, 20),
+            ])
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(5, $result); // while, text, output, text, endwhile
-        $this->assertInstanceOf(TextNode::class, $result[1]);
-        $this->assertInstanceOf(OutputNode::class, $result[2]);
-        $this->assertInstanceOf(TextNode::class, $result[3]);
+        $this->assertAst($result)
+            ->hasCount(5)
+            ->hasPhpCode('while ($count > 0):')
+            ->containsText('Line 1')
+            ->containsOutput()
+            ->containsText('Line 2')
+            ->hasPhpCode('endwhile;');
     }
 
     public function testGetType(): void
     {
-        $type = $this->compiler->getType();
+        $type = $this->directiveCompiler->getType();
 
         $this->assertSame(DirectiveType::CONTROL_FLOW, $type);
     }
 
     public function testCompileWhileWithEmptyChildren(): void
     {
-        $node = new DirectiveNode(
-            name: 'while',
-            expression: 'true',
-            children: [],
-            line: 1,
-            column: 1,
-        );
+        $node = $this->directive('while')
+            ->expression('true')
+            ->at(1, 1)
+            ->build();
 
-        $result = $this->compiler->compile($node, $this->createContext());
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(2, $result); // while, endwhile (no content)
-        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
-        $this->assertInstanceOf(RawPhpNode::class, $result[1]);
+        $this->assertAst($result)
+            ->hasCount(2)
+            ->hasPhpCode('while (true):')
+            ->hasPhpCode('endwhile;');
     }
 }

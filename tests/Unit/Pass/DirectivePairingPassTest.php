@@ -3,21 +3,17 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
-use Sugar\Ast\TextNode;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Extension\ExtensionRegistry;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\PassInterface;
 
-final class DirectivePairingPassTest extends TestCase
+final class DirectivePairingPassTest extends PassTestCase
 {
-    private DirectivePairingPass $pass;
-
-    protected function setUp(): void
+    protected function getPass(): PassInterface
     {
         $registry = new ExtensionRegistry();
         $registry->registerDirective('forelse', ForelseCompiler::class);
@@ -25,16 +21,16 @@ final class DirectivePairingPassTest extends TestCase
         $registry->registerDirective('switch', SwitchCompiler::class);
         $registry->registerDirective('case', SwitchCompiler::class);
 
-        $this->pass = new DirectivePairingPass($registry);
+        return new DirectivePairingPass($registry);
     }
 
     public function testWiresParentReferences(): void
     {
-        $child1 = new TextNode('Hello', 1, 1);
-        $child2 = new TextNode('World', 1, 7);
+        $child1 = $this->createText('Hello');
+        $child2 = $this->createText('World');
         $doc = new DocumentNode([$child1, $child2]);
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         $this->assertSame($doc, $child1->getParent());
         $this->assertSame($doc, $child2->getParent());
@@ -42,11 +38,11 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testWiresNestedParentReferences(): void
     {
-        $grandchild = new TextNode('Inner', 1, 1);
+        $grandchild = $this->createText('Inner');
         $child = new DirectiveNode('if', '$x', [$grandchild], 1, 1);
         $doc = new DocumentNode([$child]);
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         $this->assertSame($doc, $child->getParent());
         $this->assertSame($child, $grandchild->getParent());
@@ -54,23 +50,34 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testPairsForelseWithEmpty(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
-        $empty = new DirectiveNode('empty', '', [], 2, 1);
-        $doc = new DocumentNode([$forelse, $empty]);
+        $forelse = $this->directive('forelse')
+            ->expression('$items as $item')
+            ->build();
+        $empty = $this->directive('empty')->build();
+        $doc = $this->document()
+            ->withChild($forelse)
+            ->withChild($empty)
+            ->build();
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         $this->assertSame($empty, $forelse->getPairedSibling());
     }
 
     public function testDoesNotPairNonSiblingDirectives(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
-        $text = new TextNode('Some text', 2, 1);
-        $empty = new DirectiveNode('empty', '', [], 3, 1);
-        $doc = new DocumentNode([$forelse, $text, $empty]);
+        $forelse = $this->directive('forelse')
+            ->expression('$items as $item')
+            ->build();
+        $text = $this->text('Some text');
+        $empty = $this->directive('empty')->build();
+        $doc = $this->document()
+            ->withChild($forelse)
+            ->withChild($text)
+            ->withChild($empty)
+            ->build();
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         // Should still pair even with text node between them
         $this->assertSame($empty, $forelse->getPairedSibling());
@@ -78,11 +85,16 @@ final class DirectivePairingPassTest extends TestCase
 
     public function testDoesNotPairForelseWithoutEmpty(): void
     {
-        $forelse = new DirectiveNode('forelse', '$items as $item', [], 1, 1);
-        $text = new TextNode('Text', 2, 1);
-        $doc = new DocumentNode([$forelse, $text]);
+        $forelse = $this->directive('forelse')
+            ->expression('$items as $item')
+            ->build();
+        $text = $this->text('Text');
+        $doc = $this->document()
+            ->withChild($forelse)
+            ->withChild($text)
+            ->build();
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         $this->assertNotInstanceOf(DirectiveNode::class, $forelse->getPairedSibling());
     }
@@ -94,17 +106,9 @@ final class DirectivePairingPassTest extends TestCase
         $case1 = new DirectiveNode('case', '1', [], 2, 1);
         $doc = new DocumentNode([$switch, $case1]);
 
-        $this->pass->execute($doc, $this->createContext());
+        $this->execute($doc, $this->createTestContext());
 
         // Should not pair since switch doesn't implement the interface
         $this->assertNotInstanceOf(DirectiveNode::class, $switch->getPairedSibling());
-    }
-
-    protected function createContext(
-        string $source = '',
-        string $templatePath = 'test.sugar.php',
-        bool $debug = false,
-    ): CompilationContext {
-        return new CompilationContext($templatePath, $source, $debug);
     }
 }
