@@ -45,6 +45,18 @@ final class DirectiveRegistryTest extends TestCase
         $this->registry->get('nonexistent');
     }
 
+    public function testGetDirectiveThrowsWithSuggestionForTypo(): void
+    {
+        $compiler = $this->createMockDirectiveCompiler();
+        $this->registry->register('foreach', $compiler);
+
+        $this->expectException(UnknownDirectiveException::class);
+        $this->expectExceptionMessage('Unknown directive "forech". Did you mean "foreach"?');
+
+        // Typo: forech instead of foreach
+        $this->registry->get('forech');
+    }
+
     public function testAllDirectivesReturnsEmptyArrayInitially(): void
     {
         $this->assertSame([], $this->registry->all());

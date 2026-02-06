@@ -8,9 +8,11 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
+use Sugar\Exception\UnsupportedNodeException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -506,5 +508,22 @@ final class CodeGeneratorTest extends TestCase
         // Should compile to json_encode(upper($data))
         $this->assertStringContainsString('json_encode(upper($data)', $code);
         $this->assertStringContainsString('JSON_HEX_TAG', $code);
+    }
+
+    public function testGenerateThrowsForUnsupportedNodeType(): void
+    {
+        // Create a custom node type that isn't handled by CodeGenerator
+        $unsupportedNode = new class (1, 1) extends Node
+        {
+        };
+
+        $ast = $this->document()
+            ->withChild($unsupportedNode)
+            ->build();
+
+        $this->expectException(UnsupportedNodeException::class);
+        $this->expectExceptionMessage('Unsupported node type:');
+
+        $this->generator->generate($ast);
     }
 }
