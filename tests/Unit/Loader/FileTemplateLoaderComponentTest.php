@@ -20,7 +20,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
     protected function setUp(): void
     {
         $this->tempDir = $this->createTempDir('sugar_component_test_');
-        $this->loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
+        $this->loader = new FileTemplateLoader(new SugarConfig(), [$this->tempDir]);
     }
 
     public function testDiscoverComponentsFindsComponentsInDirectory(): void
@@ -90,7 +90,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
     public function testDiscoverComponentsWithCustomPrefix(): void
     {
-        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x')->withTemplatePaths($this->tempDir));
+        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x'), [$this->tempDir]);
 
         mkdir($this->tempDir . '/components', 0777, true);
         file_put_contents($this->tempDir . '/components/x-button.sugar.php', '<button>Button</button>');
@@ -195,7 +195,7 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
     public function testGetComponentNameWorksWithCustomPrefix(): void
     {
-        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x')->withTemplatePaths($this->tempDir));
+        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x'), [$this->tempDir]);
 
         $name = $loader->getComponentName('x-alert');
 
@@ -225,11 +225,9 @@ final class FileTemplateLoaderComponentTest extends TestCase
         file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
 
         // Create loader with componentPaths in config
-        $config = (new SugarConfig())
-            ->withTemplatePaths($this->tempDir)
-            ->withComponentPaths('components');
+        $config = new SugarConfig();
 
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader($config, [$this->tempDir], ['components']);
 
         // Should auto-discover without manual discoverComponents() call
         $this->assertTrue($loader->hasComponent('button'));
@@ -244,11 +242,9 @@ final class FileTemplateLoaderComponentTest extends TestCase
         file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
         file_put_contents($this->tempDir . '/widgets/s-widget.sugar.php', '<div>Widget</div>');
 
-        $config = (new SugarConfig())
-            ->withTemplatePaths($this->tempDir)
-            ->withComponentPaths('components', 'widgets');
+        $config = new SugarConfig();
 
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader($config, [$this->tempDir], ['components', 'widgets']);
 
         $this->assertTrue($loader->hasComponent('button'));
         $this->assertTrue($loader->hasComponent('widget'));
@@ -260,8 +256,8 @@ final class FileTemplateLoaderComponentTest extends TestCase
         mkdir($this->tempDir . '/components', 0777, true);
         file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
 
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $loader = new FileTemplateLoader($config);
+        $config = new SugarConfig();
+        $loader = new FileTemplateLoader($config, [$this->tempDir]);
 
         // Should NOT be discovered automatically
         $this->assertFalse($loader->hasComponent('button'));

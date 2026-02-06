@@ -102,7 +102,8 @@ trait TemplateTestHelperTrait
     protected function createLoader(string $path): FileTemplateLoader
     {
         return new FileTemplateLoader(
-            (new SugarConfig())->withTemplatePaths($path),
+            new SugarConfig(),
+            [$path],
         );
     }
 

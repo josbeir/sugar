@@ -6,7 +6,6 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Config\SugarConfig;
-use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -32,9 +31,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
         // Test if s:block works on fragment elements
         $template = '<s-template s:block="content">Default content</s-template>';
 
-        new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->tempDir));
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->tempDir],
+        );
 
         try {
             $compiled = $this->compiler->compile($template, 'test.sugar.php');
@@ -72,8 +74,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->tempDir],
+        );
 
         $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);
@@ -95,8 +101,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->tempDir],
+        );
 
         $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);
@@ -114,8 +124,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->tempDir],
+        );
 
         $compiled = $this->compiler->compile($child, 'child.sugar.php');
 
@@ -134,8 +148,12 @@ final class FragmentTemplateInheritanceTest extends TestCase
 
         file_put_contents($this->tempDir . '/layout.sugar.php', $layout);
 
-        $config = (new SugarConfig())->withTemplatePaths($this->tempDir);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->tempDir],
+        );
 
         $compiled = $this->compiler->compile($child, 'child.sugar.php');
         $result = $this->executeTemplate($compiled);

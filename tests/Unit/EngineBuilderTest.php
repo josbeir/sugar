@@ -33,8 +33,7 @@ final class EngineBuilderTest extends TestCase
     public function testBuildWithMinimalConfiguration(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         $builder = new EngineBuilder();
         $engine = $builder
@@ -47,8 +46,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithTemplateLoader(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         $builder = new EngineBuilder();
         $result = $builder->withTemplateLoader($loader);
@@ -64,8 +62,7 @@ final class EngineBuilderTest extends TestCase
     {
         $tempDir = $this->createTempDir();
         $cacheDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
         $cache = new FileCache($cacheDir);
 
         $builder = new EngineBuilder();
@@ -83,8 +80,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithDirectiveRegistry(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
         $registry = DirectiveRegistry::empty();
 
         $builder = new EngineBuilder();
@@ -102,8 +98,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithDebug(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         $builder = new EngineBuilder();
         $result = $builder
@@ -120,8 +115,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithTemplateContext(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
         $context = new class {
             public string $name = 'Test';
         };
@@ -142,8 +136,7 @@ final class EngineBuilderTest extends TestCase
     {
         $tempDir = $this->createTempDir();
         $cacheDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
         $cache = new FileCache($cacheDir);
         $registry = new DirectiveRegistry();
         $context = new class {
@@ -165,8 +158,7 @@ final class EngineBuilderTest extends TestCase
     public function testBuildCreatesDefaultCacheWhenNotProvided(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         $builder = new EngineBuilder();
         $engine = $builder
@@ -180,8 +172,7 @@ final class EngineBuilderTest extends TestCase
     public function testBuildCreatesDefaultRegistryWhenNotProvided(): void
     {
         $tempDir = $this->createTempDir();
-        $config = (new SugarConfig())->withTemplatePaths($tempDir);
-        $loader = new FileTemplateLoader($config);
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         $builder = new EngineBuilder();
         $engine = $builder

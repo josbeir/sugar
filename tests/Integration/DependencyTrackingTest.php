@@ -60,14 +60,17 @@ final class DependencyTrackingTest extends TestCase
 
     public function testTracksExtendsDependency(): void
     {
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATE_INHERITANCE_PATH);
+        $config = new SugarConfig();
 
-        $loader = new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATE_INHERITANCE_PATH],
+        );
 
         $tracker = new DependencyTracker();
-        $source = $loader->load('simple-child.sugar.php');
+        $this->assertInstanceOf(FileTemplateLoader::class, $this->templateLoader);
+        $source = $this->templateLoader->load('simple-child.sugar.php');
 
         // Compile child template that extends base
         $this->compiler->compile($source, 'simple-child.sugar.php', false, $tracker);
@@ -81,14 +84,16 @@ final class DependencyTrackingTest extends TestCase
 
     public function testTracksIncludeDependency(): void
     {
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATE_INHERITANCE_PATH);
-
-        $loader = new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATE_INHERITANCE_PATH],
+        );
 
         $tracker = new DependencyTracker();
-        $source = $loader->load('include-test.sugar.php');
+        $this->assertInstanceOf(FileTemplateLoader::class, $this->templateLoader);
+        $source = $this->templateLoader->load('include-test.sugar.php');
 
         // Compile template that includes header partial
         $this->compiler->compile($source, 'include-test.sugar.php', false, $tracker);
@@ -102,12 +107,13 @@ final class DependencyTrackingTest extends TestCase
 
     public function testTracksComponentDependency(): void
     {
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
-            ->withComponentPaths('components');
-
-        new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
+            componentPaths: ['components'],
+        );
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Click me</s-button>';
@@ -124,12 +130,13 @@ final class DependencyTrackingTest extends TestCase
 
     public function testTracksMultipleComponents(): void
     {
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
-            ->withComponentPaths('components');
-
-        new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
+            componentPaths: ['components'],
+        );
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Save</s-button><s-badge>New</s-badge><s-alert>Done!</s-alert>';
@@ -149,12 +156,13 @@ final class DependencyTrackingTest extends TestCase
 
     public function testTracksDuplicateComponentsOnce(): void
     {
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
-            ->withComponentPaths('components');
-
-        new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
+            componentPaths: ['components'],
+        );
 
         $tracker = new DependencyTracker();
         $source = '<s-button>Save</s-button><s-button>Cancel</s-button><s-button>Delete</s-button>';
@@ -173,12 +181,13 @@ final class DependencyTrackingTest extends TestCase
     public function testTracksNestedDependencies(): void
     {
         // Use base templates path which has both template-inheritance and components subdirs
-        $config = (new SugarConfig())
-            ->withTemplatePaths(SUGAR_TEST_TEMPLATES_PATH)
-            ->withComponentPaths('components');
-
-        new FileTemplateLoader($config);
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
+            componentPaths: ['components'],
+        );
 
         $tracker = new DependencyTracker();
 

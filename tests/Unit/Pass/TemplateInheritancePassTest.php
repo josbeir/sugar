@@ -23,7 +23,7 @@ final class TemplateInheritancePassTest extends PassTestCase
     protected function getPass(): PassInterface
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $loader = new FileTemplateLoader((new SugarConfig())->withTemplatePaths($this->inheritanceFixturesPath));
+        $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);
 
         return new TemplateInheritancePass($loader, new SugarConfig());
     }

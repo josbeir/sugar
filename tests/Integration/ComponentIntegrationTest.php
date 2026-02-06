@@ -24,11 +24,14 @@ final class ComponentIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
-        $config = (new SugarConfig())
-            ->withTemplatePaths($this->templatesPath)
-            ->withComponentPaths('components');
+        $config = new SugarConfig();
 
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->templatesPath],
+            componentPaths: ['components'],
+        );
     }
 
     public function testCompilesSimpleComponent(): void

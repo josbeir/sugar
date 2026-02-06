@@ -228,4 +228,87 @@ final class FileCacheTest extends TestCase
 
         unlink($sourcePath);
     }
+
+    public function testInvalidateHandlesCircularDependencies(): void
+    {
+        // Create circular reverse dependency: A←B←C←A
+        // Layout is used by PageA, PageA is used by PageB, PageB is used by Layout
+        // Without duplicate prevention, this would loop infinitely
+
+        $metadataLayout = new CacheMetadata();
+        $metadataPageA = new CacheMetadata(dependencies: ['templates/layout.sugar.php']);
+        $metadataPageB = new CacheMetadata(dependencies: ['templates/page-a.sugar.php']);
+        $metadataLayout2 = new CacheMetadata(dependencies: ['templates/page-b.sugar.php']);
+
+        $this->cache->put('templates/layout.sugar.php', '<?php echo "Layout";', $metadataLayout);
+        $this->cache->put('templates/page-a.sugar.php', '<?php echo "PageA";', $metadataPageA);
+        $this->cache->put('templates/page-b.sugar.php', '<?php echo "PageB";', $metadataPageB);
+        // Update layout to depend on page-b, creating circular dependency
+        $this->cache->put('templates/layout.sugar.php', '<?php echo "Layout v2";', $metadataLayout2);
+
+        // Invalidate layout - should process each template exactly once
+        $invalidated = $this->cache->invalidate('templates/layout.sugar.php');
+
+        // All three should be invalidated
+        $this->assertCount(3, $invalidated);
+        $this->assertContains('templates/layout.sugar.php', $invalidated);
+        $this->assertContains('templates/page-a.sugar.php', $invalidated);
+        $this->assertContains('templates/page-b.sugar.php', $invalidated);
+
+        // Verify all are actually deleted
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('templates/layout.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('templates/page-a.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('templates/page-b.sugar.php'));
+    }
+
+    public function testInvalidateHandlesDiamondDependencies(): void
+    {
+        // Create diamond pattern in reverse dependency graph:
+        // Base template is extended by both PageA and PageB
+        // Both PageA and PageB are extended by FinalPage
+        // When Base changes, FinalPage appears in queue twice but should only be processed once
+
+        $metadataBase = new CacheMetadata();
+        $metadataPageA = new CacheMetadata(dependencies: ['templates/base.sugar.php']);
+        $metadataPageB = new CacheMetadata(dependencies: ['templates/base.sugar.php']);
+        $metadataFinal = new CacheMetadata(dependencies: ['templates/page-a.sugar.php', 'templates/page-b.sugar.php']);
+
+        $this->cache->put('templates/base.sugar.php', '<?php echo "Base";', $metadataBase);
+        $this->cache->put('templates/page-a.sugar.php', '<?php echo "PageA";', $metadataPageA);
+        $this->cache->put('templates/page-b.sugar.php', '<?php echo "PageB";', $metadataPageB);
+        $this->cache->put('templates/final.sugar.php', '<?php echo "Final";', $metadataFinal);
+
+        // Invalidate Base - Final should appear in queue twice but only be deleted once
+        $invalidated = $this->cache->invalidate('templates/base.sugar.php');
+
+        // All four should be invalidated exactly once
+        $this->assertCount(4, $invalidated);
+        $this->assertContains('templates/base.sugar.php', $invalidated);
+        $this->assertContains('templates/page-a.sugar.php', $invalidated);
+        $this->assertContains('templates/page-b.sugar.php', $invalidated);
+        $this->assertContains('templates/final.sugar.php', $invalidated);
+
+        // Verify Final appears exactly once in the result
+        $finalCount = count(array_filter($invalidated, fn($key) => $key === 'templates/final.sugar.php'));
+        $this->assertSame(1, $finalCount, 'Template Final should be invalidated exactly once');
+    }
+
+    public function testInvalidateHandlesSelfReference(): void
+    {
+        // Create self-referential dependency: A→A
+        // This edge case should not cause infinite loop
+
+        $metadata = new CacheMetadata(dependencies: ['templates/self.sugar.php']);
+        $this->cache->put('templates/self.sugar.php', '<?php echo "Self";', $metadata);
+
+        // Invalidate - should process exactly once
+        $invalidated = $this->cache->invalidate('templates/self.sugar.php');
+
+        // Should be invalidated exactly once
+        $this->assertCount(1, $invalidated);
+        $this->assertContains('templates/self.sugar.php', $invalidated);
+
+        // Verify actually deleted
+        $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('templates/self.sugar.php'));
+    }
 }

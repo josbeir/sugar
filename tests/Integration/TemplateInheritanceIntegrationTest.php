@@ -20,9 +20,13 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $config = (new SugarConfig())->withTemplatePaths($this->templatesPath);
+        $config = new SugarConfig();
 
-        $this->setUpCompiler(config: $config, withTemplateLoader: true);
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->templatesPath],
+        );
     }
 
     public function testSimpleInheritanceWithBlockReplacement(): void

@@ -33,7 +33,8 @@ final class EngineTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())->withTemplatePaths($this->templateDir),
+                    new SugarConfig(),
+                    [$this->templateDir],
                 ),
             )
             ->build();
@@ -49,7 +50,8 @@ final class EngineTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())->withTemplatePaths($this->templateDir),
+                    new SugarConfig(),
+                    [$this->templateDir],
                 ),
             )
             ->build();
@@ -68,7 +70,8 @@ final class EngineTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())->withTemplatePaths($this->templateDir),
+                    new SugarConfig(),
+                    [$this->templateDir],
                 ),
             )
             ->withCache($cache)
@@ -96,7 +99,8 @@ final class EngineTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())->withTemplatePaths($this->templateDir),
+                    new SugarConfig(),
+                    [$this->templateDir],
                 ),
             )
             ->withCache($cache)
@@ -125,7 +129,8 @@ final class EngineTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())->withTemplatePaths($this->templateDir),
+                    new SugarConfig(),
+                    [$this->templateDir],
                 ),
             )
             ->build();

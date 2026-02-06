@@ -30,8 +30,8 @@ trait EngineTestTrait
         ?TemplateCacheInterface $cache = null,
         bool $debug = false,
     ): Engine {
-        $config = (new SugarConfig())->withTemplatePaths($templatePath);
-        $loader = new FileTemplateLoader($config);
+        $config = new SugarConfig();
+        $loader = new FileTemplateLoader($config, [$templatePath]);
 
         $builder = Engine::builder()
             ->withTemplateLoader($loader)

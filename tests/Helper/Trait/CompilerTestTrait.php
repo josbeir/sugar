@@ -32,11 +32,19 @@ trait CompilerTestTrait
      *
      * Call this in your setUp() method.
      * Pass $withDefaultDirectives=false if you need to register custom directives.
+     *
+     * @param SugarConfig|null $config Optional configuration
+     * @param bool $withTemplateLoader Whether to set up template loader
+     * @param bool $withDefaultDirectives Whether to load default directives
+     * @param array<string> $templatePaths Template paths for loader (only used if withTemplateLoader=true)
+     * @param array<string> $componentPaths Component paths for loader (only used if withTemplateLoader=true)
      */
     protected function setUpCompiler(
         ?SugarConfig $config = null,
         bool $withTemplateLoader = false,
         bool $withDefaultDirectives = true,
+        array $templatePaths = [],
+        array $componentPaths = [],
     ): void {
         $this->parser = new Parser($config);
         $this->escaper = new Escaper();
@@ -46,8 +54,12 @@ trait CompilerTestTrait
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
 
-        if ($withTemplateLoader && $config instanceof SugarConfig) {
-            $this->templateLoader = new FileTemplateLoader($config);
+        if ($withTemplateLoader) {
+            $this->templateLoader = new FileTemplateLoader(
+                $config ?? new SugarConfig(),
+                $templatePaths,
+                $componentPaths,
+            );
             $this->compiler = new Compiler(
                 parser: $this->parser,
                 escaper: $this->escaper,

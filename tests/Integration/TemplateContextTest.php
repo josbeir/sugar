@@ -86,9 +86,9 @@ final class TemplateContextTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader(
                 new FileTemplateLoader(
-                    (new SugarConfig())
-                        ->withTemplatePaths($this->templatesPath)
-                        ->withComponentPaths('components'),
+                    new SugarConfig(),
+                    [$this->templatesPath],
+                    ['components'],
                 ),
             )
             ->withTemplateContext($viewContext)

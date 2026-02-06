@@ -35,21 +35,28 @@ class FileTemplateLoader implements TemplateLoaderInterface
      * Constructor.
      *
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
+     * @param array<string>|string $templatePaths Paths to search for templates (searched in order)
+     * @param array<string>|string $componentPaths Paths to scan for component templates
      */
     public function __construct(
         private readonly SugarConfig $config = new SugarConfig(),
+        string|array $templatePaths = [],
+        string|array $componentPaths = [],
     ) {
-        if ($this->config->templatePaths === []) {
+        $templatePaths = is_string($templatePaths) ? [$templatePaths] : $templatePaths;
+        $componentPaths = is_string($componentPaths) ? [$componentPaths] : $componentPaths;
+
+        if ($templatePaths === []) {
             $cwd = getcwd();
             $this->templatePaths = [$cwd !== false ? $cwd : '.'];
         } else {
-            $this->templatePaths = $this->config->templatePaths;
+            $this->templatePaths = $templatePaths;
         }
 
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
 
-        // Auto-discover components from config paths
-        foreach ($this->config->componentPaths as $path) {
+        // Auto-discover components from provided paths
+        foreach ($componentPaths as $path) {
             $this->discoverComponents($path);
         }
     }

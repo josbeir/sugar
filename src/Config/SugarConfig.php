@@ -6,7 +6,7 @@ namespace Sugar\Config;
 /**
  * Configuration for Sugar template engine
  *
- * Allows customizing directive prefixes, element prefix, template paths, and component paths.
+ * Allows customizing directive prefixes and element prefix.
  * All properties are readonly for immutability.
  */
 final readonly class SugarConfig
@@ -16,14 +16,10 @@ final readonly class SugarConfig
      *
      * @param string $directivePrefix Prefix for directives (e.g., 's' for s:if, 'x' for x:if)
      * @param string $elementPrefix Prefix for custom elements (e.g., 's-' for s-template, s-button)
-     * @param array<string> $templatePaths Paths to search for templates (searched in order)
-     * @param array<string> $componentPaths Paths to scan for component templates
      */
     public function __construct(
         public string $directivePrefix = 's',
         public string $elementPrefix = 's-',
-        public array $templatePaths = [],
-        public array $componentPaths = [],
     ) {
     }
 
@@ -50,38 +46,6 @@ final readonly class SugarConfig
         return new self(
             directivePrefix: $prefix,
             elementPrefix: $prefix . '-',
-        );
-    }
-
-    /**
-     * Create new config instance with template paths
-     *
-     * @param string ...$paths Template directory paths (searched in order)
-     * @return self New configuration instance
-     */
-    public function withTemplatePaths(string ...$paths): self
-    {
-        return new self(
-            directivePrefix: $this->directivePrefix,
-            elementPrefix: $this->elementPrefix,
-            templatePaths: $paths,
-            componentPaths: $this->componentPaths,
-        );
-    }
-
-    /**
-     * Create new config instance with component paths
-     *
-     * @param string ...$paths Component directory paths to scan
-     * @return self New configuration instance
-     */
-    public function withComponentPaths(string ...$paths): self
-    {
-        return new self(
-            directivePrefix: $this->directivePrefix,
-            elementPrefix: $this->elementPrefix,
-            templatePaths: $this->templatePaths,
-            componentPaths: $paths,
         );
     }
 }
