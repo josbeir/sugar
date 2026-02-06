@@ -17,7 +17,7 @@ use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
-use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
@@ -41,13 +41,13 @@ final readonly class ComponentExpansionPass implements PassInterface
      *
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader for loading components
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
-     * @param \Sugar\Extension\DirectiveRegistry $registry Extension registry for directive type checking
+     * @param \Sugar\Extension\DirectiveRegistryInterface $registry Extension registry for directive type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private TemplateLoaderInterface $loader,
         private Parser $parser,
-        private DirectiveRegistry $registry,
+        private DirectiveRegistryInterface $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);

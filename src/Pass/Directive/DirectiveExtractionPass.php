@@ -20,7 +20,7 @@ use Sugar\Directive\Interface\ElementExtractionInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
-use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\PassInterface;
 
 /**
@@ -55,11 +55,11 @@ final class DirectiveExtractionPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\DirectiveRegistry $registry Directive registry for type checking
+     * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry for type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
-        private readonly DirectiveRegistry $registry,
+        private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);

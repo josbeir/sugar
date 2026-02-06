@@ -44,6 +44,9 @@
 - [Caching](#caching)
 - [Template Context](#template-context)
 - [Configuration](#configuration)
+  - [Engine Configuration](#engine-configuration)
+  - [Custom Directive Prefix](#custom-directive-prefix)
+  - [Custom Directive Registry](#custom-directive-registry)
 - [Architecture](#architecture)
 - [Debug Mode](#debug-mode)
 - [Roadmap](#roadmap)
@@ -1394,6 +1397,7 @@ $engine = Engine::builder($config)
 | `withCache()` | Set cache implementation | `FileCache` in temp dir |
 | `withDebug()` | Enable debug mode with freshness checks | `false` |
 | `withTemplateContext()` | Bind context object to templates | `null` |
+| `withDirectiveRegistry()` | Set custom directive registry | `DirectiveRegistry` with defaults |
 
 **Note:** Configuration is passed to `Engine::builder($config)` in the constructor, not via a method.
 
@@ -1424,6 +1428,39 @@ $engine = Engine::builder($config)
 - `x:` - Inspired by JSX conventions
 - `v:` - Vue.js style directives
 - `tw:` - Tailwind-style naming
+
+#### Custom Directive Registry
+
+Customize which directives are available by providing your own directive registry. Useful for adding custom directives or removing built-in ones:
+
+```php
+use Sugar\Extension\DirectiveRegistry;
+use Sugar\Directive\CustomDirectiveCompiler;
+
+// Start with an empty registry
+$registry = DirectiveRegistry::empty();
+
+// Add only the directives you want
+$registry->register('if', IfCompiler::class);
+$registry->register('foreach', ForeachCompiler::class);
+$registry->register('custom', CustomDirectiveCompiler::class);
+
+// Or start with defaults and override/add
+$registry = new DirectiveRegistry(); // Has all built-in directives
+$registry->register('custom', CustomDirectiveCompiler::class);
+
+// Use with engine
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDirectiveRegistry($registry)
+    ->build();
+```
+
+**Use cases:**
+- **Custom directives** - Add framework-specific or domain-specific directives
+- **Security** - Remove directives that shouldn't be available in restricted contexts
+- **Performance** - Include only the directives your templates actually use
+- **Framework integration** - Adapt Sugar to match your framework's conventions
 
 ## Architecture
 
@@ -1475,23 +1512,33 @@ The compiled output is pure PHP that can be cached and executed with opcache for
 
 ## Debug Mode
 
-Enable debug mode to add source location comments to compiled templates:
+Enable debug mode during development to add source location comments to compiled templates. This helps trace errors back to your original template source:
 
 ```php
-$compiled = $compiler->compile(
-    $source,
-    debug: true,
-    sourceFile: 'templates/user/profile.sugar.php'
-);
+use Sugar\Engine;
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDebug(true) // Enable debug mode
+    ->build();
+
+echo $engine->render('pages/home', ['user' => $currentUser]);
 ```
 
-Output includes helpful comments:
+**Compiled output with debug comments:**
 ```php
 <?php if ($user): /* L1:C0 */ ?>
 <div> <!-- L2:C4 -->
-    <?php echo htmlspecialchars($name); /* L2:C14 s:text */ ?>
+    <?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8'); /* L2:C14 s:text */ ?>
 </div>
 ```
+
+Debug comments include:
+- **Line/column numbers** - `/* L1:C0 */` shows source location
+- **Directive names** - `/* s:text */` shows which directive generated the code
+- **Element markers** - `<!-- L2:C4 -->` tracks HTML element positions
+
+> **Tip:** Enable debug mode in development, disable in production for optimal performance.
 
 ## Roadmap
 

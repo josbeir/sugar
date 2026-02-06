@@ -44,7 +44,7 @@ use Sugar\Exception\UnknownDirectiveException;
  * $registry->register('if', IfCompiler::class);
  * ```
  */
-final class DirectiveRegistry
+final class DirectiveRegistry implements DirectiveRegistryInterface
 {
     /**
      * Built-in directive mappings

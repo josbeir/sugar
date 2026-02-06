@@ -9,6 +9,7 @@ use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Util\Hash;
@@ -24,7 +25,7 @@ final class EngineBuilder
 
     private ?TemplateCacheInterface $cache = null;
 
-    private ?DirectiveRegistry $registry = null;
+    private ?DirectiveRegistryInterface $registry = null;
 
     private SugarConfig $config;
 

@@ -8,7 +8,7 @@ use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
-use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Pass\ComponentExpansionPass;
@@ -25,7 +25,7 @@ use Sugar\Pass\TemplateInheritancePass;
  */
 final class Compiler implements CompilerInterface
 {
-    private readonly DirectiveRegistry $registry;
+    private readonly DirectiveRegistryInterface $registry;
 
     private readonly DirectivePairingPass $directivePairingPass;
 
@@ -46,14 +46,14 @@ final class Compiler implements CompilerInterface
      *
      * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
-     * @param \Sugar\Extension\DirectiveRegistry $registry Directive registry with registered compilers
+     * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry with registered compilers
      * @param \Sugar\Loader\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(
         private readonly Parser $parser,
         Escaper $escaper,
-        DirectiveRegistry $registry,
+        DirectiveRegistryInterface $registry,
         ?TemplateLoaderInterface $templateLoader = null,
         ?SugarConfig $config = null,
     ) {

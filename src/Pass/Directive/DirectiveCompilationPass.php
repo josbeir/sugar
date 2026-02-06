@@ -12,7 +12,7 @@ use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\UnknownDirectiveException;
-use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\PassInterface;
 
 /**
@@ -32,10 +32,10 @@ final class DirectiveCompilationPass implements PassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\DirectiveRegistry $registry Extension registry with directive compilers
+     * @param \Sugar\Extension\DirectiveRegistryInterface $registry Extension registry with directive compilers
      */
     public function __construct(
-        private readonly DirectiveRegistry $registry,
+        private readonly DirectiveRegistryInterface $registry,
     ) {
     }
 
