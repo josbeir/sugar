@@ -16,26 +16,6 @@ use Sugar\Ast\FragmentNode;
 final class NodeCloner
 {
     /**
-     * Clone ElementNode with modified attributes
-     *
-     * @param \Sugar\Ast\ElementNode $node Original node
-     * @param array<\Sugar\Ast\AttributeNode> $newAttributes New attributes array
-     * @return \Sugar\Ast\ElementNode New node with updated attributes
-     */
-    public static function withAttributes(ElementNode $node, array $newAttributes): ElementNode
-    {
-        return new ElementNode(
-            tag: $node->tag,
-            attributes: $newAttributes,
-            children: $node->children,
-            selfClosing: $node->selfClosing,
-            line: $node->line,
-            column: $node->column,
-            dynamicTag: $node->dynamicTag,
-        );
-    }
-
-    /**
      * Clone ElementNode with modified children
      *
      * @param \Sugar\Ast\ElementNode $node Original node

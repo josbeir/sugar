@@ -12,27 +12,6 @@ use Sugar\Ast\TextNode;
 
 final class NodeClonerTest extends TestCase
 {
-    public function testWithAttributes(): void
-    {
-        $node = new ElementNode(
-            'div',
-            [new AttributeNode('id', 'old', 1, 1)],
-            [new TextNode('content', 1, 1)],
-            false,
-            1,
-            1,
-        );
-
-        $newAttributes = [new AttributeNode('id', 'new', 1, 1)];
-        $result = NodeCloner::withAttributes($node, $newAttributes);
-
-        $this->assertNotSame($node, $result);
-        $this->assertSame('div', $result->tag);
-        $this->assertSame($newAttributes, $result->attributes);
-        $this->assertSame($node->children, $result->children);
-        $this->assertSame($node->selfClosing, $result->selfClosing);
-    }
-
     public function testWithChildren(): void
     {
         $node = new ElementNode(
@@ -115,7 +94,7 @@ final class NodeClonerTest extends TestCase
         $this->assertSame($node->column, $result->column);
     }
 
-    public function testPreservesImmutability(): void
+    public function testImmutabilityWithChildren(): void
     {
         $original = new ElementNode(
             'span',
@@ -126,15 +105,14 @@ final class NodeClonerTest extends TestCase
             10,
         );
 
-        $modified = NodeCloner::withAttributes($original, []);
+        $modified = NodeCloner::withChildren($original, []);
 
         // Original unchanged
-        $this->assertCount(1, $original->attributes);
-        $this->assertSame('original', $original->attributes[0]->value);
+        $this->assertCount(1, $original->children);
 
         // Modified is different
-        $this->assertCount(0, $modified->attributes);
+        $this->assertCount(0, $modified->children);
         $this->assertSame($original->tag, $modified->tag);
-        $this->assertSame($original->children, $modified->children);
+        $this->assertSame($original->attributes, $modified->attributes);
     }
 }
