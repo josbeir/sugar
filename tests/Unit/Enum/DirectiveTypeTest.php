@@ -12,10 +12,11 @@ final class DirectiveTypeTest extends TestCase
     {
         $cases = DirectiveType::cases();
 
-        $this->assertCount(3, $cases);
+        $this->assertCount(4, $cases);
         $this->assertContains(DirectiveType::CONTROL_FLOW, $cases);
         $this->assertContains(DirectiveType::ATTRIBUTE, $cases);
         $this->assertContains(DirectiveType::CONTENT, $cases);
+        $this->assertContains(DirectiveType::PASS_THROUGH, $cases);
     }
 
     public function testEnumComparison(): void

@@ -112,24 +112,24 @@ final class Compiler implements CompilerInterface
             $ast = $this->templateInheritancePass->execute($ast, $context);
         }
 
-        // Step 1.75: Expand components (s-button → template content)
-        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $ast = $this->componentExpansionPass->execute($ast, $context);
-        }
-
-        // Step 2: Extract directives from elements (s:if → DirectiveNode)
+        // Step 2: Extract directives from elements (s:if, s:component → DirectiveNode)
         $extractedAst = $this->directiveExtractionPass->execute($ast, $context);
 
         // Step 3: Wire up parent references and pair sibling directives
         $pairedAst = $this->directivePairingPass->execute($extractedAst, $context);
 
-        // Step 4: Compile DirectiveNodes into PHP control structures
+        // Step 4: Compile DirectiveNodes into PHP control structures and component nodes
         $transformedAst = $this->directiveCompilationPass->execute($pairedAst, $context);
 
-        // Step 5: Analyze context and update OutputNode contexts
+        // Step 5: Expand components (ComponentNode/DynamicComponentNode → template content)
+        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
+            $transformedAst = $this->componentExpansionPass->execute($transformedAst, $context);
+        }
+
+        // Step 6: Analyze context and update OutputNode contexts
         $analyzedAst = $this->contextPass->execute($transformedAst, $context);
 
-        // Step 6: Generate executable PHP code with inline escaping
+        // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);

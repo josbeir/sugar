@@ -275,7 +275,7 @@ Component definition (`components/s-card.sugar.php`):
 
 Usage:
 ```html
-<s-card s-bind:featured="true" class="shadow-lg" data-id="123">
+<s-card s:bind="['featured' => true]" class="shadow-lg" data-id="123">
     <h3 s:slot="header">Product Title</h3>
 
     <p>This is the main card content in the default slot.</p>
@@ -814,7 +814,7 @@ Use the `s:component` directive to invoke a component by name on any element or 
 <div s:component="button">Click Me</div>
 
 <!-- Fragment form (no wrapper element) -->
-<s-template s:component="alert" s-bind:type="'info'">
+<s-template s:component="alert" s:bind="['type' => 'info']">
     Hello
 </s-template>
 ```
@@ -823,9 +823,9 @@ Use the `s:component` directive to invoke a component by name on any element or 
 - The `s:component` value must be a non-empty literal component name.
 - Use this when you need to choose the component tag dynamically in markup while keeping a consistent element shape.
 
-#### Component Props with `s-bind:`
+#### Component Props with `s:bind`
 
-Pass data to components as props using the `s-bind:` prefix. Props become variables inside the component scope.
+Pass data to components as props using the `s:bind` attribute with array syntax. Props become variables inside the component scope.
 
 **Component** (`components/alert.sugar.php`):
 ```html
@@ -837,18 +837,18 @@ Pass data to components as props using the `s-bind:` prefix. Props become variab
 
 **Usage**:
 ```html
-<!-- String literals need inner quotes (like Vue/Alpine) -->
-<s-alert s-bind:class="'alert alert-success'" s-bind:title="'Well done!'">
+<!-- Pass props as array -->
+<s-alert s:bind="['class' => 'alert alert-success', 'title' => 'Well done!']">
     Your changes have been saved.
 </s-alert>
 
-<!-- Pass variables without quotes -->
-<s-alert s-bind:class="$alertClass" s-bind:title="$message">
+<!-- Pass variables -->
+<s-alert s:bind="['class' => $alertClass, 'title' => $message]">
     <?= $content ?>
 </s-alert>
 
 <!-- Pass expressions -->
-<s-alert s-bind:class="'alert alert-' . ($hasError ? 'danger' : 'success')">
+<s-alert s:bind="['class' => 'alert alert-' . ($hasError ? 'danger' : 'success')]">
     Operation complete
 </s-alert>
 ```
@@ -861,7 +861,7 @@ Pass data to components as props using the `s-bind:` prefix. Props become variab
 <?php })(['title' => 'Well done!', 'slot' => 'Your changes have been saved.']); ?>
 ```
 
-> **Note:** The `s-bind:` syntax treats values as **PHP expressions**. String literals require inner quotes (`"'success'"`), similar to Vue's `:prop` or Alpine's `x-bind:`. Pass variables directly without quotes (`"$var"`). Slot content is pre-rendered HTML and should be output with `raw()` in your component templates to avoid double-escaping.
+> **Note:** The `s:bind` attribute accepts a **PHP array expression** mapping prop names to values. All values are treated as PHP expressions. Slot content is pre-rendered HTML and is automatically output without escaping in component templates.
 
 **Compiled Output**:
 ```html
@@ -886,7 +886,7 @@ HTML attributes and framework directives automatically merge to the component's 
 **Usage with HTML & Framework Attributes**:
 ```html
 <s-card
-    s-bind:title="'User Profile'"
+    s:bind="['title' => 'User Profile']"
     class="shadow-lg"
     id="profile-card"
     @click="handleClick"
@@ -973,7 +973,7 @@ You can use Sugar directives on component invocations:
 
 ```html
 <!-- Conditional components -->
-<s-alert s:if="$hasErrors" s-bind:type="'error'">
+<s-alert s:if="$hasErrors" s:bind="['type' => 'error']">
     <?= $errorMessage ?>
 </s-alert>
 
@@ -994,21 +994,21 @@ Components work seamlessly with attribute-based frameworks:
 
 **Alpine.js**:
 ```html
-<s-modal s-bind:title="'Confirm'" x-data="{ open: false }" @close="open = false">
+<s-modal s:bind="['title' => 'Confirm']" x-data="{ open: false }" @close="open = false">
     Are you sure?
 </s-modal>
 ```
 
 **Vue**:
 ```html
-<s-dropdown s-bind:items="$menuItems" v-model="selectedItem" @change="handleChange">
+<s-dropdown s:bind="['items' => $menuItems]" v-model="selectedItem" @change="handleChange">
     Select option
 </s-dropdown>
 ```
 
 **HTMX**:
 ```html
-<s-form s-bind:action="'/api/users'" hx-post="/api/users" hx-target="#result">
+<s-form s:bind="['action' => '/api/users']" hx-post="/api/users" hx-target="#result">
     Form content
 </s-form>
 ```
@@ -1016,14 +1016,14 @@ Components work seamlessly with attribute-based frameworks:
 #### Component Best Practices
 
 ✅ **DO:**
-- Use `s-bind:` for component-specific data (props)
+- Use `s:bind` for component-specific data (props)
 - Use regular attributes for HTML/framework features
 - Keep component templates simple with single root element
-- Use descriptive prop names (`s-bind:type`, not `s-bind:t`)
+- Use descriptive prop names (`'type' => ...`, not `'t' => ...`)
 - Output slot variables directly: `<?= $slot ?>` - Sugar automatically disables escaping for slots
 
 ❌ **DON'T:**
-- Don't use `s-bind:` for HTML attributes like `class`, `id`, `data-*` (just use them directly)
+- Don't use `s:bind` for HTML attributes like `class`, `id`, `data-*` (just use them directly)
 - Don't add control flow directives (`s:if`, `s:foreach`) to component root element (they won't be seen by consumers)
 - Avoid multiple root elements in components (first one wins for attribute merging)
 
@@ -1353,7 +1353,7 @@ Template context automatically flows into components, so `$this` works consisten
 
 **Usage**:
 ```html
-<s-link s-bind:href="'/dashboard'">Go to Dashboard</s-link>
+<s-link s:bind="['href' => '/dashboard']">Go to Dashboard</s-link>
 ```
 
 **Compiled Output**:

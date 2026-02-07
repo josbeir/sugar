@@ -17,6 +17,7 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Exception\ComponentNotFoundException;
+use Sugar\Exception\SyntaxException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\ComponentExpansionPass;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
@@ -137,8 +138,8 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testPreservesComponentAttributes(): void
     {
-        // Component with s-bind: attributes should pass them as variables via closure
-        $template = '<s-alert s-bind:type="\'warning\'">Important message</s-alert>';
+        // Component with s:bind attributes should pass them as variables via closure
+        $template = '<s-alert s:bind="[\'type\' => \'warning\']">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
         $result = $this->pass->execute($ast, $this->createContext());
@@ -198,7 +199,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testExpandsComponentDirectiveOnFragment(): void
     {
-        $template = '<s-template s:component="alert" s-bind:type="\'info\'">Hello</s-template>';
+        $template = '<s-template s:component="alert" s:bind="[\'type\' => \'info\']">Hello</s-template>';
         $ast = $this->parser->parse($template);
 
         $result = $this->pass->execute($ast, $this->createContext());
@@ -336,5 +337,17 @@ final class ComponentExpansionPassTest extends TestCase
 
         // Both component types should be properly expanded
         $this->assertGreaterThan(0, count($result->children));
+    }
+
+    public function testThrowsExceptionForInvalidBindExpression(): void
+    {
+        // Use existing button component - test that invalid s:bind throws error at compile time
+        $ast = $this->parser->parse('<s-button s:bind="\'not an array\'">Click</s-button>');
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute must be an array expression');
+        $this->expectExceptionMessage('string literal');
+
+        $this->pass->execute($ast, $this->createContext());
     }
 }

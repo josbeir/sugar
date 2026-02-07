@@ -54,8 +54,8 @@ final class ComponentIntegrationTest extends TestCase
 
     public function testCompilesComponentWithAttributes(): void
     {
-        // Use s-bind: to pass component variables
-        $template = '<s-alert s-bind:title="\'Important\'" s-bind:type="\'warning\'">Important message</s-alert>';
+        // Use s:bind to pass component variables
+        $template = '<s-alert s:bind="[\'title\' => \'Important\', \'type\' => \'warning\']">Important message</s-alert>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -268,8 +268,8 @@ final class ComponentIntegrationTest extends TestCase
 
     public function testBindAttributesBecomeVariables(): void
     {
-        // s-bind: attributes should become component variables
-        $template = '<s-alert s-bind:type="\'warning\'" s-bind:title="\'Attention\'" class="mb-4">Check this</s-alert>';
+        // s:bind attributes should become component variables
+        $template = '<s-alert s:bind="[\'type\' => \'warning\', \'title\' => \'Attention\']" class="mb-4">Check this</s-alert>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -286,7 +286,7 @@ final class ComponentIntegrationTest extends TestCase
     {
         // Test everything together
         $template = '<s-button ' .
-            's-bind:variant="\'primary\'" ' .
+            's:bind="[\'variant\' => \'primary\']" ' .
             'class="btn-lg shadow" ' .
             'id="save-btn" ' .
             '@click="save()" ' .
@@ -296,7 +296,7 @@ final class ComponentIntegrationTest extends TestCase
 
         $compiled = $this->compiler->compile($template);
 
-        // s-bind:variant becomes variable
+        // s:bind variant becomes variable
         $this->assertStringContainsString("'variant' => 'primary'", $compiled);
 
         // HTML attributes merge to root
@@ -373,7 +373,7 @@ final class ComponentIntegrationTest extends TestCase
 
     public function testComplexModalComponentWithMultipleSlots(): void
     {
-        $template = '<s-modal s-bind:title="\'Confirm Action\'" s-bind:onClose="\'closeModal()\'">' .
+        $template = '<s-modal s:bind="[\'title\' => \'Confirm Action\', \'onClose\' => \'closeModal()\']">' .
             '<p>Are you sure you want to continue?</p>' .
             '<div s:slot="footer">' .
             '<button class="btn-secondary">Cancel</button>' .
@@ -406,7 +406,7 @@ final class ComponentIntegrationTest extends TestCase
     public function testDropdownComponentWithItemsRenderedOutside(): void
     {
         // Static HTML items work in slots
-        $template = '<s-dropdown s-bind:trigger="\'Select Option\'"><li>Item 1</li><li>Item 2</li></s-dropdown>';
+        $template = '<s-dropdown s:bind="[\'trigger\' => \'Select Option\']"><li>Item 1</li><li>Item 2</li></s-dropdown>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -451,7 +451,7 @@ final class ComponentIntegrationTest extends TestCase
     {
         // Test passing variables as props
         // Note: Props are passed but component templates cannot use dynamic values in HTML attributes currently
-        $template = '<s-alert s-bind:title="$userName">Hello everyone!</s-alert>';
+        $template = '<s-alert s:bind="[\'title\' => $userName]">Hello everyone!</s-alert>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -511,7 +511,7 @@ final class ComponentIntegrationTest extends TestCase
     public function testComponentWithSClassDirective(): void
     {
         // Test s:class directive inside component template
-        $template = '<s-badge s-bind:variant="\'primary\'">Admin</s-badge>';
+        $template = '<s-badge s:bind="[\'variant\' => \'primary\']">Admin</s-badge>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -527,7 +527,7 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('Admin', $output);
 
         // Test with different variant
-        $template2 = '<s-badge s-bind:variant="\'danger\'">Error</s-badge>';
+        $template2 = '<s-badge s:bind="[\'variant\' => \'danger\']">Error</s-badge>';
         $compiled2 = $this->compiler->compile($template2);
         $output2 = $this->executeTemplate($compiled2);
         $this->assertStringContainsString('badge-danger', $output2);
@@ -555,7 +555,7 @@ final class ComponentIntegrationTest extends TestCase
         $this->setUp();
 
         // Use component with spread attributes
-        $template = '<s-container s-bind:attrs="[\'data-id\' => \'123\', \'aria-label\' => \'Container\']">Content</s-container>';
+        $template = '<s-container s:bind="[\'attrs\' => [\'data-id\' => \'123\', \'aria-label\' => \'Container\']]">Content</s-container>';
 
         $compiled = $this->compiler->compile($template);
 
@@ -628,7 +628,7 @@ final class ComponentIntegrationTest extends TestCase
     public function testComponentWithSExtendsDirective(): void
     {
         // Components already exist in fixtures
-        $template = '<s-custom-panel s-bind:title="\'My Panel\'">Panel Content</s-custom-panel>';
+        $template = '<s-custom-panel s:bind="[\'title\' => \'My Panel\']">Panel Content</s-custom-panel>';
         $compiled = $this->compiler->compile($template);
 
         // Should have base structure with overridden blocks
@@ -652,7 +652,7 @@ final class ComponentIntegrationTest extends TestCase
     public function testComponentWithMultiLevelInheritance(): void
     {
         // Components already exist in fixtures
-        $template = '<s-custom-layout s-bind:title="\'Page Title\'">Page Content</s-custom-layout>';
+        $template = '<s-custom-layout s:bind="[\'title\' => \'Page Title\']">Page Content</s-custom-layout>';
         $compiled = $this->compiler->compile($template);
 
         // Should have base structure

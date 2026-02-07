@@ -17,7 +17,7 @@ final class AttributeHelperTest extends TestCase
             new AttributeNode('s:if', '$show', 1, 1),
             new AttributeNode('s:foreach', '$items as $item', 1, 10),
             new AttributeNode('class', 'btn', 1, 20),
-            new AttributeNode('s-bind:title', '$title', 1, 30),
+            new AttributeNode('id', 'main-btn', 1, 30),
         ];
 
         $result = AttributeHelper::findAttributesByPrefix($attributes, 's:');

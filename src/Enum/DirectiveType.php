@@ -16,6 +16,9 @@ namespace Sugar\Enum;
  *
  * - CONTENT: Injects content into element children (text, html)
  *   Can combine with control flow directives.
+ *
+ * - PASS_THROUGH: Special attributes that use directive syntax but are handled by other passes.
+ *   Not compiled as directives, passed through to downstream passes (e.g., slot for components).
  */
 enum DirectiveType
 {
@@ -33,4 +36,10 @@ enum DirectiveType
      * Content directive - injects content into children (text, html)
      */
     case CONTENT;
+
+    /**
+     * Pass-through attribute - uses directive syntax but handled by other passes (slot)
+     * These are registered in the directive system but not compiled by DirectiveCompilationPass
+     */
+    case PASS_THROUGH;
 }

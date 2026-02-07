@@ -14,6 +14,7 @@ use Sugar\Directive\IfCompiler;
 use Sugar\Directive\IfContentCompiler;
 use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\PassThroughCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Directive\TagCompiler;
@@ -78,6 +79,9 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         // HTML manipulation
         'tag' => TagCompiler::class,
         'ifcontent' => IfContentCompiler::class,
+        // Pass-through (handled by other passes)
+        'slot' => PassThroughCompiler::class,
+        'bind' => PassThroughCompiler::class,
     ];
 
     /**

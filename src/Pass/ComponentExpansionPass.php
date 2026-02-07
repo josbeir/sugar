@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Ast\Helper\ExpressionValidator;
 use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
@@ -21,6 +22,9 @@ use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\Directive\DirectiveCompilationPass;
+use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Pass\Directive\DirectivePairingPass;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 /**
@@ -38,6 +42,12 @@ final class ComponentExpansionPass implements PassInterface
     private readonly string $slotAttrName;
 
     private readonly TemplateInheritancePass $inheritancePass;
+
+    private readonly DirectiveExtractionPass $directiveExtractionPass;
+
+    private readonly DirectivePairingPass $directivePairingPass;
+
+    private readonly DirectiveCompilationPass $directiveCompilationPass;
 
     /**
      * @var array<string, \Sugar\Ast\DocumentNode> Cache of parsed component ASTs
@@ -61,6 +71,9 @@ final class ComponentExpansionPass implements PassInterface
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
         $this->inheritancePass = new TemplateInheritancePass($loader, $config);
+        $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
+        $this->directivePairingPass = new DirectivePairingPass($this->registry);
+        $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
     }
 
     /**
@@ -128,6 +141,11 @@ final class ComponentExpansionPass implements PassInterface
         );
         $templateAst = $this->inheritancePass->execute($templateAst, $inheritanceContext);
 
+        // Process directives in component template (s:if, s:class, etc.)
+        $templateAst = $this->directiveExtractionPass->execute($templateAst, $inheritanceContext);
+        $templateAst = $this->directivePairingPass->execute($templateAst, $inheritanceContext);
+        $templateAst = $this->directiveCompilationPass->execute($templateAst, $inheritanceContext);
+
         // Categorize attributes: control flow, attribute directives, bindings, merge
         $categorized = $this->categorizeAttributes($component->attributes);
 
@@ -161,6 +179,7 @@ final class ComponentExpansionPass implements PassInterface
             $categorized['componentBindings'],
             $expandedSlots,
             $expandedDefaultSlot,
+            $context,
         );
 
         // Recursively expand any nested components in the wrapped template itself
@@ -250,36 +269,34 @@ final class ComponentExpansionPass implements PassInterface
      * Categorize component attributes into different types
      *
      * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes
-     * @return array{controlFlow: array<\Sugar\Ast\AttributeNode>, attributeDirectives: array<\Sugar\Ast\AttributeNode>, componentBindings: array<\Sugar\Ast\AttributeNode>, merge: array<\Sugar\Ast\AttributeNode>}
+     * @return array{controlFlow: array<\Sugar\Ast\AttributeNode>, attributeDirectives: array<\Sugar\Ast\AttributeNode>, componentBindings: \Sugar\Ast\AttributeNode|null, merge: array<\Sugar\Ast\AttributeNode>}
      */
     private function categorizeAttributes(array $attributes): array
     {
         $controlFlow = [];
         $attributeDirectives = [];
-        $componentBindings = [];
+        $componentBindings = null;
         $mergeAttrs = [];
 
         foreach ($attributes as $attr) {
             $name = $attr->name;
 
-            // Sugar directives: s:if, s:class, s:foreach
+            // Sugar directives: s:if, s:class, s:foreach, s:bind
             if ($this->prefixHelper->isDirective($name)) {
-                if ($this->isControlFlowDirective($name)) {
+                $directiveName = $this->prefixHelper->stripPrefix($name);
+
+                // s:bind is a pass-through directive for component variable bindings
+                if ($directiveName === 'bind') {
+                    // Component bindings: s:bind="['title' => $value, 'type' => 'warning']"
+                    // Store the full attribute node for error reporting with line/column
+                    $componentBindings = $attr;
+                } elseif ($this->isControlFlowDirective($name)) {
                     // Control flow: s:if, s:foreach, s:while
                     $controlFlow[] = $attr;
                 } else {
                     // Attribute directives: s:class, s:spread
                     $attributeDirectives[] = $attr;
                 }
-            } elseif ($this->prefixHelper->isBinding($name)) {
-                // Component bindings: s-bind:variant, s-bind:size
-                // Remove prefix to get variable name
-                $componentBindings[] = new AttributeNode(
-                    $this->prefixHelper->stripBindingPrefix($name),
-                    $attr->value,
-                    $attr->line,
-                    $attr->column,
-                );
             } else {
                 // Everything else merges: class, id, @click, x-show, data-*, v-if, hx-get
                 $mergeAttrs[] = $attr;
@@ -470,29 +487,54 @@ final class ComponentExpansionPass implements PassInterface
      * Wrap template with PHP code that injects variables
      *
      * @param \Sugar\Ast\DocumentNode $template Component template AST
-     * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes (non-directive)
+     * @param \Sugar\Ast\AttributeNode|null $bindAttribute Optional s:bind attribute node
      * @param array<string, array<\Sugar\Ast\Node>> $namedSlots Named slots
      * @param array<\Sugar\Ast\Node> $defaultSlot Default slot content
+     * @param \Sugar\Context\CompilationContext|null $context Compilation context for error reporting
      * @return \Sugar\Ast\DocumentNode Wrapped template
      */
     private function wrapWithVariables(
         DocumentNode $template,
-        array $attributes,
+        ?AttributeNode $bindAttribute,
         array $namedSlots,
         array $defaultSlot,
+        ?CompilationContext $context = null,
     ): DocumentNode {
         $arrayItems = [];
 
-        // Add component attributes as array items
-        foreach ($attributes as $attr) {
-            if (is_string($attr->value)) {
-                // s-bind values are PHP expressions, not literal strings
-                $arrayItems[] = sprintf(
-                    "'%s' => %s",
-                    $attr->name,
-                    $attr->value, // Use value as-is (it's a PHP expression)
-                );
+        // Add component bindings using spread operator if provided
+        if ($bindAttribute instanceof AttributeNode) {
+            $bindingsExpression = $bindAttribute->value;
+
+            // s:bind attribute must have a value
+            if ($bindingsExpression === null) {
+                $message = 's:bind attribute must have a value (e.g., s:bind="[\'key\' => $value]")';
+                if ($context instanceof CompilationContext) {
+                    throw $context->createException(
+                        SyntaxException::class,
+                        $message,
+                        $bindAttribute->line,
+                        $bindAttribute->column,
+                    );
+                }
+
+                throw new SyntaxException($message);
             }
+
+            $expression = $bindingsExpression instanceof OutputNode
+                ? $bindingsExpression->expression
+                : $bindingsExpression;
+
+            // Validate that expression could be an array at compile time
+            ExpressionValidator::validateArrayExpression(
+                $expression,
+                's:bind attribute',
+                $context,
+                $bindAttribute->line,
+                $bindAttribute->column,
+            );
+
+            $arrayItems[] = '...(' . $expression . ')';
         }
 
         // Collect all slot variable names

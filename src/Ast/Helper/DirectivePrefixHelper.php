@@ -21,8 +21,6 @@ final readonly class DirectivePrefixHelper
 {
     private string $directiveSeparator;
 
-    private string $bindingPrefix;
-
     /**
      * Constructor
      *
@@ -32,7 +30,6 @@ final readonly class DirectivePrefixHelper
         private string $prefix = 's',
     ) {
         $this->directiveSeparator = $prefix . ':';
-        $this->bindingPrefix = $prefix . '-bind:';
     }
 
     /**
@@ -43,16 +40,6 @@ final readonly class DirectivePrefixHelper
     public function isDirective(string $attrName): bool
     {
         return str_starts_with($attrName, $this->directiveSeparator);
-    }
-
-    /**
-     * Check if attribute name is a binding directive
-     *
-     * @param string $attrName Attribute name (e.g., 's-bind:title')
-     */
-    public function isBinding(string $attrName): bool
-    {
-        return str_starts_with($attrName, $this->bindingPrefix);
     }
 
     /**
@@ -71,21 +58,6 @@ final readonly class DirectivePrefixHelper
     }
 
     /**
-     * Strip binding prefix from name
-     *
-     * @param string $attrName Full attribute name (e.g., 's-bind:prop')
-     * @return string Property name without prefix (e.g., 'prop')
-     */
-    public function stripBindingPrefix(string $attrName): string
-    {
-        if ($this->isBinding($attrName)) {
-            return substr($attrName, strlen($this->bindingPrefix));
-        }
-
-        return $attrName;
-    }
-
-    /**
      * Build full directive name from short name
      *
      * @param string $name Short directive name (e.g., 'if')
@@ -94,17 +66,6 @@ final readonly class DirectivePrefixHelper
     public function buildName(string $name): string
     {
         return $this->directiveSeparator . $name;
-    }
-
-    /**
-     * Build full binding name from property name
-     *
-     * @param string $name Property name (e.g., 'title')
-     * @return string Full binding name (e.g., 's-bind:title')
-     */
-    public function buildBindingName(string $name): string
-    {
-        return $this->bindingPrefix . $name;
     }
 
     /**
@@ -125,16 +86,6 @@ final readonly class DirectivePrefixHelper
     public function getDirectiveSeparator(): string
     {
         return $this->directiveSeparator;
-    }
-
-    /**
-     * Get the binding prefix (prefix + -bind:)
-     *
-     * @return string The binding prefix (e.g., 's-bind:')
-     */
-    public function getBindingPrefix(): string
-    {
-        return $this->bindingPrefix;
     }
 
     /**

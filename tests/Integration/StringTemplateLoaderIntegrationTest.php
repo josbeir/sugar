@@ -106,7 +106,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
         $loader = new StringTemplateLoader(
             config: new SugarConfig(),
             templates: [
-                'alert-page' => '<s-alert s-bind:title="\'Important\'">Message</s-alert>',
+                'alert-page' => '<s-alert s:bind="[\'title\' => \'Important\']">Message</s-alert>',
             ],
             components: [
                 'alert' => '<div class="alert">' .
@@ -324,7 +324,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
         $loader = new StringTemplateLoader(
             config: new SugarConfig(),
             templates: [
-                'test-template' => '<s-custom-component s-bind:data="$testData">Test</s-custom-component>',
+                'test-template' => '<s-custom-component s:bind="[\'data\' => $testData]">Test</s-custom-component>',
             ],
             components: [
                 'custom-component' => '<div class="test"><?= json_encode($data) ?>: <?= $slot ?></div>',

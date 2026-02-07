@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass\Directive;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -95,6 +96,9 @@ final class DirectiveExtractionPass implements PassInterface
                 // Convert element with directive into DirectiveNode
                 // Don't pair at extraction time - let DirectivePairingPass handle that
                 $result[] = $this->elementToDirective($node);
+            } elseif ($node instanceof ComponentNode && $this->hasComponentDirectiveAttribute($node)) {
+                // Convert component with directive into DirectiveNode
+                $result[] = $this->componentToDirective($node);
             } elseif ($node instanceof FragmentNode && $this->hasFragmentDirectiveAttribute($node)) {
                 // Convert fragment with directive into DirectiveNode
                 $result[] = $this->fragmentToDirective($node);
@@ -119,6 +123,14 @@ final class DirectiveExtractionPass implements PassInterface
             return NodeCloner::withChildren($node, $newChildren);
         }
 
+        // Handle components with children
+        if ($node instanceof ComponentNode) {
+            $newChildren = $this->transformChildren($node->children);
+            $node->children = $newChildren;
+
+            return $node;
+        }
+
         // Handle fragments with children
         if ($node instanceof FragmentNode) {
             $newChildren = $this->transformChildren($node->children);
@@ -132,11 +144,21 @@ final class DirectiveExtractionPass implements PassInterface
 
     /**
      * Check if an ElementNode has a directive attribute (s:if, s:foreach, etc.)
+     * Pass-through directives (like s:slot) are NOT counted as real directives
      */
     private function hasDirectiveAttribute(ElementNode $node): bool
     {
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
+                $name = $this->prefixHelper->stripPrefix($attr->name);
+                if ($this->registry->has($name)) {
+                    $compiler = $this->registry->get($name);
+                    // Skip pass-through directives
+                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
+                        continue;
+                    }
+                }
+
                 return true;
             }
         }
@@ -146,11 +168,45 @@ final class DirectiveExtractionPass implements PassInterface
 
     /**
      * Check if a FragmentNode has a directive attribute
+     * Pass-through directives (like s:slot) are NOT counted as real directives
      */
     private function hasFragmentDirectiveAttribute(FragmentNode $node): bool
     {
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
+                $name = $this->prefixHelper->stripPrefix($attr->name);
+                if ($this->registry->has($name)) {
+                    $compiler = $this->registry->get($name);
+                    // Skip pass-through directives
+                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
+                        continue;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a ComponentNode has a directive attribute
+     * Pass-through directives (like s:slot) are NOT counted as real directives
+     */
+    private function hasComponentDirectiveAttribute(ComponentNode $node): bool
+    {
+        foreach ($node->attributes as $attr) {
+            if ($this->prefixHelper->isDirective($attr->name)) {
+                $name = $this->prefixHelper->stripPrefix($attr->name);
+                if ($this->registry->has($name)) {
+                    $compiler = $this->registry->get($name);
+                    // Skip pass-through directives
+                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
+                        continue;
+                    }
+                }
+
                 return true;
             }
         }
@@ -169,7 +225,7 @@ final class DirectiveExtractionPass implements PassInterface
      *
      * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementExtractionInterface}>, remaining: array<\Sugar\Ast\AttributeNode>}
      */
-    private function extractDirective(ElementNode $node): array
+    private function extractDirective(ElementNode|ComponentNode $node): array
     {
         $controlFlowDirective = null;
         $contentDirective = null;
@@ -197,6 +253,12 @@ final class DirectiveExtractionPass implements PassInterface
                 // Get directive type
                 $compiler = $this->registry->get($name);
                 $type = $compiler->getType();
+
+                // Pass-through directives are handled by other passes - keep them as-is
+                if ($type === DirectiveType::PASS_THROUGH) {
+                    $remainingAttrs[] = $attr;
+                    continue;
+                }
 
                 // Check if directive needs custom extraction
                 if ($compiler instanceof ElementExtractionInterface) {
@@ -394,6 +456,45 @@ final class DirectiveExtractionPass implements PassInterface
     }
 
     /**
+     * Transform ComponentNode with directive attribute into DirectiveNode or ComponentNode
+     *
+     * Similar to elementToDirective but for components. ComponentNodes support
+     * control flow and attribute directives but not content directives.
+     */
+    private function componentToDirective(ComponentNode $node): DirectiveNode|ComponentNode
+    {
+        $directives = $this->extractDirective($node);
+
+        // Transform children recursively
+        $transformedChildren = $this->transformChildren($node->children);
+
+        // Components don't support custom extraction or content directives
+        // If there are only attribute directives, return ComponentNode with them
+        if ($directives['controlFlow'] === null) {
+            $node->attributes = $directives['remaining'];
+            $node->children = $transformedChildren;
+
+            return $node;
+        }
+
+        // Create component without control flow directive but keep attribute directives
+        $wrappedComponent = clone $node;
+        $wrappedComponent->attributes = $directives['remaining'];
+        $wrappedComponent->children = $transformedChildren;
+
+        // If there's a control flow directive, wrap everything in it
+        $controlDir = $directives['controlFlow'];
+
+        return new DirectiveNode(
+            name: $controlDir['name'],
+            expression: $controlDir['expression'],
+            children: [$wrappedComponent],
+            line: $node->line,
+            column: $node->column,
+        );
+    }
+
+    /**
      * Transform FragmentNode with directive attribute into DirectiveNode
      *
      * Fragments can only have directive attributes, not regular HTML attributes.
@@ -428,6 +529,12 @@ final class DirectiveExtractionPass implements PassInterface
                 // Get directive type
                 $compiler = $this->registry->get($name);
                 $type = $compiler->getType();
+
+                // Pass-through directives are handled by other passes - skip them
+                if ($type === DirectiveType::PASS_THROUGH) {
+                    continue;
+                }
+
                 match ($type) {
                     DirectiveType::CONTROL_FLOW => $controlFlowDirective = [
                         'name' => $name,
@@ -459,18 +566,30 @@ final class DirectiveExtractionPass implements PassInterface
             }
         }
 
-        // Must have at least one directive or inheritance attribute
+        // If no control flow or content directives, check if it's for inheritance or pass-through
         if ($controlFlowDirective === null && $contentDirective === null) {
-            // Check if there's at least one inheritance attribute
-            $hasInheritanceAttr = false;
+            // Check if there's at least one inheritance or pass-through attribute
+            $hasSpecialAttr = false;
             foreach ($node->attributes as $attr) {
                 if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
-                    $hasInheritanceAttr = true;
+                    $hasSpecialAttr = true;
                     break;
+                }
+
+                // Check if it's a pass-through directive (like s:slot)
+                if ($this->prefixHelper->isDirective($attr->name)) {
+                    $name = $this->prefixHelper->stripPrefix($attr->name);
+                    if ($this->registry->has($name)) {
+                        $compiler = $this->registry->get($name);
+                        if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
+                            $hasSpecialAttr = true;
+                            break;
+                        }
+                    }
                 }
             }
 
-            if (!$hasInheritanceAttr) {
+            if (!$hasSpecialAttr) {
                 throw $this->context->createException(
                     SyntaxException::class,
                     '<s-template> must have at least one directive or inheritance attribute',
@@ -479,8 +598,7 @@ final class DirectiveExtractionPass implements PassInterface
                 );
             }
 
-            // Fragment with only inheritance attributes - transform children and return
-            // TemplateInheritancePass will handle these attributes
+            // Fragment with only inheritance/pass-through attributes - transform children and return
             $transformedChildren = $this->transformChildren($node->children);
 
             return NodeCloner::fragmentWithChildren($node, $transformedChildren);
