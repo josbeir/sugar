@@ -10,11 +10,11 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
@@ -22,7 +22,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 {
     private string $inheritanceFixturesPath;
 
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
         $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);

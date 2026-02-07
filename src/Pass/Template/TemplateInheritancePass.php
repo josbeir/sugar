@@ -11,17 +11,17 @@ use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
-final class TemplateInheritancePass implements AstMiddlewarePassInterface
+final class TemplateInheritancePass implements AstPassInterface
 {
     use ScopeIsolationTrait;
 
@@ -61,7 +61,7 @@ final class TemplateInheritancePass implements AstMiddlewarePassInterface
     /**
      * Hook executed before child traversal.
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         if (!$node instanceof DocumentNode) {
             return NodeAction::none();
@@ -77,7 +77,7 @@ final class TemplateInheritancePass implements AstMiddlewarePassInterface
     /**
      * Hook executed after child traversal.
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         return NodeAction::none();
     }

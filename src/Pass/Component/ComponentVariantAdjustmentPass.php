@@ -7,15 +7,15 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Applies component variant adjustments without extra traversals.
  */
-final class ComponentVariantAdjustmentPass implements AstMiddlewarePassInterface
+final class ComponentVariantAdjustmentPass implements AstPassInterface
 {
     /**
      * @param array<string> $slotVars
@@ -28,7 +28,7 @@ final class ComponentVariantAdjustmentPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof OutputNode) {
             if ($this->shouldDisableEscaping($node)) {
@@ -52,7 +52,7 @@ final class ComponentVariantAdjustmentPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof DocumentNode) {
             ComponentAttributeOverrideHelper::apply($node, '$__sugar_attrs');

@@ -5,9 +5,9 @@ namespace Sugar\Tests\Unit\Pass\Context;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Context\ContextAnalysisPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 /**
@@ -15,7 +15,7 @@ use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
  */
 final class ContextAnalysisPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         return new ContextAnalysisPass();
     }

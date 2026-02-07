@@ -14,6 +14,7 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
@@ -24,7 +25,6 @@ use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\Component\ComponentExpansionPass;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -36,7 +36,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     private FileTemplateLoader $loader;
 
-    private AstMiddlewarePipeline $pipeline;
+    private AstPipeline $pipeline;
 
     protected function setUp(): void
     {
@@ -52,7 +52,7 @@ final class ComponentExpansionPassTest extends TestCase
         $registry->register('while', WhileCompiler::class);
 
         $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
-        $this->pipeline = new AstMiddlewarePipeline([$pass]);
+        $this->pipeline = new AstPipeline([$pass]);
     }
 
     private function executePipeline(DocumentNode $ast, CompilationContext $context): DocumentNode
@@ -737,7 +737,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'button', children: [new TextNode('Third', 3, 0)], line: 3, column: 0),
         ]);
 
-        $result = (new AstMiddlewarePipeline([$pass]))->execute($ast, $this->createContext());
+        $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
 
         // All components should be expanded correctly
         $output = $this->astToString($result);
@@ -752,7 +752,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'button', children: [new TextNode('Fourth', 4, 0)], line: 4, column: 0),
         ]);
 
-        $result2 = (new AstMiddlewarePipeline([$pass]))->execute($ast2, $this->createContext());
+        $result2 = (new AstPipeline([$pass]))->execute($ast2, $this->createContext());
         $output2 = $this->astToString($result2);
         $this->assertStringContainsString('Fourth', $output2);
     }
@@ -770,7 +770,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'alert', children: [new TextNode('Alert 2', 4, 0)], line: 4, column: 0),
         ]);
 
-        $result = (new AstMiddlewarePipeline([$pass]))->execute($ast, $this->createContext());
+        $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
         $output = $this->astToString($result);
 
         // Should successfully expand both component types multiple times

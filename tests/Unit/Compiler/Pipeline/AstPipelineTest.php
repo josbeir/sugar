@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Middleware;
+namespace Sugar\Tests\Unit\Compiler\Pipeline;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -11,18 +11,18 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\AstPipeline;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Context\CompilationContext;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
-final class AstMiddlewarePipelineTest extends TestCase
+final class AstPipelineTest extends TestCase
 {
     public function testCallsBeforeAndAfterInDepthFirstOrder(): void
     {
         $events = [];
-        $pass = new class ($events) implements AstMiddlewarePassInterface {
+        $pass = new class ($events) implements AstPassInterface {
             /**
              * @var array<int, string>
              */
@@ -36,14 +36,14 @@ final class AstMiddlewarePipelineTest extends TestCase
                 $this->events = &$events;
             }
 
-            public function before(Node $node, WalkContext $context): NodeAction
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 $this->events[] = 'before:' . $node::class;
 
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 $this->events[] = 'after:' . $node::class;
 
@@ -62,7 +62,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
 
         $this->assertSame([
@@ -77,8 +77,8 @@ final class AstMiddlewarePipelineTest extends TestCase
 
     public function testReplacesNodeWithMultipleNodes(): void
     {
-        $pass = new class () implements AstMiddlewarePassInterface {
-            public function before(Node $node, WalkContext $context): NodeAction
+        $pass = new class () implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof ElementNode) {
                     return NodeAction::replace([
@@ -90,7 +90,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
@@ -107,7 +107,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
 
         $this->assertCount(2, $result->children);
@@ -118,8 +118,8 @@ final class AstMiddlewarePipelineTest extends TestCase
     public function testSkipsChildrenWhenRequested(): void
     {
         $events = [];
-        $skipPass = new class () implements AstMiddlewarePassInterface {
-            public function before(Node $node, WalkContext $context): NodeAction
+        $skipPass = new class () implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof ElementNode) {
                     return NodeAction::skipChildren();
@@ -128,13 +128,13 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
         };
 
-        $recordPass = new class ($events) implements AstMiddlewarePassInterface {
+        $recordPass = new class ($events) implements AstPassInterface {
             /**
              * @var array<int, string>
              */
@@ -148,7 +148,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 $this->events = &$events;
             }
 
-            public function before(Node $node, WalkContext $context): NodeAction
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof TextNode) {
                     $this->events[] = 'text';
@@ -157,7 +157,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
@@ -174,7 +174,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$skipPass, $recordPass]);
+        $pipeline = new AstPipeline([$skipPass, $recordPass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
 
         $this->assertSame([], $recordPass->events);
@@ -182,8 +182,8 @@ final class AstMiddlewarePipelineTest extends TestCase
 
     public function testRestartPassReprocessesReplacement(): void
     {
-        $pass = new class () implements AstMiddlewarePassInterface {
-            public function before(Node $node, WalkContext $context): NodeAction
+        $pass = new class () implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof ElementNode && $node->tag === 'outer') {
                     return NodeAction::replace(
@@ -199,7 +199,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
@@ -216,7 +216,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
 
         $this->assertCount(1, $result->children);
@@ -227,7 +227,7 @@ final class AstMiddlewarePipelineTest extends TestCase
     public function testTraversesComponentAndDirectiveChildren(): void
     {
         $events = [];
-        $pass = new class ($events) implements AstMiddlewarePassInterface {
+        $pass = new class ($events) implements AstPassInterface {
             /**
              * @var array<int, string>
              */
@@ -241,7 +241,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 $this->events = &$events;
             }
 
-            public function before(Node $node, WalkContext $context): NodeAction
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof TextNode) {
                     $this->events[] = $node->content;
@@ -250,7 +250,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
@@ -273,7 +273,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
 
         $this->assertSame(['component', 'directive'], $pass->events);
@@ -281,8 +281,8 @@ final class AstMiddlewarePipelineTest extends TestCase
 
     public function testThrowsWhenPipelineReturnsNonDocumentNode(): void
     {
-        $pass = new class () implements AstMiddlewarePassInterface {
-            public function before(Node $node, WalkContext $context): NodeAction
+        $pass = new class () implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof DocumentNode) {
                     return NodeAction::replace(new TextNode('invalid', 1, 1));
@@ -291,7 +291,7 @@ final class AstMiddlewarePipelineTest extends TestCase
                 return NodeAction::none();
             }
 
-            public function after(Node $node, WalkContext $context): NodeAction
+            public function after(Node $node, PipelineContext $context): NodeAction
             {
                 return NodeAction::none();
             }
@@ -308,7 +308,7 @@ final class AstMiddlewarePipelineTest extends TestCase
             ),
         ]);
 
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Pipeline must return a single DocumentNode.');

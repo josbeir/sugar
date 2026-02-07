@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass\Middleware;
+namespace Sugar\Compiler\Pipeline;
 
 use LogicException;
 use Sugar\Ast\ComponentNode;
@@ -13,12 +13,12 @@ use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
 
 /**
- * Executes middleware passes in a single AST traversal.
+ * Executes compiler passes in a single AST traversal.
  */
-final class AstMiddlewarePipeline
+final class AstPipeline
 {
     /**
-     * @param array<\Sugar\Pass\Middleware\AstMiddlewarePassInterface> $passes
+     * @param array<\Sugar\Compiler\Pipeline\AstPassInterface> $passes
      */
     public function __construct(
         private readonly array $passes,
@@ -50,7 +50,7 @@ final class AstMiddlewarePipeline
         int $startPassIndex,
     ): array {
         $node->setParent($parent);
-        $walkContext = new WalkContext($context, $parent, $index);
+        $walkContext = new PipelineContext($context, $parent, $index);
         $passCount = count($this->passes);
         $skipChildren = false;
 

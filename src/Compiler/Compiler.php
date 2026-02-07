@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar;
+namespace Sugar\Compiler;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
-use Sugar\Exception\TemplateRuntimeException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -19,13 +19,12 @@ use Sugar\Pass\Context\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Pass\Template\TemplateInheritancePass;
 
 /**
  * Orchestrates template compilation pipeline
  *
- * Pipeline: Parser → TemplateInheritancePass (optional) → DirectiveExtractionPass → DirectivePairingPass → DirectiveCompilationPass → ComponentExpansionPass → ContextAnalysisPass → CodeGenerator
+ * Pipeline: Parser -> TemplateInheritancePass (optional) -> DirectiveExtractionPass -> DirectivePairingPass -> DirectiveCompilationPass -> ComponentExpansionPass -> ContextAnalysisPass -> CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
@@ -41,11 +40,11 @@ final class Compiler implements CompilerInterface
 
     private readonly Escaper $escaper;
 
-    private readonly ?TemplateInheritancePass $templateInheritancePass;
+    private readonly TemplateInheritancePass $templateInheritancePass;
 
-    private readonly ?ComponentExpansionPass $componentExpansionPass;
+    private readonly ComponentExpansionPass $componentExpansionPass;
 
-    private readonly ?TemplateLoaderInterface $templateLoader;
+    private readonly TemplateLoaderInterface $templateLoader;
 
     /**
      * Constructor
@@ -53,14 +52,14 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry with registered compilers
-     * @param \Sugar\Loader\TemplateLoaderInterface|null $templateLoader Template loader for inheritance (optional)
+     * @param \Sugar\Loader\TemplateLoaderInterface $templateLoader Template loader for inheritance
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(
         private readonly Parser $parser,
         Escaper $escaper,
         DirectiveRegistryInterface $registry,
-        ?TemplateLoaderInterface $templateLoader = null,
+        TemplateLoaderInterface $templateLoader,
         ?SugarConfig $config = null,
     ) {
         $config = $config ?? new SugarConfig();
@@ -77,15 +76,13 @@ final class Compiler implements CompilerInterface
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
         $this->contextPass = new ContextAnalysisPass();
 
-        // Create template inheritance pass if loader is provided
-        $this->templateInheritancePass = $this->templateLoader instanceof TemplateLoaderInterface
-            ? new TemplateInheritancePass($this->templateLoader, $config)
-            : null;
-
-        // Create component expansion pass if loader is provided
-        $this->componentExpansionPass = $this->templateLoader instanceof TemplateLoaderInterface
-            ? new ComponentExpansionPass($this->templateLoader, $this->parser, $this->registry, $config)
-            : null;
+        $this->templateInheritancePass = new TemplateInheritancePass($this->templateLoader, $config);
+        $this->componentExpansionPass = new ComponentExpansionPass(
+            $this->templateLoader,
+            $this->parser,
+            $this->registry,
+            $config,
+        );
     }
 
     /**
@@ -123,10 +120,6 @@ final class Compiler implements CompilerInterface
         bool $debug = false,
         ?DependencyTracker $tracker = null,
     ): string {
-        if (!$this->templateLoader instanceof TemplateLoaderInterface) {
-            throw new TemplateRuntimeException('Template loader is required for components.');
-        }
-
         $templateContent = $this->templateLoader->loadComponent($componentName);
         $componentPath = $this->templateLoader->getComponentPath($componentName);
 
@@ -196,20 +189,17 @@ final class Compiler implements CompilerInterface
     private function buildPipeline(
         bool $enableInheritance,
         ?ComponentVariantAdjustmentPass $variantAdjustments = null,
-    ): AstMiddlewarePipeline {
+    ): AstPipeline {
         $passes = [];
 
-        if ($enableInheritance && $this->templateInheritancePass instanceof TemplateInheritancePass) {
+        if ($enableInheritance) {
             $passes[] = $this->templateInheritancePass;
         }
 
         $passes[] = $this->directiveExtractionPass;
         $passes[] = $this->directivePairingPass;
         $passes[] = $this->directiveCompilationPass;
-
-        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $passes[] = $this->componentExpansionPass;
-        }
+        $passes[] = $this->componentExpansionPass;
 
         if ($variantAdjustments instanceof ComponentVariantAdjustmentPass) {
             $passes[] = $variantAdjustments;
@@ -217,6 +207,6 @@ final class Compiler implements CompilerInterface
 
         $passes[] = $this->contextPass;
 
-        return new AstMiddlewarePipeline($passes);
+        return new AstPipeline($passes);
     }
 }

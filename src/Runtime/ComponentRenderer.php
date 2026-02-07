@@ -7,7 +7,7 @@ use Closure;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
-use Sugar\Compiler;
+use Sugar\Compiler\Compiler;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Loader\TemplateLoaderInterface;
 
@@ -17,7 +17,7 @@ use Sugar\Loader\TemplateLoaderInterface;
 final class ComponentRenderer
 {
     /**
-     * @param \Sugar\Compiler $compiler Compiler instance
+     * @param \Sugar\Compiler\Compiler $compiler Compiler instance
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Cache\TemplateCacheInterface $cache Template cache
      * @param \Sugar\Cache\DependencyTracker|null $tracker Optional dependency tracker

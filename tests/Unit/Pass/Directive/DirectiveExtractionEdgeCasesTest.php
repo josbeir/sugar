@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
@@ -19,14 +20,14 @@ use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 /**
  * Edge case tests for DirectiveExtractionPass to improve code coverage
  */
 final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         $registry = new DirectiveRegistry();
         $registry->register('if', IfCompiler::class);

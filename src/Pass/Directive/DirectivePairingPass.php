@@ -9,11 +9,11 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Directive\Interface\PairedDirectiveCompilerInterface;
 use Sugar\Extension\DirectiveRegistryInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Directive Pairing Pass
@@ -23,7 +23,7 @@ use Sugar\Pass\Middleware\WalkContext;
  * This pass runs after DirectiveExtractionPass so it can pair DirectiveNodes
  * regardless of intervening text nodes, comments, or whitespace.
  */
-final class DirectivePairingPass implements AstMiddlewarePassInterface
+final class DirectivePairingPass implements AstPassInterface
 {
     /**
      * Constructor
@@ -38,7 +38,7 @@ final class DirectivePairingPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         $children = $this->getChildren($node);
         if ($children === null) {
@@ -61,7 +61,7 @@ final class DirectivePairingPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         return NodeAction::none();
     }

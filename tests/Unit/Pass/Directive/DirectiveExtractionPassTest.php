@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
@@ -13,6 +13,8 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
@@ -31,12 +33,11 @@ use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         // Create registry with test directives
         $registry = $this->createTestRegistry();
@@ -402,7 +403,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $registry->register('custom', $compiler);
 
         $pass = new DirectiveExtractionPass($registry, new SugarConfig());
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
 
         $element = new ElementNode(
             tag: 'div',
@@ -439,7 +440,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $registry->register('textattr', $compiler);
 
         $pass = new DirectiveExtractionPass($registry, new SugarConfig());
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
 
         $element = new ElementNode(
             tag: 'div',
@@ -608,7 +609,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
@@ -631,7 +632,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, $this->createTestContext());
 
         // Should not be extracted since we're using 'x' prefix

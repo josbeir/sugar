@@ -7,9 +7,9 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Context\CompilationContext;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\CustomConstraintsTrait;
@@ -25,12 +25,12 @@ abstract class MiddlewarePassTestCase extends TestCase
     use CustomConstraintsTrait;
     use NodeBuildersTrait;
 
-    protected AstMiddlewarePassInterface $pass;
+    protected AstPassInterface $pass;
 
     /**
      * Get the middleware pass instance to test
      */
-    abstract protected function getPass(): AstMiddlewarePassInterface;
+    abstract protected function getPass(): AstPassInterface;
 
     protected function setUp(): void
     {
@@ -43,7 +43,7 @@ abstract class MiddlewarePassTestCase extends TestCase
      */
     protected function execute(DocumentNode $ast, ?CompilationContext $context = null): DocumentNode
     {
-        $pipeline = new AstMiddlewarePipeline([$this->pass]);
+        $pipeline = new AstPipeline([$this->pass]);
 
         return $pipeline->execute($ast, $context ?? $this->createTestContext());
     }

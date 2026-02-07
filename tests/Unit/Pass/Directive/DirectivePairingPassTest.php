@@ -1,18 +1,19 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\DirectiveNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 final class DirectivePairingPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         $registry = new DirectiveRegistry();
         $registry->register('forelse', ForelseCompiler::class);

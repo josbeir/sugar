@@ -5,13 +5,13 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\CodeGen\CodeGenerator;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\IfContentCompiler;
 use Sugar\Directive\TagCompiler;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Runtime\HtmlTagHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -30,7 +30,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
     use CompilerTestTrait;
     use TemplateTestHelperTrait;
 
-    private AstMiddlewarePipeline $pipeline;
+    private AstPipeline $pipeline;
 
     private CodeGenerator $generator;
 
@@ -44,7 +44,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
         $pairingPass = new DirectivePairingPass($this->registry);
         $compilationPass = new DirectiveCompilationPass($this->registry);
-        $this->pipeline = new AstMiddlewarePipeline([
+        $this->pipeline = new AstPipeline([
             $extractionPass,
             $pairingPass,
             $compilationPass,

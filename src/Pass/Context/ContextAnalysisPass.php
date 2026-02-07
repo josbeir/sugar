@@ -8,17 +8,17 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Context\AnalysisContext;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Analyzes AST and assigns proper OutputContext to OutputNodes
  * based on their position in HTML structure
  */
-final class ContextAnalysisPass implements AstMiddlewarePassInterface
+final class ContextAnalysisPass implements AstPassInterface
 {
     private AnalysisContext $analysisContext;
 
@@ -32,7 +32,7 @@ final class ContextAnalysisPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof DocumentNode) {
             $this->analysisContext = new AnalysisContext();
@@ -69,7 +69,7 @@ final class ContextAnalysisPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof ElementNode) {
             $previous = array_pop($this->contextStack);

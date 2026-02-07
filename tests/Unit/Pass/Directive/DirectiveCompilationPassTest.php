@@ -1,24 +1,25 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveCompilerInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): AstMiddlewarePassInterface
+    protected function getPass(): AstPassInterface
     {
         $this->registry = new DirectiveRegistry();
 

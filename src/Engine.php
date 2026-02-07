@@ -7,6 +7,7 @@ use Closure;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
+use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
@@ -21,7 +22,7 @@ use Sugar\Runtime\RuntimeEnvironment;
 final class Engine implements EngineInterface
 {
     /**
-     * @param \Sugar\Compiler $compiler Template compiler
+     * @param \Sugar\Compiler\Compiler $compiler Template compiler
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Cache\TemplateCacheInterface $cache Template cache
      * @param bool $debug Debug mode (enables freshness checking)

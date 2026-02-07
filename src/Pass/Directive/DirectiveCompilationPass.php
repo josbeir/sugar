@@ -5,12 +5,12 @@ namespace Sugar\Pass\Directive;
 
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\Node;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveRegistryInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Compiles DirectiveNodes into PHP control structures using registered compilers
@@ -22,7 +22,7 @@ use Sugar\Pass\Middleware\WalkContext;
  *
  * This pass does NOT extract directives - that's handled by DirectiveExtractionPass.
  */
-final class DirectiveCompilationPass implements AstMiddlewarePassInterface
+final class DirectiveCompilationPass implements AstPassInterface
 {
     /**
      * Constructor
@@ -37,7 +37,7 @@ final class DirectiveCompilationPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         return NodeAction::none();
     }
@@ -45,7 +45,7 @@ final class DirectiveCompilationPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         if (!($node instanceof DirectiveNode)) {
             return NodeAction::none();

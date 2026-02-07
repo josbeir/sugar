@@ -6,6 +6,7 @@ namespace Sugar;
 use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
+use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;

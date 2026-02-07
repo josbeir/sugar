@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar;
+namespace Sugar\Compiler;
 
 use Sugar\Cache\DependencyTracker;
 

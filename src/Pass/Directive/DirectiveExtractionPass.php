@@ -14,6 +14,9 @@ use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveCompilerInterface;
@@ -22,9 +25,6 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -49,7 +49,7 @@ use Sugar\Pass\Middleware\WalkContext;
  * DirectiveNode(name: 'if', expression: '$user', children: [<div>Content</div>])
  * ```
  */
-final class DirectiveExtractionPass implements AstMiddlewarePassInterface
+final class DirectiveExtractionPass implements AstPassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
 
@@ -71,7 +71,7 @@ final class DirectiveExtractionPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof DocumentNode) {
             $this->context = $context->compilation;
@@ -97,7 +97,7 @@ final class DirectiveExtractionPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         return NodeAction::none();
     }

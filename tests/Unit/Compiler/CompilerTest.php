@@ -5,7 +5,7 @@ namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Escape\Escaper;
-use Sugar\Exception\TemplateRuntimeException;
+use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -177,12 +177,10 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString('declare(strict_types=1);', $result);
     }
 
-    public function testCompileComponentRequiresTemplateLoader(): void
+    public function testCompileComponentThrowsWhenComponentMissing(): void
     {
-        $this->setUpCompiler(withTemplateLoader: false);
-
-        $this->expectException(TemplateRuntimeException::class);
-        $this->expectExceptionMessage('Template loader is required for components.');
+        $this->expectException(ComponentNotFoundException::class);
+        $this->expectExceptionMessage('Component "button" not found');
 
         $this->compiler->compileComponent('button');
     }

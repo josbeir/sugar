@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass\Middleware;
+namespace Sugar\Compiler\Pipeline;
 
 use Sugar\Ast\Node;
 
 /**
- * Result of a middleware hook invocation.
+ * Result of a compiler hook invocation.
  */
 final class NodeAction
 {

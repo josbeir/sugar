@@ -15,6 +15,10 @@ use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RuntimeCallNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\AstPipeline;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
@@ -28,10 +32,6 @@ use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
-use Sugar\Pass\Middleware\AstMiddlewarePipeline;
-use Sugar\Pass\Middleware\NodeAction;
-use Sugar\Pass\Middleware\WalkContext;
 use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -42,7 +42,7 @@ use Sugar\Runtime\RuntimeEnvironment;
  * Replaces ComponentNode instances with their actual template content,
  * injecting slots and attributes as variables.
  */
-final class ComponentExpansionPass implements AstMiddlewarePassInterface
+final class ComponentExpansionPass implements AstPassInterface
 {
     use ScopeIsolationTrait;
 
@@ -58,7 +58,7 @@ final class ComponentExpansionPass implements AstMiddlewarePassInterface
 
     private readonly DirectiveCompilationPass $directiveCompilationPass;
 
-    private readonly AstMiddlewarePipeline $componentTemplatePipeline;
+    private readonly AstPipeline $componentTemplatePipeline;
 
     private readonly ComponentAttributeCategorizer $attributeCategorizer;
 
@@ -89,7 +89,7 @@ final class ComponentExpansionPass implements AstMiddlewarePassInterface
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
-        $this->componentTemplatePipeline = new AstMiddlewarePipeline([
+        $this->componentTemplatePipeline = new AstPipeline([
             $this->inheritancePass,
             $this->directiveExtractionPass,
             $this->directivePairingPass,
@@ -102,7 +102,7 @@ final class ComponentExpansionPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function before(Node $node, WalkContext $context): NodeAction
+    public function before(Node $node, PipelineContext $context): NodeAction
     {
         return NodeAction::none();
     }
@@ -110,7 +110,7 @@ final class ComponentExpansionPass implements AstMiddlewarePassInterface
     /**
      * @inheritDoc
      */
-    public function after(Node $node, WalkContext $context): NodeAction
+    public function after(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof ComponentNode) {
             return NodeAction::replace($this->expandComponent($node, $context->compilation, true));
