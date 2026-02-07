@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Runtime;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
+use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
@@ -197,8 +198,27 @@ final class ComponentRendererTest extends TestCase
         $this->assertStringContainsString('<div>Hello</div>', $output);
     }
 
-    private function createRenderer(?object $context = null, ?FileCache $cache = null): ComponentRenderer
+    public function testRenderComponentUpdatesProvidedTracker(): void
     {
+        $tracker = new DependencyTracker();
+        $renderer = $this->createRenderer(tracker: $tracker);
+
+        $renderer->renderComponent(name: 'alert');
+
+        $loader = $this->templateLoader;
+        $this->assertInstanceOf(FileTemplateLoader::class, $loader);
+
+        $componentPath = $loader->getComponentPath('alert');
+        $metadata = $tracker->getMetadata($componentPath);
+
+        $this->assertContains('alert', $metadata->components);
+    }
+
+    private function createRenderer(
+        ?object $context = null,
+        ?FileCache $cache = null,
+        ?DependencyTracker $tracker = null,
+    ): ComponentRenderer {
         $cache = $cache ?? $this->createCache();
 
         $loader = $this->templateLoader;
@@ -208,6 +228,7 @@ final class ComponentRendererTest extends TestCase
             compiler: $this->compiler,
             loader: $loader,
             cache: $cache,
+            tracker: $tracker,
             templateContext: $context,
         );
     }

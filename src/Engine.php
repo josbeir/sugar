@@ -53,10 +53,10 @@ final class Engine implements EngineInterface
     public function render(string $template, array $data = []): string
     {
         // Get compiled PHP code
-        $compiled = $this->getCompiledTemplate($template);
+        [$compiled, $tracker] = $this->getCompiledTemplate($template);
 
         // Execute the compiled template
-        return $this->execute($compiled, $data);
+        return $this->execute($compiled, $data, $tracker);
     }
 
     /**
@@ -73,9 +73,9 @@ final class Engine implements EngineInterface
      * Get compiled template (from cache or compile fresh)
      *
      * @param string $template Template path
-     * @return string Path to compiled PHP file
+     * @return array{0: string, 1: \Sugar\Cache\DependencyTracker|null} Compiled path and tracker
      */
-    private function getCompiledTemplate(string $template): string
+    private function getCompiledTemplate(string $template): array
     {
         // Use template as cache key
         $cacheKey = $template;
@@ -83,7 +83,7 @@ final class Engine implements EngineInterface
         // Try to get from cache
         $cached = $this->cache->get($cacheKey, $this->debug);
         if ($cached instanceof CachedTemplate) {
-            return $cached->path;
+            return [$cached->path, null];
         }
 
         // Cache miss or stale - compile and cache
@@ -101,7 +101,7 @@ final class Engine implements EngineInterface
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);
 
-        return $cachedPath;
+        return [$cachedPath, $tracker];
     }
 
     /**
@@ -109,14 +109,16 @@ final class Engine implements EngineInterface
      *
      * @param string $compiledPath Path to compiled PHP file
      * @param array<string, mixed> $data Template variables
+     * @param \Sugar\Cache\DependencyTracker|null $tracker Dependency tracker to reuse during render
      * @return string Rendered output
      */
-    private function execute(string $compiledPath, array $data): string
+    private function execute(string $compiledPath, array $data, ?DependencyTracker $tracker): string
     {
         $renderer = new ComponentRenderer(
             compiler: $this->compiler,
             loader: $this->loader,
             cache: $this->cache,
+            tracker: $tracker,
             debug: $this->debug,
             templateContext: $this->templateContext,
         );

@@ -197,6 +197,10 @@ final class DirectiveExtractionPass implements AstMiddlewarePassInterface
     {
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
+                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
+                    continue;
+                }
+
                 $name = $this->prefixHelper->stripPrefix($attr->name);
                 if ($this->registry->has($name)) {
                     $compiler = $this->registry->get($name);
@@ -518,12 +522,11 @@ final class DirectiveExtractionPass implements AstMiddlewarePassInterface
     }
 
     /**
-     * Transform FragmentNode with directive attribute into DirectiveNode
+     * Transform FragmentNode with directive attribute into DirectiveNode.
      *
      * Fragments can only have directive attributes, not regular HTML attributes.
-     * Returns FragmentNode if it only has inheritance attributes (processed later).
      */
-    private function fragmentToDirective(FragmentNode $node): DirectiveNode|FragmentNode
+    private function fragmentToDirective(FragmentNode $node): DirectiveNode
     {
         // Extract directives from fragment
         $controlFlowDirective = null;
@@ -587,44 +590,6 @@ final class DirectiveExtractionPass implements AstMiddlewarePassInterface
                     $attr->column,
                 );
             }
-        }
-
-        // If no control flow or content directives, check if it's for inheritance or pass-through
-        if ($controlFlowDirective === null && $contentDirective === null) {
-            // Check if there's at least one inheritance or pass-through attribute
-            $hasSpecialAttr = false;
-            foreach ($node->attributes as $attr) {
-                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
-                    $hasSpecialAttr = true;
-                    break;
-                }
-
-                // Check if it's a pass-through directive (like s:slot)
-                if ($this->prefixHelper->isDirective($attr->name)) {
-                    $name = $this->prefixHelper->stripPrefix($attr->name);
-                    if ($this->registry->has($name)) {
-                        $compiler = $this->registry->get($name);
-                        if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
-                            $hasSpecialAttr = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!$hasSpecialAttr) {
-                throw $this->context->createException(
-                    SyntaxException::class,
-                    '<s-template> must have at least one directive or inheritance attribute',
-                    $node->line,
-                    $node->column,
-                );
-            }
-
-            // Fragment with only inheritance/pass-through attributes - transform children and return
-            $transformedChildren = $node->children;
-
-            return NodeCloner::fragmentWithChildren($node, $transformedChildren);
         }
 
         // Transform children recursively

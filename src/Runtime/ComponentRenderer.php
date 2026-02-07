@@ -20,6 +20,7 @@ final class ComponentRenderer
      * @param \Sugar\Compiler $compiler Compiler instance
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Cache\TemplateCacheInterface $cache Template cache
+     * @param \Sugar\Cache\DependencyTracker|null $tracker Optional dependency tracker
      * @param bool $debug Debug mode
      * @param object|null $templateContext Optional template context
      */
@@ -27,6 +28,7 @@ final class ComponentRenderer
         private readonly Compiler $compiler,
         private readonly TemplateLoaderInterface $loader,
         private readonly TemplateCacheInterface $cache,
+        private readonly ?DependencyTracker $tracker = null,
         private readonly bool $debug = false,
         private readonly ?object $templateContext = null,
     ) {
@@ -81,7 +83,7 @@ final class ComponentRenderer
         }
 
         $tracker = new DependencyTracker();
-        $compiled = $this->compiler->compileComponentVariant(
+        $compiled = $this->compiler->compileComponent(
             componentName: $name,
             slotNames: $slotNames,
             debug: $this->debug,
@@ -89,6 +91,16 @@ final class ComponentRenderer
         );
 
         $metadata = $tracker->getMetadata($componentPath);
+
+        if ($this->tracker instanceof DependencyTracker) {
+            foreach ($metadata->dependencies as $dependency) {
+                $this->tracker->addDependency($dependency);
+            }
+
+            foreach ($metadata->components as $component) {
+                $this->tracker->addComponent($component);
+            }
+        }
 
         return $this->cache->put($cacheKey, $compiled, $metadata);
     }

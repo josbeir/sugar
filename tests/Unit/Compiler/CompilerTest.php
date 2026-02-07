@@ -177,14 +177,14 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString('declare(strict_types=1);', $result);
     }
 
-    public function testCompileComponentVariantRequiresTemplateLoader(): void
+    public function testCompileComponentRequiresTemplateLoader(): void
     {
         $this->setUpCompiler(withTemplateLoader: false);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Template loader is required for components.');
 
-        $this->compiler->compileComponentVariant('button');
+        $this->compiler->compileComponent('button');
     }
 
     public function testMultipleContextSwitches(): void

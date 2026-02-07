@@ -38,31 +38,6 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         return new DirectiveExtractionPass($registry, new SugarConfig());
     }
 
-    public function testThrowsWhenDirectiveAttributeContainsDynamicOutput(): void
-    {
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
-
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode(
-                    's:if',
-                    new OutputNode('$value', true, OutputContext::HTML, 1, 5),
-                    1,
-                    5,
-                ),
-            ],
-            children: [new TextNode('Content', 1, 20)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
-
-        $ast = new DocumentNode([$element]);
-        $this->execute($ast, $this->createTestContext());
-    }
-
     public function testThrowsWhenFragmentAttributeContainsDynamicOutput(): void
     {
         $this->expectException(SyntaxException::class);

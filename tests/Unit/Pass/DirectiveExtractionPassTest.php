@@ -9,19 +9,24 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
+use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
+use Sugar\Directive\Interface\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\ElementExtractionInterface;
 use Sugar\Directive\IssetCompiler;
 use Sugar\Directive\PassThroughCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\TagCompiler;
 use Sugar\Directive\UnlessCompiler;
+use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
@@ -346,6 +351,110 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
         $this->assertSame('s:block', $result->children[0]->attributes[0]->name);
+    }
+
+    public function testKeepsFragmentWithPassThroughDirectiveOnly(): void
+    {
+        $fragment = new FragmentNode(
+            attributes: [new AttributeNode('s:slot', 'header', 1, 1)],
+            children: [new TextNode('Content', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$fragment]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+        $this->assertSame('s:slot', $result->children[0]->attributes[0]->name);
+    }
+
+    public function testCustomExtractionReturnsFragmentWithoutElement(): void
+    {
+        $compiler = new class () implements DirectiveCompilerInterface, ElementExtractionInterface {
+            public function extractFromElement(
+                ElementNode $element,
+                string $expression,
+                array $transformedChildren,
+                array $remainingAttrs,
+            ): FragmentNode {
+                return new FragmentNode(
+                    attributes: [],
+                    children: [new RawPhpNode('prefix', 1, 1)],
+                    line: 1,
+                    column: 1,
+                );
+            }
+
+            public function compile(Node $node, CompilationContext $context): array
+            {
+                return [];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::ATTRIBUTE;
+            }
+        };
+
+        $registry = DirectiveRegistry::empty();
+        $registry->register('custom', $compiler);
+
+        $pass = new DirectiveExtractionPass($registry, new SugarConfig());
+        $pipeline = new AstMiddlewarePipeline([$pass]);
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('s:custom', '$value', 1, 1)],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $pipeline->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+        $this->assertInstanceOf(RawPhpNode::class, $result->children[0]->children[0]);
+    }
+
+    public function testIgnoresNonRawPhpNodesFromAttributeCompiler(): void
+    {
+        $compiler = new class () implements DirectiveCompilerInterface {
+            public function compile(Node $node, CompilationContext $context): array
+            {
+                return [new TextNode('ignored', 1, 1)];
+            }
+
+            public function getType(): DirectiveType
+            {
+                return DirectiveType::ATTRIBUTE;
+            }
+        };
+
+        $registry = DirectiveRegistry::empty();
+        $registry->register('textattr', $compiler);
+
+        $pass = new DirectiveExtractionPass($registry, new SugarConfig());
+        $pipeline = new AstMiddlewarePipeline([$pass]);
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('s:textattr', 'value', 1, 1)],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $pipeline->execute($ast, $this->createTestContext());
+
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+        $this->assertCount(0, $result->children[0]->attributes);
     }
 
     public function testTransformsNestedElementsWithoutDirectives(): void

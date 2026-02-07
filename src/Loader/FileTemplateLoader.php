@@ -65,7 +65,7 @@ class FileTemplateLoader extends AbstractTemplateLoader
             $fullPath = $basePath . '/' . ltrim($resolvedPath, '/');
 
             // Try with the path as-is first
-            if (file_exists($fullPath)) {
+            if (is_file($fullPath)) {
                 $content = file_get_contents($fullPath);
                 if ($content === false) {
                     throw new TemplateNotFoundException(
@@ -79,7 +79,7 @@ class FileTemplateLoader extends AbstractTemplateLoader
             // If not found and doesn't end with .sugar.php, try adding the extension
             if (!str_ends_with($fullPath, '.sugar.php')) {
                 $fullPathWithExtension = $fullPath . '.sugar.php';
-                if (file_exists($fullPathWithExtension)) {
+                if (is_file($fullPathWithExtension)) {
                     $content = file_get_contents($fullPathWithExtension);
                     if ($content === false) {
                         throw new TemplateNotFoundException(

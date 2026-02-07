@@ -89,13 +89,7 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * Compile template source to executable PHP code
-     *
-     * @param string $source Template source code
-     * @param string|null $templatePath Template path for inheritance resolution and debug info (default: null)
-     * @param bool $debug Enable debug mode with inline source comments (default: false)
-     * @param \Sugar\Cache\DependencyTracker|null $tracker Optional dependency tracker for cache metadata
-     * @return string Compiled PHP code
+     * @inheritDoc
      */
     public function compile(
         string $source,
@@ -121,15 +115,9 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * Compile a component template variant with runtime slots and attributes
-     *
-     * @param string $componentName Component name
-     * @param array<string> $slotNames Slot variable names to mark as raw
-     * @param bool $debug Enable debug mode
-     * @param \Sugar\Cache\DependencyTracker|null $tracker Dependency tracker
-     * @return string Compiled PHP code
+     * @inheritDoc
      */
-    public function compileComponentVariant(
+    public function compileComponent(
         string $componentName,
         array $slotNames = [],
         bool $debug = false,

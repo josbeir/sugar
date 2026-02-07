@@ -110,6 +110,117 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('<button class="btn">', $code);
     }
 
+    public function testComponentBindMissingValueThrows(): void
+    {
+        $template = '<s-button s:bind>Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute must have a value');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    public function testComponentBindOutputExpressionUsesExpression(): void
+    {
+        $ast = new DocumentNode([
+            new ComponentNode(
+                name: 'button',
+                attributes: [
+                    new AttributeNode(
+                        's:bind',
+                        new OutputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                        1,
+                        1,
+                    ),
+                ],
+                children: [new TextNode('Click', 1, 1)],
+                line: 1,
+                column: 1,
+            ),
+        ]);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('...($bindings)', $code);
+    }
+
+    public function testComponentWithNoRootElementSkipsMerge(): void
+    {
+        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-plain.sugar.php';
+        file_put_contents($componentPath, 'Plain <?= $slot ?>');
+        $this->loader->discoverComponents('.');
+
+        try {
+            $template = '<s-plain class="extra">Text</s-plain>';
+            $ast = $this->parser->parse($template);
+
+            $result = $this->executePipeline($ast, $this->createContext());
+            $code = $this->astToString($result);
+
+            $this->assertStringContainsString('Plain', $code);
+            $this->assertStringContainsString('Text', $code);
+            $this->assertStringNotContainsString('class="extra"', $code);
+        } finally {
+            unlink($componentPath);
+        }
+    }
+
+    public function testComponentMergesAttributeDirectives(): void
+    {
+        $template = '<s-button s:class="[\'active\' => true]">Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('s:class', $code);
+    }
+
+    public function testNestedComponentDirectiveExpandsInTemplate(): void
+    {
+        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-wrapper.sugar.php';
+        file_put_contents($componentPath, '<div s:component="button">Inner</div>');
+        $this->loader->discoverComponents('.');
+
+        try {
+            $template = '<s-wrapper></s-wrapper>';
+            $ast = $this->parser->parse($template);
+
+            $result = $this->executePipeline($ast, $this->createContext());
+            $code = $this->astToString($result);
+
+            $this->assertStringContainsString('<button class="btn">', $code);
+            $this->assertStringContainsString('Inner', $code);
+        } finally {
+            unlink($componentPath);
+        }
+    }
+
+    public function testNestedComponentNamedSlotsExpand(): void
+    {
+        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-panel.sugar.php';
+        file_put_contents(
+            $componentPath,
+            '<s-card><div s:slot="header">Head</div>Body</s-card>',
+        );
+        $this->loader->discoverComponents('.');
+
+        try {
+            $template = '<s-panel></s-panel>';
+            $ast = $this->parser->parse($template);
+
+            $result = $this->executePipeline($ast, $this->createContext());
+            $code = $this->astToString($result);
+
+            $this->assertStringContainsString('Head', $code);
+            $this->assertStringContainsString('Body', $code);
+        } finally {
+            unlink($componentPath);
+        }
+    }
+
     public function testMergesStringClassAttributesOnRootElement(): void
     {
         $template = '<s-button class="primary">Click</s-button>';

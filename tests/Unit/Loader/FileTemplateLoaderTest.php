@@ -145,6 +145,10 @@ final class FileTemplateLoaderTest extends TestCase
         file_put_contents($path, 'content');
         chmod($path, 0000);
 
+        if (is_readable($path)) {
+            $this->markTestSkipped('Unable to make file unreadable on this platform.');
+        }
+
         $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
         set_error_handler(static fn() => true);
@@ -155,9 +159,12 @@ final class FileTemplateLoaderTest extends TestCase
 
             $loader->load('unreadable.sugar.php');
         } finally {
+            if (is_file($path)) {
+                chmod($path, 0644);
+                unlink($path);
+            }
+
             restore_error_handler();
-            chmod($path, 0644);
-            unlink($path);
         }
     }
 
