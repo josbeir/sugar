@@ -309,7 +309,7 @@ Notice:
 - ✅ **Named slots** - Organize component content with `<s-slot:name>`
 - ✅ **Attribute merging** - Component's `class` attribute merges with usage's `class`, other attributes are passed through
 - ✅ **Scoped variables** - Component props are isolated in a closure
-- ✅ **No raw() needed** - Slot content is automatically safe from double-escaping
+- ✅ **No raw() pipe needed** - Slot content is automatically safe from double-escaping
 
 #### Standalone Variable Checks
 
@@ -528,7 +528,7 @@ Sugar automatically detects output context and applies appropriate escaping:
 
 #### Disabling Auto-Escaping (Raw Output)
 
-When you need to output trusted HTML or pre-encoded content, use `raw()` or its short alias `r()`:
+When you need to output trusted HTML or pre-encoded content, use the `|> raw()` pipe:
 
 ```php
 <!-- Regular output (auto-escaped) -->
@@ -536,44 +536,41 @@ When you need to output trusted HTML or pre-encoded content, use `raw()` or its 
 <!-- Output: <div>&lt;script&gt;alert('xss')&lt;/script&gt;</div> -->
 
 <!-- Raw output for trusted content -->
-<div><?= raw($article->renderedBody) ?></div>
+<div><?= $article->renderedBody |> raw() ?></div>
 <!-- Output: <div><p>Article content...</p></div> -->
 
-<!-- Short form -->
-<div><?= r($trustedHtml) ?></div>
+<!-- Raw output for trusted content -->
+<div><?= $trustedHtml |> raw() ?></div>
 
 <!-- Works with complex expressions -->
-<div><?= raw($cms->renderBlock('hero')) ?></div>
+<div><?= $cms->renderBlock('hero') |> raw() ?></div>
 ```
 
-**Note:** `raw()` and `r()` only work with **shorthand echo syntax** `<?= ?>`. If you're using long-form PHP blocks `<?php echo ?>`, you're already writing raw PHP, so just omit the function:
+**Note:** `|> raw()` is a pipe, so it only applies in shorthand output expressions and directives. If you're using long-form PHP blocks `<?php echo ?>`, you're already writing raw PHP, so just omit the pipe:
 
 ```php
-<!-- ✅ Shorthand - parser unwraps raw() -->
-<?= raw($html) ?>
-
-<!-- ❌ Long-form - raw() stays as function call (use runtime function) -->
-<?php echo raw($html); ?>
+<!-- ✅ Shorthand - pipe disables escaping -->
+<?= $html |> raw() ?>
 
 <!-- ✅ Long-form - just omit raw() entirely -->
 <?php echo $html; ?>  // Already raw, no auto-escaping in <?php ?> blocks
 ```
 
 > [!WARNING]
-> **Security Notice**: Only use `raw()` or `r()` with trusted content you control. Never use with user input as it bypasses XSS protection and creates security vulnerabilities.
+> **Security Notice**: Only use `|> raw()` with trusted content you control. Never use with user input as it bypasses XSS protection and creates security vulnerabilities.
 
 ```php
 // ✅ SAFE: Content you control
-<?= raw($article->renderedMarkdown) ?>
+<?= $article->renderedMarkdown |> raw() ?>
 
 // ❌ DANGEROUS: User input (XSS vulnerability!)
-<?= raw($_GET['comment']) ?>
+<?= $_GET['comment'] |> raw() ?>
 
 // ✅ SAFE: Let auto-escaping protect you
 <?= $_GET['comment'] ?>
 ```
 
-The parser detects `raw()` and `r()` at compile-time and unwraps them, so there's zero runtime overhead.
+The compiler detects `|> raw()` at compile-time and disables escaping, so there's zero runtime overhead.
 
 ### Loop Metadata
 
@@ -1033,7 +1030,7 @@ Components work seamlessly with attribute-based frameworks:
 - Avoid multiple root elements in components (first one wins for attribute merging)
 
 **Note on Slots:**
-Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansionPass automatically marks slot variables (`$slot`, `$header`, `$footer`, etc.) as safe, so you don't need to use `raw()`. The compiled output will skip escaping for these variables.
+Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansionPass automatically marks slot variables (`$slot`, `$header`, `$footer`, etc.) as safe, so you don't need to use the `|> raw()` pipe. The compiled output will skip escaping for these variables.
 
 ## Quick Start
 
@@ -1042,7 +1039,7 @@ Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansi
 The high-level `Engine` API provides caching, template loading, and context binding out of the box:
 
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Cache\FileCache;
 
@@ -1180,7 +1177,7 @@ $loader->addComponent('custom-widget', $componentSource);
 
 **Example with Engine:**
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 
 // Load templates from database
 $templates = $db->query('SELECT path, source FROM templates')->fetchAll();
@@ -1206,7 +1203,7 @@ Sugar includes a powerful file-based caching system with automatic dependency tr
 The `FileCache` automatically tracks template dependencies (layouts, includes, components) and invalidates cached templates when any dependency changes:
 
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\Cache\FileCache;
 use Sugar\Loader\FileTemplateLoader;
 
@@ -1303,7 +1300,7 @@ Sugar supports binding a context object to templates, enabling `$this` access fo
 Pass a context object when building the engine:
 
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 
 // Create a view context with helper methods
 $viewContext = new class {
@@ -1377,7 +1374,7 @@ The context object is bound to the template closure using `Closure->bindTo()`, p
 The `EngineBuilder` provides a fluent API for configuring all aspects of the template engine:
 
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\Cache\FileCache;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Config\SugarConfig;
@@ -1534,7 +1531,7 @@ The compiled output is pure PHP that can be cached and executed with opcache for
 Enable debug mode during development to add source location comments to compiled templates. This helps trace errors back to your original template source:
 
 ```php
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
@@ -1567,10 +1564,6 @@ Debug comments include:
 - [x] **Pipe Operator Support** - Use PHP 8.5 pipe operators (`<?= $data |> strtoupper |> trim ?>`)
 - [x] **Template Caching** - File-based cache with dependency tracking and cascade invalidation (✅ Completed)
 - [x] **Template Context** - Bind context objects to templates for `$this` access (✅ Completed)
-
-### Developer Experience
-- [ ] **Source Maps** - Map compiled PHP errors back to original Sugar templates
-- [ ] **Debug Toolbar Integration** - Show compilation stats and context detection
 
 ## Contributing
 

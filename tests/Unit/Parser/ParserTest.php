@@ -274,31 +274,32 @@ final class ParserTest extends TestCase
         $this->assertNull($input->attributes[3]->value); // Boolean attribute
     }
 
-    public function testParseRawFunctionDisablesEscaping(): void
+    public function testParseRawPipeDisablesEscaping(): void
     {
-        $source = '<?= raw($html) ?>';
+        $source = '<?= $html |> raw() ?>';
         $ast = $this->parser->parse($source);
 
         $this->assertCount(1, $ast->children);
         $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
         $this->assertSame('$html', $ast->children[0]->expression);
-        $this->assertFalse($ast->children[0]->escape, 'raw() should disable escaping');
+        $this->assertNull($ast->children[0]->pipes);
+        $this->assertFalse($ast->children[0]->escape, 'raw() pipe should disable escaping');
     }
 
-    public function testParseShortRawFunctionDisablesEscaping(): void
+    public function testParseRawPipeWithWhitespace(): void
     {
-        $source = '<?= r($content) ?>';
+        $source = '<?= $content |> raw() ?>';
         $ast = $this->parser->parse($source);
 
         $this->assertCount(1, $ast->children);
         $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
         $this->assertSame('$content', $ast->children[0]->expression);
-        $this->assertFalse($ast->children[0]->escape, 'r() should disable escaping');
+        $this->assertFalse($ast->children[0]->escape, 'raw() pipe should disable escaping');
     }
 
-    public function testParseRawFunctionWithComplexExpression(): void
+    public function testParseRawPipeWithComplexExpression(): void
     {
-        $source = '<?= raw($user->htmlBio) ?>';
+        $source = '<?= $user->htmlBio |> raw() ?>';
         $ast = $this->parser->parse($source);
 
         $this->assertCount(1, $ast->children);
@@ -307,9 +308,9 @@ final class ParserTest extends TestCase
         $this->assertFalse($ast->children[0]->escape);
     }
 
-    public function testParseRawFunctionWithWhitespace(): void
+    public function testParseRawPipeWithExtraWhitespace(): void
     {
-        $source = '<?= raw( $var ) ?>';
+        $source = '<?= $var |> raw() ?>';
         $ast = $this->parser->parse($source);
 
         $this->assertCount(1, $ast->children);
@@ -329,7 +330,7 @@ final class ParserTest extends TestCase
         $this->assertTrue($ast->children[0]->escape, 'Regular output should still escape');
     }
 
-    public function testParseRawFunctionDoesNotAffectOtherFunctions(): void
+    public function testParseOtherFunctionsStillEscape(): void
     {
         $source = '<?= strtoupper($var) ?>';
         $ast = $this->parser->parse($source);
@@ -400,15 +401,15 @@ final class ParserTest extends TestCase
         $this->assertNull($output->pipes);
     }
 
-    public function testParsePipeWithRawFunction(): void
+    public function testParsePipeWithRawPipe(): void
     {
-        $source = '<?= raw($html |> upper(...)) ?>';
+        $source = '<?= $html |> upper(...) |> raw() ?>';
         $ast = $this->parser->parse($source);
 
         $output = $ast->children[0];
         $this->assertInstanceOf(OutputNode::class, $output);
         $this->assertSame('$html', $output->expression);
-        $this->assertFalse($output->escape); // raw() disables escaping
+        $this->assertFalse($output->escape); // raw() pipe disables escaping
         $this->assertNotNull($output->pipes);
         $this->assertSame(['upper(...)'], $output->pipes);
     }

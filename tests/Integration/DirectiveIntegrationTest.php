@@ -104,34 +104,34 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertStringContainsString('<li>', $code);
     }
 
-    public function testRawOutputFullPipeline(): void
+    public function testRawPipeOutputFullPipeline(): void
     {
-        $template = '<div><?= raw($html) ?></div>';
+        $template = '<div><?= $html |> raw() ?></div>';
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
         $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        // Should unwrap raw() and output without escaping
+        // Should output without escaping when using raw() pipe
         $this->assertStringContainsString('<?php echo $html; ?>', $code);
         $this->assertStringNotContainsString('Escaper::html', $code);
         $this->assertStringNotContainsString('raw(', $code);
     }
 
-    public function testShortRawOutputFullPipeline(): void
+    public function testRawPipeOutputWithPipesFullPipeline(): void
     {
-        $template = '<div><?= r($content) ?></div>';
+        $template = '<div><?= $content |> strtoupper(...) |> raw() ?></div>';
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
         $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        // Should unwrap r() and output without escaping
-        $this->assertStringContainsString('<?php echo $content; ?>', $code);
+        // Should output without escaping after pipes
+        $this->assertStringContainsString('<?php echo strtoupper($content); ?>', $code);
         $this->assertStringNotContainsString('Escaper::html', $code);
-        $this->assertStringNotContainsString('r(', $code);
+        $this->assertStringNotContainsString('raw(', $code);
     }
 
     public function testRegularOutputStillEscapedFullPipeline(): void

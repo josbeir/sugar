@@ -62,9 +62,9 @@ final class PipeSyntaxIntegrationTest extends TestCase
         $this->assertStringNotContainsString('<script>', $result);
     }
 
-    public function testPipeWithRawFunction(): void
+    public function testPipeWithRawPipe(): void
     {
-        $template = '<?= raw($html |> strtoupper(...)) ?>';
+        $template = '<?= $html |> strtoupper(...) |> raw() ?>';
 
         $compiled = $this->compiler->compile($template);
         $result = $this->executeTemplate($compiled, ['html' => '<b>bold</b>']);

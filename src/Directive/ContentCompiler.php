@@ -53,11 +53,14 @@ readonly class ContentCompiler implements DirectiveCompilerInterface
         // Parse pipe syntax from directive expression
         $parsed = PipeParser::parse($node->expression);
 
+        $escape = $this->escape && !$parsed['raw'];
+        $context = $parsed['raw'] ? OutputContext::RAW : $this->context;
+
         // Create OutputNode with configured escaping
         $outputNode = new OutputNode(
             expression: $parsed['expression'],
-            escape: $this->escape,
-            context: $this->context,
+            escape: $escape,
+            context: $context,
             line: $node->line,
             column: $node->column,
             pipes: $parsed['pipes'],

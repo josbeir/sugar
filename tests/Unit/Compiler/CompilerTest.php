@@ -111,11 +111,11 @@ final class CompilerTest extends TestCase
         // Check body HTML context
         $this->assertStringContainsString(Escaper::class . '::html($heading)', $result);
 
-        // Check raw() unwraps and outputs without escaping
+        // Check raw() pipe outputs without escaping
         $this->assertStringContainsString('<?php echo $articleBody; ?>', $result);
         $this->assertStringNotContainsString(Escaper::class . '::html($articleBody)', $result);
 
-        // Check r() short form unwraps
+        // Check raw() pipe outputs without escaping
         $this->assertStringContainsString('<?php echo $sidebarHtml; ?>', $result);
         $this->assertStringNotContainsString(Escaper::class . '::html($sidebarHtml)', $result);
 
@@ -125,9 +125,9 @@ final class CompilerTest extends TestCase
         // Check year is still escaped (regular output)
         $this->assertStringContainsString(Escaper::class . '::html($year)', $result);
 
-        // Verify raw() function calls are removed (unwrapped at compile-time)
+        // Verify raw() pipe does not emit raw() calls in output
         $this->assertStringNotContainsString('raw($articleBody)', $result);
-        $this->assertStringNotContainsString('r($sidebarHtml)', $result);
+        $this->assertStringNotContainsString('raw($sidebarHtml)', $result);
 
         // Check s:if directive compiles
         $this->assertStringContainsString('<?php if ($showBanner): ?>', $result);

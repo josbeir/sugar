@@ -29,26 +29,41 @@ final class PipeParser
      * If no pipes are found, returns the original expression with null pipes.
      *
      * @param string $expression Expression to parse
-     * @return array{expression: string, pipes: array<string>|null} Base expression and pipe chain
+     * @return array{expression: string, pipes: array<string>|null, raw: bool} Base expression, pipe chain, and raw flag
      */
     public static function parse(string $expression): array
     {
         // Quick check - no pipe operator present
         if (!str_contains($expression, '|>')) {
-            return ['expression' => $expression, 'pipes' => null];
+            return ['expression' => $expression, 'pipes' => null, 'raw' => false];
         }
 
         // Split by pipe operator (with optional whitespace)
         $parts = preg_split('/\s*\|\>\s*/', $expression);
 
         if ($parts === false || count($parts) < 2) {
-            return ['expression' => $expression, 'pipes' => null];
+            return ['expression' => $expression, 'pipes' => null, 'raw' => false];
         }
 
         // First part is the base expression, rest are pipe transformations
         $baseExpression = trim(array_shift($parts));
         $pipes = array_map('trim', $parts);
 
-        return ['expression' => $baseExpression, 'pipes' => $pipes];
+        $raw = false;
+        $filteredPipes = [];
+        foreach ($pipes as $pipe) {
+            if (preg_match('/^raw\s*\(\s*\)$/', $pipe) === 1) {
+                $raw = true;
+                continue;
+            }
+
+            $filteredPipes[] = $pipe;
+        }
+
+        return [
+            'expression' => $baseExpression,
+            'pipes' => $filteredPipes !== [] ? $filteredPipes : null,
+            'raw' => $raw,
+        ];
     }
 }

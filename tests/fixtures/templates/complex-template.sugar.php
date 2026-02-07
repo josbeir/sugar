@@ -15,10 +15,10 @@
     </div>
 
     <!-- Trusted HTML content (pre-rendered) -->
-    <article><?= raw($articleBody) ?></article>
+    <article><?= $articleBody |> raw() ?></article>
 
     <!-- Short form for trusted content -->
-    <aside><?= r($sidebarHtml) ?></aside>
+    <aside><?= $sidebarHtml |> raw() ?></aside>
 
     <script>
         var config = <?= $config ?>;
@@ -46,7 +46,7 @@
     <!-- Footer with both escaped and raw content -->
     <footer>
         <p>Copyright <?= $year ?></p>
-        <?= raw($footerContent) ?>
+        <?= $footerContent |> raw() ?>
     </footer>
 </body>
 </html>
