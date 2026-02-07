@@ -205,4 +205,12 @@ class FileTemplateLoader extends AbstractTemplateLoader
         // Reuse existing load() method with relative path
         return $this->load($this->components[$name]);
     }
+
+    /**
+     * @inheritDoc
+     */
+    protected function resolveComponentPath(string $name): string
+    {
+        return $this->components[$name];
+    }
 }

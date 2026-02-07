@@ -1,1 +1,3 @@
-<script>var data = <?= $data ?>;</script>
+<script>
+    var data = <?= $data ?>;
+</script>

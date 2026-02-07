@@ -99,4 +99,13 @@ class StringTemplateLoader extends AbstractTemplateLoader
 
         return $this->components[$name];
     }
+
+    /**
+     * @inheritDoc
+     */
+    protected function resolveComponentPath(string $name): string
+    {
+        // For StringTemplateLoader, use a virtual path for inheritance resolution
+        return 'components/' . $name . '.sugar.php';
+    }
 }

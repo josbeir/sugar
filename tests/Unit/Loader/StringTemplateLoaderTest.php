@@ -340,4 +340,25 @@ final class StringTemplateLoaderTest extends TestCase
 
         $this->assertSame([], $loader->getComponents());
     }
+
+    public function testGetComponentPathReturnsVirtualPath(): void
+    {
+        $loader = new StringTemplateLoader(
+            config: new SugarConfig(),
+            components: ['button' => '<button><?= $slot ?></button>'],
+        );
+
+        $path = $loader->getComponentPath('button');
+        $this->assertSame('components/button.sugar.php', $path);
+    }
+
+    public function testGetComponentPathThrowsExceptionForUnknownComponent(): void
+    {
+        $loader = new StringTemplateLoader(config: new SugarConfig());
+
+        $this->expectException(ComponentNotFoundException::class);
+        $this->expectExceptionMessage('Component "unknown" not found');
+
+        $loader->getComponentPath('unknown');
+    }
 }

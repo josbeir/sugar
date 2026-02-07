@@ -606,4 +606,71 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringNotContainsString('<s-template', $output);
         $this->assertStringNotContainsString('s:slot', $output);
     }
+
+    public function testComponentWithSIncludeDirective(): void
+    {
+        // Component and partial already exist in fixtures
+        $template = '<s-widget>Widget Content</s-widget>';
+        $compiled = $this->compiler->compile($template);
+
+        // Should include the partial content
+        $this->assertStringContainsString('Powered by Sugar', $compiled);
+        $this->assertStringContainsString('text-muted', $compiled);
+
+        // Execute and verify
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<div class="widget">', $output);
+        $this->assertStringContainsString('Widget Content', $output);
+        $this->assertStringContainsString('<small class="text-muted">Powered by Sugar</small>', $output);
+    }
+
+    public function testComponentWithSExtendsDirective(): void
+    {
+        // Components already exist in fixtures
+        $template = '<s-custom-panel s-bind:title="\'My Panel\'">Panel Content</s-custom-panel>';
+        $compiled = $this->compiler->compile($template);
+
+        // Should have base structure with overridden blocks
+        $this->assertStringContainsString('base-panel', $compiled);
+        $this->assertStringContainsString('panel-header', $compiled);
+        $this->assertStringContainsString('panel-body', $compiled);
+
+        // Should NOT have default content
+        $this->assertStringNotContainsString('Default Header', $compiled);
+        $this->assertStringNotContainsString('Default Body', $compiled);
+
+        // Execute and verify
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<div class="base-panel">', $output);
+        $this->assertStringContainsString('<h3>My Panel</h3>', $output);
+        $this->assertStringContainsString('Panel Content', $output);
+        $this->assertStringNotContainsString('Default Header', $output);
+        $this->assertStringNotContainsString('Default Body', $output);
+    }
+
+    public function testComponentWithMultiLevelInheritance(): void
+    {
+        // Components already exist in fixtures
+        $template = '<s-custom-layout s-bind:title="\'Page Title\'">Page Content</s-custom-layout>';
+        $compiled = $this->compiler->compile($template);
+
+        // Should have base structure
+        $this->assertStringContainsString('class="container"', $compiled);
+
+        // Should have both blocks overridden
+        $this->assertStringContainsString('<header', $compiled);
+        $this->assertStringContainsString('<main', $compiled);
+
+        // Should NOT have default content
+        $this->assertStringNotContainsString('Default Header', $compiled);
+        $this->assertStringNotContainsString('Default Main', $compiled);
+
+        // Execute and verify
+        $output = $this->executeTemplate($compiled);
+        $this->assertStringContainsString('<div class="container">', $output);
+        $this->assertStringContainsString('<h1>Page Title</h1>', $output);
+        $this->assertStringContainsString('Page Content', $output);
+        $this->assertStringNotContainsString('Default Header', $output);
+        $this->assertStringNotContainsString('Default Main', $output);
+    }
 }

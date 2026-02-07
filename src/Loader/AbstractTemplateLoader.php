@@ -5,6 +5,7 @@ namespace Sugar\Loader;
 
 use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
+use Sugar\Exception\ComponentNotFoundException;
 
 /**
  * Base class for template loaders with common functionality
@@ -95,6 +96,28 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
     {
         return $this->prefixHelper->stripElementPrefix($elementName);
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getComponentPath(string $name): string
+    {
+        if (!$this->hasComponent($name)) {
+            throw new ComponentNotFoundException(
+                sprintf('Component "%s" not found', $name),
+            );
+        }
+
+        return $this->resolveComponentPath($name);
+    }
+
+    /**
+     * Resolve the path for a component
+     *
+     * @param string $name Component name
+     * @return string Component path for inheritance resolution
+     */
+    abstract protected function resolveComponentPath(string $name): string;
 
     /**
      * Get all registered components

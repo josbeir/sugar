@@ -262,4 +262,34 @@ final class FileTemplateLoaderComponentTest extends TestCase
         // Should NOT be discovered automatically
         $this->assertFalse($loader->hasComponent('button'));
     }
+
+    public function testGetComponentPathReturnsRelativePath(): void
+    {
+        mkdir($this->tempDir . '/components', 0777, true);
+        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
+
+        $this->loader->discoverComponents('components');
+
+        $path = $this->loader->getComponentPath('button');
+        $this->assertSame('components/s-button.sugar.php', $path);
+    }
+
+    public function testGetComponentPathWorksWithNestedComponents(): void
+    {
+        mkdir($this->tempDir . '/components/forms', 0777, true);
+        file_put_contents($this->tempDir . '/components/forms/s-input.sugar.php', '<input>');
+
+        $this->loader->discoverComponents('components');
+
+        $path = $this->loader->getComponentPath('input');
+        $this->assertSame('components/forms/s-input.sugar.php', $path);
+    }
+
+    public function testGetComponentPathThrowsExceptionForUnknownComponent(): void
+    {
+        $this->expectException(ComponentNotFoundException::class);
+        $this->expectExceptionMessage('Component "unknown" not found');
+
+        $this->loader->getComponentPath('unknown');
+    }
 }

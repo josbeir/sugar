@@ -31,4 +31,14 @@ interface TemplateLoaderInterface
      * @throws \Sugar\Exception\ComponentNotFoundException If component is not found
      */
     public function loadComponent(string $name): string;
+
+    /**
+     * Get the resolved path for a component.
+     *
+     * Used for error messages and resolving relative paths within component templates.
+     *
+     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
+     * @return string Component path (e.g., "components/button.sugar.php")
+     */
+    public function getComponentPath(string $name): string;
 }

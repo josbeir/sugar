@@ -36,6 +36,8 @@ final readonly class ComponentExpansionPass implements PassInterface
 
     private string $slotAttrName;
 
+    private TemplateInheritancePass $inheritancePass;
+
     /**
      * Constructor
      *
@@ -52,6 +54,7 @@ final readonly class ComponentExpansionPass implements PassInterface
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
+        $this->inheritancePass = new TemplateInheritancePass($loader, $config);
     }
 
     /**
@@ -96,6 +99,17 @@ final readonly class ComponentExpansionPass implements PassInterface
 
         // Parse component template
         $templateAst = $this->parser->parse($templateContent);
+
+        // Process template inheritance (s:extends, s:include) in component template
+        // Use resolved component path for proper relative path resolution
+        $componentPath = $this->loader->getComponentPath($component->name);
+        $inheritanceContext = new CompilationContext(
+            $componentPath,
+            $templateContent,
+            $context->debug ?? false,
+            $context?->tracker,
+        );
+        $templateAst = $this->inheritancePass->execute($templateAst, $inheritanceContext);
 
         // Categorize attributes: control flow, attribute directives, bindings, merge
         $categorized = $this->categorizeAttributes($component->attributes);

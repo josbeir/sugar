@@ -1,1 +1,5 @@
-HTML: <?= $html ?><script>JS: <?= $js ?></script>Back to HTML: <?= $html2 ?>
+HTML: <?= $html ?>
+<script>
+    JS: <?= $js ?>
+</script>
+Back to HTML: <?= $html2 ?>

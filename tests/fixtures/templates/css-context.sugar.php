@@ -1,1 +1,5 @@
-<style>.class { color: <?= $color ?>; }</style>
+<style>
+    .class {
+        color: <?= $color ?>;
+    }
+</style>
