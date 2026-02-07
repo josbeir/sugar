@@ -93,6 +93,9 @@ How does Sugar compare to other popular PHP templating engines?
     <?php foreach ($users as $user): ?>
         <div class="<?= $user->isAdmin() ? 'admin' : 'user' ?>">
             <?= htmlspecialchars($user->name, ENT_QUOTES, 'UTF-8') ?>
+            <?php if ($user->email): ?>
+                <small><?= htmlspecialchars($user->email, ENT_QUOTES, 'UTF-8') ?></small>
+            <?php endif; ?>
         </div>
     <?php endforeach; ?>
 <?php else: ?>
@@ -112,7 +115,7 @@ How does Sugar compare to other popular PHP templating engines?
 
 **Compiles to optimized PHP:**
 ```php
-<?php if (!empty($users)): ?>
+<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($users)): ?>
     <?php foreach ($users as $user): ?>
         <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
             <?= \Sugar\Escape\Escaper::html($user->name) ?>
