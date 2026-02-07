@@ -154,32 +154,4 @@ final class EngineBuilderTest extends TestCase
 
         $this->assertInstanceOf(Engine::class, $engine);
     }
-
-    public function testBuildCreatesDefaultCacheWhenNotProvided(): void
-    {
-        $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
-
-        $builder = new EngineBuilder();
-        $engine = $builder
-            ->withTemplateLoader($loader)
-            ->build();
-
-        // Should create default FileCache
-        $this->assertInstanceOf(Engine::class, $engine);
-    }
-
-    public function testBuildCreatesDefaultRegistryWhenNotProvided(): void
-    {
-        $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
-
-        $builder = new EngineBuilder();
-        $engine = $builder
-            ->withTemplateLoader($loader)
-            ->build();
-
-        // Should create default DirectiveRegistry with standard directives
-        $this->assertInstanceOf(Engine::class, $engine);
-    }
 }

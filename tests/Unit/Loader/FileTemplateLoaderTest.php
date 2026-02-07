@@ -7,9 +7,12 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class FileTemplateLoaderTest extends TestCase
 {
+    use TempDirectoryTrait;
+
     private string $fixturesPath;
 
     protected function setUp(): void
@@ -119,10 +122,8 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testLoadsFromMultipleTemplatePaths(): void
     {
-        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        mkdir($tempDir1, 0777, true);
-        mkdir($tempDir2, 0777, true);
+        $tempDir1 = $this->createTempDir('sugar_test_');
+        $tempDir2 = $this->createTempDir('sugar_test_');
 
         // Create template in second path
         file_put_contents($tempDir2 . '/test.sugar.php', '<div>From path 2</div>');
@@ -135,16 +136,35 @@ final class FileTemplateLoaderTest extends TestCase
 
         // Cleanup
         unlink($tempDir2 . '/test.sugar.php');
-        rmdir($tempDir2);
-        rmdir($tempDir1);
+    }
+
+    public function testLoadThrowsWhenFileIsUnreadable(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        $path = $tempDir . '/unreadable.sugar.php';
+        file_put_contents($path, 'content');
+        chmod($path, 0000);
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+
+        set_error_handler(static fn() => true);
+
+        try {
+            $this->expectException(TemplateNotFoundException::class);
+            $this->expectExceptionMessage('Failed to read template "unreadable.sugar.php"');
+
+            $loader->load('unreadable.sugar.php');
+        } finally {
+            restore_error_handler();
+            chmod($path, 0644);
+            unlink($path);
+        }
     }
 
     public function testFirstPathTakesPrecedenceInMultiplePaths(): void
     {
-        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        mkdir($tempDir1, 0777, true);
-        mkdir($tempDir2, 0777, true);
+        $tempDir1 = $this->createTempDir('sugar_test_');
+        $tempDir2 = $this->createTempDir('sugar_test_');
 
         // Create same template in both paths
         file_put_contents($tempDir1 . '/test.sugar.php', '<div>From path 1</div>');
@@ -160,8 +180,6 @@ final class FileTemplateLoaderTest extends TestCase
         // Cleanup
         unlink($tempDir1 . '/test.sugar.php');
         unlink($tempDir2 . '/test.sugar.php');
-        rmdir($tempDir1);
-        rmdir($tempDir2);
     }
 
     public function testEmptyTemplatePathsDefaultsToCurrentDirectory(): void
@@ -177,10 +195,8 @@ final class FileTemplateLoaderTest extends TestCase
 
     public function testMultiplePathsInExceptionMessage(): void
     {
-        $tempDir1 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        $tempDir2 = sys_get_temp_dir() . '/sugar_test_' . uniqid();
-        mkdir($tempDir1, 0777, true);
-        mkdir($tempDir2, 0777, true);
+        $tempDir1 = $this->createTempDir('sugar_test_');
+        $tempDir2 = $this->createTempDir('sugar_test_');
 
         $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir1, $tempDir2]);
 
@@ -192,9 +208,5 @@ final class FileTemplateLoaderTest extends TestCase
             $this->assertStringContainsString($tempDir2, $templateNotFoundException->getMessage());
             $this->assertStringContainsString('not found in paths:', $templateNotFoundException->getMessage());
         }
-
-        // Cleanup
-        rmdir($tempDir1);
-        rmdir($tempDir2);
     }
 }

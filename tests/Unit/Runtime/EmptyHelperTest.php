@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Runtime;
 
 use ArrayIterator;
 use ArrayObject;
+use Iterator;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Sugar\Exception\GeneratorNotSupportedException;
@@ -97,6 +98,74 @@ final class EmptyHelperTest extends TestCase
     public function testIsEmptyWithNonEmptyArrayIterator(): void
     {
         $iterator = new ArrayIterator([1, 2, 3]);
+        $this->assertFalse(EmptyHelper::isEmpty($iterator));
+    }
+
+    public function testIsEmptyWithEmptyTraversableIterator(): void
+    {
+        $iterator = new class implements Iterator {
+            private int $position = 0;
+
+            public function current(): mixed
+            {
+                return null;
+            }
+
+            public function key(): mixed
+            {
+                return null;
+            }
+
+            public function next(): void
+            {
+                $this->position++;
+            }
+
+            public function rewind(): void
+            {
+                $this->position = 0;
+            }
+
+            public function valid(): bool
+            {
+                return false;
+            }
+        };
+
+        $this->assertTrue(EmptyHelper::isEmpty($iterator));
+    }
+
+    public function testIsEmptyWithNonEmptyTraversableIterator(): void
+    {
+        $iterator = new class implements Iterator {
+            private int $position = 0;
+
+            public function current(): mixed
+            {
+                return 'value';
+            }
+
+            public function key(): mixed
+            {
+                return $this->position;
+            }
+
+            public function next(): void
+            {
+                $this->position++;
+            }
+
+            public function rewind(): void
+            {
+                $this->position = 0;
+            }
+
+            public function valid(): bool
+            {
+                return $this->position === 0;
+            }
+        };
+
         $this->assertFalse(EmptyHelper::isEmpty($iterator));
     }
 

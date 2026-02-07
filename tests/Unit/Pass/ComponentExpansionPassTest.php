@@ -4,9 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Test\Unit\Pass;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
@@ -17,6 +19,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\WhileCompiler;
+use Sugar\Enum\OutputContext;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\FileTemplateLoader;
@@ -211,6 +214,42 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString("'type' => 'info'", $code);
     }
 
+    public function testComponentDirectiveThrowsForEmptyName(): void
+    {
+        $template = '<div s:component="">Content</div>';
+        $ast = $this->parser->parse($template);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Component name must be a non-empty string.');
+
+        $this->pass->execute($ast, $this->createContext());
+    }
+
+    public function testComponentDirectiveNormalizesQuotedName(): void
+    {
+        $template = '<div s:component="\'button\'">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertStringContainsString('button', $runtimeCall->arguments[0]);
+    }
+
+    public function testCreatesRuntimeCallForInvalidLiteralComponentName(): void
+    {
+        $template = '<div s:component="123">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+    }
+
     public function testCreatesRuntimeCallForDynamicComponentDirective(): void
     {
         $template = '<div s:component="$componentName">Click</div>';
@@ -220,6 +259,121 @@ final class ComponentExpansionPassTest extends TestCase
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+    }
+
+    public function testDynamicComponentBindMissingValueThrows(): void
+    {
+        $template = '<div s:component="$componentName" s:bind>Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute must have a value');
+
+        $this->pass->execute($ast, $this->createContext());
+    }
+
+    public function testComponentWithControlFlowWrapsFragment(): void
+    {
+        $template = '<s-button s:if="$show">Save</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+
+        $fragment = $result->children[0];
+        $this->assertTrue($this->containsElementTag($fragment->children, 'button'));
+    }
+
+    public function testSlotAttributeWithoutValueUsesDefaultSlot(): void
+    {
+        $template = '<s-card><div s:slot>Header</div>Body</s-card>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $output = $this->astToString($result);
+
+        $this->assertStringContainsString('Card Header', $output);
+        $this->assertStringContainsString('<div s:slot>Header</div>', $output);
+        $this->assertStringContainsString('Body', $output);
+    }
+
+    public function testRuntimeComponentSlotsConcatenateMultipleNodes(): void
+    {
+        $template = '<div s:component="$component">Hello <?= $name ?></div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertStringContainsString("'slot' =>", $runtimeCall->arguments[2]);
+        $this->assertStringContainsString(' . ', $runtimeCall->arguments[2]);
+        $this->assertStringContainsString('$name', $runtimeCall->arguments[2]);
+    }
+
+    public function testRuntimeComponentAttributesIncludeOutputAndNull(): void
+    {
+        $ast = new DocumentNode([
+            new ElementNode(
+                tag: 'div',
+                attributes: [
+                    new AttributeNode('s:component', '$component', 1, 0),
+                    new AttributeNode(
+                        'data-id',
+                        new OutputNode(
+                            expression: '$id',
+                            escape: true,
+                            context: OutputContext::HTML,
+                            line: 1,
+                            column: 0,
+                        ),
+                        1,
+                        0,
+                    ),
+                    new AttributeNode('hidden', null, 1, 0),
+                ],
+                children: [new TextNode('Click', 1, 0)],
+                selfClosing: false,
+                line: 1,
+                column: 0,
+            ),
+        ]);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertStringContainsString("'data-id' => \$id", $runtimeCall->arguments[3]);
+        $this->assertStringContainsString("'hidden' => null", $runtimeCall->arguments[3]);
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node> $nodes
+     */
+    private function containsElementTag(array $nodes, string $tag): bool
+    {
+        foreach ($nodes as $node) {
+            if ($node instanceof ElementNode && $node->tag === $tag) {
+                return true;
+            }
+
+            if ($node instanceof FragmentNode && $this->containsElementTag($node->children, $tag)) {
+                return true;
+            }
+
+            if ($node instanceof ElementNode && $this->containsElementTag($node->children, $tag)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

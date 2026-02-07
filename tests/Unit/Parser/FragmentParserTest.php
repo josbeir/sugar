@@ -6,15 +6,15 @@ namespace Sugar\Tests\Unit\Parser;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\TextNode;
-use Sugar\Parser\Parser;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class FragmentParserTest extends TestCase
 {
-    private Parser $parser;
+    use CompilerTestTrait;
 
     protected function setUp(): void
     {
-        $this->parser = new Parser();
+        $this->parser = $this->createParser();
     }
 
     public function testParsesBasicFragment(): void

@@ -65,12 +65,14 @@ trait CompilerTestTrait
                 escaper: $this->escaper,
                 registry: $registry,
                 templateLoader: $this->templateLoader,
+                config: $config,
             );
         } else {
             $this->compiler = new Compiler(
                 parser: $this->parser,
                 escaper: $this->escaper,
                 registry: $registry,
+                config: $config,
             );
         }
 

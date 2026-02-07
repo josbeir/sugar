@@ -47,11 +47,56 @@ final class FileCacheTest extends TestCase
         $this->assertFileExists($cached->path);
     }
 
+    public function testGetReturnsDefaultMetadataWhenMetaMissing(): void
+    {
+        $compiled = '<?php echo "Test";';
+        $metadata = new CacheMetadata(sourceTimestamp: 123, compiledTimestamp: 456);
+
+        $path = $this->cache->put('/templates/test-missing-meta.sugar.php', $compiled, $metadata);
+        $metaPath = $path . '.meta';
+        unlink($metaPath);
+
+        $cached = $this->cache->get('/templates/test-missing-meta.sugar.php');
+
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+        $this->assertSame(0, $cached->metadata->compiledTimestamp);
+        $this->assertSame(0, $cached->metadata->sourceTimestamp);
+        $this->assertSame([], $cached->metadata->dependencies);
+    }
+
+    public function testGetReturnsDefaultMetadataWhenMetaInvalid(): void
+    {
+        $compiled = '<?php echo "Test";';
+        $metadata = new CacheMetadata(sourceTimestamp: 123, compiledTimestamp: 456);
+
+        $path = $this->cache->put('/templates/test-invalid-meta.sugar.php', $compiled, $metadata);
+        $metaPath = $path . '.meta';
+        file_put_contents($metaPath, '{invalid json');
+
+        $cached = $this->cache->get('/templates/test-invalid-meta.sugar.php');
+
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+        $this->assertSame(0, $cached->metadata->compiledTimestamp);
+        $this->assertSame(0, $cached->metadata->sourceTimestamp);
+    }
+
     public function testGetReturnsNullWhenCacheNotFound(): void
     {
         $cached = $this->cache->get('/templates/nonexistent.sugar.php');
 
         $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+    }
+
+    public function testPutSanitizesCacheFileName(): void
+    {
+        $compiled = '<?php echo "Test";';
+        $metadata = new CacheMetadata();
+
+        $path = $this->cache->put('/templates/user profile@.sugar.php', $compiled, $metadata);
+
+        $basename = basename($path);
+        $this->assertStringNotContainsString(' ', $basename);
+        $this->assertStringNotContainsString('@', $basename);
     }
 
     public function testDeleteRemovesCache(): void
@@ -220,6 +265,25 @@ final class FileCacheTest extends TestCase
         unlink($pagePath);
     }
 
+    public function testDebugModeIgnoresMissingDependencyFiles(): void
+    {
+        $sourcePath = sys_get_temp_dir() . '/sugar_missing_dep_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        $metadata = new CacheMetadata(
+            dependencies: [$sourcePath . '.missing'],
+            sourceTimestamp: $sourceTime,
+        );
+
+        $this->cache->put($sourcePath, '<?php echo "cached";', $metadata);
+
+        $cached = $this->cache->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
+    }
+
     public function testProductionModeSkipsTimestampChecks(): void
     {
         // Create temporary source file
@@ -361,6 +425,26 @@ final class FileCacheTest extends TestCase
         $this->assertNotFalse($json);
         $data = json_decode($json, true);
 
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('dep1', $data);
+        $this->assertIsArray($data['dep1']);
+        $this->assertContains('templates/test.sugar.php', $data['dep1']);
+    }
+
+    public function testInvalidDependencyMapIsRebuilt(): void
+    {
+        $cacheDir = $this->createTempDir('sugar_cache_invalid_map_');
+        $depMapPath = $cacheDir . '/dependencies.json';
+        file_put_contents($depMapPath, '{invalid');
+
+        $cache = new FileCache($cacheDir);
+        $cache->put('templates/test.sugar.php', '<?php echo "Test";', new CacheMetadata(['dep1']));
+
+        unset($cache);
+
+        $json = file_get_contents($depMapPath);
+        $this->assertNotFalse($json);
+        $data = json_decode($json, true);
         $this->assertIsArray($data);
         $this->assertArrayHasKey('dep1', $data);
         $this->assertIsArray($data['dep1']);

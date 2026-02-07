@@ -6,9 +6,8 @@ namespace Sugar\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\FileCache;
-use Sugar\Config\SugarConfig;
 use Sugar\Engine;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
@@ -16,6 +15,7 @@ use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
  */
 final class EngineTest extends TestCase
 {
+    use EngineTestTrait;
     use TempDirectoryTrait;
 
     private string $cacheDir;
@@ -30,14 +30,7 @@ final class EngineTest extends TestCase
 
     public function testBuilderCreatesEngine(): void
     {
-        $engine = Engine::builder()
-            ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templateDir],
-                ),
-            )
-            ->build();
+        $engine = $this->createEngine($this->templateDir);
 
         $this->assertInstanceOf(Engine::class, $engine);
     }
@@ -47,14 +40,7 @@ final class EngineTest extends TestCase
         $templatePath = $this->templateDir . '/simple.sugar.php';
         file_put_contents($templatePath, '<h1><?= $title ?></h1>');
 
-        $engine = Engine::builder()
-            ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templateDir],
-                ),
-            )
-            ->build();
+        $engine = $this->createEngine($this->templateDir);
 
         $result = $engine->render('simple.sugar.php', ['title' => 'Hello World']);
 
@@ -67,15 +53,7 @@ final class EngineTest extends TestCase
         file_put_contents($templatePath, '<p><?= $message ?></p>');
 
         $cache = new FileCache($this->cacheDir);
-        $engine = Engine::builder()
-            ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templateDir],
-                ),
-            )
-            ->withCache($cache)
-            ->build();
+        $engine = $this->createEngine($this->templateDir, cache: $cache);
 
         // First render - compiles and caches
         $result1 = $engine->render('cached.sugar.php', ['message' => 'First']);
@@ -96,16 +74,11 @@ final class EngineTest extends TestCase
         file_put_contents($templatePath, '<div><?= $content ?></div>');
 
         $cache = new FileCache($this->cacheDir);
-        $engine = Engine::builder()
-            ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templateDir],
-                ),
-            )
-            ->withCache($cache)
-            ->withDebug(false) // Disable debug for now - timestamp checking needs work
-            ->build();
+        $engine = $this->createEngine(
+            $this->templateDir,
+            cache: $cache,
+            debug: false,
+        );
 
         // First render
         $result1 = $engine->render('debug.sugar.php', ['content' => 'v1']);
@@ -126,14 +99,7 @@ final class EngineTest extends TestCase
         $templatePath = $this->templateDir . '/compile.sugar.php';
         file_put_contents($templatePath, '<span><?= $value ?></span>');
 
-        $engine = Engine::builder()
-            ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templateDir],
-                ),
-            )
-            ->build();
+        $engine = $this->createEngine($this->templateDir);
 
         $compiled = $engine->compile('compile.sugar.php');
 

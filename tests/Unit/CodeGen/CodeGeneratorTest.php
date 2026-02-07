@@ -269,6 +269,17 @@ final class CodeGeneratorTest extends TestCase
         $this->assertSame('4', $output);
     }
 
+    public function testGenerateRuntimeCallInDebugMode(): void
+    {
+        $ast = $this->document()
+            ->withChild(new RuntimeCallNode('strlen', ["'test'"], 2, 3))
+            ->build();
+
+        $code = $this->debugGenerator->generate($ast);
+
+        $this->assertStringContainsString('/* L2:C3 runtime */', $code);
+    }
+
     public function testNoDebugCommentsWhenDisabled(): void
     {
         $ast = $this->document()
@@ -365,6 +376,52 @@ final class CodeGeneratorTest extends TestCase
         $this->assertStringContainsString('Escaper::attr', $code);
     }
 
+    public function testGenerateDynamicTag(): void
+    {
+        $ast = $this->document()
+            ->withChild(
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [],
+                    children: [$this->text('Content', 1, 1)],
+                    selfClosing: false,
+                    line: 1,
+                    column: 1,
+                    dynamicTag: '$tagName',
+                ),
+            )
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('<<?= $tagName ?>', $code);
+        $this->assertStringContainsString('</<?= $tagName ?>', $code);
+    }
+
+    public function testGenerateSpreadAttributeWithPipesAndEscaping(): void
+    {
+        $spreadOutput = new OutputNode('$attrs', true, OutputContext::HTML_ATTRIBUTE, 1, 1, ['trim(...)']);
+        $ast = $this->document()
+            ->withChild(
+                new ElementNode(
+                    tag: 'div',
+                    attributes: [new AttributeNode('', $spreadOutput, 1, 1)],
+                    children: [],
+                    selfClosing: false,
+                    line: 1,
+                    column: 1,
+                ),
+            )
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('$__attr =', $code);
+        $this->assertStringContainsString('trim($attrs)', $code);
+        $this->assertStringContainsString('Escaper::attr', $code);
+        $this->assertStringContainsString('echo \' \' . $__attr', $code);
+    }
+
     public function testGenerateBooleanAttribute(): void
     {
         $ast = $this->document()
@@ -428,6 +485,25 @@ final class CodeGeneratorTest extends TestCase
         // DirectiveNode outputs as comment in current implementation
         $this->assertStringContainsString('<!-- Directive: if', $code);
         $this->assertStringContainsString('$condition', $code);
+    }
+
+    public function testGenerateDirectiveEscapesExpression(): void
+    {
+        $ast = $this->document()
+            ->withChild(
+                new DirectiveNode(
+                    'if',
+                    '<script>',
+                    [],
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('&lt;script&gt;', $code);
     }
 
     public function testGenerateElementInDebugMode(): void

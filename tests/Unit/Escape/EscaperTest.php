@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Escape;
 
+use InvalidArgumentException;
 use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -106,6 +107,16 @@ final class EscaperTest extends TestCase
         $this->assertStringContainsString('123', $result);
     }
 
+    // JSON Context Tests
+
+    public function testEscapesJsonContext(): void
+    {
+        $result = $this->escaper->escape('<tag>', OutputContext::JSON);
+
+        $this->assertStringNotContainsString('<', $result);
+        $this->assertStringNotContainsString('>', $result);
+    }
+
     // URL Context Tests
 
     public function testEscapesUrl(): void
@@ -155,6 +166,14 @@ final class EscaperTest extends TestCase
         $this->assertStringNotContainsString('javascript:', $result);
     }
 
+    public function testEscapesCssSpecialCharacters(): void
+    {
+        $result = $this->escaper->escape('<>', OutputContext::CSS);
+
+        $this->assertStringContainsString('\\3c', $result);
+        $this->assertStringContainsString('\\3e', $result);
+    }
+
     // RAW Context Tests
 
     public function testRawContextDoesNotEscape(): void
@@ -163,6 +182,13 @@ final class EscaperTest extends TestCase
         $result = $this->escaper->escape($input, OutputContext::RAW);
 
         $this->assertSame($input, $result);
+    }
+
+    public function testRawReturnsEmptyStringForArray(): void
+    {
+        $result = $this->escaper->escape(['value'], OutputContext::RAW);
+
+        $this->assertSame('', $result);
     }
 
     // Edge Cases
@@ -197,6 +223,14 @@ final class EscaperTest extends TestCase
         $this->assertSame('', $result);
     }
 
+    public function testHtmlThrowsForArray(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot auto-escape arrays/objects in HTML context');
+
+        $this->escaper->escape(['value'], OutputContext::HTML);
+    }
+
     public function testGenerateEscapeCodeForHtml(): void
     {
         $code = $this->escaper->generateEscapeCode('$variable', OutputContext::HTML);
@@ -219,6 +253,22 @@ final class EscaperTest extends TestCase
 
         $this->assertStringContainsString('Escaper::url', $code);
         $this->assertStringContainsString('$url', $code);
+    }
+
+    public function testGenerateEscapeCodeForJson(): void
+    {
+        $code = $this->escaper->generateEscapeCode('$payload', OutputContext::JSON);
+
+        $this->assertStringContainsString('Escaper::json', $code);
+        $this->assertStringContainsString('$payload', $code);
+    }
+
+    public function testGenerateEscapeCodeForHtmlAttribute(): void
+    {
+        $code = $this->escaper->generateEscapeCode('$value', OutputContext::HTML_ATTRIBUTE);
+
+        $this->assertStringContainsString('Escaper::attr', $code);
+        $this->assertStringContainsString('$value', $code);
     }
 
     public function testGenerateEscapeCodeForCss(): void

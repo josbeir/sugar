@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Escape\Escaper;
+use Sugar\Exception\TemplateRuntimeException;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -174,6 +175,16 @@ final class CompilerTest extends TestCase
 
         $this->assertStringContainsString('<?php', $result);
         $this->assertStringContainsString('declare(strict_types=1);', $result);
+    }
+
+    public function testCompileComponentVariantRequiresTemplateLoader(): void
+    {
+        $this->setUpCompiler(withTemplateLoader: false);
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessage('Template loader is required for components.');
+
+        $this->compiler->compileComponentVariant('button');
     }
 
     public function testMultipleContextSwitches(): void

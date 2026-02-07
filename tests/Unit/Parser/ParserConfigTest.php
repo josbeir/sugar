@@ -6,23 +6,16 @@ namespace Sugar\Test\Unit\Parser;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\FragmentNode;
 use Sugar\Config\SugarConfig;
-use Sugar\Parser\Parser;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class ParserConfigTest extends TestCase
 {
-    public function testDefaultFragmentElement(): void
-    {
-        $parser = new Parser();
-        $ast = $parser->parse('<s-template>content</s-template>');
-
-        $this->assertCount(1, $ast->children);
-        $this->assertInstanceOf(FragmentNode::class, $ast->children[0]);
-    }
+    use CompilerTestTrait;
 
     public function testCustomFragmentElement(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $parser = new Parser($config);
+        $parser = $this->createParser($config);
 
         $ast = $parser->parse('<x-template>content</x-template>');
 
@@ -33,7 +26,7 @@ final class ParserConfigTest extends TestCase
     public function testCustomFragmentElementNameOverride(): void
     {
         $config = SugarConfig::withPrefix('v');
-        $parser = new Parser($config);
+        $parser = $this->createParser($config);
 
         // Both v-template and custom component names work
         $ast = $parser->parse('<v-template>content</v-template>');
@@ -45,7 +38,7 @@ final class ParserConfigTest extends TestCase
     public function testOldFragmentElementIgnoredWithCustomConfig(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $parser = new Parser($config);
+        $parser = $this->createParser($config);
 
         $ast = $parser->parse('<s-template>content</s-template>');
 

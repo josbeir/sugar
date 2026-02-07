@@ -8,13 +8,15 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
-use Sugar\Parser\Parser;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class ParserComponentTest extends TestCase
 {
+    use CompilerTestTrait;
+
     public function testParsesComponentElement(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-button>Click me</s-button>');
 
         $this->assertCount(1, $ast->children);
@@ -29,7 +31,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesComponentWithAttributes(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-button type="primary" class="btn">Save</s-button>');
 
         $this->assertCount(1, $ast->children);
@@ -42,7 +44,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesNestedComponents(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-card><s-button>Click</s-button></s-card>');
 
         $this->assertCount(1, $ast->children);
@@ -60,7 +62,7 @@ final class ParserComponentTest extends TestCase
     public function testParsesComponentWithCustomPrefix(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $parser = new Parser($config);
+        $parser = $this->createParser($config);
         $ast = $parser->parse('<x-alert>Warning!</x-alert>');
 
         $this->assertCount(1, $ast->children);
@@ -72,7 +74,7 @@ final class ParserComponentTest extends TestCase
 
     public function testDoesNotParseFragmentAsComponent(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-template>Content</s-template>');
 
         $this->assertCount(1, $ast->children);
@@ -81,7 +83,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesMultipleComponents(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-button>One</s-button><s-alert>Two</s-alert>');
 
         $this->assertCount(2, $ast->children);
@@ -94,7 +96,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesComponentWithHyphenatedName(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-dropdown-menu>Items</s-dropdown-menu>');
 
         $this->assertCount(1, $ast->children);
@@ -106,7 +108,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesComponentMixedWithRegularElements(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<div><s-button>Click</s-button><span>Text</span></div>');
 
         $this->assertCount(1, $ast->children);
@@ -120,7 +122,7 @@ final class ParserComponentTest extends TestCase
 
     public function testParsesComponentWithDirectives(): void
     {
-        $parser = new Parser();
+        $parser = $this->createParser();
         $ast = $parser->parse('<s-button s:if="$showButton" s:class="$buttonClass">Save</s-button>');
 
         $this->assertCount(1, $ast->children);

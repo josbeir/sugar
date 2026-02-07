@@ -4,25 +4,24 @@ declare(strict_types=1);
 namespace Sugar\Test\Integration\Config;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Extension\DirectiveRegistry;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Parser\Parser;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class CustomPrefixIntegrationTest extends TestCase
 {
     use ExecuteTemplateTrait;
+    use CompilerTestTrait;
+    use TempDirectoryTrait;
 
     public function testCustomPrefixIfDirective(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $compiler = $this->createCompiler($config);
+        $this->setUpCompiler(config: $config);
 
         $template = '<div x:if="$show">Hello</div>';
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['show' => true]);
         $this->assertStringContainsString('<div>Hello</div>', $result);
@@ -34,10 +33,10 @@ final class CustomPrefixIntegrationTest extends TestCase
     public function testCustomPrefixForeachDirective(): void
     {
         $config = SugarConfig::withPrefix('v');
-        $compiler = $this->createCompiler($config);
+        $this->setUpCompiler(config: $config);
 
         $template = '<li v:foreach="$items as $item"><?= $item ?></li>';
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['items' => ['a', 'b', 'c']]);
         $this->assertStringContainsString('<li>a</li>', $result);
@@ -48,10 +47,10 @@ final class CustomPrefixIntegrationTest extends TestCase
     public function testCustomFragmentElement(): void
     {
         $config = SugarConfig::withPrefix('tw');
-        $compiler = $this->createCompiler($config);
+        $this->setUpCompiler(config: $config);
 
         $template = '<tw-template tw:foreach="$items as $item"><li><?= $item ?></li></tw-template>';
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['items' => [1, 2, 3]]);
 
@@ -64,11 +63,11 @@ final class CustomPrefixIntegrationTest extends TestCase
     public function testOldPrefixIgnoredWithCustomConfig(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $compiler = $this->createCompiler($config);
+        $this->setUpCompiler(config: $config);
 
         // Old s:if should be treated as regular attribute
         $template = '<div s:if="$show">Hello</div>';
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, ['show' => true]);
 
@@ -79,10 +78,10 @@ final class CustomPrefixIntegrationTest extends TestCase
     public function testMixedDirectivesWithCustomPrefix(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $compiler = $this->createCompiler($config);
+        $this->setUpCompiler(config: $config);
 
         $template = '<div x:if="$show" x:text="$message"></div>';
-        $compiled = $compiler->compile($template);
+        $compiled = $this->compiler->compile($template);
 
         $result = $this->executeTemplate($compiled, [
             'show' => true,
@@ -97,8 +96,7 @@ final class CustomPrefixIntegrationTest extends TestCase
     public function testCustomPrefixWithTemplateInheritance(): void
     {
         $config = SugarConfig::withPrefix('v');
-        $tmpDir = sys_get_temp_dir() . '/sugar-test-' . uniqid();
-        mkdir($tmpDir);
+        $tmpDir = $this->createTempDir('sugar-test-');
 
         try {
             // Create parent template with v:block
@@ -125,16 +123,13 @@ TEMPLATE;
 </v-template>
 TEMPLATE;
 
-            $loader = new FileTemplateLoader(new SugarConfig(), [$tmpDir]);
-            $compiler = new Compiler(
-                parser: new Parser($config),
-                escaper: new Escaper(),
-                registry: new DirectiveRegistry(),
-                templateLoader: $loader,
+            $this->setUpCompiler(
                 config: $config,
+                withTemplateLoader: true,
+                templatePaths: [$tmpDir],
             );
 
-            $compiled = $compiler->compile($child, 'child.sugar.php');
+            $compiled = $this->compiler->compile($child, 'child.sugar.php');
 
             // Verify inheritance worked
             $result = $this->executeTemplate($compiled, ['show' => true, 'name' => 'World']);
@@ -150,18 +145,13 @@ TEMPLATE;
             if (file_exists($tmpDir . '/layout.sugar.php')) {
                 unlink($tmpDir . '/layout.sugar.php');
             }
-
-            if (is_dir($tmpDir)) {
-                rmdir($tmpDir);
-            }
         }
     }
 
     public function testCustomPrefixWithInclude(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $tmpDir = sys_get_temp_dir() . '/sugar-test-' . uniqid();
-        mkdir($tmpDir);
+        $tmpDir = $this->createTempDir('sugar-test-');
 
         try {
             // Create partial template
@@ -178,16 +168,13 @@ TEMPLATE;
 </div>
 TEMPLATE;
 
-            $loader = new FileTemplateLoader(new SugarConfig(), [$tmpDir]);
-            $compiler = new Compiler(
-                parser: new Parser($config),
-                escaper: new Escaper(),
-                registry: new DirectiveRegistry(),
-                templateLoader: $loader,
+            $this->setUpCompiler(
                 config: $config,
+                withTemplateLoader: true,
+                templatePaths: [$tmpDir],
             );
 
-            $compiled = $compiler->compile($template, 'main.sugar.php');
+            $compiled = $this->compiler->compile($template, 'main.sugar.php');
             $result = $this->executeTemplate($compiled, ['users' => ['Alice', 'Bob', 'Charlie']]);
 
             $this->assertStringContainsString('User: Alice', $result);
@@ -198,20 +185,6 @@ TEMPLATE;
             if (file_exists($tmpDir . '/user.sugar.php')) {
                 unlink($tmpDir . '/user.sugar.php');
             }
-
-            if (is_dir($tmpDir)) {
-                rmdir($tmpDir);
-            }
         }
-    }
-
-    private function createCompiler(SugarConfig $config): Compiler
-    {
-        return new Compiler(
-            parser: new Parser($config),
-            escaper: new Escaper(),
-            registry: new DirectiveRegistry(),
-            config: $config,
-        );
     }
 }
