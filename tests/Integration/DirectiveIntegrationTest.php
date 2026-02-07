@@ -114,9 +114,9 @@ final class DirectiveIntegrationTest extends TestCase
         $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        // Should unwrap raw() and output without htmlspecialchars
+        // Should unwrap raw() and output without escaping
         $this->assertStringContainsString('<?php echo $html; ?>', $code);
-        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('Escaper::html', $code);
         $this->assertStringNotContainsString('raw(', $code);
     }
 
@@ -132,7 +132,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Should unwrap r() and output without escaping
         $this->assertStringContainsString('<?php echo $content; ?>', $code);
-        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('Escaper::html', $code);
         $this->assertStringNotContainsString('r(', $code);
     }
 
@@ -146,8 +146,8 @@ final class DirectiveIntegrationTest extends TestCase
         $transformed = $this->compilationPass->execute($extracted, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        // Regular output should use htmlspecialchars
-        $this->assertStringContainsString('htmlspecialchars', $code);
+        // Regular output should use Escaper::html
+        $this->assertStringContainsString('Escaper::html', $code);
         $this->assertStringContainsString('$userInput', $code);
     }
 

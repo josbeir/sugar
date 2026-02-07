@@ -12,6 +12,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
+use Sugar\Escape\Escaper;
 use Sugar\Exception\UnsupportedNodeException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -60,8 +61,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString('htmlspecialchars((string)($userName)', $code);
-        $this->assertStringContainsString('ENT_QUOTES', $code);
+        $this->assertStringContainsString(Escaper::class . '::html($userName)', $code);
         $this->assertStringNotContainsString('$escaper', $code); // Inline, not method call
     }
 
@@ -74,7 +74,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('echo $htmlContent', $code);
-        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('Escaper::html', $code);
     }
 
     public function testGenerateJavascriptContext(): void
@@ -85,8 +85,8 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString('json_encode($data', $code);
-        $this->assertStringContainsString('JSON_HEX_TAG', $code);
+        $this->assertStringContainsString('Escaper::js($data', $code);
+        $this->assertStringContainsString('Escaper::js', $code);
     }
 
     public function testGenerateUrlContext(): void
@@ -97,7 +97,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString('rawurlencode((string)($url))', $code);
+        $this->assertStringContainsString(Escaper::class . '::url($url)', $code);
     }
 
     public function testGenerateMixedContent(): void
@@ -113,7 +113,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<div>', $code);
-        $this->assertStringContainsString('htmlspecialchars((string)($title)', $code);
+        $this->assertStringContainsString(Escaper::class . '::html($title)', $code);
         $this->assertStringContainsString('</div>', $code);
     }
 
@@ -190,7 +190,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<?php $greeting = "Hello"; ?>', $code);
-        $this->assertStringContainsString('htmlspecialchars((string)($greeting)', $code);
+        $this->assertStringContainsString(Escaper::class . '::html($greeting)', $code);
     }
 
     public function testDebugModeAddsSourceInfo(): void
@@ -346,7 +346,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<div title="', $code);
-        $this->assertStringContainsString('htmlspecialchars', $code);
+        $this->assertStringContainsString('Escaper::attr', $code);
     }
 
     public function testGenerateBooleanAttribute(): void
@@ -456,7 +456,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to upper($name)
         $this->assertStringContainsString('upper($name)', $code);
-        $this->assertStringContainsString('htmlspecialchars', $code);
+        $this->assertStringContainsString('Escaper::html', $code);
     }
 
     public function testGenerateMultiplePipes(): void
@@ -469,7 +469,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to truncate(upper($name), 20)
         $this->assertStringContainsString('truncate(upper($name), 20)', $code);
-        $this->assertStringContainsString('htmlspecialchars', $code);
+        $this->assertStringContainsString('Escaper::html', $code);
     }
 
     public function testGeneratePipeWithMultipleArguments(): void
@@ -494,7 +494,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to upper($html) without escaping
         $this->assertStringContainsString('echo upper($html)', $code);
-        $this->assertStringNotContainsString('htmlspecialchars', $code);
+        $this->assertStringNotContainsString('Escaper::html', $code);
     }
 
     public function testGeneratePipeInJavascriptContext(): void
@@ -505,9 +505,8 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        // Should compile to json_encode(upper($data))
-        $this->assertStringContainsString('json_encode(upper($data)', $code);
-        $this->assertStringContainsString('JSON_HEX_TAG', $code);
+        // Should compile to Escaper::js(upper($data))
+        $this->assertStringContainsString('Escaper::js(upper($data)', $code);
     }
 
     public function testGenerateThrowsForUnsupportedNodeType(): void

@@ -59,7 +59,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
         // Variable should be accessible in included template (check for escaping, not specific format)
         $this->assertStringContainsString('$title', $compiled);
-        $this->assertStringContainsString('htmlspecialchars', $compiled);
+        $this->assertStringContainsString('Escaper::html', $compiled);
     }
 
     public function testCombiningInheritanceWithDirectives(): void
@@ -89,7 +89,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
 
         // HTML context escaping should be applied
-        $this->assertStringContainsString('htmlspecialchars', $compiled);
+        $this->assertStringContainsString('Escaper::html', $compiled);
         $this->assertStringContainsString('$pageTitle', $compiled);
         $this->assertStringContainsString('$heading', $compiled);
     }

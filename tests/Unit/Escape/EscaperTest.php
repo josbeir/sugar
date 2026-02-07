@@ -201,27 +201,32 @@ final class EscaperTest extends TestCase
     {
         $code = $this->escaper->generateEscapeCode('$variable', OutputContext::HTML);
 
-        $this->assertStringContainsString('htmlspecialchars', $code);
+        $this->assertStringContainsString('Escaper::html', $code);
         $this->assertStringContainsString('$variable', $code);
-        $this->assertStringContainsString('ENT_QUOTES', $code);
-        $this->assertStringContainsString('UTF-8', $code);
     }
 
     public function testGenerateEscapeCodeForJavascript(): void
     {
         $code = $this->escaper->generateEscapeCode('$data', OutputContext::JAVASCRIPT);
 
-        $this->assertStringContainsString('json_encode', $code);
+        $this->assertStringContainsString('Escaper::js', $code);
         $this->assertStringContainsString('$data', $code);
-        $this->assertStringContainsString('JSON_HEX_TAG', $code);
     }
 
     public function testGenerateEscapeCodeForUrl(): void
     {
         $code = $this->escaper->generateEscapeCode('$url', OutputContext::URL);
 
-        $this->assertStringContainsString('rawurlencode', $code);
+        $this->assertStringContainsString('Escaper::url', $code);
         $this->assertStringContainsString('$url', $code);
+    }
+
+    public function testGenerateEscapeCodeForCss(): void
+    {
+        $code = $this->escaper->generateEscapeCode('$color', OutputContext::CSS);
+
+        $this->assertStringContainsString('Escaper::css', $code);
+        $this->assertStringContainsString('$color', $code);
     }
 
     public function testGenerateEscapeCodeForRaw(): void

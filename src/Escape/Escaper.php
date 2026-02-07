@@ -12,53 +12,33 @@ use Sugar\Enum\OutputContext;
 final class Escaper implements EscaperInterface
 {
     /**
-     * Escape value based on output context
-     *
-     * @param mixed $value Value to escape
-     * @param \Sugar\Enum\OutputContext $context Output context
-     * @return string Escaped value
+     * @inheritDoc
      */
     public function escape(mixed $value, OutputContext $context): string
     {
         return match ($context) {
-            OutputContext::HTML => $this->escapeHtml($value),
-            OutputContext::HTML_ATTRIBUTE => $this->escapeAttribute($value),
-            OutputContext::JAVASCRIPT => $this->escapeJs($value),
-            OutputContext::JSON => $this->escapeJson($value),
-            OutputContext::CSS => $this->escapeCss($value),
-            OutputContext::URL => $this->escapeUrl($value),
-            OutputContext::RAW => $this->escapeRaw($value),
+            OutputContext::HTML => self::html($value),
+            OutputContext::HTML_ATTRIBUTE => self::attr($value),
+            OutputContext::JAVASCRIPT => self::js($value),
+            OutputContext::JSON => self::json($value),
+            OutputContext::CSS => self::css($value),
+            OutputContext::URL => self::url($value),
+            OutputContext::RAW => self::raw($value),
         };
     }
 
     /**
-     * Generate inline PHP code for escaping (compile-time optimization)
-     * Returns a PHP expression that can be embedded directly in compiled templates
-     *
-     * @param string $expression PHP expression to escape
-     * @param \Sugar\Enum\OutputContext $context Output context
-     * @return string PHP code expression
+     * @inheritDoc
      */
     public function generateEscapeCode(string $expression, OutputContext $context): string
     {
-        $htmlFlags = 'ENT_QUOTES | ENT_HTML5';
-        $jsonFlags = 'JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT';
-
         return match ($context) {
-            OutputContext::HTML => sprintf(
-                "htmlspecialchars((string)(%s), %s, 'UTF-8')",
-                $expression,
-                $htmlFlags,
-            ),
-            OutputContext::HTML_ATTRIBUTE => sprintf(
-                "htmlspecialchars((string)(%s), %s, 'UTF-8')",
-                $expression,
-                $htmlFlags,
-            ),
-            OutputContext::JAVASCRIPT => sprintf('json_encode(%s, %s)', $expression, $jsonFlags),
-            OutputContext::JSON => sprintf('json_encode(%s, JSON_HEX_TAG | JSON_HEX_AMP)', $expression),
-            OutputContext::CSS => sprintf('\Sugar\Runtime\escapeCss((string)(%s))', $expression),
-            OutputContext::URL => sprintf('rawurlencode((string)(%s))', $expression),
+            OutputContext::HTML => sprintf(Escaper::class . '::html(%s)', $expression),
+            OutputContext::HTML_ATTRIBUTE => sprintf(Escaper::class . '::attr(%s)', $expression),
+            OutputContext::JAVASCRIPT => sprintf(Escaper::class . '::js(%s)', $expression),
+            OutputContext::JSON => sprintf(Escaper::class . '::json(%s)', $expression),
+            OutputContext::CSS => sprintf(Escaper::class . '::css(%s)', $expression),
+            OutputContext::URL => sprintf(Escaper::class . '::url(%s)', $expression),
             OutputContext::RAW => $expression,
         };
     }
@@ -69,13 +49,13 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped HTML
      */
-    private function escapeHtml(mixed $value): string
+    public static function html(mixed $value): string
     {
         if (is_array($value) || (is_object($value) && !method_exists($value, '__toString'))) {
             throw new InvalidArgumentException('Cannot auto-escape arrays/objects in HTML context');
         }
 
-        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+        assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
 
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -86,10 +66,10 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped attribute
      */
-    private function escapeAttribute(mixed $value): string
+    public static function attr(mixed $value): string
     {
         // Attributes use same escaping as HTML but we're explicit about context
-        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+        assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
 
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -100,7 +80,7 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped JavaScript
      */
-    private function escapeJs(mixed $value): string
+    public static function js(mixed $value): string
     {
         // Auto-detect: primitives vs objects/arrays
         if (is_scalar($value) || $value === null) {
@@ -120,7 +100,7 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped JSON
      */
-    private function escapeJson(mixed $value): string
+    public static function json(mixed $value): string
     {
         return json_encode($value, JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
     }
@@ -131,9 +111,9 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped CSS
      */
-    private function escapeCss(mixed $value): string
+    public static function css(mixed $value): string
     {
-        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+        assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
 
         $string = (string)$value;
 
@@ -157,9 +137,9 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to escape
      * @return string Escaped URL
      */
-    private function escapeUrl(mixed $value): string
+    public static function url(mixed $value): string
     {
-        assert($value === null || is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
+        assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
 
         return rawurlencode((string)$value);
     }
@@ -170,7 +150,7 @@ final class Escaper implements EscaperInterface
      * @param mixed $value Value to convert
      * @return string String representation
      */
-    private function escapeRaw(mixed $value): string
+    public static function raw(mixed $value): string
     {
         if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
             return (string)$value;

@@ -115,9 +115,9 @@ How does Sugar compare to other popular PHP templating engines?
 <?php if (!empty($users)): ?>
     <?php foreach ($users as $user): ?>
         <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
-            <?= htmlspecialchars((string)($user->name), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>
+            <?= \Sugar\Escape\Escaper::html($user->name) ?>
             <?php if ($user->email): ?>
-                <small><?= htmlspecialchars((string)($user->email), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></small>
+                <small><?= \Sugar\Escape\Escaper::html($user->email) ?></small>
             <?php endif; ?>
         </div>
     <?php endforeach; ?>
@@ -148,9 +148,9 @@ Notice:
 Compiles to nested function calls with auto-escaping preserved:
 
 ```php
-<h1><?= htmlspecialchars((string)(substr(strtoupper($title), 0, 50)), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></h1>
-<p><?= htmlspecialchars((string)(number_format($product->price, 2)), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></p>
-<div><?= htmlspecialchars((string)(trim(strip_tags($text))), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></div>
+<h1><?= \Sugar\Escape\Escaper::html(substr(strtoupper($title), 0, 50)) ?></h1>
+<p><?= \Sugar\Escape\Escaper::html(number_format($product->price, 2)) ?></p>
+<div><?= \Sugar\Escape\Escaper::html(trim(strip_tags($text))) ?></div>
 ```
 
 #### Context-Aware Escaping
@@ -171,14 +171,14 @@ Sugar template:
 Compiled Output:
 ```php
 <?php if ($isActive): ?>
-    <div data-user="<?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>">
+    <div data-user="<?= \Sugar\Escape\Escaper::attr($name) ?>">
         <?php $displayName = strtoupper($name); // Regular PHP works fine ?>
-        <span><?= htmlspecialchars($displayName, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></span>
+        <span><?= \Sugar\Escape\Escaper::html($displayName) ?></span>
     </div>
 <?php endif; ?>
-<script>const user = <?= json_encode($userData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
-<style>.user::before { content: '<?= \Sugar\Escape\Escaper::escapeCss($prefix) ?>'; }</style>
-<a href="/search?q=<?= rawurlencode($query) ?>">Search</a>
+<script>const user = <?= \Sugar\Escape\Escaper::js($userData) ?>;</script>
+<style>.user::before { content: '<?= \Sugar\Escape\Escaper::css($prefix) ?>'; }</style>
+<a href="/search?q=<?= \Sugar\Escape\Escaper::url($query) ?>">Search</a>
 ```
 
 #### Loop Metadata
@@ -201,7 +201,7 @@ $__loopStack = [];
 $__loopStack[] = $loop = new \Sugar\Runtime\LoopMetadata($items);
 foreach ($items as $item): ?>
     <li class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['first' => $loop->first, 'last' => $loop->last, 'odd' => $loop->odd]) ?>">
-        <?= htmlspecialchars($item, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?> (<?= htmlspecialchars($loop->iteration, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?> of <?= htmlspecialchars($loop->count, ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>)
+        <?= \Sugar\Escape\Escaper::html($item) ?> (<?= \Sugar\Escape\Escaper::html($loop->iteration) ?> of <?= \Sugar\Escape\Escaper::html($loop->count) ?>)
     </li>
     <?php $loop->next(); ?>
 <?php endforeach; ?>
@@ -224,13 +224,13 @@ Compiled Output:
 <div>
     <?php switch ($role): ?>
         <?php case 'admin': ?>
-            <span class="badge-red"><?= htmlspecialchars('Administrator', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></span>
+            <span class="badge-red"><?= \Sugar\Escape\Escaper::html('Administrator') ?></span>
             <?php break; ?>
         <?php case 'moderator': ?>
-            <span class="badge-blue"><?= htmlspecialchars('Moderator', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></span>
+            <span class="badge-blue"><?= \Sugar\Escape\Escaper::html('Moderator') ?></span>
             <?php break; ?>
         <?php default: ?>
-            <span class="badge-gray"><?= htmlspecialchars('User', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></span>
+            <span class="badge-gray"><?= \Sugar\Escape\Escaper::html('User') ?></span>
     <?php endswitch; ?>
 </div>
 ```
@@ -243,7 +243,7 @@ Use `s:text` and `s:html` for explicit output control:
 <!-- s:text - Escaped output (same as <?= ?>) -->
 <div s:text="$userName"></div>
 <!-- Compiles to: -->
-<div><?= htmlspecialchars((string)($userName), ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></div>
+<div><?= \Sugar\Escape\Escaper::html($userName) ?></div>
 
 <!-- s:html - Unescaped output for trusted HTML -->
 <div s:html="$article->renderedContent"></div>
@@ -290,15 +290,15 @@ Compiled Output:
     <div class="card shadow-lg" data-id="123" class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['card-featured' => $featured ?? false]) ?>">
         <?php if (isset($header)): ?>
             <div class="card-header">
-                <h3><?= htmlspecialchars('Product Title', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></h3>
+                <h3><?= \Sugar\Escape\Escaper::html('Product Title') ?></h3>
             </div>
         <?php endif; ?>
         <div class="card-body">
-            <p><?= htmlspecialchars('This is the main card content in the default slot.', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></p>
+            <p><?= \Sugar\Escape\Escaper::html('This is the main card content in the default slot.') ?></p>
         </div>
         <?php if (isset($footer)): ?>
             <div class="card-footer">
-                <button><?= htmlspecialchars('Learn More', ENT_QUOTES | ENT_HTML5, 'UTF-8') ?></button>
+                <button><?= \Sugar\Escape\Escaper::html('Learn More') ?></button>
             </div>
         <?php endif; ?>
     </div>
@@ -838,7 +838,7 @@ Pass data to components as props using the `s-bind:` prefix. Props become variab
 **Compiled Output**:
 ```php
 <?php (function($__vars) { extract($__vars); ?><div class="alert alert-info">
-    <strong><?php echo htmlspecialchars((string)($title ?? 'Notice'), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></strong>
+    <strong><?php echo \Sugar\Escape\Escaper::html($title ?? 'Notice'); ?></strong>
     <?php echo $slot; ?></div>
 <?php })(['title' => 'Well done!', 'slot' => 'Your changes have been saved.']); ?>
 ```
@@ -1525,7 +1525,7 @@ echo $engine->render('pages/home', ['user' => $currentUser]);
 ```php
 <?php if ($user): /* L1:C0 */ ?>
 <div> <!-- L2:C4 -->
-    <?= htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8'); /* L2:C14 s:text */ ?>
+    <?= \Sugar\Escape\Escaper::html($name); /* L2:C14 s:text */ ?>
 </div>
 ```
 

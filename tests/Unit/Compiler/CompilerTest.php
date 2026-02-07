@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Escape\Escaper;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -41,7 +42,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('Hello ', $result);
-        $this->assertStringContainsString('htmlspecialchars((string)($name)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($name)', $result);
         $this->assertStringContainsString('!', $result);
     }
 
@@ -52,9 +53,8 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<script>', $result);
-        $this->assertStringContainsString('json_encode($data', $result);
-        $this->assertStringContainsString('JSON_HEX_TAG', $result);
-        $this->assertStringNotContainsString('htmlspecialchars', $result);
+        $this->assertStringContainsString(Escaper::class . '::js($data', $result);
+        $this->assertStringNotContainsString('Escaper::html', $result);
     }
 
     public function testCompileWithCssContext(): void
@@ -75,7 +75,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<a href="', $result);
-        $this->assertStringContainsString('htmlspecialchars((string)($url)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($url)', $result);
         $this->assertStringContainsString('Link</a>', $result);
     }
 
@@ -86,7 +86,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<?php $x = 42; ?>', $result);
-        $this->assertStringContainsString('htmlspecialchars((string)($x)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($x)', $result);
     }
 
     public function testCompileComplexTemplate(): void
@@ -96,33 +96,33 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         // Check title is HTML escaped
-        $this->assertStringContainsString('htmlspecialchars((string)($title)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($title)', $result);
 
         // Check CSS context
-        $this->assertStringContainsString('escapeCss((string)($bgColor))', $result);
+        $this->assertStringContainsString(Escaper::class . '::css($bgColor)', $result);
 
         // Check JS context
-        $this->assertStringContainsString('json_encode($config', $result);
+        $this->assertStringContainsString(Escaper::class . '::js($config', $result);
 
         // Check attribute context
-        $this->assertStringContainsString('htmlspecialchars((string)($link)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($link)', $result);
 
         // Check body HTML context
-        $this->assertStringContainsString('htmlspecialchars((string)($heading)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($heading)', $result);
 
         // Check raw() unwraps and outputs without escaping
         $this->assertStringContainsString('<?php echo $articleBody; ?>', $result);
-        $this->assertStringNotContainsString('htmlspecialchars((string)($articleBody)', $result);
+        $this->assertStringNotContainsString(Escaper::class . '::html($articleBody)', $result);
 
         // Check r() short form unwraps
         $this->assertStringContainsString('<?php echo $sidebarHtml; ?>', $result);
-        $this->assertStringNotContainsString('htmlspecialchars((string)($sidebarHtml)', $result);
+        $this->assertStringNotContainsString(Escaper::class . '::html($sidebarHtml)', $result);
 
         // Check footer raw content
         $this->assertStringContainsString('<?php echo $footerContent; ?>', $result);
 
         // Check year is still escaped (regular output)
-        $this->assertStringContainsString('htmlspecialchars((string)($year)', $result);
+        $this->assertStringContainsString(Escaper::class . '::html($year)', $result);
 
         // Verify raw() function calls are removed (unwrapped at compile-time)
         $this->assertStringNotContainsString('raw($articleBody)', $result);
@@ -189,13 +189,13 @@ final class CompilerTest extends TestCase
         $this->assertCount(3, $outputs);
 
         // First should be HTML escaped
-        $this->assertStringContainsString('htmlspecialchars((string)($html)', $outputs[0]);
+        $this->assertStringContainsString(Escaper::class . '::html($html)', $outputs[0]);
 
         // Second should be JSON encoded (JavaScript context)
-        $this->assertStringContainsString('json_encode($js', $outputs[1]);
+        $this->assertStringContainsString(Escaper::class . '::js($js', $outputs[1]);
 
         // Third should be HTML escaped again
-        $this->assertStringContainsString('htmlspecialchars((string)($html2)', $outputs[2]);
+        $this->assertStringContainsString(Escaper::class . '::html($html2)', $outputs[2]);
     }
 
     public function testCompileUnclosedPhpBlock(): void
@@ -348,7 +348,7 @@ final class CompilerTest extends TestCase
 
         // Verify compilation
         $this->assertStringContainsString('<div>', $compiled);
-        $this->assertStringContainsString('htmlspecialchars((string)($userName)', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($userName)', $compiled);
         $this->assertStringContainsString('</div>', $compiled);
 
         // Test execution with XSS attempt
@@ -370,7 +370,7 @@ final class CompilerTest extends TestCase
 
         // Verify compilation - should NOT escape
         $this->assertStringContainsString('<div>', $compiled);
-        $this->assertStringNotContainsString('htmlspecialchars', $compiled);
+        $this->assertStringNotContainsString('Escaper::html', $compiled);
         $this->assertStringContainsString('echo $trustedContent', $compiled);
         $this->assertStringContainsString('</div>', $compiled);
 
@@ -390,7 +390,7 @@ final class CompilerTest extends TestCase
 
         $compiled = $this->compiler->compile($source);
 
-        $this->assertStringContainsString('htmlspecialchars((string)($user->getName())', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($user->getName()', $compiled);
     }
 
     public function testMixingTextAndHtmlDirectives(): void
@@ -422,7 +422,7 @@ TEMPLATE;
         // Should have if wrapper
         $this->assertStringContainsString('<?php if ($show): ?>', $compiled);
         $this->assertStringContainsString('<?php endif; ?>', $compiled);
-        $this->assertStringContainsString('htmlspecialchars((string)($message)', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($message)', $compiled);
 
         // Test with condition true
         $output = $this->executeTemplate($compiled, [
@@ -452,7 +452,7 @@ TEMPLATE;
 
         // Should have foreach loop
         $this->assertStringContainsString('foreach ($items as $item)', $compiled);
-        $this->assertStringContainsString('htmlspecialchars((string)($item)', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($item)', $compiled);
 
         // Test execution
         $output = $this->executeTemplate($compiled, [
@@ -474,7 +474,7 @@ TEMPLATE;
         $compiled = $this->compiler->compile($source);
 
         // Should NOT escape (s:html)
-        $this->assertStringNotContainsString('htmlspecialchars', $compiled);
+        $this->assertStringNotContainsString('Escaper::html', $compiled);
 
         // Test execution - HTML should pass through
         $output = $this->executeTemplate($compiled, [
@@ -493,7 +493,7 @@ TEMPLATE;
 
         // Should have both class helper and escaped text
         $this->assertStringContainsString('classNames', $compiled);
-        $this->assertStringContainsString('htmlspecialchars((string)($content)', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($content)', $compiled);
 
         // Test execution
         $output = $this->executeTemplate($compiled, [

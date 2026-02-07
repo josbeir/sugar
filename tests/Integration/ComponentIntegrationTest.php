@@ -5,6 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
+use Sugar\Escape\Escaper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -69,7 +70,7 @@ final class ComponentIntegrationTest extends TestCase
         // Should have alert template structure
         $this->assertStringContainsString('<div class="alert alert-info">', $compiled);
         // Title uses the prop
-        $this->assertStringContainsString('htmlspecialchars((string)($title ?? \'Notice\')', $compiled);
+        $this->assertStringContainsString(Escaper::class . '::html($title ?? \'Notice\')', $compiled);
     }
 
     public function testCompilesComponentWithNamedSlots(): void
@@ -191,7 +192,7 @@ final class ComponentIntegrationTest extends TestCase
         $output = $this->executeTemplate($compiled);
 
         // Should render the alert with type
-        // Note: The attribute contains OutputNode which compiles to htmlspecialchars
+        // Note: The attribute contains OutputNode which compiles to Escaper::html
         // resulting in quoted output like alert-">danger">
         $this->assertStringContainsString('<div class="alert alert-', $output);
         $this->assertStringContainsString('danger', $output);
