@@ -28,15 +28,20 @@ use Sugar\Pass\Trait\ScopeIsolationTrait;
  * Replaces ComponentNode instances with their actual template content,
  * injecting slots and attributes as variables.
  */
-final readonly class ComponentExpansionPass implements PassInterface
+final class ComponentExpansionPass implements PassInterface
 {
     use ScopeIsolationTrait;
 
-    private DirectivePrefixHelper $prefixHelper;
+    private readonly DirectivePrefixHelper $prefixHelper;
 
-    private string $slotAttrName;
+    private readonly string $slotAttrName;
 
-    private TemplateInheritancePass $inheritancePass;
+    private readonly TemplateInheritancePass $inheritancePass;
+
+    /**
+     * @var array<string, \Sugar\Ast\DocumentNode> Cache of parsed component ASTs
+     */
+    private array $componentAstCache = [];
 
     /**
      * Constructor
@@ -47,9 +52,9 @@ final readonly class ComponentExpansionPass implements PassInterface
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
-        private TemplateLoaderInterface $loader,
-        private Parser $parser,
-        private DirectiveRegistryInterface $registry,
+        private readonly TemplateLoaderInterface $loader,
+        private readonly Parser $parser,
+        private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
@@ -97,8 +102,12 @@ final readonly class ComponentExpansionPass implements PassInterface
         // Track component as dependency
         $context?->tracker?->addComponent($component->name);
 
-        // Parse component template
-        $templateAst = $this->parser->parse($templateContent);
+        // Cache parsed component ASTs to avoid re-parsing same components
+        if (!isset($this->componentAstCache[$component->name])) {
+            $this->componentAstCache[$component->name] = $this->parser->parse($templateContent);
+        }
+
+        $templateAst = $this->componentAstCache[$component->name];
 
         // Process template inheritance (s:extends, s:include) in component template
         // Use resolved component path for proper relative path resolution

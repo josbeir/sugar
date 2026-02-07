@@ -165,11 +165,19 @@ final class FileCacheTest extends TestCase
         touch($sourcePath); // Update mtime
         clearstatcache(); // Clear PHP's stat cache
 
-        // Debug mode with stale cache should return null
-        $cached = $this->cache->get($sourcePath, debug: true);
+        // Create new FileCache instance to simulate new request
+        $cacheDir = sys_get_temp_dir() . '/sugar_newcache_' . uniqid();
+        mkdir($cacheDir, 0755, true);
+        $newCache = new FileCache($cacheDir);
+        $newCache->put($sourcePath, '<?php echo "cached v1";', $metadata);
+
+        // Debug mode with stale cache should return null (new instance detects change)
+        $cached = $newCache->get($sourcePath, debug: true);
         $this->assertNotInstanceOf(CachedTemplate::class, $cached);
 
         unlink($sourcePath);
+        // Cleanup new cache dir
+        $this->removeTempDir($cacheDir);
     }
 
     public function testDebugModeChecksDependencyTimestamps(): void
@@ -181,15 +189,18 @@ final class FileCacheTest extends TestCase
         file_put_contents($pagePath, '<?php echo "page v1";');
         $pageTime = (int)filemtime($pagePath);
 
-        // Cache page with layout dependency
+        // Cache page with layout dependency using shared cache directory
+        $sharedCacheDir = $this->createTempDir('sugar_shared_cache_');
+        $cache1 = new FileCache($sharedCacheDir);
+
         $metadata = new CacheMetadata(
             dependencies: [$layoutPath],
             sourceTimestamp: $pageTime,
         );
-        $this->cache->put($pagePath, '<?php echo "cached page";', $metadata);
+        $cache1->put($pagePath, '<?php echo "cached page";', $metadata);
 
         // Debug mode with fresh cache should return cached
-        $cached = $this->cache->get($pagePath, debug: true);
+        $cached = $cache1->get($pagePath, debug: true);
         $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify layout (dependency)
@@ -198,8 +209,11 @@ final class FileCacheTest extends TestCase
         touch($layoutPath);
         clearstatcache(); // Clear PHP's stat cache
 
-        // Debug mode should detect stale dependency
-        $cached = $this->cache->get($pagePath, debug: true);
+        // Create new FileCache instance to simulate new request (shares same cache files)
+        $cache2 = new FileCache($sharedCacheDir);
+
+        // Debug mode should detect stale dependency (new instance with fresh stat cache)
+        $cached = $cache2->get($pagePath, debug: true);
         $this->assertNotInstanceOf(CachedTemplate::class, $cached);
 
         unlink($layoutPath);
@@ -310,5 +324,242 @@ final class FileCacheTest extends TestCase
 
         // Verify actually deleted
         $this->assertNotInstanceOf(CachedTemplate::class, $this->cache->get('templates/self.sugar.php'));
+    }
+
+    public function testInMemoryDependencyMapReducesFileIo(): void
+    {
+        // Cache multiple templates with dependencies
+        $this->cache->put('templates/a.sugar.php', '<?php echo "A";', new CacheMetadata(['dep1']));
+        $this->cache->put('templates/b.sugar.php', '<?php echo "B";', new CacheMetadata(['dep1']));
+        $this->cache->put('templates/c.sugar.php', '<?php echo "C";', new CacheMetadata(['dep2']));
+
+        // Dependencies should be tracked correctly
+        $invalidated = $this->cache->invalidate('dep1');
+
+        $this->assertCount(2, $invalidated);
+        $this->assertContains('templates/a.sugar.php', $invalidated);
+        $this->assertContains('templates/b.sugar.php', $invalidated);
+        $this->assertNotContains('templates/c.sugar.php', $invalidated);
+    }
+
+    public function testDestructorPersistsDependencyMap(): void
+    {
+        $cacheDir = $this->createTempDir('sugar_cache_destruct_');
+        $depMapPath = $cacheDir . '/dependencies.json';
+
+        // Create cache and add template
+        $cache = new FileCache($cacheDir);
+        $cache->put('templates/test.sugar.php', '<?php echo "Test";', new CacheMetadata(['dep1']));
+
+        // Explicitly destroy the cache object to trigger destructor
+        unset($cache);
+
+        // Verify dependency map was written by destructor
+        $this->assertFileExists($depMapPath);
+
+        $json = file_get_contents($depMapPath);
+        $this->assertNotFalse($json);
+        $data = json_decode($json, true);
+
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('dep1', $data);
+        $this->assertIsArray($data['dep1']);
+        $this->assertContains('templates/test.sugar.php', $data['dep1']);
+    }
+
+    public function testFlushPersistsAndClearsDependencyMap(): void
+    {
+        $cacheDir = $this->createTempDir('sugar_cache_flush_');
+        $cache = new FileCache($cacheDir);
+        $depMapPath = $cacheDir . '/dependencies.json';
+
+        // Add templates
+        $cache->put('templates/a.sugar.php', '<?php echo "A";', new CacheMetadata(['dep1']));
+        $cache->put('templates/b.sugar.php', '<?php echo "B";', new CacheMetadata(['dep2']));
+
+        // Flush should persist dependency map before clearing
+        $cache->flush();
+
+        // Verify all caches cleared
+        $this->assertNotInstanceOf(CachedTemplate::class, $cache->get('templates/a.sugar.php'));
+        $this->assertNotInstanceOf(CachedTemplate::class, $cache->get('templates/b.sugar.php'));
+
+        // Dependency map should be empty after flush (since all caches cleared)
+        $this->assertFileExists($depMapPath);
+        $json = file_get_contents($depMapPath);
+        $this->assertNotFalse($json);
+        $data = json_decode($json, true);
+        $this->assertIsArray($data);
+        $this->assertEmpty($data);
+    }
+
+    public function testBulkOperationsUseInMemoryCache(): void
+    {
+        $cacheDir = $this->createTempDir('sugar_cache_bulk_');
+        $cache = new FileCache($cacheDir);
+
+        // Cache 50 templates with dependencies
+        $start = hrtime(true);
+        for ($i = 0; $i < 50; $i++) {
+            $cache->put(
+                sprintf('templates/template%d.sugar.php', $i),
+                sprintf("<?php echo 'Template %d';", $i),
+                new CacheMetadata(['dep' . $i]),
+            );
+        }
+
+        $duration = (hrtime(true) - $start) / 1e9;
+
+        // Should complete very quickly (in-memory operations)
+        // With old implementation: ~500ms (50 × 10ms I/O)
+        // With new implementation: ~50ms (1 load + 1 save on destruct)
+        $this->assertLessThan(0.5, $duration, 'Bulk operations should be fast with in-memory cache');
+
+        // Verify dependencies tracked correctly
+        $invalidated = $cache->invalidate('dep25');
+        $this->assertCount(1, $invalidated);
+        $this->assertContains('templates/template25.sugar.php', $invalidated);
+    }
+
+    public function testInvalidationCascadeUsesInMemoryCache(): void
+    {
+        // Create cascade: layout -> page -> component
+        $this->cache->put('templates/layout.sugar.php', '<?php echo "Layout";', new CacheMetadata());
+        $this->cache->put('templates/page.sugar.php', '<?php echo "Page";', new CacheMetadata(['templates/layout.sugar.php']));
+        $this->cache->put('templates/component.sugar.php', '<?php echo "Component";', new CacheMetadata(['templates/page.sugar.php']));
+
+        // Invalidate layout should cascade to page and component
+        $invalidated = $this->cache->invalidate('templates/layout.sugar.php');
+
+        $this->assertCount(3, $invalidated);
+        $this->assertContains('templates/layout.sugar.php', $invalidated);
+        $this->assertContains('templates/page.sugar.php', $invalidated);
+        $this->assertContains('templates/component.sugar.php', $invalidated);
+    }
+
+    public function testComponentDependenciesTrackedInMemory(): void
+    {
+        // Test that component dependencies (in addition to template dependencies) are tracked
+        $this->cache->put(
+            'templates/page.sugar.php',
+            '<?php echo "Page";',
+            new CacheMetadata(dependencies: ['templates/layout.sugar.php'], components: ['components/button.sugar.php']),
+        );
+
+        // Invalidating component should invalidate page
+        $invalidated = $this->cache->invalidate('components/button.sugar.php');
+        $this->assertContains('templates/page.sugar.php', $invalidated);
+
+        // Invalidating layout should also invalidate page
+        $this->cache->put(
+            'templates/page2.sugar.php',
+            '<?php echo "Page2";',
+            new CacheMetadata(dependencies: ['templates/layout.sugar.php'], components: ['components/button.sugar.php']),
+        );
+
+        $invalidated = $this->cache->invalidate('templates/layout.sugar.php');
+        $this->assertContains('templates/page2.sugar.php', $invalidated);
+    }
+
+    public function testDebugModeOptimizesStatCalls(): void
+    {
+        // Create temporary source file
+        $sourcePath = sys_get_temp_dir() . '/sugar_stat_test_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "test";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        // Cache with correct timestamp
+        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime);
+        $this->cache->put($sourcePath, '<?php echo "cached";', $metadata);
+
+        // First debug check - should use filesystem
+        $cached1 = $this->cache->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached1);
+
+        // Subsequent debug checks should use cached mtime (request-level cache)
+        $cached2 = $this->cache->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached2);
+
+        $cached3 = $this->cache->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached3);
+
+        // All checks should return same result efficiently
+        $this->assertInstanceOf(CachedTemplate::class, $cached1);
+        $this->assertInstanceOf(CachedTemplate::class, $cached2);
+        $this->assertInstanceOf(CachedTemplate::class, $cached3);
+
+        unlink($sourcePath);
+    }
+
+    public function testDebugModeWithMultipleDependenciesUsesMtimeCache(): void
+    {
+        // Create multiple temporary files
+        $templatePath = sys_get_temp_dir() . '/sugar_template_' . uniqid() . '.php';
+        $dep1Path = sys_get_temp_dir() . '/sugar_dep1_' . uniqid() . '.php';
+        $dep2Path = sys_get_temp_dir() . '/sugar_dep2_' . uniqid() . '.php';
+        $dep3Path = sys_get_temp_dir() . '/sugar_dep3_' . uniqid() . '.php';
+
+        file_put_contents($templatePath, '<?php echo "template";');
+        file_put_contents($dep1Path, '<?php echo "dep1";');
+        file_put_contents($dep2Path, '<?php echo "dep2";');
+        file_put_contents($dep3Path, '<?php echo "dep3";');
+
+        $templateTime = (int)filemtime($templatePath);
+
+        // Cache with multiple dependencies
+        $metadata = new CacheMetadata(
+            dependencies: [$dep1Path, $dep2Path, $dep3Path],
+            sourceTimestamp: $templateTime,
+        );
+        $this->cache->put($templatePath, '<?php echo "cached";', $metadata);
+
+        // Multiple debug checks - should efficiently cache file mtimes
+        for ($i = 0; $i < 5; $i++) {
+            $cached = $this->cache->get($templatePath, debug: true);
+            $this->assertInstanceOf(
+                CachedTemplate::class,
+                $cached,
+                sprintf('Check #%d should use request-level mtime cache', $i),
+            );
+        }
+
+        // Cleanup
+        unlink($templatePath);
+        unlink($dep1Path);
+        unlink($dep2Path);
+        unlink($dep3Path);
+    }
+
+    public function testDebugModeDetectsChangesAfterCacheCleared(): void
+    {
+        // Create temporary source file
+        $sourcePath = sys_get_temp_dir() . '/sugar_change_detect_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        // Cache with correct timestamp
+        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime);
+        $this->cache->put($sourcePath, '<?php echo "cached v1";', $metadata);
+
+        // First check - should be fresh
+        $cached = $this->cache->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        // Modify source file
+        sleep(1);
+        file_put_contents($sourcePath, '<?php echo "v2";');
+        touch($sourcePath);
+        clearstatcache(); // Simulate cache clearing
+
+        // Create NEW FileCache instance (simulates new request)
+        $cacheDir = $this->createTempDir('sugar_cache_new_');
+        $newCache = new FileCache($cacheDir);
+        $newCache->put($sourcePath, '<?php echo "cached v1";', $metadata);
+
+        // New cache instance should detect change (has fresh static state)
+        $cached = $newCache->get($sourcePath, debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
     }
 }

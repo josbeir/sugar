@@ -17,13 +17,53 @@ final class FileCache implements TemplateCacheInterface
     private array $mtimeCache = [];
 
     /**
+     * @var array<string, array<string>>|null In-memory dependency map cache (null = not loaded yet)
+     */
+    private ?array $dependencyMapCache = null;
+
+    /**
+     * @var bool Whether dependency map has been modified and needs saving
+     */
+    private bool $dependencyMapDirty = false;
+
+    /**
+     * @var bool Whether stat cache has been cleared for this instance (request)
+     */
+    private bool $statCacheCleared = false;
+
+    /**
      * @param string $cacheDir Cache directory path
      */
     public function __construct(
         private readonly string $cacheDir,
     ) {
-        if (!is_dir($this->cacheDir)) {
-            mkdir($this->cacheDir, 0755, true);
+        $this->ensureCacheDirectoryExists();
+    }
+
+    /**
+     * Destructor ensures dependency map is flushed to disk
+     */
+    public function __destruct()
+    {
+        $this->flushDependencyMap();
+    }
+
+    /**
+     * Flush pending dependency map changes to disk
+     *
+     * This is called automatically by the destructor but can be
+     * called explicitly for long-running processes.
+     */
+    private function flushDependencyMap(): void
+    {
+        if ($this->dependencyMapDirty && $this->dependencyMapCache !== null) {
+            // Ensure cache directory exists
+            $this->ensureCacheDirectoryExists();
+
+            $path = $this->getDependencyMapPath();
+            $json = json_encode($this->dependencyMapCache, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            file_put_contents($path, $json);
+            $this->dependencyMapDirty = false;
         }
     }
 
@@ -151,8 +191,18 @@ final class FileCache implements TemplateCacheInterface
      */
     public function flush(): void
     {
+        // Clear cache directory
         $this->removeDirectory($this->cacheDir);
-        mkdir($this->cacheDir, 0755, true);
+        $this->ensureCacheDirectoryExists();
+
+        // Reset in-memory caches
+        $this->dependencyMapCache = [];
+        $this->dependencyMapDirty = false;
+        $this->mtimeCache = [];
+
+        // Write empty dependency map
+        $path = $this->getDependencyMapPath();
+        file_put_contents($path, '[]');
     }
 
     /**
@@ -279,41 +329,61 @@ final class FileCache implements TemplateCacheInterface
     /**
      * Load reverse dependency map
      *
+     * Uses in-memory cache to avoid repeated disk I/O within the same request.
+     *
      * @return array<string, array<string>> Map of dependency -> [dependents]
      */
     private function loadDependencyMap(): array
     {
+        // Return cached version if already loaded
+        if ($this->dependencyMapCache !== null) {
+            return $this->dependencyMapCache;
+        }
+
+        // Load from disk on first access
         $path = $this->getDependencyMapPath();
 
         if (!file_exists($path)) {
+            $this->dependencyMapCache = [];
+
             return [];
         }
 
         $json = file_get_contents($path);
         if ($json === false) {
+            $this->dependencyMapCache = [];
+
             return [];
         }
 
         $data = json_decode($json, true);
 
         if (!is_array($data)) {
+            $this->dependencyMapCache = [];
+
             return [];
         }
 
-        /** @phpstan-ignore return.type */
+        // Cache in memory for subsequent accesses in this request
+        /** @var array<string, array<string>> $data */
+        $this->dependencyMapCache = $data;
+
         return $data;
     }
 
     /**
      * Save reverse dependency map
      *
+     * Updates in-memory cache and marks for lazy persistence.
+     * Actual disk write happens in flush() or __destruct().
+     *
      * @param array<string, array<string>> $map Map to save
      */
     private function saveDependencyMap(array $map): void
     {
-        $path = $this->getDependencyMapPath();
-        $json = json_encode($map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        file_put_contents($path, $json);
+        // Update in-memory cache and mark as dirty
+        $this->dependencyMapCache = $map;
+        $this->dependencyMapDirty = true;
     }
 
     /**
@@ -390,10 +460,11 @@ final class FileCache implements TemplateCacheInterface
      */
     private function isFresh(string $key, CacheMetadata $metadata): bool
     {
-        // Clear stat cache to ensure fresh timestamps
-        clearstatcache();
-        // Clear request-level cache too
-        $this->mtimeCache = [];
+        // Clear stat cache only once per instance (request) to reduce filesystem overhead
+        if (!$this->statCacheCleared) {
+            clearstatcache();
+            $this->statCacheCleared = true;
+        }
 
         // Check source timestamp
         $sourceTime = $this->getModTime($key);
@@ -433,5 +504,15 @@ final class FileCache implements TemplateCacheInterface
         }
 
         return $this->mtimeCache[$path];
+    }
+
+    /**
+     * Ensure cache directory exists
+     */
+    private function ensureCacheDirectoryExists(): void
+    {
+        if (!is_dir($this->cacheDir)) {
+            mkdir($this->cacheDir, 0755, true);
+        }
     }
 }

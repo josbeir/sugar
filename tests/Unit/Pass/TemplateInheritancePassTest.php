@@ -354,4 +354,130 @@ final class TemplateInheritancePassTest extends PassTestCase
 
         return '';
     }
+
+    public function testCachesLayoutAsts(): void
+    {
+        // Create a reusable layout
+        $layoutPath = $this->inheritanceFixturesPath . '/temp-cached-layout.sugar.php';
+        file_put_contents($layoutPath, '<html><title s:block="title">Default</title></html>');
+
+        try {
+            // First page extends layout
+            $page1 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-cached-layout.sugar.php')], [], false, 1, 1),
+                new ElementNode('title', [$this->attr('s:block', 'title')], [
+                    $this->createText('Page 1'),
+                ], false, 2, 1),
+            ]);
+
+            // Second page also extends same layout
+            $page2 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-cached-layout.sugar.php')], [], false, 1, 1),
+                new ElementNode('title', [$this->attr('s:block', 'title')], [
+                    $this->createText('Page 2'),
+                ], false, 2, 1),
+            ]);
+
+            // Execute both - layout should be parsed once and cached
+            $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));
+            $result2 = $this->execute($page2, $this->createTestContext('', 'page2.sugar.php'));
+
+            // Both should succeed - cached AST reused
+            $this->assertInstanceOf(DocumentNode::class, $result1);
+            $this->assertInstanceOf(DocumentNode::class, $result2);
+
+            // Results should be different (different block content)
+            $code1 = $this->documentToString($result1);
+            $code2 = $this->documentToString($result2);
+            $this->assertStringContainsString('Page 1', $code1);
+            $this->assertStringContainsString('Page 2', $code2);
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
+    public function testCachesIncludeAsts(): void
+    {
+        // Create a reusable partial
+        $partialPath = $this->inheritanceFixturesPath . '/temp-cached-partial.sugar.php';
+        file_put_contents($partialPath, '<header>Site Header</header>');
+
+        try {
+            // First page includes partial
+            $page1 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:include', 'temp-cached-partial.sugar.php')], [], false, 1, 1),
+                $this->createText('Page 1 Content'),
+            ]);
+
+            // Second page also includes same partial
+            $page2 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:include', 'temp-cached-partial.sugar.php')], [], false, 1, 1),
+                $this->createText('Page 2 Content'),
+            ]);
+
+            // Execute both - partial should be parsed once and cached
+            $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));
+            $result2 = $this->execute($page2, $this->createTestContext('', 'page2.sugar.php'));
+
+            // Both should succeed
+            $this->assertInstanceOf(DocumentNode::class, $result1);
+            $this->assertInstanceOf(DocumentNode::class, $result2);
+
+            // Both should contain header from include
+            $code1 = $this->documentToString($result1);
+            $code2 = $this->documentToString($result2);
+            $this->assertStringContainsString('Site Header', $code1);
+            $this->assertStringContainsString('Site Header', $code2);
+            $this->assertStringContainsString('Page 1 Content', $code1);
+            $this->assertStringContainsString('Page 2 Content', $code2);
+        } finally {
+            unlink($partialPath);
+        }
+    }
+
+    public function testCachesSeparateTemplatesSeparately(): void
+    {
+        // Create two different layouts
+        $layout1Path = $this->inheritanceFixturesPath . '/temp-layout1.sugar.php';
+        $layout2Path = $this->inheritanceFixturesPath . '/temp-layout2.sugar.php';
+        file_put_contents($layout1Path, '<html><title s:block="title">Layout 1</title></html>');
+        file_put_contents($layout2Path, '<body><h1 s:block="title">Layout 2</h1></body>');
+
+        try {
+            // Page extends layout 1
+            $page1 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-layout1.sugar.php')], [], false, 1, 1),
+                new ElementNode('title', [$this->attr('s:block', 'title')], [
+                    $this->createText('Page with L1'),
+                ], false, 2, 1),
+            ]);
+
+            // Page extends layout 2
+            $page2 = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-layout2.sugar.php')], [], false, 1, 1),
+                new ElementNode('h1', [$this->attr('s:block', 'title')], [
+                    $this->createText('Page with L2'),
+                ], false, 2, 1),
+            ]);
+
+            // Execute both
+            $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));
+            $result2 = $this->execute($page2, $this->createTestContext('', 'page2.sugar.php'));
+
+            // Both should work correctly with different structures
+            $code1 = $this->documentToString($result1);
+            $code2 = $this->documentToString($result2);
+
+            // Layout 1 uses <html> structure
+            $this->assertStringContainsString('<html>', $code1);
+            $this->assertStringContainsString('</html>', $code1);
+
+            // Layout 2 uses <body> structure
+            $this->assertStringContainsString('<body>', $code2);
+            $this->assertStringContainsString('</body>', $code2);
+        } finally {
+            unlink($layout1Path);
+            unlink($layout2Path);
+        }
+    }
 }

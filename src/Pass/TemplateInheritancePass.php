@@ -34,6 +34,14 @@ final class TemplateInheritancePass implements PassInterface
     private array $loadedTemplates = [];
 
     /**
+     * Cache of parsed template ASTs by resolved path.
+     * Avoids re-parsing the same layout/include multiple times.
+     *
+     * @var array<string, \Sugar\Ast\DocumentNode>
+     */
+    private array $templateAstCache = [];
+
+    /**
      * Constructor.
      *
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
@@ -139,6 +147,23 @@ final class TemplateInheritancePass implements PassInterface
     }
 
     /**
+     * Get or parse a template with caching.
+     *
+     * @param string $resolvedPath Resolved template path
+     * @param string $content Template content
+     * @return \Sugar\Ast\DocumentNode Parsed document
+     */
+    private function getOrParseTemplate(string $resolvedPath, string $content): DocumentNode
+    {
+        if (!isset($this->templateAstCache[$resolvedPath])) {
+            $parser = new Parser($this->config);
+            $this->templateAstCache[$resolvedPath] = $parser->parse($content);
+        }
+
+        return $this->templateAstCache[$resolvedPath];
+    }
+
+    /**
      * Process s:extends directive.
      *
      * @param \Sugar\Ast\ElementNode $extendsElement Element with s:extends
@@ -160,10 +185,9 @@ final class TemplateInheritancePass implements PassInterface
         // Track parent template as dependency
         $context->tracker?->addDependency($resolvedPath);
 
-        // Load and parse parent template
+        // Load and parse parent template (with caching)
         $parentContent = $this->loader->load($resolvedPath);
-        $parser = new Parser($this->config);
-        $parentDocument = $parser->parse($parentContent);
+        $parentDocument = $this->getOrParseTemplate($resolvedPath, $parentContent);
 
         // Collect blocks from child
         $childBlocks = $this->collectBlocks($childDocument);
@@ -209,10 +233,9 @@ final class TemplateInheritancePass implements PassInterface
                 // Track included template as dependency
                 $context->tracker?->addDependency($resolvedPath);
 
-                // Load and parse included template
+                // Load and parse included template (with caching)
                 $includeContent = $this->loader->load($resolvedPath);
-                $parser = new Parser($this->config);
-                $includeDocument = $parser->parse($includeContent);
+                $includeDocument = $this->getOrParseTemplate($resolvedPath, $includeContent);
 
                 // Create new context for included template
                 $includeContext = new CompilationContext(

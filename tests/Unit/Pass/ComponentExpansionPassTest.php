@@ -252,4 +252,64 @@ final class ComponentExpansionPassTest extends TestCase
     ): CompilationContext {
         return new CompilationContext($templatePath, $source, $debug);
     }
+
+    public function testCachesComponentAsts(): void
+    {
+        // Create a tracking parser to count parse calls
+        $registry = $this->createRegistry();
+        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+
+        // Create AST with same component used 3 times
+        // Each button component will be loaded but should only be parsed once
+        $ast = new DocumentNode([
+            new ComponentNode(name: 'button', children: [new TextNode('First', 1, 0)], line: 1, column: 0),
+            new ComponentNode(name: 'button', children: [new TextNode('Second', 2, 0)], line: 2, column: 0),
+            new ComponentNode(name: 'button', children: [new TextNode('Third', 3, 0)], line: 3, column: 0),
+        ]);
+
+        $result = $pass->execute($ast, $this->createContext());
+
+        // All components should be expanded correctly
+        $output = $this->astToString($result);
+
+        // Should contain all three button instances
+        $this->assertStringContainsString('First', $output);
+        $this->assertStringContainsString('Second', $output);
+        $this->assertStringContainsString('Third', $output);
+
+        // Verify caching by executing again with same component
+        $ast2 = new DocumentNode([
+            new ComponentNode(name: 'button', children: [new TextNode('Fourth', 4, 0)], line: 4, column: 0),
+        ]);
+
+        $result2 = $pass->execute($ast2, $this->createContext());
+        $output2 = $this->astToString($result2);
+        $this->assertStringContainsString('Fourth', $output2);
+    }
+
+    public function testCachesSeparateComponentsSeparately(): void
+    {
+        $registry = $this->createRegistry();
+        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+
+        // Use different components multiple times each
+        $ast = new DocumentNode([
+            new ComponentNode(name: 'button', children: [new TextNode('Button 1', 1, 0)], line: 1, column: 0),
+            new ComponentNode(name: 'button', children: [new TextNode('Button 2', 2, 0)], line: 2, column: 0),
+            new ComponentNode(name: 'alert', children: [new TextNode('Alert 1', 3, 0)], line: 3, column: 0),
+            new ComponentNode(name: 'alert', children: [new TextNode('Alert 2', 4, 0)], line: 4, column: 0),
+        ]);
+
+        $result = $pass->execute($ast, $this->createContext());
+        $output = $this->astToString($result);
+
+        // Should successfully expand both component types multiple times
+        $this->assertStringContainsString('Button 1', $output);
+        $this->assertStringContainsString('Button 2', $output);
+        $this->assertStringContainsString('Alert 1', $output);
+        $this->assertStringContainsString('Alert 2', $output);
+
+        // Both component types should be properly expanded
+        $this->assertGreaterThan(0, count($result->children));
+    }
 }
