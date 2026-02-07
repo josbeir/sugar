@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass;
+namespace Sugar\Pass\Component;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
@@ -15,18 +15,21 @@ use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RuntimeCallNode;
-use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
+use Sugar\Pass\Component\Helper\ComponentSlots;
+use Sugar\Pass\Component\Helper\SlotOutputHelper;
+use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Helper\SlotOutputHelper;
+use Sugar\Pass\PassInterface;
+use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Runtime\RuntimeEnvironment;
 
@@ -51,6 +54,10 @@ final class ComponentExpansionPass implements PassInterface
     private readonly DirectivePairingPass $directivePairingPass;
 
     private readonly DirectiveCompilationPass $directiveCompilationPass;
+
+    private readonly ComponentAttributeCategorizer $attributeCategorizer;
+
+    private readonly SlotResolver $slotResolver;
 
     /**
      * @var array<string, \Sugar\Ast\DocumentNode> Cache of parsed component ASTs
@@ -77,6 +84,8 @@ final class ComponentExpansionPass implements PassInterface
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
+        $this->attributeCategorizer = new ComponentAttributeCategorizer($this->registry, $this->prefixHelper);
+        $this->slotResolver = new SlotResolver($this->slotAttrName);
     }
 
     /**
@@ -154,7 +163,7 @@ final class ComponentExpansionPass implements PassInterface
         $templateAst = $this->directiveCompilationPass->execute($templateAst, $inheritanceContext);
 
         // Categorize attributes: control flow, attribute directives, bindings, merge
-        $categorized = $this->categorizeAttributes($component->attributes);
+        $categorized = $this->attributeCategorizer->categorize($component->attributes);
 
         // Find root element in component template for attribute merging
         $rootElement = $this->findRootElement($templateAst);
@@ -163,29 +172,22 @@ final class ComponentExpansionPass implements PassInterface
         if ($rootElement instanceof ElementNode) {
             $this->mergeAttributesToRoot(
                 $rootElement,
-                $categorized['merge'],
-                $categorized['attributeDirectives'],
+                $categorized->merge,
+                $categorized->attributeDirectives,
             );
         }
 
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
-        $slots = $this->extractSlots($component->children);
-        $defaultSlot = $this->extractDefaultSlot($component->children);
+        $slots = $this->slotResolver->extract($component->children);
 
         // NOW expand any nested components in the slot contents
-        $expandedSlots = [];
-        foreach ($slots as $name => $nodes) {
-            $expandedSlots[$name] = $this->expandNodes($nodes, $context);
-        }
-
-        $expandedDefaultSlot = $this->expandNodes($defaultSlot, $context);
+        $expandedSlots = $this->expandSlotContent($slots, $context);
 
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
             $templateAst,
-            $categorized['componentBindings'],
+            $categorized->componentBindings,
             $expandedSlots,
-            $expandedDefaultSlot,
             $context,
         );
 
@@ -193,9 +195,9 @@ final class ComponentExpansionPass implements PassInterface
         $expandedContent = $this->expandNodes($wrappedTemplate->children, $context);
 
         // If component has control flow directives, wrap in FragmentNode
-        if ($categorized['controlFlow'] !== []) {
+        if ($categorized->controlFlow !== []) {
             return [new FragmentNode(
-                attributes: $categorized['controlFlow'],
+                attributes: $categorized->controlFlow,
                 children: $expandedContent,
                 line: $component->line,
                 column: $component->column,
@@ -324,11 +326,11 @@ final class ComponentExpansionPass implements PassInterface
         int $column,
         ?CompilationContext $context,
     ): RuntimeCallNode {
-        $categorized = $this->categorizeAttributes($attributes);
+        $categorized = $this->attributeCategorizer->categorize($attributes);
 
         $bindingsExpression = '[]';
-        if ($categorized['componentBindings'] instanceof AttributeNode) {
-            $bindAttribute = $categorized['componentBindings'];
+        if ($categorized->componentBindings instanceof AttributeNode) {
+            $bindAttribute = $categorized->componentBindings;
             $bindingsValue = $bindAttribute->value;
 
             if ($bindingsValue === null) {
@@ -358,13 +360,11 @@ final class ComponentExpansionPass implements PassInterface
             );
         }
 
-        $slots = $this->extractSlots($children);
-        $defaultSlot = $this->extractDefaultSlot($children);
-
-        $slotsExpression = $this->buildSlotsExpression($slots, $defaultSlot);
+        $slots = $this->slotResolver->extract($children);
+        $slotsExpression = $this->slotResolver->buildSlotsExpression($slots);
         $attributesExpression = $this->buildRuntimeAttributesExpression(array_merge(
-            $categorized['merge'],
-            $categorized['attributeDirectives'],
+            $categorized->merge,
+            $categorized->attributeDirectives,
         ));
 
         return new RuntimeCallNode(
@@ -373,29 +373,6 @@ final class ComponentExpansionPass implements PassInterface
             line: $line,
             column: $column,
         );
-    }
-
-    /**
-     * Build runtime slot array expression
-     *
-     * @param array<string, array<\Sugar\Ast\Node>> $namedSlots
-     * @param array<\Sugar\Ast\Node> $defaultSlot
-     */
-    private function buildSlotsExpression(array $namedSlots, array $defaultSlot): string
-    {
-        $items = [];
-
-        if ($defaultSlot === []) {
-            $items[] = "'slot' => ''";
-        } else {
-            $items[] = sprintf("'slot' => %s", $this->nodesToPhpString($defaultSlot));
-        }
-
-        foreach ($namedSlots as $name => $nodes) {
-            $items[] = sprintf("'%s' => %s", $name, $this->nodesToPhpString($nodes));
-        }
-
-        return '[' . implode(', ', $items) . ']';
     }
 
     /**
@@ -425,70 +402,6 @@ final class ComponentExpansionPass implements PassInterface
         }
 
         return '[' . implode(', ', $items) . ']';
-    }
-
-    /**
-     * Categorize component attributes into different types
-     *
-     * @param array<\Sugar\Ast\AttributeNode> $attributes Component attributes
-     * @return array{controlFlow: array<\Sugar\Ast\AttributeNode>, attributeDirectives: array<\Sugar\Ast\AttributeNode>, componentBindings: \Sugar\Ast\AttributeNode|null, merge: array<\Sugar\Ast\AttributeNode>}
-     */
-    private function categorizeAttributes(array $attributes): array
-    {
-        $controlFlow = [];
-        $attributeDirectives = [];
-        $componentBindings = null;
-        $mergeAttrs = [];
-
-        foreach ($attributes as $attr) {
-            $name = $attr->name;
-
-            // Sugar directives: s:if, s:class, s:foreach, s:bind
-            if ($this->prefixHelper->isDirective($name)) {
-                $directiveName = $this->prefixHelper->stripPrefix($name);
-
-                // s:bind is a pass-through directive for component variable bindings
-                if ($directiveName === 'bind') {
-                    // Component bindings: s:bind="['title' => $value, 'type' => 'warning']"
-                    // Store the full attribute node for error reporting with line/column
-                    $componentBindings = $attr;
-                } elseif ($this->isControlFlowDirective($name)) {
-                    // Control flow: s:if, s:foreach, s:while
-                    $controlFlow[] = $attr;
-                } else {
-                    // Attribute directives: s:class, s:spread
-                    $attributeDirectives[] = $attr;
-                }
-            } else {
-                // Everything else merges: class, id, @click, x-show, data-*, v-if, hx-get
-                $mergeAttrs[] = $attr;
-            }
-        }
-
-        return [
-            'controlFlow' => $controlFlow,
-            'attributeDirectives' => $attributeDirectives,
-            'componentBindings' => $componentBindings,
-            'merge' => $mergeAttrs,
-        ];
-    }
-
-    /**
-     * Check if directive is a control flow directive
-     *
-     * @param string $directiveName Full directive name (e.g., 's:if', 's:foreach')
-     */
-    private function isControlFlowDirective(string $directiveName): bool
-    {
-        $name = $this->prefixHelper->stripPrefix($directiveName);
-
-        if (!$this->registry->has($name)) {
-            return false;
-        }
-
-        $compiler = $this->registry->get($name);
-
-        return $compiler->getType() === DirectiveType::CONTROL_FLOW;
     }
 
     /**
@@ -562,104 +475,18 @@ final class ComponentExpansionPass implements PassInterface
     }
 
     /**
-     * Extract named slots from component children
-     *
-     * @param array<\Sugar\Ast\Node> $children Component children
-     * @return array<string, array<\Sugar\Ast\Node>> Slot name => nodes
-     */
-    private function extractSlots(array $children): array
-    {
-        $slots = [];
-
-        foreach ($children as $child) {
-            // Handle both ElementNode and FragmentNode (s-template)
-            if (!$child instanceof ElementNode && !$child instanceof FragmentNode) {
-                continue;
-            }
-
-            $slotInfo = $this->findSlotAttribute($child->attributes);
-            if ($slotInfo === null) {
-                continue;
-            }
-
-            [$slotName, $slotAttrIndex] = $slotInfo;
-
-            // For FragmentNode (s-template), use its children as slot content
-            if ($child instanceof FragmentNode) {
-                $slots[$slotName] = $child->children;
-            } else {
-                // For regular ElementNode, remove s:slot attribute and use the element itself
-                $clonedElement = clone $child;
-                array_splice($clonedElement->attributes, $slotAttrIndex, 1);
-                $slots[$slotName] = [$clonedElement];
-            }
-        }
-
-        return $slots;
-    }
-
-    /**
-     * Extract default slot (children without s:slot attribute)
-     *
-     * @param array<\Sugar\Ast\Node> $children Component children
-     * @return array<\Sugar\Ast\Node> Default slot nodes
-     */
-    private function extractDefaultSlot(array $children): array
-    {
-        $defaultSlot = [];
-
-        foreach ($children as $child) {
-            // Check both ElementNode and FragmentNode for s:slot attribute
-            $isSlottedElement = ($child instanceof ElementNode || $child instanceof FragmentNode) &&
-                $this->findSlotAttribute($child->attributes) !== null;
-
-            if ($isSlottedElement) {
-                continue;
-                // Has s:slot attribute, skip
-            }
-
-            // Add to default slot if no s:slot attribute
-            $defaultSlot[] = $child;
-        }
-
-        return $defaultSlot;
-    }
-
-    /**
-     * Find s:slot attribute in attributes array
-     *
-     * @param array<\Sugar\Ast\AttributeNode> $attributes Attributes to search
-     * @return array{string, int}|null [slotName, index] or null if not found
-     */
-    private function findSlotAttribute(array $attributes): ?array
-    {
-        $result = AttributeHelper::findAttributeWithIndex($attributes, $this->slotAttrName);
-
-        if ($result !== null) {
-            [$attr, $index] = $result;
-            if (is_string($attr->value)) {
-                return [$attr->value, $index];
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Wrap template with PHP code that injects variables
      *
      * @param \Sugar\Ast\DocumentNode $template Component template AST
      * @param \Sugar\Ast\AttributeNode|null $bindAttribute Optional s:bind attribute node
-     * @param array<string, array<\Sugar\Ast\Node>> $namedSlots Named slots
-     * @param array<\Sugar\Ast\Node> $defaultSlot Default slot content
+     * @param \Sugar\Pass\Component\Helper\ComponentSlots $slots Slot content
      * @param \Sugar\Context\CompilationContext|null $context Compilation context for error reporting
      * @return \Sugar\Ast\DocumentNode Wrapped template
      */
     private function wrapWithVariables(
         DocumentNode $template,
         ?AttributeNode $bindAttribute,
-        array $namedSlots,
-        array $defaultSlot,
+        ComponentSlots $slots,
         ?CompilationContext $context = null,
     ): DocumentNode {
         $arrayItems = [];
@@ -699,23 +526,9 @@ final class ComponentExpansionPass implements PassInterface
             $arrayItems[] = '...(' . $expression . ')';
         }
 
-        // Collect all slot variable names
-        $slotVars = ['slot'];
-        foreach (array_keys($namedSlots) as $name) {
-            $slotVars[] = $name;
-        }
+        $arrayItems = array_merge($arrayItems, $this->slotResolver->buildSlotItems($slots));
 
-        // Add default slot
-        if ($defaultSlot === []) {
-            $arrayItems[] = "'slot' => ''";
-        } else {
-            $arrayItems[] = sprintf("'slot' => %s", $this->nodesToPhpString($defaultSlot));
-        }
-
-        // Add named slots
-        foreach ($namedSlots as $name => $nodes) {
-            $arrayItems[] = sprintf("'%s' => %s", $name, $this->nodesToPhpString($nodes));
-        }
+        $slotVars = $this->slotResolver->buildSlotVars($slots);
 
         // Automatically disable escaping for slot variable outputs in component template
         SlotOutputHelper::disableEscaping($template, $slotVars);
@@ -725,89 +538,17 @@ final class ComponentExpansionPass implements PassInterface
     }
 
     /**
-     * Convert nodes to PHP string representation for injection
-     *
-     * @param array<\Sugar\Ast\Node> $nodes Nodes to convert
-     * @return string PHP string representation
+     * Expand nested components inside slot content.
      */
-    private function nodesToPhpString(array $nodes): string
+    private function expandSlotContent(ComponentSlots $slots, ?CompilationContext $context): ComponentSlots
     {
-        if ($nodes === []) {
-            return "''";
+        $expandedSlots = [];
+        foreach ($slots->namedSlots as $name => $nodes) {
+            $expandedSlots[$name] = $this->expandNodes($nodes, $context);
         }
 
-        // For now, use a simple approach: render nodes and capture output
-        $parts = [];
-        foreach ($nodes as $node) {
-            $parts[] = $this->nodeToPhpExpression($node);
-        }
+        $expandedDefaultSlot = $this->expandNodes($slots->defaultSlot, $context);
 
-        if (count($parts) === 1) {
-            return $parts[0];
-        }
-
-        return implode(' . ', $parts);
-    }
-
-    /**
-     * Convert single node to PHP expression
-     *
-     * @param \Sugar\Ast\Node $node Node to convert
-     * @return string PHP expression
-     */
-    private function nodeToPhpExpression(Node $node): string
-    {
-        if ($node instanceof OutputNode) {
-            return '(' . $node->expression . ')';
-        }
-
-        // For other nodes, we need to render them as strings
-        // This is a simplified version - in production we'd use a proper renderer
-        return var_export($this->nodeToString($node), true);
-    }
-
-    /**
-     * Convert node to string (simplified rendering)
-     *
-     * @param \Sugar\Ast\Node $node Node to convert
-     * @return string String representation
-     */
-    private function nodeToString(Node $node): string
-    {
-        if ($node instanceof TextNode) {
-            return $node->content;
-        }
-
-        if ($node instanceof ElementNode) {
-            $html = '<' . $node->tag;
-            foreach ($node->attributes as $attr) {
-                $html .= ' ' . $attr->name;
-                if ($attr->value !== null) {
-                    if ($attr->value instanceof OutputNode) {
-                        $html .= '="<?= ' . $attr->value->expression . ' ?>"';
-                    } else {
-                        $html .= '="' . $attr->value . '"';
-                    }
-                }
-            }
-
-            $html .= '>';
-
-            foreach ($node->children as $child) {
-                $html .= $this->nodeToString($child);
-            }
-
-            if (!$node->selfClosing) {
-                $html .= '</' . $node->tag . '>';
-            }
-
-            return $html;
-        }
-
-        if ($node instanceof OutputNode) {
-            return '<?= ' . $node->expression . ' ?>';
-        }
-
-        return '';
+        return new ComponentSlots($expandedSlots, $expandedDefaultSlot);
     }
 }

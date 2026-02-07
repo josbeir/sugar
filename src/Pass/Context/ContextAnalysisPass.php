@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass;
+namespace Sugar\Pass\Context;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -12,6 +12,7 @@ use Sugar\Ast\TextNode;
 use Sugar\Context\AnalysisContext;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\OutputContext;
+use Sugar\Pass\PassInterface;
 
 /**
  * Analyzes AST and assigns proper OutputContext to OutputNodes

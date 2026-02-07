@@ -1,13 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Context;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\ContextAnalysisPass;
+use Sugar\Pass\Context\ContextAnalysisPass;
 use Sugar\Pass\PassInterface;
+use Sugar\Tests\Unit\Pass\PassTestCase;
 
 /**
  * Test context analysis pass

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass\Helper;
+namespace Sugar\Pass\Component\Helper;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;

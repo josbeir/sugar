@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Pass;
+namespace Sugar\Pass\Template;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
@@ -16,6 +16,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\PassInterface;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 final class TemplateInheritancePass implements PassInterface

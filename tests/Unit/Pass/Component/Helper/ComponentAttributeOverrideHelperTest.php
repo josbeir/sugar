@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Ast\Helper;
+namespace Sugar\Tests\Unit\Pass\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\Helper\ComponentAttributeOverrideHelper;
+use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
 use Sugar\Runtime\HtmlAttributeHelper;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 

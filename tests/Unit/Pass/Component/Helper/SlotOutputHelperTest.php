@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Ast\Helper;
+namespace Sugar\Tests\Unit\Pass\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\Helper\SlotOutputHelper;
+use Sugar\Pass\Component\Helper\SlotOutputHelper;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class SlotOutputHelperTest extends TestCase

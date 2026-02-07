@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Test\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
@@ -23,7 +23,8 @@ use Sugar\Enum\OutputContext;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\FileTemplateLoader;
-use Sugar\Pass\ComponentExpansionPass;
+use Sugar\Pass\Component\ComponentExpansionPass;
+use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -102,10 +103,75 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('<button class="btn">', $code);
     }
 
+    public function testCreatesRuntimeComponentCallForDynamicName(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:component', '$component', 1, 1),
+                new AttributeNode('class', 'panel', 1, 1),
+                new AttributeNode('disabled', null, 1, 1),
+                new AttributeNode(
+                    'data-id',
+                    new OutputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                    1,
+                    1,
+                ),
+            ],
+            children: [new TextNode('Content', 1, 1)],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame(
+            RuntimeEnvironment::class . '::getRenderer()->renderComponent',
+            $call->callableExpression,
+        );
+        $this->assertSame('$component', $call->arguments[0]);
+        $this->assertSame('[]', $call->arguments[1]);
+        $this->assertStringContainsString("'slot' => 'Content'", $call->arguments[2]);
+        $this->assertStringContainsString("'class' => 'panel'", $call->arguments[3]);
+        $this->assertStringContainsString("'disabled' => null", $call->arguments[3]);
+        $this->assertStringContainsString('\'data-id\' => $id', $call->arguments[3]);
+    }
+
+    public function testThrowsWhenComponentNameIsNotString(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode(
+                    's:component',
+                    new OutputNode('$name', true, OutputContext::HTML, 1, 1),
+                    1,
+                    1,
+                ),
+            ],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+
+        $this->expectException(SyntaxException::class);
+
+        $this->pass->execute($ast, $this->createContext());
+    }
+
     public function testExpandsNestedComponents(): void
     {
         // Create a temporary component that uses another component
-        $nestedComponentPath = __DIR__ . '/../../fixtures/templates/components/s-panel.sugar.php';
+        $nestedComponentPath = __DIR__ . '/../../../fixtures/templates/components/s-panel.sugar.php';
         file_put_contents($nestedComponentPath, '<div class="panel"><s-button><?= $slot ?></s-button></div>');
 
         $this->loader->discoverComponents('.');

@@ -19,9 +19,8 @@ use Sugar\Pass\PassInterface;
  * Wires up parent references in the AST and pairs sibling directives
  * (e.g., s:forelse with s:empty, s:switch with s:case).
  *
- * This pass must run before DirectiveExtractionPass to enable robust
- * sibling-based directive pairing that works regardless of intervening
- * text nodes, comments, or whitespace.
+ * This pass runs after DirectiveExtractionPass so it can pair DirectiveNodes
+ * regardless of intervening text nodes, comments, or whitespace.
  */
 final class DirectivePairingPass implements PassInterface
 {

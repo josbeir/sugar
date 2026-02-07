@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass;
+namespace Sugar\Tests\Unit\Pass\Template;
 
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
@@ -14,7 +14,8 @@ use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\PassInterface;
-use Sugar\Pass\TemplateInheritancePass;
+use Sugar\Pass\Template\TemplateInheritancePass;
+use Sugar\Tests\Unit\Pass\PassTestCase;
 
 final class TemplateInheritancePassTest extends PassTestCase
 {

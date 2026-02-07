@@ -12,14 +12,14 @@ use Sugar\Exception\TemplateRuntimeException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
-use Sugar\Pass\ComponentExpansionPass;
-use Sugar\Pass\ContextAnalysisPass;
+use Sugar\Pass\Component\ComponentExpansionPass;
+use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
+use Sugar\Pass\Component\Helper\SlotOutputHelper;
+use Sugar\Pass\Context\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Helper\ComponentAttributeOverrideHelper;
-use Sugar\Pass\Helper\SlotOutputHelper;
-use Sugar\Pass\TemplateInheritancePass;
+use Sugar\Pass\Template\TemplateInheritancePass;
 
 /**
  * Orchestrates template compilation pipeline
