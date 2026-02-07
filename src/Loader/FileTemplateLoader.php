@@ -172,6 +172,8 @@ class FileTemplateLoader extends AbstractTemplateLoader
             // Find relative path from first template path
             $basePath = $this->templatePaths[0];
             $relativePath = str_replace($basePath . '/', '', $file->getPathname());
+            // Normalize path separators for cross-platform consistency
+            $relativePath = str_replace('\\', '/', $relativePath);
             $this->components[$componentName] = $relativePath;
         }
     }

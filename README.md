@@ -1014,10 +1014,6 @@ Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansi
 
 ## Quick Start
 
-```bash
-composer require sugar/templating
-```
-
 ### Basic Usage (Recommended)
 
 The high-level `Engine` API provides caching, template loading, and context binding out of the box:
