@@ -5,7 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 

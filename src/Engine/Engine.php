@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar;
+namespace Sugar\Engine;
 
 use Closure;
 use Sugar\Cache\CachedTemplate;
@@ -9,6 +9,7 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
+use Sugar\EngineBuilder;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -54,10 +55,10 @@ final class Engine implements EngineInterface
     public function render(string $template, array $data = []): string
     {
         // Get compiled PHP code
-        [$compiled, $tracker] = $this->getCompiledTemplate($template);
+        $compiled = $this->getCompiledTemplate($template);
 
         // Execute the compiled template
-        return $this->execute($compiled, $data, $tracker);
+        return $this->execute($compiled->path, $data, $compiled->tracker);
     }
 
     /**
@@ -74,9 +75,9 @@ final class Engine implements EngineInterface
      * Get compiled template (from cache or compile fresh)
      *
      * @param string $template Template path
-     * @return array{0: string, 1: \Sugar\Cache\DependencyTracker|null} Compiled path and tracker
+     * @return \Sugar\Engine\CompiledTemplateResult Compiled path and tracker
      */
-    private function getCompiledTemplate(string $template): array
+    private function getCompiledTemplate(string $template): CompiledTemplateResult
     {
         // Use template as cache key
         $cacheKey = $template;
@@ -84,7 +85,7 @@ final class Engine implements EngineInterface
         // Try to get from cache
         $cached = $this->cache->get($cacheKey, $this->debug);
         if ($cached instanceof CachedTemplate) {
-            return [$cached->path, null];
+            return new CompiledTemplateResult($cached->path, null);
         }
 
         // Cache miss or stale - compile and cache
@@ -102,7 +103,7 @@ final class Engine implements EngineInterface
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);
 
-        return [$cachedPath, $tracker];
+        return new CompiledTemplateResult($cachedPath, $tracker);
     }
 
     /**

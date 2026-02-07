@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\EngineBuilder;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\FileTemplateLoader;

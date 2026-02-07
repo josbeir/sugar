@@ -8,6 +8,7 @@ use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
+use Sugar\Engine\Engine;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\DirectiveRegistryInterface;
@@ -115,7 +116,7 @@ final class EngineBuilder
     /**
      * Build the engine
      *
-     * @return \Sugar\Engine Configured engine instance
+     * @return \Sugar\Engine\Engine Configured engine instance
      * @throws \RuntimeException If required dependencies are missing
      */
     public function build(): Engine

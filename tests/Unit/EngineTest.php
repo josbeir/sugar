@@ -6,7 +6,7 @@ namespace Sugar\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\FileCache;
-use Sugar\Engine;
+use Sugar\Engine\Engine;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
