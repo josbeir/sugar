@@ -205,9 +205,8 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify source file (newer timestamp)
-        sleep(1);
         file_put_contents($sourcePath, '<?php echo "v2";');
-        touch($sourcePath); // Update mtime
+        $this->bumpFileMtime($sourcePath);
         clearstatcache(); // Clear PHP's stat cache
 
         // Create new FileCache instance to simulate new request
@@ -249,9 +248,8 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify layout (dependency)
-        sleep(1);
         file_put_contents($layoutPath, '<?php echo "layout v2";');
-        touch($layoutPath);
+        $this->bumpFileMtime($layoutPath);
         clearstatcache(); // Clear PHP's stat cache
 
         // Create new FileCache instance to simulate new request (shares same cache files)
@@ -296,9 +294,8 @@ final class FileCacheTest extends TestCase
         $this->cache->put($sourcePath, '<?php echo "cached";', $metadata);
 
         // Modify source file
-        sleep(1);
         file_put_contents($sourcePath, '<?php echo "v2";');
-        touch($sourcePath);
+        $this->bumpFileMtime($sourcePath);
 
         // Production mode (debug=false) should still return cached
         $cached = $this->cache->get($sourcePath, debug: false);
@@ -630,9 +627,8 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         // Modify source file
-        sleep(1);
         file_put_contents($sourcePath, '<?php echo "v2";');
-        touch($sourcePath);
+        $this->bumpFileMtime($sourcePath);
         clearstatcache(); // Simulate cache clearing
 
         // Create NEW FileCache instance (simulates new request)

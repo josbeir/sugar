@@ -71,6 +71,19 @@ trait TempDirectoryTrait
     }
 
     /**
+     * Force a file's mtime forward without waiting.
+     */
+    protected function bumpFileMtime(string $path, int $seconds = 2): void
+    {
+        $now = time();
+        $current = is_file($path) ? filemtime($path) : false;
+        $target = $current !== false ? max($current + $seconds, $now + $seconds) : $now + $seconds;
+
+        touch($path, $target);
+        clearstatcache();
+    }
+
+    /**
      * Automatically clean up temp directories after each test
      * This hooks into PHPUnit's tearDown
      */

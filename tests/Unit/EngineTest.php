@@ -85,8 +85,8 @@ final class EngineTest extends TestCase
         $this->assertStringContainsString('<div>v1</div>', $result1);
 
         // Modify template
-        sleep(1);
         file_put_contents($templatePath, '<div>Modified: <?= $content ?></div>');
+        $this->bumpFileMtime($templatePath);
         clearstatcache();
 
         // Without debug mode, uses cached version
