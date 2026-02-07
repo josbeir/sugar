@@ -17,6 +17,7 @@ use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -77,6 +78,13 @@ final class ComponentExpansionPass implements PassInterface
                 if ($node instanceof ComponentNode) {
                     // Expand component - return array of nodes
                     return $this->expandComponent($node, $context);
+                }
+
+                if ($node instanceof ElementNode || $node instanceof FragmentNode) {
+                    $component = $this->tryConvertComponentDirective($node, $context);
+                    if ($component instanceof ComponentNode) {
+                        return $this->expandComponent($component, $context);
+                    }
                 }
 
                 // Recurse into children for other nodes
@@ -185,8 +193,57 @@ final class ComponentExpansionPass implements PassInterface
                 return $this->expandComponent($node, $context);
             }
 
+            if ($node instanceof ElementNode || $node instanceof FragmentNode) {
+                $component = $this->tryConvertComponentDirective($node, $context);
+                if ($component instanceof ComponentNode) {
+                    return $this->expandComponent($component, $context);
+                }
+            }
+
             return $recurse($node);
         });
+    }
+
+    /**
+     * Convert s:component directive on an element/fragment into a ComponentNode.
+     *
+     * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $node Node to inspect
+     * @param \Sugar\Context\CompilationContext|null $context Compilation context for errors
+     * @return \Sugar\Ast\ComponentNode|null Component node or null if not applicable
+     */
+    private function tryConvertComponentDirective(
+        ElementNode|FragmentNode $node,
+        ?CompilationContext $context,
+    ): ?ComponentNode {
+        $attrName = $this->prefixHelper->buildName('component');
+        $result = AttributeHelper::findAttributeWithIndex($node->attributes, $attrName);
+
+        if ($result === null) {
+            return null;
+        }
+
+        [$attr, $index] = $result;
+        $value = $attr->value;
+
+        if (!is_string($value) || $value === '') {
+            $message = 'Component name must be a non-empty string.';
+            if ($context instanceof CompilationContext) {
+                throw $context->createException(SyntaxException::class, $message, $attr->line, $attr->column);
+            }
+
+            throw new SyntaxException($message);
+        }
+
+        $attributes = $node->attributes;
+        array_splice($attributes, $index, 1);
+
+        return new ComponentNode(
+            name: $value,
+            attributes: $attributes,
+            children: $node->children,
+            line: $node->line,
+            column: $node->column,
+        );
     }
 
     /**

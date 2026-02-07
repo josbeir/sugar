@@ -184,6 +184,31 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('Body content', $code);
     }
 
+    public function testExpandsComponentDirectiveOnElement(): void
+    {
+        $template = '<div s:component="button">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $code = $this->astToString($result);
+        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertStringContainsString('Click', $code);
+    }
+
+    public function testExpandsComponentDirectiveOnFragment(): void
+    {
+        $template = '<s-template s:component="alert" s-bind:type="\'info\'">Hello</s-template>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $code = $this->astToString($result);
+        $this->assertStringContainsString('class="alert alert-info"', $code);
+        $this->assertStringContainsString('Hello', $code);
+        $this->assertStringContainsString("'type' => 'info'", $code);
+    }
+
     /**
      * Helper to convert AST back to string for assertions
      */

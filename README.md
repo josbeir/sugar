@@ -805,6 +805,24 @@ Create reusable UI components with slots and attribute merging. Components are t
 </button>
 ```
 
+#### Dynamic Component Invocation (`s:component`)
+
+Use the `s:component` directive to invoke a component by name on any element or fragment. This is functionally equivalent to `<s-name>` syntax and uses the same expansion pipeline.
+
+```html
+<!-- Element form -->
+<div s:component="button">Click Me</div>
+
+<!-- Fragment form (no wrapper element) -->
+<s-template s:component="alert" s-bind:type="'info'">
+    Hello
+</s-template>
+```
+
+**Notes**:
+- The `s:component` value must be a non-empty literal component name.
+- Use this when you need to choose the component tag dynamically in markup while keeping a consistent element shape.
+
 #### Component Props with `s-bind:`
 
 Pass data to components as props using the `s-bind:` prefix. Props become variables inside the component scope.
