@@ -329,12 +329,17 @@ final class ComponentExpansionPass implements PassInterface
         $categorized = $this->attributeCategorizer->categorize($attributes);
 
         $bindingsExpression = '[]';
+        $bindContext = $this->prefixHelper->buildName('bind') . ' attribute';
         if ($categorized->componentBindings instanceof AttributeNode) {
             $bindAttribute = $categorized->componentBindings;
             $bindingsValue = $bindAttribute->value;
 
             if ($bindingsValue === null) {
-                $message = 's:bind attribute must have a value (e.g., s:bind="[\'key\' => $value]")';
+                $message = sprintf(
+                    '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
+                    $this->prefixHelper->buildName('bind'),
+                    $this->prefixHelper->buildName('bind'),
+                );
                 if ($context instanceof CompilationContext) {
                     throw $context->createException(
                         SyntaxException::class,
@@ -353,7 +358,7 @@ final class ComponentExpansionPass implements PassInterface
 
             ExpressionValidator::validateArrayExpression(
                 $bindingsExpression,
-                's:bind attribute',
+                $bindContext,
                 $context,
                 $bindAttribute->line,
                 $bindAttribute->column,
@@ -491,13 +496,19 @@ final class ComponentExpansionPass implements PassInterface
     ): DocumentNode {
         $arrayItems = [];
 
+        $bindContext = $this->prefixHelper->buildName('bind') . ' attribute';
+
         // Add component bindings using spread operator if provided
         if ($bindAttribute instanceof AttributeNode) {
             $bindingsExpression = $bindAttribute->value;
 
             // s:bind attribute must have a value
             if ($bindingsExpression === null) {
-                $message = 's:bind attribute must have a value (e.g., s:bind="[\'key\' => $value]")';
+                $message = sprintf(
+                    '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
+                    $this->prefixHelper->buildName('bind'),
+                    $this->prefixHelper->buildName('bind'),
+                );
                 if ($context instanceof CompilationContext) {
                     throw $context->createException(
                         SyntaxException::class,
@@ -517,7 +528,7 @@ final class ComponentExpansionPass implements PassInterface
             // Validate that expression could be an array at compile time
             ExpressionValidator::validateArrayExpression(
                 $expression,
-                's:bind attribute',
+                $bindContext,
                 $context,
                 $bindAttribute->line,
                 $bindAttribute->column,

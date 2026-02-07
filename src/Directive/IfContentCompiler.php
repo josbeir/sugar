@@ -81,7 +81,7 @@ readonly class IfContentCompiler implements DirectiveCompilerInterface, ElementE
             // Build attributes string
             $attributes = '';
             foreach ($element->attributes as $attr) {
-                if ($attr->name !== 's:ifcontent' && $attr->name !== 'ifcontent') {
+                if (!$this->isIfContentAttribute($attr->name)) {
                     if ($attr->value === null) {
                         $attributes .= ' ' . $attr->name;
                     } elseif (is_string($attr->value)) {
@@ -181,5 +181,13 @@ readonly class IfContentCompiler implements DirectiveCompilerInterface, ElementE
         $directiveNode->setElementNode($elementForIfContent);
 
         return $directiveNode;
+    }
+
+    /**
+     * Check whether an attribute name targets the ifcontent directive.
+     */
+    private function isIfContentAttribute(string $name): bool
+    {
+        return $name === 'ifcontent' || str_ends_with($name, ':ifcontent');
     }
 }
