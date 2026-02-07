@@ -11,6 +11,7 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
@@ -98,6 +99,7 @@ final class CodeGenerator
             ElementNode::class => $this->generateElement($node, $buffer),
             FragmentNode::class => $this->generateFragment($node, $buffer),
             DirectiveNode::class => $this->generateDirective($node, $buffer),
+            RuntimeCallNode::class => $this->generateRuntimeCall($node, $buffer),
             default => throw UnsupportedNodeException::forNodeType(
                 $node::class,
                 $this->context->templatePath,
@@ -238,8 +240,20 @@ final class CodeGenerator
         // Special case: empty name means this is a spread directive output
         // Output it directly without name= wrapper (e.g., <php echo spreadAttrs($attrs) >)
         if ($attribute->name === '' && $attribute->value instanceof OutputNode) {
-            $buffer->write(' ');
-            $this->generateOutput($attribute->value, $buffer);
+            $expression = $attribute->value->expression;
+            if ($attribute->value->pipes !== null) {
+                $expression = $this->compilePipes($expression, $attribute->value->pipes);
+            }
+
+            if ($attribute->value->escape) {
+                $expression = $this->escaper->generateEscapeCode($expression, $attribute->value->context);
+            }
+
+            $buffer->write(sprintf(
+                '<?php $__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr;%s } ?>',
+                $expression,
+                $this->debugComment($attribute->value, 'attr'),
+            ));
 
             return;
         }
@@ -273,6 +287,23 @@ final class CodeGenerator
         foreach ($node->children as $child) {
             $this->generateNode($child, $buffer);
         }
+    }
+
+    /**
+     * Generate runtime call output
+     *
+     * @param \Sugar\Ast\RuntimeCallNode $node Runtime call node
+     * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer
+     */
+    private function generateRuntimeCall(RuntimeCallNode $node, OutputBuffer $buffer): void
+    {
+        $arguments = implode(', ', $node->arguments);
+        $buffer->write(sprintf(
+            '<?php echo %s(%s);%s ?>',
+            $node->callableExpression,
+            $arguments,
+            $this->debugComment($node, 'runtime'),
+        ));
     }
 
     /**

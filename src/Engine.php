@@ -9,6 +9,8 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Runtime\ComponentRenderer;
+use Sugar\Runtime\RuntimeEnvironment;
 
 /**
  * Sugar template engine
@@ -111,17 +113,31 @@ final class Engine implements EngineInterface
      */
     private function execute(string $compiledPath, array $data): string
     {
-        // Include the compiled file and execute the closure
-        $fn = include $compiledPath;
-        if ($fn instanceof Closure) {
-            // Bind to template context if provided (enables $this->helper() calls)
-            if ($this->templateContext !== null) {
-                $fn = $fn->bindTo($this->templateContext);
+        $renderer = new ComponentRenderer(
+            compiler: $this->compiler,
+            loader: $this->loader,
+            cache: $this->cache,
+            debug: $this->debug,
+            templateContext: $this->templateContext,
+        );
+
+        RuntimeEnvironment::setRenderer($renderer);
+
+        try {
+            // Include the compiled file and execute the closure
+            $fn = include $compiledPath;
+            if ($fn instanceof Closure) {
+                // Bind to template context if provided (enables $this->helper() calls)
+                if ($this->templateContext !== null) {
+                    $fn = $fn->bindTo($this->templateContext);
+                }
+
+                return $fn($data);
             }
 
-            return $fn($data);
+            return '';
+        } finally {
+            RuntimeEnvironment::clearRenderer();
         }
-
-        return '';
     }
 }

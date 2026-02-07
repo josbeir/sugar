@@ -14,6 +14,7 @@ use Sugar\Ast\Helper\ExpressionValidator;
 use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
@@ -25,7 +26,9 @@ use Sugar\Parser\Parser;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\Helper\SlotOutputHelper;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
+use Sugar\Runtime\RuntimeEnvironment;
 
 /**
  * Expands component invocations into their template content
@@ -95,6 +98,10 @@ final class ComponentExpansionPass implements PassInterface
 
                 if ($node instanceof ElementNode || $node instanceof FragmentNode) {
                     $component = $this->tryConvertComponentDirective($node, $context);
+                    if ($component instanceof RuntimeCallNode) {
+                        return $component;
+                    }
+
                     if ($component instanceof ComponentNode) {
                         return $this->expandComponent($component, $context);
                     }
@@ -214,6 +221,10 @@ final class ComponentExpansionPass implements PassInterface
 
             if ($node instanceof ElementNode || $node instanceof FragmentNode) {
                 $component = $this->tryConvertComponentDirective($node, $context);
+                if ($component instanceof RuntimeCallNode) {
+                    return $component;
+                }
+
                 if ($component instanceof ComponentNode) {
                     return $this->expandComponent($component, $context);
                 }
@@ -228,12 +239,12 @@ final class ComponentExpansionPass implements PassInterface
      *
      * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $node Node to inspect
      * @param \Sugar\Context\CompilationContext|null $context Compilation context for errors
-     * @return \Sugar\Ast\ComponentNode|null Component node or null if not applicable
+     * @return \Sugar\Ast\ComponentNode|\Sugar\Ast\RuntimeCallNode|null Component node or null if not applicable
      */
     private function tryConvertComponentDirective(
         ElementNode|FragmentNode $node,
         ?CompilationContext $context,
-    ): ?ComponentNode {
+    ): ComponentNode|RuntimeCallNode|null {
         $attrName = $this->prefixHelper->buildName('component');
         $result = AttributeHelper::findAttributeWithIndex($node->attributes, $attrName);
 
@@ -256,13 +267,164 @@ final class ComponentExpansionPass implements PassInterface
         $attributes = $node->attributes;
         array_splice($attributes, $index, 1);
 
-        return new ComponentNode(
-            name: $value,
+        $literalName = $this->normalizeComponentName($value);
+        if ($literalName !== null) {
+            return new ComponentNode(
+                name: $literalName,
+                attributes: $attributes,
+                children: $node->children,
+                line: $node->line,
+                column: $node->column,
+            );
+        }
+
+        return $this->createRuntimeComponentCall(
+            nameExpression: $value,
             attributes: $attributes,
             children: $node->children,
             line: $node->line,
             column: $node->column,
+            context: $context,
         );
+    }
+
+    /**
+     * Normalize a literal component name or return null for expressions
+     */
+    private function normalizeComponentName(string $value): ?string
+    {
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (preg_match('/^([\"\"]).+\1$/s', $trimmed) === 1) {
+            $trimmed = substr($trimmed, 1, -1);
+        }
+
+        if (preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $trimmed) !== 1) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    /**
+     * Create a runtime call node for dynamic component rendering
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Ast\Node> $children
+     */
+    private function createRuntimeComponentCall(
+        string $nameExpression,
+        array $attributes,
+        array $children,
+        int $line,
+        int $column,
+        ?CompilationContext $context,
+    ): RuntimeCallNode {
+        $categorized = $this->categorizeAttributes($attributes);
+
+        $bindingsExpression = '[]';
+        if ($categorized['componentBindings'] instanceof AttributeNode) {
+            $bindAttribute = $categorized['componentBindings'];
+            $bindingsValue = $bindAttribute->value;
+
+            if ($bindingsValue === null) {
+                $message = 's:bind attribute must have a value (e.g., s:bind="[\'key\' => $value]")';
+                if ($context instanceof CompilationContext) {
+                    throw $context->createException(
+                        SyntaxException::class,
+                        $message,
+                        $bindAttribute->line,
+                        $bindAttribute->column,
+                    );
+                }
+
+                throw new SyntaxException($message);
+            }
+
+            $bindingsExpression = $bindingsValue instanceof OutputNode
+                ? $bindingsValue->expression
+                : $bindingsValue;
+
+            ExpressionValidator::validateArrayExpression(
+                $bindingsExpression,
+                's:bind attribute',
+                $context,
+                $bindAttribute->line,
+                $bindAttribute->column,
+            );
+        }
+
+        $slots = $this->extractSlots($children);
+        $defaultSlot = $this->extractDefaultSlot($children);
+
+        $slotsExpression = $this->buildSlotsExpression($slots, $defaultSlot);
+        $attributesExpression = $this->buildRuntimeAttributesExpression(array_merge(
+            $categorized['merge'],
+            $categorized['attributeDirectives'],
+        ));
+
+        return new RuntimeCallNode(
+            callableExpression: RuntimeEnvironment::class . '::getRenderer()->renderComponent',
+            arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
+            line: $line,
+            column: $column,
+        );
+    }
+
+    /**
+     * Build runtime slot array expression
+     *
+     * @param array<string, array<\Sugar\Ast\Node>> $namedSlots
+     * @param array<\Sugar\Ast\Node> $defaultSlot
+     */
+    private function buildSlotsExpression(array $namedSlots, array $defaultSlot): string
+    {
+        $items = [];
+
+        if ($defaultSlot === []) {
+            $items[] = "'slot' => ''";
+        } else {
+            $items[] = sprintf("'slot' => %s", $this->nodesToPhpString($defaultSlot));
+        }
+
+        foreach ($namedSlots as $name => $nodes) {
+            $items[] = sprintf("'%s' => %s", $name, $this->nodesToPhpString($nodes));
+        }
+
+        return '[' . implode(', ', $items) . ']';
+    }
+
+    /**
+     * Build runtime attributes array expression
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes
+     */
+    private function buildRuntimeAttributesExpression(array $attributes): string
+    {
+        if ($attributes === []) {
+            return '[]';
+        }
+
+        $items = [];
+        foreach ($attributes as $attr) {
+            $key = var_export($attr->name, true);
+
+            if ($attr->value instanceof OutputNode) {
+                $value = $attr->value->expression;
+            } elseif ($attr->value === null) {
+                $value = 'null';
+            } else {
+                $value = var_export($attr->value, true);
+            }
+
+            $items[] = $key . ' => ' . $value;
+        }
+
+        return '[' . implode(', ', $items) . ']';
     }
 
     /**
@@ -556,69 +718,10 @@ final class ComponentExpansionPass implements PassInterface
         }
 
         // Automatically disable escaping for slot variable outputs in component template
-        $this->processNodeForSlotWrapping($template, $slotVars);
+        SlotOutputHelper::disableEscaping($template, $slotVars);
 
         // Use trait method for consistent closure wrapping with parent passes
         return $this->wrapInIsolatedScope($template, '[' . implode(', ', $arrayItems) . ']');
-    }
-
-    /**
-     * Recursively process nodes to disable escaping for slot outputs
-     *
-     * Traverses the component template AST and sets escape=false for any OutputNode
-     * referencing a slot variable (e.g., $slot, $header, $footer).
-     *
-     * Slots contain pre-rendered HTML from component usage, so escaping would
-     * double-escape them (e.g., <strong> becomes &lt;strong&gt;).
-     *
-     * @param \Sugar\Ast\Node $node Node to process
-     * @param array<string> $slotVars List of slot variable names
-     */
-    private function processNodeForSlotWrapping(Node $node, array $slotVars): void
-    {
-        if ($node instanceof OutputNode) {
-            // Check if this output references a slot variable
-            // Match patterns like: $slot, $header, ($slot), $footer ?? '', isset($slot) ? $slot : ''
-            foreach ($slotVars as $varName) {
-                if ($this->expressionReferencesVariable($node->expression, $varName)) {
-                    // Disable escaping for this slot output (it's already safe HTML)
-                    $node->escape = false;
-                    break;
-                }
-            }
-        }
-
-        // Recursively process children for all node types that have them
-        if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof DocumentNode) {
-            foreach ($node->children as $child) {
-                $this->processNodeForSlotWrapping($child, $slotVars);
-            }
-        }
-
-        // Process element attributes (for OutputNode in attribute values)
-        if ($node instanceof ElementNode) {
-            foreach ($node->attributes as $attr) {
-                if ($attr->value instanceof OutputNode) {
-                    $this->processNodeForSlotWrapping($attr->value, $slotVars);
-                }
-            }
-        }
-    }
-
-    /**
-     * Check if a PHP expression references a specific variable
-     *
-     * @param string $expression PHP expression
-     * @param string $varName Variable name (without $)
-     * @return bool True if expression references the variable
-     */
-    private function expressionReferencesVariable(string $expression, string $varName): bool
-    {
-        // Match $varName as a standalone variable or with array/object access
-        // Patterns: $slot, $slot['key'], $slot->prop, ($slot), $slot ?? ''
-        $pattern = '/\$' . preg_quote($varName, '/') . '(?![a-zA-Z0-9_])/';
-
-        return (bool)preg_match($pattern, $expression);
     }
 
     /**

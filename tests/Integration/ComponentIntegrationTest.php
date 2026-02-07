@@ -4,10 +4,14 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
+use Sugar\Engine;
 use Sugar\Escape\Escaper;
+use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
@@ -18,17 +22,20 @@ final class ComponentIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
     use ExecuteTemplateTrait;
+    use TempDirectoryTrait;
     use TemplateTestHelperTrait;
 
     private string $templatesPath;
 
+    private SugarConfig $config;
+
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
-        $config = new SugarConfig();
+        $this->config = new SugarConfig();
 
         $this->setUpCompiler(
-            config: $config,
+            config: $this->config,
             withTemplateLoader: true,
             templatePaths: [$this->templatesPath],
             componentPaths: ['components'],
@@ -673,5 +680,90 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('Page Content', $output);
         $this->assertStringNotContainsString('Default Header', $output);
         $this->assertStringNotContainsString('Default Main', $output);
+    }
+
+    public function testDynamicComponentWithBindingsAndSlots(): void
+    {
+        $engine = $this->createEngineWithTemplate(
+            '<div s:component="$component" s:bind="[\'header\' => \'Dynamic Header\']">'
+            . '<p>Body</p>'
+            . '<div s:slot="footer">Footer</div>'
+            . '</div>',
+        );
+
+        $output = $engine->render('dynamic', ['component' => 'card']);
+
+        $this->assertStringContainsString('Dynamic Header', $output);
+        $this->assertStringContainsString('Body', $output);
+        $this->assertStringContainsString('Footer', $output);
+        $this->assertStringContainsString('class="card"', $output);
+    }
+
+    public function testDynamicComponentRespectsControlFlow(): void
+    {
+        $engine = $this->createEngineWithTemplate(
+            '<div s:if="$show">'
+            . '<div s:component="$component">Save</div>'
+            . '</div>',
+        );
+
+        $output = $engine->render('dynamic', ['component' => 'button', 'show' => true]);
+        $this->assertStringContainsString('<button class="btn">Save</button>', $output);
+
+        $output = $engine->render('dynamic', ['component' => 'button', 'show' => false]);
+        $this->assertStringNotContainsString('<button', $output);
+    }
+
+    public function testDynamicComponentWithTemplateInheritance(): void
+    {
+        $engine = $this->createEngineWithTemplate(
+            '<div s:component="$component" s:bind="[\'title\' => \'My Panel\']">Panel Content</div>',
+        );
+
+        $output = $engine->render('dynamic', ['component' => 'custom-panel']);
+
+        $this->assertStringContainsString('base-panel', $output);
+        $this->assertStringContainsString('My Panel', $output);
+        $this->assertStringContainsString('Panel Content', $output);
+    }
+
+    public function testDynamicComponentWithComplexExpression(): void
+    {
+        $engine = $this->createEngineWithTemplate(
+            '<div s:component="$componentName ?? \'button\'">Default</div>'
+            . '<div s:component="$useAlert ? \'alert\' : \'button\'">Conditional</div>',
+        );
+
+        $output = $engine->render('dynamic', ['componentName' => null, 'useAlert' => false]);
+
+        $this->assertStringContainsString('<button class="btn">Default</button>', $output);
+        $this->assertStringContainsString('<button class="btn">Conditional</button>', $output);
+
+        $output = $engine->render('dynamic', ['componentName' => 'alert', 'useAlert' => true]);
+
+        $this->assertStringContainsString('class="alert alert-info"', $output);
+        $this->assertStringContainsString('Default', $output);
+        $this->assertStringContainsString('Conditional', $output);
+    }
+
+    private function createEngineWithTemplate(string $template): Engine
+    {
+        $templateDir = $this->createTempDir('sugar_templates_');
+        $templatePath = $templateDir . '/dynamic.sugar.php';
+        file_put_contents($templatePath, $template);
+
+        $loader = new FileTemplateLoader(
+            $this->config,
+            [$this->templatesPath, $templateDir],
+            ['components'],
+        );
+
+        $cacheDir = $this->createTempDir('sugar_cache_');
+        $cache = new FileCache($cacheDir);
+
+        return Engine::builder($this->config)
+            ->withTemplateLoader($loader)
+            ->withCache($cache)
+            ->build();
     }
 }

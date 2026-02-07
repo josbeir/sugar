@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RuntimeCallNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
 use Sugar\Escape\Escaper;
@@ -251,6 +252,21 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->debugGenerator->generate($ast);
 
         $this->assertStringContainsString('/* L4:C10 s:html */', $code);
+    }
+
+    public function testGenerateRuntimeCallNode(): void
+    {
+        $ast = $this->document()
+            ->withChild(new RuntimeCallNode('strlen', ["'test'"], 1, 1))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString("echo strlen('test')", $code);
+
+        $output = $this->executeTemplate($code);
+
+        $this->assertSame('4', $output);
     }
 
     public function testNoDebugCommentsWhenDisabled(): void

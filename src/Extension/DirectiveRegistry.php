@@ -82,6 +82,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         // Pass-through (handled by other passes)
         'slot' => PassThroughCompiler::class,
         'bind' => PassThroughCompiler::class,
+        'component' => PassThroughCompiler::class,
     ];
 
     /**

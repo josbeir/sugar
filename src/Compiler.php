@@ -8,6 +8,7 @@ use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
+use Sugar\Exception\TemplateRuntimeException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -16,6 +17,8 @@ use Sugar\Pass\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\Helper\ComponentAttributeOverrideHelper;
+use Sugar\Pass\Helper\SlotOutputHelper;
 use Sugar\Pass\TemplateInheritancePass;
 
 /**
@@ -41,6 +44,8 @@ final class Compiler implements CompilerInterface
 
     private readonly ?ComponentExpansionPass $componentExpansionPass;
 
+    private readonly ?TemplateLoaderInterface $templateLoader;
+
     /**
      * Constructor
      *
@@ -60,6 +65,7 @@ final class Compiler implements CompilerInterface
         $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
         $this->registry = $registry;
+        $this->templateLoader = $templateLoader;
 
         // Create passes
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
@@ -71,13 +77,13 @@ final class Compiler implements CompilerInterface
         $this->contextPass = new ContextAnalysisPass();
 
         // Create template inheritance pass if loader is provided
-        $this->templateInheritancePass = $templateLoader instanceof TemplateLoaderInterface
-            ? new TemplateInheritancePass($templateLoader, $config)
+        $this->templateInheritancePass = $this->templateLoader instanceof TemplateLoaderInterface
+            ? new TemplateInheritancePass($this->templateLoader, $config)
             : null;
 
         // Create component expansion pass if loader is provided
-        $this->componentExpansionPass = $templateLoader instanceof TemplateLoaderInterface
-            ? new ComponentExpansionPass($templateLoader, $this->parser, $this->registry, $config)
+        $this->componentExpansionPass = $this->templateLoader instanceof TemplateLoaderInterface
+            ? new ComponentExpansionPass($this->templateLoader, $this->parser, $this->registry, $config)
             : null;
     }
 
@@ -130,6 +136,62 @@ final class Compiler implements CompilerInterface
         $analyzedAst = $this->contextPass->execute($transformedAst, $context);
 
         // Step 7: Generate executable PHP code with inline escaping
+        $generator = new CodeGenerator($this->escaper, $context);
+
+        return $generator->generate($analyzedAst);
+    }
+
+    /**
+     * Compile a component template variant with runtime slots and attributes
+     *
+     * @param string $componentName Component name
+     * @param array<string> $slotNames Slot variable names to mark as raw
+     * @param bool $debug Enable debug mode
+     * @param \Sugar\Cache\DependencyTracker|null $tracker Dependency tracker
+     * @return string Compiled PHP code
+     */
+    public function compileComponentVariant(
+        string $componentName,
+        array $slotNames = [],
+        bool $debug = false,
+        ?DependencyTracker $tracker = null,
+    ): string {
+        if (!$this->templateLoader instanceof TemplateLoaderInterface) {
+            throw new TemplateRuntimeException('Template loader is required for components.');
+        }
+
+        $templateContent = $this->templateLoader->loadComponent($componentName);
+        $componentPath = $this->templateLoader->getComponentPath($componentName);
+
+        $tracker?->addComponent($componentName);
+
+        $context = new CompilationContext(
+            $componentPath,
+            $templateContent,
+            $debug,
+            $tracker,
+        );
+
+        $ast = $this->parser->parse($templateContent);
+
+        if ($this->templateInheritancePass instanceof TemplateInheritancePass) {
+            $ast = $this->templateInheritancePass->execute($ast, $context);
+        }
+
+        $ast = $this->directiveExtractionPass->execute($ast, $context);
+        $ast = $this->directivePairingPass->execute($ast, $context);
+        $ast = $this->directiveCompilationPass->execute($ast, $context);
+
+        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
+            $ast = $this->componentExpansionPass->execute($ast, $context);
+        }
+
+        ComponentAttributeOverrideHelper::apply($ast, '$__sugar_attrs');
+
+        $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
+        SlotOutputHelper::disableEscaping($ast, $slotVars);
+
+        $analyzedAst = $this->contextPass->execute($ast, $context);
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);

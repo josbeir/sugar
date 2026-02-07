@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
+use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
@@ -208,6 +209,17 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('class="alert alert-info"', $code);
         $this->assertStringContainsString('Hello', $code);
         $this->assertStringContainsString("'type' => 'info'", $code);
+    }
+
+    public function testCreatesRuntimeCallForDynamicComponentDirective(): void
+    {
+        $template = '<div s:component="$componentName">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->pass->execute($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
     }
 
     /**
