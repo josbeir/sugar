@@ -10,6 +10,8 @@ use Sugar\Directive\IfContentCompiler;
 use Sugar\Directive\TagCompiler;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Runtime\HtmlTagHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -28,9 +30,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
     use CompilerTestTrait;
     use TemplateTestHelperTrait;
 
-    private DirectiveExtractionPass $extractionPass;
-
-    private DirectiveCompilationPass $compilationPass;
+    private AstMiddlewarePipeline $pipeline;
 
     private CodeGenerator $generator;
 
@@ -41,8 +41,14 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $this->registry->register('tag', new TagCompiler());
         $this->registry->register('ifcontent', new IfContentCompiler());
 
-        $this->extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
-        $this->compilationPass = new DirectiveCompilationPass($this->registry);
+        $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
+        $pairingPass = new DirectivePairingPass($this->registry);
+        $compilationPass = new DirectiveCompilationPass($this->registry);
+        $this->pipeline = new AstMiddlewarePipeline([
+            $extractionPass,
+            $pairingPass,
+            $compilationPass,
+        ]);
         $this->generator = new CodeGenerator($this->escaper, $this->createContext());
     }
 
@@ -52,8 +58,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain tag validation
@@ -67,8 +72,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $template = '<h1 s:tag="\'h\' . $level">Title</h1>';
 
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         $this->assertStringContainsString('\'h\' . $level', $code);
@@ -80,8 +84,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $template = '<div class="card" s:ifcontent><?= $content ?></div>';
 
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain output buffering
@@ -96,8 +99,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $template = '<div s:tag="$tag" class="wrapper" s:ifcontent><?= $content ?></div>';
 
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain both tag validation and output buffering
@@ -116,8 +118,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
 SUGAR;
 
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should have multiple tag variables and content variables

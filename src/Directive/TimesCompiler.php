@@ -56,6 +56,7 @@ readonly class TimesCompiler implements DirectiveCompilerInterface
      * Compile with wrapper pattern - element is container, children repeat inside.
      *
      * @param \Sugar\Ast\DirectiveNode $node
+     * @return array<\Sugar\Ast\Node>
      */
     private function compileWithWrapper(
         Node $node,

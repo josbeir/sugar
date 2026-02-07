@@ -7,15 +7,15 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Context\ContextAnalysisPass;
-use Sugar\Pass\PassInterface;
-use Sugar\Tests\Unit\Pass\PassTestCase;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
 /**
  * Test context analysis pass
  */
-final class ContextAnalysisPassTest extends PassTestCase
+final class ContextAnalysisPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): PassInterface
+    protected function getPass(): AstMiddlewarePassInterface
     {
         return new ContextAnalysisPass();
     }

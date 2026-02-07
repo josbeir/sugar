@@ -3,26 +3,27 @@ declare(strict_types=1);
 
 namespace Sugar\Pass\Directive;
 
+use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Interface\SiblingNavigationInterface;
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\PairedDirectiveCompilerInterface;
 use Sugar\Extension\DirectiveRegistryInterface;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\NodeAction;
+use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Directive Pairing Pass
  *
- * Wires up parent references in the AST and pairs sibling directives
- * (e.g., s:forelse with s:empty, s:switch with s:case).
+ * Pairs sibling directives (e.g., s:forelse with s:empty, s:switch with s:case).
  *
  * This pass runs after DirectiveExtractionPass so it can pair DirectiveNodes
  * regardless of intervening text nodes, comments, or whitespace.
  */
-final class DirectivePairingPass implements PassInterface
+final class DirectivePairingPass implements AstMiddlewarePassInterface
 {
     /**
      * Constructor
@@ -35,71 +36,40 @@ final class DirectivePairingPass implements PassInterface
     }
 
     /**
-     * Execute the pass: wire parent references and pair sibling directives
-     *
-     * @param \Sugar\Ast\DocumentNode $ast Document to transform
-     * @return \Sugar\Ast\DocumentNode Same document with paired directives linked
+     * @inheritDoc
      */
-    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    public function before(Node $node, WalkContext $context): NodeAction
     {
-        // First pass: wire up all parent references
-        $this->wireParents($ast, null);
+        $children = $this->getChildren($node);
+        if ($children === null) {
+            return NodeAction::none();
+        }
 
-        // Second pass: pair sibling directives
-        $this->pairSiblingDirectives($ast);
+        if (!($node instanceof SiblingNavigationInterface)) {
+            return NodeAction::none();
+        }
 
-        return $ast;
+        foreach ($children as $child) {
+            if ($child instanceof DirectiveNode) {
+                $this->pairDirective($node, $child);
+            }
+        }
+
+        return NodeAction::none();
     }
 
     /**
-     * Recursively wire parent references throughout the tree
+     * @inheritDoc
      */
-    private function wireParents(Node $node, ?Node $parent): void
+    public function after(Node $node, WalkContext $context): NodeAction
     {
-        $node->setParent($parent);
-
-        // Process children array
-        if ($node instanceof DocumentNode || $node instanceof ElementNode) {
-            foreach ($node->children as $child) {
-                $this->wireParents($child, $node);
-            }
-        }
-
-        // Process DirectiveNode children
-        if ($node instanceof DirectiveNode) {
-            foreach ($node->children as $child) {
-                $this->wireParents($child, $node);
-            }
-        }
-    }
-
-    /**
-     * Find and pair sibling directives
-     */
-    private function pairSiblingDirectives(Node $node): void
-    {
-        if ($node instanceof DirectiveNode) {
-            $this->pairDirective($node);
-        }
-
-        // Recurse to children
-        if ($node instanceof DocumentNode || $node instanceof ElementNode) {
-            foreach ($node->children as $child) {
-                $this->pairSiblingDirectives($child);
-            }
-        }
-
-        if ($node instanceof DirectiveNode) {
-            foreach ($node->children as $child) {
-                $this->pairSiblingDirectives($child);
-            }
-        }
+        return NodeAction::none();
     }
 
     /**
      * Pair a directive with its sibling if it's a paired directive type
      */
-    private function pairDirective(DirectiveNode $node): void
+    private function pairDirective(SiblingNavigationInterface $parent, DirectiveNode $node): void
     {
         if (!$this->registry->has($node->name)) {
             return;
@@ -112,23 +82,31 @@ final class DirectivePairingPass implements PassInterface
         }
 
         $pairName = $compiler->getPairingDirective();
-        $parent = $node->getParent();
-
-        // Parent must support sibling navigation to enable pairing
-        if (!($parent instanceof SiblingNavigationInterface)) {
-            return;
-        }
-
         // Find next sibling with matching directive name
         $paired = $parent->findNextSibling(
             $node,
             fn($n): bool => $n instanceof DirectiveNode && $n->name === $pairName,
         );
 
-        if ($paired instanceof Node) {
-            assert($paired instanceof DirectiveNode);
+        if ($paired instanceof DirectiveNode) {
             $node->setPairedSibling($paired);
             $paired->markConsumedByPairing();
         }
+    }
+
+    /**
+     * @return array<\Sugar\Ast\Node>|null
+     */
+    private function getChildren(Node $node): ?array
+    {
+        if ($node instanceof DocumentNode || $node instanceof ElementNode) {
+            return $node->children;
+        }
+
+        if ($node instanceof DirectiveNode || $node instanceof ComponentNode) {
+            return $node->children;
+        }
+
+        return null;
     }
 }

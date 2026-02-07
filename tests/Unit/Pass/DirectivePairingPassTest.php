@@ -8,11 +8,11 @@ use Sugar\Directive\ForelseCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 
-final class DirectivePairingPassTest extends PassTestCase
+final class DirectivePairingPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): PassInterface
+    protected function getPass(): AstMiddlewarePassInterface
     {
         $registry = new DirectiveRegistry();
         $registry->register('forelse', ForelseCompiler::class);

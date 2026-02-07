@@ -22,7 +22,9 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\NodeAction;
+use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -47,7 +49,7 @@ use Sugar\Pass\PassInterface;
  * DirectiveNode(name: 'if', expression: '$user', children: [<div>Content</div>])
  * ```
  */
-final class DirectiveExtractionPass implements PassInterface
+final class DirectiveExtractionPass implements AstMiddlewarePassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
 
@@ -67,79 +69,100 @@ final class DirectiveExtractionPass implements PassInterface
     }
 
     /**
-     * Execute the pass: extract directive attributes into DirectiveNodes
-     *
-     * @param \Sugar\Ast\DocumentNode $ast Document to transform
-     * @param \Sugar\Context\CompilationContext $context Compilation context
-     * @return \Sugar\Ast\DocumentNode New document with directives extracted
+     * @inheritDoc
      */
-    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    public function before(Node $node, WalkContext $context): NodeAction
     {
-        $this->context = $context;
-        $children = $this->transformChildren($ast->children);
+        if ($node instanceof DocumentNode) {
+            $this->context = $context->compilation;
+        }
 
-        return new DocumentNode($children);
+        $this->preTransformChildren($node);
+
+        if ($node instanceof ElementNode && $this->hasDirectiveAttribute($node)) {
+            return NodeAction::replace($this->elementToDirective($node));
+        }
+
+        if ($node instanceof ComponentNode && $this->hasComponentDirectiveAttribute($node)) {
+            return NodeAction::replace($this->componentToDirective($node));
+        }
+
+        if ($node instanceof FragmentNode && $this->hasFragmentDirectiveAttribute($node)) {
+            return NodeAction::replace($this->fragmentToDirective($node));
+        }
+
+        return NodeAction::none();
     }
 
     /**
-     * Transform a list of child nodes, handling directive pairing
-     *
-     * @param array<\Sugar\Ast\Node> $nodes
-     * @return array<\Sugar\Ast\Node>
+     * @inheritDoc
      */
-    private function transformChildren(array $nodes): array
+    public function after(Node $node, WalkContext $context): NodeAction
     {
-        $result = [];
+        return NodeAction::none();
+    }
 
-        foreach ($nodes as $node) {
-            if ($node instanceof ElementNode && $this->hasDirectiveAttribute($node)) {
-                // Convert element with directive into DirectiveNode
-                // Don't pair at extraction time - let DirectivePairingPass handle that
-                $result[] = $this->elementToDirective($node);
-            } elseif ($node instanceof ComponentNode && $this->hasComponentDirectiveAttribute($node)) {
-                // Convert component with directive into DirectiveNode
-                $result[] = $this->componentToDirective($node);
-            } elseif ($node instanceof FragmentNode && $this->hasFragmentDirectiveAttribute($node)) {
-                // Convert fragment with directive into DirectiveNode
-                $result[] = $this->fragmentToDirective($node);
-            } else {
-                // Transform children recursively
-                $result[] = $this->transformNode($node);
+    /**
+     * Pre-transform immediate children into directive nodes when needed.
+     */
+    private function preTransformChildren(Node $node): void
+    {
+        $children = $this->getChildren($node);
+        if ($children === null) {
+            return;
+        }
+
+        foreach ($children as $index => $child) {
+            if ($child instanceof ElementNode && $this->hasDirectiveAttribute($child)) {
+                $children[$index] = $this->elementToDirective($child);
+                continue;
+            }
+
+            if ($child instanceof ComponentNode && $this->hasComponentDirectiveAttribute($child)) {
+                $children[$index] = $this->componentToDirective($child);
+                continue;
+            }
+
+            if ($child instanceof FragmentNode && $this->hasFragmentDirectiveAttribute($child)) {
+                $children[$index] = $this->fragmentToDirective($child);
             }
         }
 
-        return $result;
+        $this->setChildren($node, $children);
     }
 
     /**
-     * Transform a node and its children recursively
+     * @return array<\Sugar\Ast\Node>|null
      */
-    private function transformNode(Node $node): Node
+    private function getChildren(Node $node): ?array
     {
-        // Handle elements with children
-        if ($node instanceof ElementNode) {
-            $newChildren = $this->transformChildren($node->children);
-
-            return NodeCloner::withChildren($node, $newChildren);
+        if (
+            $node instanceof DocumentNode ||
+            $node instanceof ElementNode ||
+            $node instanceof FragmentNode ||
+            $node instanceof ComponentNode ||
+            $node instanceof DirectiveNode
+        ) {
+            return $node->children;
         }
 
-        // Handle components with children
-        if ($node instanceof ComponentNode) {
-            $newChildren = $this->transformChildren($node->children);
-            $node->children = $newChildren;
+        return null;
+    }
 
-            return $node;
+    /**
+     * @param array<\Sugar\Ast\Node> $children
+     */
+    private function setChildren(Node $node, array $children): void
+    {
+        if (
+            $node instanceof DocumentNode ||
+            $node instanceof ElementNode ||
+            $node instanceof FragmentNode ||
+            $node instanceof ComponentNode ||
+            $node instanceof DirectiveNode
+        ) {
+            $node->children = $children;
         }
-
-        // Handle fragments with children
-        if ($node instanceof FragmentNode) {
-            $newChildren = $this->transformChildren($node->children);
-
-            return NodeCloner::fragmentWithChildren($node, $newChildren);
-        }
-
-        // All other nodes pass through unchanged
-        return $node;
     }
 
     /**
@@ -346,7 +369,7 @@ final class DirectiveExtractionPass implements PassInterface
         $directives = $this->extractDirective($node);
 
         // Transform children recursively
-        $transformedChildren = $this->transformChildren($node->children);
+        $transformedChildren = $node->children;
 
         // If directive needs custom extraction, chain them all together
         if ($directives['customExtraction'] !== []) {
@@ -466,7 +489,7 @@ final class DirectiveExtractionPass implements PassInterface
         $directives = $this->extractDirective($node);
 
         // Transform children recursively
-        $transformedChildren = $this->transformChildren($node->children);
+        $transformedChildren = $node->children;
 
         // Components don't support custom extraction or content directives
         // If there are only attribute directives, return ComponentNode with them
@@ -599,13 +622,13 @@ final class DirectiveExtractionPass implements PassInterface
             }
 
             // Fragment with only inheritance/pass-through attributes - transform children and return
-            $transformedChildren = $this->transformChildren($node->children);
+            $transformedChildren = $node->children;
 
             return NodeCloner::fragmentWithChildren($node, $transformedChildren);
         }
 
         // Transform children recursively
-        $transformedChildren = $this->transformChildren($node->children);
+        $transformedChildren = $node->children;
 
         // If there's a content directive, wrap it as a DirectiveNode in children
         if ($contentDirective !== null) {

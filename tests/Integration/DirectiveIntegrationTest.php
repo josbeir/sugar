@@ -12,6 +12,8 @@ use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -23,9 +25,7 @@ final class DirectiveIntegrationTest extends TestCase
     use CompilerTestTrait;
     use TemplateTestHelperTrait;
 
-    private DirectiveExtractionPass $extractionPass;
-
-    private DirectiveCompilationPass $compilationPass;
+    private AstMiddlewarePipeline $pipeline;
 
     private CodeGenerator $generator;
 
@@ -36,8 +36,14 @@ final class DirectiveIntegrationTest extends TestCase
         $this->registry->register('if', new IfCompiler());
         $this->registry->register('foreach', new ForeachCompiler());
 
-        $this->extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
-        $this->compilationPass = new DirectiveCompilationPass($this->registry);
+        $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
+        $pairingPass = new DirectivePairingPass($this->registry);
+        $compilationPass = new DirectiveCompilationPass($this->registry);
+        $this->pipeline = new AstMiddlewarePipeline([
+            $extractionPass,
+            $pairingPass,
+            $compilationPass,
+        ]);
         $this->generator = new CodeGenerator($this->escaper, $this->createContext());
     }
 
@@ -49,11 +55,8 @@ final class DirectiveIntegrationTest extends TestCase
         $ast = $this->parser->parse($template);
         $this->assertInstanceOf(DocumentNode::class, $ast);
 
-        // Extract directives
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-
-        // Compile directives
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        // Extract + pair + compile directives
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
 
         // Generate code
         $code = $this->generator->generate($transformed);
@@ -74,8 +77,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain foreach/endforeach
@@ -90,9 +92,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
-        $code = $this->generator->generate($transformed);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain nested control structures
@@ -110,8 +110,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should unwrap raw() and output without escaping
@@ -126,8 +125,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should unwrap r() and output without escaping
@@ -142,8 +140,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Regular output should use Escaper::html
@@ -159,8 +156,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain call to booleanAttribute helper
@@ -177,8 +173,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain call to booleanAttribute helper
@@ -195,8 +190,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should contain call to booleanAttribute helper
@@ -213,8 +207,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Check that there's no trailing space before the closing tag
@@ -236,8 +229,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should NOT have trailing space before closing angle bracket
@@ -252,8 +244,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Parse → Extract → Compile → Generate
         $ast = $this->parser->parse($template);
-        $extracted = $this->extractionPass->execute($ast, $this->createContext());
-        $transformed = $this->compilationPass->execute($extracted, $this->createContext());
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
         // Should NOT have trailing double space before self-closing tag

@@ -14,11 +14,11 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 
-final class DirectiveCompilationPassTest extends PassTestCase
+final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): PassInterface
+    protected function getPass(): AstMiddlewarePassInterface
     {
         $this->registry = new DirectiveRegistry();
 

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass;
 
-use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -12,7 +11,6 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassCompiler;
 use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
@@ -21,15 +19,14 @@ use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 
 /**
  * Edge case tests for DirectiveExtractionPass to improve code coverage
  */
-final class DirectiveExtractionEdgeCasesTest extends TestCase
+final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 {
-    private DirectiveExtractionPass $pass;
-
-    protected function setUp(): void
+    protected function getPass(): AstMiddlewarePassInterface
     {
         $registry = new DirectiveRegistry();
         $registry->register('if', IfCompiler::class);
@@ -38,7 +35,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         $registry->register('text', new ContentCompiler(escape: true));
         $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
 
-        $this->pass = new DirectiveExtractionPass($registry, new SugarConfig());
+        return new DirectiveExtractionPass($registry, new SugarConfig());
     }
 
     public function testThrowsWhenDirectiveAttributeContainsDynamicOutput(): void
@@ -63,7 +60,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $this->pass->execute($ast, $this->createContext());
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testThrowsWhenFragmentAttributeContainsDynamicOutput(): void
@@ -86,7 +83,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->execute($ast, $this->createContext());
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testThrowsWhenFragmentHasRegularHtmlAttribute(): void
@@ -105,7 +102,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->execute($ast, $this->createContext());
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testThrowsWhenFragmentHasAttributeDirective(): void
@@ -123,7 +120,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $this->pass->execute($ast, $this->createContext());
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testFragmentWithContentDirective(): void
@@ -138,7 +135,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
@@ -159,7 +156,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$fragment]);
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         // Should have if directive wrapping html directive
         $this->assertCount(1, $result->children);
@@ -186,7 +183,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         // Should return ElementNode with compiled class attribute
         $this->assertInstanceOf(DocumentNode::class, $result);
@@ -216,7 +213,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
         $directive = $result->children[0];
@@ -240,7 +237,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->execute($ast, $this->createTestContext());
 
         // Should wrap: if -> element containing text directive
         $this->assertCount(1, $result->children);
@@ -277,7 +274,7 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $this->pass->execute($ast, $this->createContext());
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testThrowsOnMultipleContentDirectives(): void
@@ -298,14 +295,6 @@ final class DirectiveExtractionEdgeCasesTest extends TestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $this->pass->execute($ast, $this->createContext());
-    }
-
-    protected function createContext(
-        string $source = '',
-        string $templatePath = 'test.sugar.php',
-        bool $debug = false,
-    ): CompilationContext {
-        return new CompilationContext($templatePath, $source, $debug);
+        $this->execute($ast, $this->createTestContext());
     }
 }

@@ -8,30 +8,29 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\CompilationContext;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\CustomConstraintsTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 /**
- * Base class for compilation pass tests
- *
- * Provides common setup and helper methods for testing compilation passes
+ * Base class for middleware pass tests
  */
-abstract class PassTestCase extends TestCase
+abstract class MiddlewarePassTestCase extends TestCase
 {
     use AstAssertionsTrait;
     use CompilerTestTrait;
     use CustomConstraintsTrait;
     use NodeBuildersTrait;
 
-    protected PassInterface $pass;
+    protected AstMiddlewarePassInterface $pass;
 
     /**
-     * Get the pass instance to test
+     * Get the middleware pass instance to test
      */
-    abstract protected function getPass(): PassInterface;
+    abstract protected function getPass(): AstMiddlewarePassInterface;
 
     protected function setUp(): void
     {
@@ -40,11 +39,13 @@ abstract class PassTestCase extends TestCase
     }
 
     /**
-     * Execute the pass on AST
+     * Execute the middleware pass on AST
      */
     protected function execute(DocumentNode $ast, ?CompilationContext $context = null): DocumentNode
     {
-        return $this->pass->execute($ast, $context ?? $this->createTestContext());
+        $pipeline = new AstMiddlewarePipeline([$this->pass]);
+
+        return $pipeline->execute($ast, $context ?? $this->createTestContext());
     }
 
     /**

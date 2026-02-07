@@ -16,16 +16,18 @@ use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\NodeAction;
+use Sugar\Pass\Middleware\WalkContext;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
-final class TemplateInheritancePass implements PassInterface
+final class TemplateInheritancePass implements AstMiddlewarePassInterface
 {
     use ScopeIsolationTrait;
 
     private DirectivePrefixHelper $prefixHelper;
 
-    private SugarConfig $config;
+    private readonly SugarConfig $config;
 
     /**
      * Stack of loaded templates for circular detection
@@ -57,20 +59,27 @@ final class TemplateInheritancePass implements PassInterface
     }
 
     /**
-     * Execute the pass: process template inheritance (s:extends, s:block, s:include)
-     *
-     * @param \Sugar\Ast\DocumentNode $ast Document to process
-     * @param \Sugar\Context\CompilationContext $context Compilation context
-     * @return \Sugar\Ast\DocumentNode Processed document
-     * @throws \Sugar\Exception\SyntaxException On circular inheritance
-     * @throws \Sugar\Exception\TemplateNotFoundException If template not found
+     * Hook executed before child traversal.
      */
-    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    public function before(Node $node, WalkContext $context): NodeAction
     {
+        if (!$node instanceof DocumentNode) {
+            return NodeAction::none();
+        }
+
         // Reset loaded templates stack for this execution
         $this->loadedTemplates = [];
+        $processed = $this->process($node, $context->compilation, $this->loadedTemplates);
 
-        return $this->process($ast, $context, $this->loadedTemplates);
+        return NodeAction::replace($processed);
+    }
+
+    /**
+     * Hook executed after child traversal.
+     */
+    public function after(Node $node, WalkContext $context): NodeAction
+    {
+        return NodeAction::none();
     }
 
     /**

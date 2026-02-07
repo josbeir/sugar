@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar;
 
+use Sugar\Ast\DocumentNode;
 use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Config\SugarConfig;
@@ -13,18 +14,18 @@ use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Pass\Component\ComponentExpansionPass;
-use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
-use Sugar\Pass\Component\Helper\SlotOutputHelper;
+use Sugar\Pass\Component\ComponentVariantAdjustmentPass;
 use Sugar\Pass\Context\ContextAnalysisPass;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Pass\Template\TemplateInheritancePass;
 
 /**
  * Orchestrates template compilation pipeline
  *
- * Pipeline: Parser → DirectiveExtractionPass → DirectivePairingPass → DirectiveCompilationPass → ContextAnalysisPass → CodeGenerator
+ * Pipeline: Parser → TemplateInheritancePass (optional) → DirectiveExtractionPass → DirectivePairingPass → DirectiveCompilationPass → ComponentExpansionPass → ContextAnalysisPass → CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
@@ -102,8 +103,7 @@ final class Compiler implements CompilerInterface
         bool $debug = false,
         ?DependencyTracker $tracker = null,
     ): string {
-        // Create compilation context for error handling with snippets
-        $context = new CompilationContext(
+        $context = $this->createContext(
             $templatePath ?? 'inline-template',
             $source,
             $debug,
@@ -113,32 +113,11 @@ final class Compiler implements CompilerInterface
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
 
-        // Step 1.5: Process template inheritance if enabled
-        if ($this->templateInheritancePass instanceof TemplateInheritancePass && $templatePath !== null) {
-            $ast = $this->templateInheritancePass->execute($ast, $context);
-        }
-
-        // Step 2: Extract directives from elements (s:if, s:component → DirectiveNode)
-        $extractedAst = $this->directiveExtractionPass->execute($ast, $context);
-
-        // Step 3: Wire up parent references and pair sibling directives
-        $pairedAst = $this->directivePairingPass->execute($extractedAst, $context);
-
-        // Step 4: Compile DirectiveNodes into PHP control structures and component nodes
-        $transformedAst = $this->directiveCompilationPass->execute($pairedAst, $context);
-
-        // Step 5: Expand components (ComponentNode/DynamicComponentNode → template content)
-        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $transformedAst = $this->componentExpansionPass->execute($transformedAst, $context);
-        }
-
-        // Step 6: Analyze context and update OutputNode contexts
-        $analyzedAst = $this->contextPass->execute($transformedAst, $context);
-
-        // Step 7: Generate executable PHP code with inline escaping
-        $generator = new CodeGenerator($this->escaper, $context);
-
-        return $generator->generate($analyzedAst);
+        return $this->compileAst(
+            $ast,
+            $context,
+            $templatePath !== null,
+        );
     }
 
     /**
@@ -174,26 +153,82 @@ final class Compiler implements CompilerInterface
 
         $ast = $this->parser->parse($templateContent);
 
-        if ($this->templateInheritancePass instanceof TemplateInheritancePass) {
-            $ast = $this->templateInheritancePass->execute($ast, $context);
-        }
-
-        $ast = $this->directiveExtractionPass->execute($ast, $context);
-        $ast = $this->directivePairingPass->execute($ast, $context);
-        $ast = $this->directiveCompilationPass->execute($ast, $context);
-
-        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            $ast = $this->componentExpansionPass->execute($ast, $context);
-        }
-
-        ComponentAttributeOverrideHelper::apply($ast, '$__sugar_attrs');
-
         $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
-        SlotOutputHelper::disableEscaping($ast, $slotVars);
+        $variantAdjustments = new ComponentVariantAdjustmentPass($slotVars);
 
-        $analyzedAst = $this->contextPass->execute($ast, $context);
+        return $this->compileAst(
+            $ast,
+            $context,
+            true,
+            $variantAdjustments,
+        );
+    }
+
+    /**
+     * Create a compilation context for a template.
+     */
+    private function createContext(
+        string $templatePath,
+        string $source,
+        bool $debug,
+        ?DependencyTracker $tracker,
+    ): CompilationContext {
+        return new CompilationContext(
+            $templatePath,
+            $source,
+            $debug,
+            $tracker,
+        );
+    }
+
+    /**
+     * Execute the middleware pipeline and generate PHP code.
+     */
+    private function compileAst(
+        DocumentNode $ast,
+        CompilationContext $context,
+        bool $enableInheritance,
+        ?ComponentVariantAdjustmentPass $variantAdjustments = null,
+    ): string {
+        $pipeline = $this->buildPipeline(
+            $enableInheritance,
+            $variantAdjustments,
+        );
+        $analyzedAst = $pipeline->execute($ast, $context);
+
+        // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);
+    }
+
+    /**
+     * Build the middleware pipeline for compilation.
+     */
+    private function buildPipeline(
+        bool $enableInheritance,
+        ?ComponentVariantAdjustmentPass $variantAdjustments = null,
+    ): AstMiddlewarePipeline {
+        $passes = [];
+
+        if ($enableInheritance && $this->templateInheritancePass instanceof TemplateInheritancePass) {
+            $passes[] = $this->templateInheritancePass;
+        }
+
+        $passes[] = $this->directiveExtractionPass;
+        $passes[] = $this->directivePairingPass;
+        $passes[] = $this->directiveCompilationPass;
+
+        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
+            $passes[] = $this->componentExpansionPass;
+        }
+
+        if ($variantAdjustments instanceof ComponentVariantAdjustmentPass) {
+            $passes[] = $variantAdjustments;
+        }
+
+        $passes[] = $this->contextPass;
+
+        return new AstMiddlewarePipeline($passes);
     }
 }

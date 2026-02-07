@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassCompiler;
@@ -15,17 +18,20 @@ use Sugar\Directive\ContentCompiler;
 use Sugar\Directive\ForeachCompiler;
 use Sugar\Directive\IfCompiler;
 use Sugar\Directive\IssetCompiler;
+use Sugar\Directive\PassThroughCompiler;
 use Sugar\Directive\SpreadCompiler;
+use Sugar\Directive\TagCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 
-final class DirectiveExtractionPassTest extends PassTestCase
+final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 {
-    protected function getPass(): PassInterface
+    protected function getPass(): AstMiddlewarePassInterface
     {
         // Create registry with test directives
         $registry = $this->createTestRegistry();
@@ -41,6 +47,8 @@ final class DirectiveExtractionPassTest extends PassTestCase
         $registry->register('foreach', ForeachCompiler::class);
         $registry->register('class', ClassCompiler::class);
         $registry->register('spread', SpreadCompiler::class);
+        $registry->register('tag', TagCompiler::class);
+        $registry->register('slot', PassThroughCompiler::class);
         $registry->register('text', new ContentCompiler(escape: true));
         $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
         $registry->register('isset', IssetCompiler::class);
@@ -233,6 +241,113 @@ final class DirectiveExtractionPassTest extends PassTestCase
         $this->assertCount(1, $result->children[0]->attributes);
     }
 
+    public function testExtractsComponentControlFlowDirective(): void
+    {
+        $component = new ComponentNode(
+            name: 'button',
+            attributes: [new AttributeNode('s:if', '$show', 1, 1)],
+            children: [new TextNode('Click', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$component]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
+        $this->assertSame('if', $result->children[0]->name);
+
+        $wrapped = $result->children[0]->children[0];
+        $this->assertInstanceOf(ComponentNode::class, $wrapped);
+        $this->assertCount(0, $wrapped->attributes);
+    }
+
+    public function testExtractsComponentAttributeDirectiveToClassAttribute(): void
+    {
+        $component = new ComponentNode(
+            name: 'button',
+            attributes: [new AttributeNode('s:class', "['active' => true]", 1, 1)],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$component]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ComponentNode::class, $result->children[0]);
+
+        $attrs = $result->children[0]->attributes;
+        $this->assertCount(1, $attrs);
+        $this->assertSame('class', $attrs[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value);
+        $this->assertStringContainsString('classNames', $attrs[0]->value->expression);
+    }
+
+    public function testExtractsCustomExtractionDirectiveToFragment(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('s:tag', '$tag', 1, 1)],
+            children: [new TextNode('Content', 1, 1)],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+        $this->assertCount(2, $result->children[0]->children);
+        $this->assertInstanceOf(RawPhpNode::class, $result->children[0]->children[0]);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]->children[1]);
+    }
+
+    public function testExtractsSpreadDirectiveToAttributeOutput(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('s:spread', '$attrs', 1, 1)],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+
+        $attrs = $result->children[0]->attributes;
+        $this->assertCount(1, $attrs);
+        $this->assertSame('', $attrs[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value);
+        $this->assertStringContainsString('spreadAttrs', $attrs[0]->value->expression);
+    }
+
+    public function testKeepsFragmentWithInheritanceAttributeOnly(): void
+    {
+        $fragment = new FragmentNode(
+            attributes: [new AttributeNode('s:block', 'content', 1, 1)],
+            children: [new TextNode('Content', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$fragment]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+        $this->assertSame('s:block', $result->children[0]->attributes[0]->name);
+    }
+
     public function testTransformsNestedElementsWithoutDirectives(): void
     {
         $innerElement = new ElementNode(
@@ -384,7 +499,8 @@ final class DirectiveExtractionPassTest extends PassTestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $pass->execute($ast, $this->createTestContext());
+        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $result = $pipeline->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
         $this->assertInstanceOf(DirectiveNode::class, $directive);
@@ -406,7 +522,8 @@ final class DirectiveExtractionPassTest extends PassTestCase
         );
 
         $ast = new DocumentNode([$element]);
-        $result = $pass->execute($ast, $this->createTestContext());
+        $pipeline = new AstMiddlewarePipeline([$pass]);
+        $result = $pipeline->execute($ast, $this->createTestContext());
 
         // Should not be extracted since we're using 'x' prefix
         $this->assertCount(1, $result->children);

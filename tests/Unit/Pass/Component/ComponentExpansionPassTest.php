@@ -24,6 +24,7 @@ use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\Component\ComponentExpansionPass;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
 use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -35,7 +36,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     private FileTemplateLoader $loader;
 
-    private ComponentExpansionPass $pass;
+    private AstMiddlewarePipeline $pipeline;
 
     protected function setUp(): void
     {
@@ -50,7 +51,13 @@ final class ComponentExpansionPassTest extends TestCase
         $registry->register('foreach', ForeachCompiler::class);
         $registry->register('while', WhileCompiler::class);
 
-        $this->pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+        $this->pipeline = new AstMiddlewarePipeline([$pass]);
+    }
+
+    private function executePipeline(DocumentNode $ast, CompilationContext $context): DocumentNode
+    {
+        return $this->pipeline->execute($ast, $context);
     }
 
     public function testExpandsSimpleComponent(): void
@@ -64,7 +71,7 @@ final class ComponentExpansionPassTest extends TestCase
             ),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         // Component should be expanded to multiple nodes (RawPhpNode for variables + template content)
         $this->assertGreaterThan(0, count($result->children));
@@ -83,7 +90,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button>Save</s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -97,10 +104,104 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button></s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $code);
+    }
+
+    public function testMergesStringClassAttributesOnRootElement(): void
+    {
+        $template = '<s-button class="primary">Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('class="btn primary"', $code);
+    }
+
+    public function testOverridesClassAttributeWhenDynamicValueProvided(): void
+    {
+        $ast = new DocumentNode([
+            new ComponentNode(
+                name: 'button',
+                attributes: [
+                    new AttributeNode(
+                        'class',
+                        new OutputNode('$class', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                        1,
+                        1,
+                    ),
+                ],
+                children: [new TextNode('Click', 1, 1)],
+                line: 1,
+                column: 1,
+            ),
+        ]);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('class="<?= $class ?>"', $code);
+        $this->assertStringNotContainsString('class="btn"', $code);
+    }
+
+    public function testRuntimeComponentBindUsesOutputExpression(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:component', '$component', 1, 1),
+                new AttributeNode(
+                    's:bind',
+                    new OutputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                    1,
+                    1,
+                ),
+            ],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertSame('$bindings', $runtimeCall->arguments[1]);
+        $this->assertSame('[]', $runtimeCall->arguments[3]);
+    }
+
+    public function testNestedTemplateWithDynamicComponentDirectiveCreatesRuntimeCall(): void
+    {
+        $dynamicComponentPath = __DIR__ . '/../../../fixtures/templates/components/s-dynamic-panel.sugar.php';
+        file_put_contents($dynamicComponentPath, '<div s:component="$componentName"></div>');
+
+        try {
+            $this->loader->discoverComponents('.');
+
+            $ast = $this->parser->parse('<s-dynamic-panel></s-dynamic-panel>');
+            $result = $this->executePipeline($ast, $this->createContext());
+
+            $this->assertGreaterThan(0, count($result->children));
+
+            $hasRuntimeCall = false;
+            foreach ($result->children as $child) {
+                if ($child instanceof RuntimeCallNode) {
+                    $hasRuntimeCall = true;
+                    break;
+                }
+            }
+
+            $this->assertTrue($hasRuntimeCall);
+        } finally {
+            unlink($dynamicComponentPath);
+        }
     }
 
     public function testCreatesRuntimeComponentCallForDynamicName(): void
@@ -126,7 +227,7 @@ final class ComponentExpansionPassTest extends TestCase
 
         $ast = new DocumentNode([$element]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $call = $result->children[0];
@@ -165,7 +266,7 @@ final class ComponentExpansionPassTest extends TestCase
 
         $this->expectException(SyntaxException::class);
 
-        $this->pass->execute($ast, $this->createContext());
+        $this->executePipeline($ast, $this->createContext());
     }
 
     public function testExpandsNestedComponents(): void
@@ -179,7 +280,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-panel>Submit</s-panel>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<div class="panel">', $code);
@@ -203,7 +304,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectException(ComponentNotFoundException::class);
         $this->expectExceptionMessage('Component "nonexistent" not found');
 
-        $this->pass->execute($ast, $this->createContext());
+        $this->executePipeline($ast, $this->createContext());
     }
 
     public function testPreservesComponentAttributes(): void
@@ -212,7 +313,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-alert s:bind="[\'type\' => \'warning\']">Important message</s-alert>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -237,7 +338,7 @@ final class ComponentExpansionPassTest extends TestCase
             '</s-card>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
 
@@ -260,7 +361,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<div s:component="button">Click</div>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $code);
@@ -272,7 +373,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-template s:component="alert" s:bind="[\'type\' => \'info\']">Hello</s-template>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
         $this->assertStringContainsString('class="alert alert-info"', $code);
@@ -288,7 +389,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Component name must be a non-empty string.');
 
-        $this->pass->execute($ast, $this->createContext());
+        $this->executePipeline($ast, $this->createContext());
     }
 
     public function testComponentDirectiveNormalizesQuotedName(): void
@@ -296,7 +397,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<div s:component="\'button\'">Click</div>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
@@ -310,7 +411,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<div s:component="123">Click</div>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
@@ -321,7 +422,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<div s:component="$componentName">Click</div>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
@@ -335,7 +436,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('s:bind attribute must have a value');
 
-        $this->pass->execute($ast, $this->createContext());
+        $this->executePipeline($ast, $this->createContext());
     }
 
     public function testComponentWithControlFlowWrapsFragment(): void
@@ -343,7 +444,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-button s:if="$show">Save</s-button>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
@@ -357,7 +458,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<s-card><div s:slot>Header</div>Body</s-card>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $output = $this->astToString($result);
 
@@ -371,7 +472,7 @@ final class ComponentExpansionPassTest extends TestCase
         $template = '<div s:component="$component">Hello <?= $name ?></div>';
         $ast = $this->parser->parse($template);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
@@ -410,7 +511,7 @@ final class ComponentExpansionPassTest extends TestCase
             ),
         ]);
 
-        $result = $this->pass->execute($ast, $this->createContext());
+        $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
@@ -525,7 +626,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'button', children: [new TextNode('Third', 3, 0)], line: 3, column: 0),
         ]);
 
-        $result = $pass->execute($ast, $this->createContext());
+        $result = (new AstMiddlewarePipeline([$pass]))->execute($ast, $this->createContext());
 
         // All components should be expanded correctly
         $output = $this->astToString($result);
@@ -540,7 +641,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'button', children: [new TextNode('Fourth', 4, 0)], line: 4, column: 0),
         ]);
 
-        $result2 = $pass->execute($ast2, $this->createContext());
+        $result2 = (new AstMiddlewarePipeline([$pass]))->execute($ast2, $this->createContext());
         $output2 = $this->astToString($result2);
         $this->assertStringContainsString('Fourth', $output2);
     }
@@ -558,7 +659,7 @@ final class ComponentExpansionPassTest extends TestCase
             new ComponentNode(name: 'alert', children: [new TextNode('Alert 2', 4, 0)], line: 4, column: 0),
         ]);
 
-        $result = $pass->execute($ast, $this->createContext());
+        $result = (new AstMiddlewarePipeline([$pass]))->execute($ast, $this->createContext());
         $output = $this->astToString($result);
 
         // Should successfully expand both component types multiple times
@@ -580,6 +681,6 @@ final class ComponentExpansionPassTest extends TestCase
         $this->expectExceptionMessage('s:bind attribute must be an array expression');
         $this->expectExceptionMessage('string literal');
 
-        $this->pass->execute($ast, $this->createContext());
+        $this->executePipeline($ast, $this->createContext());
     }
 }

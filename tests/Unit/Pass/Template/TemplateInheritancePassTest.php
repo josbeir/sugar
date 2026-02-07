@@ -6,6 +6,7 @@ namespace Sugar\Tests\Unit\Pass\Template;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
@@ -13,15 +14,15 @@ use Sugar\Config\SugarConfig;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
 use Sugar\Pass\Template\TemplateInheritancePass;
-use Sugar\Tests\Unit\Pass\PassTestCase;
+use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
-final class TemplateInheritancePassTest extends PassTestCase
+final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 {
     private string $inheritanceFixturesPath;
 
-    protected function getPass(): PassInterface
+    protected function getPass(): AstMiddlewarePassInterface
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
         $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);
@@ -308,6 +309,83 @@ final class TemplateInheritancePassTest extends PassTestCase
             $this->assertStringContainsString("(['title' => 'Hello']);", $code);
         } finally {
             unlink($includePath);
+        }
+    }
+
+    public function testReplacesElementBlockWithDirectiveFragment(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/temp-fragment-layout.sugar.php';
+        file_put_contents($layoutPath, '<div s:block="content">Base</div>');
+
+        try {
+            $document = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-fragment-layout.sugar.php')], [], false, 1, 1),
+                new FragmentNode(
+                    attributes: [
+                        $this->attr('s:block', 'content'),
+                        $this->attr('s:if', '$show'),
+                    ],
+                    children: [$this->createText('Child')],
+                    line: 1,
+                    column: 1,
+                ),
+            ]);
+
+            $result = $this->execute($document, $this->createTestContext('', 'page.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $this->assertCount(1, $result->children);
+            $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+
+            $parent = $result->children[0];
+            $this->assertCount(1, $parent->children);
+            $this->assertInstanceOf(FragmentNode::class, $parent->children[0]);
+
+            $fragment = $parent->children[0];
+            $this->assertSame('s:if', $fragment->attributes[0]->name);
+            foreach ($fragment->attributes as $attr) {
+                $this->assertNotSame('s:block', $attr->name);
+            }
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
+    public function testReplacesFragmentBlockWithDirectiveFragment(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/temp-fragment-root.sugar.php';
+        file_put_contents(
+            $layoutPath,
+            '<s-template s:block="content"><div>Base</div></s-template>',
+        );
+
+        try {
+            $document = new DocumentNode([
+                new ElementNode('div', [$this->attr('s:extends', 'temp-fragment-root.sugar.php')], [], false, 1, 1),
+                new FragmentNode(
+                    attributes: [
+                        $this->attr('s:block', 'content'),
+                        $this->attr('s:if', '$show'),
+                    ],
+                    children: [$this->createText('Child')],
+                    line: 1,
+                    column: 1,
+                ),
+            ]);
+
+            $result = $this->execute($document, $this->createTestContext('', 'page.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $this->assertCount(1, $result->children);
+            $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
+
+            $fragment = $result->children[0];
+            $this->assertSame('s:if', $fragment->attributes[0]->name);
+            foreach ($fragment->attributes as $attr) {
+                $this->assertNotSame('s:block', $attr->name);
+            }
+        } finally {
+            unlink($layoutPath);
         }
     }
 

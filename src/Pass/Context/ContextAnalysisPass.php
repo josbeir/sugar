@@ -5,89 +5,80 @@ namespace Sugar\Pass\Context;
 
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Context\AnalysisContext;
-use Sugar\Context\CompilationContext;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\NodeAction;
+use Sugar\Pass\Middleware\WalkContext;
 
 /**
  * Analyzes AST and assigns proper OutputContext to OutputNodes
  * based on their position in HTML structure
  */
-final class ContextAnalysisPass implements PassInterface
+final class ContextAnalysisPass implements AstMiddlewarePassInterface
 {
+    private AnalysisContext $analysisContext;
+
     /**
-     * Execute the pass: analyze AST and update OutputNode contexts
-     *
-     * @param \Sugar\Ast\DocumentNode $ast Document to analyze
-     * @param \Sugar\Context\CompilationContext $context Compilation context
-     * @return \Sugar\Ast\DocumentNode New document with updated contexts
+     * @var array<int, \Sugar\Context\AnalysisContext>
      */
-    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    private array $contextStack = [];
+
+    private bool $inAttribute = false;
+
+    /**
+     * @inheritDoc
+     */
+    public function before(Node $node, WalkContext $context): NodeAction
     {
-        $analysisContext = new AnalysisContext();
-        $inAttribute = false;
+        if ($node instanceof DocumentNode) {
+            $this->analysisContext = new AnalysisContext();
+            $this->contextStack = [];
+            $this->inAttribute = false;
 
-        $newChildren = NodeTraverser::walk(
-            $ast->children,
-            function (
-                Node $node,
-                callable $recurse,
-            ) use (
-                &$analysisContext,
-                &$inAttribute,
-            ): ElementNode|TextNode|OutputNode|Node {
-                if ($node instanceof ElementNode) {
-                    return $this->processElementNode($node, $analysisContext, $recurse);
-                }
+            return NodeAction::none();
+        }
 
-                if ($node instanceof TextNode) {
-                    [$analysisContext, $inAttribute] = $this->processTextNode($node, $analysisContext, $inAttribute);
+        if ($node instanceof ElementNode) {
+            $this->contextStack[] = $this->analysisContext;
+            $this->analysisContext = $this->analysisContext->push($node->tag);
 
-                    return $node;
-                }
+            return NodeAction::none();
+        }
 
-                if ($node instanceof OutputNode) {
-                    return $this->updateOutputNode($node, $analysisContext, $inAttribute);
-                }
+        if ($node instanceof TextNode) {
+            [$this->analysisContext, $this->inAttribute] = $this->processTextNode(
+                $node,
+                $this->analysisContext,
+                $this->inAttribute,
+            );
 
-                // Other node types pass through unchanged
-                return $node;
-            },
-        );
+            return NodeAction::none();
+        }
 
-        return new DocumentNode($newChildren);
+        if ($node instanceof OutputNode) {
+            return NodeAction::replace($this->updateOutputNode($node, $this->analysisContext, $this->inAttribute));
+        }
+
+        return NodeAction::none();
     }
 
     /**
-     * Process element node and its children
-     *
-     * @param \Sugar\Ast\ElementNode $node Element to process
-     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
-     * @param callable $recurse Recursion callback
-     * @return \Sugar\Ast\ElementNode Processed element
+     * @inheritDoc
      */
-    private function processElementNode(
-        ElementNode $node,
-        AnalysisContext &$analysisContext,
-        callable $recurse,
-    ): ElementNode {
-        // Push tag onto context stack
-        $childContext = $analysisContext->push($node->tag);
-        $savedContext = $analysisContext;
-        $analysisContext = $childContext;
+    public function after(Node $node, WalkContext $context): NodeAction
+    {
+        if ($node instanceof ElementNode) {
+            $previous = array_pop($this->contextStack);
+            if ($previous instanceof AnalysisContext) {
+                $this->analysisContext = $previous;
+            }
+        }
 
-        // Process children with updated context (recurse handles traversal)
-        $processedNode = $recurse($node);
-
-        // Restore context
-        $analysisContext = $savedContext;
-
-        return $processedNode;
+        return NodeAction::none();
     }
 
     /**

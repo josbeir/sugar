@@ -28,7 +28,10 @@ use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\PassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePassInterface;
+use Sugar\Pass\Middleware\AstMiddlewarePipeline;
+use Sugar\Pass\Middleware\NodeAction;
+use Sugar\Pass\Middleware\WalkContext;
 use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -39,7 +42,7 @@ use Sugar\Runtime\RuntimeEnvironment;
  * Replaces ComponentNode instances with their actual template content,
  * injecting slots and attributes as variables.
  */
-final class ComponentExpansionPass implements PassInterface
+final class ComponentExpansionPass implements AstMiddlewarePassInterface
 {
     use ScopeIsolationTrait;
 
@@ -54,6 +57,8 @@ final class ComponentExpansionPass implements PassInterface
     private readonly DirectivePairingPass $directivePairingPass;
 
     private readonly DirectiveCompilationPass $directiveCompilationPass;
+
+    private readonly AstMiddlewarePipeline $componentTemplatePipeline;
 
     private readonly ComponentAttributeCategorizer $attributeCategorizer;
 
@@ -84,44 +89,45 @@ final class ComponentExpansionPass implements PassInterface
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
+        $this->componentTemplatePipeline = new AstMiddlewarePipeline([
+            $this->inheritancePass,
+            $this->directiveExtractionPass,
+            $this->directivePairingPass,
+            $this->directiveCompilationPass,
+        ]);
         $this->attributeCategorizer = new ComponentAttributeCategorizer($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
     }
 
     /**
-     * Execute the pass: expand all component invocations
-     *
-     * @param \Sugar\Ast\DocumentNode $ast Document to process
-     * @return \Sugar\Ast\DocumentNode Processed document with expanded components
-     * @throws \Sugar\Exception\ComponentNotFoundException If component template not found
+     * @inheritDoc
      */
-    public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
+    public function before(Node $node, WalkContext $context): NodeAction
     {
-        $expandedChildren = NodeTraverser::walk(
-            $ast->children,
-            function (Node $node, callable $recurse) use ($context) {
-                if ($node instanceof ComponentNode) {
-                    // Expand component - return array of nodes
-                    return $this->expandComponent($node, $context);
-                }
+        return NodeAction::none();
+    }
 
-                if ($node instanceof ElementNode || $node instanceof FragmentNode) {
-                    $component = $this->tryConvertComponentDirective($node, $context);
-                    if ($component instanceof RuntimeCallNode) {
-                        return $component;
-                    }
+    /**
+     * @inheritDoc
+     */
+    public function after(Node $node, WalkContext $context): NodeAction
+    {
+        if ($node instanceof ComponentNode) {
+            return NodeAction::replace($this->expandComponent($node, $context->compilation, true));
+        }
 
-                    if ($component instanceof ComponentNode) {
-                        return $this->expandComponent($component, $context);
-                    }
-                }
+        if ($node instanceof ElementNode || $node instanceof FragmentNode) {
+            $component = $this->tryConvertComponentDirective($node, $context->compilation);
+            if ($component instanceof RuntimeCallNode) {
+                return NodeAction::replace($component);
+            }
 
-                // Recurse into children for other nodes
-                return $recurse($node);
-            },
-        );
+            if ($component instanceof ComponentNode) {
+                return NodeAction::replace($this->expandComponent($component, $context->compilation, true));
+            }
+        }
 
-        return new DocumentNode($expandedChildren);
+        return NodeAction::none();
     }
 
     /**
@@ -131,8 +137,11 @@ final class ComponentExpansionPass implements PassInterface
      * @param \Sugar\Context\CompilationContext|null $context Compilation context for dependency tracking
      * @return array<\Sugar\Ast\Node> Expanded nodes
      */
-    private function expandComponent(ComponentNode $component, ?CompilationContext $context = null): array
-    {
+    private function expandComponent(
+        ComponentNode $component,
+        ?CompilationContext $context = null,
+        bool $slotsExpanded = false,
+    ): array {
         // Load component template
         $templateContent = $this->loader->loadComponent($component->name);
 
@@ -155,12 +164,8 @@ final class ComponentExpansionPass implements PassInterface
             $context->debug ?? false,
             $context?->tracker,
         );
-        $templateAst = $this->inheritancePass->execute($templateAst, $inheritanceContext);
-
-        // Process directives in component template (s:if, s:class, etc.)
-        $templateAst = $this->directiveExtractionPass->execute($templateAst, $inheritanceContext);
-        $templateAst = $this->directivePairingPass->execute($templateAst, $inheritanceContext);
-        $templateAst = $this->directiveCompilationPass->execute($templateAst, $inheritanceContext);
+        // Process template inheritance and directives in component template
+        $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
 
         // Categorize attributes: control flow, attribute directives, bindings, merge
         $categorized = $this->attributeCategorizer->categorize($component->attributes);
@@ -180,8 +185,7 @@ final class ComponentExpansionPass implements PassInterface
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
         $slots = $this->slotResolver->extract($component->children);
 
-        // NOW expand any nested components in the slot contents
-        $expandedSlots = $this->expandSlotContent($slots, $context);
+        $expandedSlots = $slotsExpanded ? $slots : $this->expandSlotContent($slots, $context);
 
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
