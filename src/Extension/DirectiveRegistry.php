@@ -18,6 +18,7 @@ use Sugar\Directive\PassThroughCompiler;
 use Sugar\Directive\SpreadCompiler;
 use Sugar\Directive\SwitchCompiler;
 use Sugar\Directive\TagCompiler;
+use Sugar\Directive\TimesCompiler;
 use Sugar\Directive\UnlessCompiler;
 use Sugar\Directive\WhileCompiler;
 use Sugar\Enum\DirectiveType;
@@ -69,6 +70,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         'foreach' => ForeachCompiler::class,
         'forelse' => ForelseCompiler::class,
         'while' => WhileCompiler::class,
+        'times' => TimesCompiler::class,
         // Attributes
         'class' => ClassCompiler::class,
         'spread' => SpreadCompiler::class,

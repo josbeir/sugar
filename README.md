@@ -397,6 +397,7 @@ Sugar provides familiar control structures as HTML attributes:
 - **`s:if` / `s:elseif` / `s:else`** - Conditional rendering
 - **`s:foreach` / `s:forelse` / `s:empty`** - Iteration with empty fallbacks (`s:empty` can also be used standalone)
 - **`s:while`** - Loop structures
+- **`s:times`** - Repeat an element a fixed number of times (`s:times="5"`, `s:times="5 as $i"`)
 - **`s:switch` / `s:case` / `s:default`** - Switch statements
 - **`s:unless`** - Inverse conditionals
 - **`s:isset` / `s:empty`** - Variable checks (standalone usage)
@@ -414,6 +415,7 @@ Sugar provides familiar control structures as HTML attributes:
 - **`s:block`** - Define named content blocks that can be overridden
 - **`s:include`** - Include other templates (extension-less paths supported)
 - **`s:with`** - Pass variables to included templates with isolated scope
+- **`s:component`** - Invoke a component dynamically by name or expression
 
 #### Special Elements
 - **`<s-template>`** - Fragment element that renders only children (no wrapper element)
@@ -813,6 +815,9 @@ Use the `s:component` directive to invoke a component by name on any element or 
 <!-- Element form -->
 <div s:component="button">Click Me</div>
 
+<!-- Expression form -->
+<div s:component="$componentName">Click Me</div>
+
 <!-- Fragment form (no wrapper element) -->
 <s-template s:component="alert" s:bind="['type' => 'info']">
     Hello
@@ -820,7 +825,7 @@ Use the `s:component` directive to invoke a component by name on any element or 
 ```
 
 **Notes**:
-- The `s:component` value must be a non-empty literal component name.
+- The `s:component` value accepts a literal name or a PHP expression that resolves to a name.
 - Use this when you need to choose the component tag dynamically in markup while keeping a consistent element shape.
 
 #### Component Props with `s:bind`
