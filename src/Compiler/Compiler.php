@@ -76,7 +76,7 @@ final class Compiler implements CompilerInterface
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
         $this->contextPass = new ContextAnalysisPass();
 
-        $this->templateInheritancePass = new TemplateInheritancePass($this->templateLoader, $config);
+        $this->templateInheritancePass = new TemplateInheritancePass($this->templateLoader, $this->parser, $config);
         $this->componentExpansionPass = new ComponentExpansionPass(
             $this->templateLoader,
             $this->parser,

@@ -15,6 +15,7 @@ use Sugar\Config\SugarConfig;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Parser\Parser;
 use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
 
@@ -26,8 +27,9 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
         $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);
+        $parser = new Parser(new SugarConfig());
 
-        return new TemplateInheritancePass($loader, new SugarConfig());
+        return new TemplateInheritancePass($loader, $parser, new SugarConfig());
     }
 
     private function attr(string $name, string $value): AttributeNode

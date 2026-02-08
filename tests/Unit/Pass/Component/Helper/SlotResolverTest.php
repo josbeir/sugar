@@ -8,10 +8,10 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\Component\Helper\SlotOutputHelper;
+use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
-final class SlotOutputHelperTest extends TestCase
+final class SlotResolverTest extends TestCase
 {
     use NodeBuildersTrait;
 
@@ -42,11 +42,26 @@ final class SlotOutputHelperTest extends TestCase
             ->withChildren([$slotOutput, $element, $otherOutput, $fragment])
             ->build();
 
-        SlotOutputHelper::disableEscaping($document, ['slot', 'header']);
+        SlotResolver::disableEscaping($document, ['slot', 'header']);
 
         $this->assertFalse($slotOutput->escape);
         $this->assertFalse($headerOutput->escape);
         $this->assertFalse($attributeOutput->escape);
         $this->assertTrue($otherOutput->escape);
+    }
+
+    public function testDoesNotDisableEscapingForSimilarVariableNames(): void
+    {
+        $slotOutput = $this->outputNode('$slot', true, OutputContext::HTML, 1, 1);
+        $slotNameOutput = $this->outputNode('$slotName', true, OutputContext::HTML, 1, 1);
+
+        $document = $this->document()
+            ->withChildren([$slotOutput, $slotNameOutput])
+            ->build();
+
+        SlotResolver::disableEscaping($document, ['slot']);
+
+        $this->assertFalse($slotOutput->escape);
+        $this->assertTrue($slotNameOutput->escape);
     }
 }

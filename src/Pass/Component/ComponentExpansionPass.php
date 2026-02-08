@@ -27,7 +27,6 @@ use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
 use Sugar\Pass\Component\Helper\ComponentSlots;
-use Sugar\Pass\Component\Helper\SlotOutputHelper;
 use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
@@ -85,7 +84,7 @@ final class ComponentExpansionPass implements AstPassInterface
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
-        $this->inheritancePass = new TemplateInheritancePass($loader, $config);
+        $this->inheritancePass = new TemplateInheritancePass($loader, $parser, $config);
         $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
         $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
@@ -171,7 +170,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $categorized = $this->attributeCategorizer->categorize($component->attributes);
 
         // Find root element in component template for attribute merging
-        $rootElement = $this->findRootElement($templateAst);
+        $rootElement = NodeTraverser::findRootElement($templateAst);
 
         // Merge non-binding attributes to root element
         if ($rootElement instanceof ElementNode) {
@@ -414,24 +413,6 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Find root element in component template
-     *
-     * @param \Sugar\Ast\DocumentNode $template Component template AST
-     * @return \Sugar\Ast\ElementNode|null Root element or null if not found
-     */
-    private function findRootElement(DocumentNode $template): ?ElementNode
-    {
-        // Find first ElementNode child
-        foreach ($template->children as $child) {
-            if ($child instanceof ElementNode) {
-                return $child;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Merge attributes to root element
      *
      * @param \Sugar\Ast\ElementNode $rootElement Root element to merge into
@@ -546,7 +527,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $slotVars = $this->slotResolver->buildSlotVars($slots);
 
         // Automatically disable escaping for slot variable outputs in component template
-        SlotOutputHelper::disableEscaping($template, $slotVars);
+        SlotResolver::disableEscaping($template, $slotVars);
 
         // Use trait method for consistent closure wrapping with parent passes
         return $this->wrapInIsolatedScope($template, '[' . implode(', ', $arrayItems) . ']');

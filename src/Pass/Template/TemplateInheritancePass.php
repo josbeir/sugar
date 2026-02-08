@@ -27,8 +27,6 @@ final class TemplateInheritancePass implements AstPassInterface
 
     private DirectivePrefixHelper $prefixHelper;
 
-    private readonly SugarConfig $config;
-
     /**
      * Stack of loaded templates for circular detection
      *
@@ -48,13 +46,14 @@ final class TemplateInheritancePass implements AstPassInterface
      * Constructor.
      *
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Parser\Parser $parser Template parser
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
+        private readonly Parser $parser,
         SugarConfig $config,
     ) {
-        $this->config = $config;
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
     }
 
@@ -166,8 +165,7 @@ final class TemplateInheritancePass implements AstPassInterface
     private function getOrParseTemplate(string $resolvedPath, string $content): DocumentNode
     {
         if (!isset($this->templateAstCache[$resolvedPath])) {
-            $parser = new Parser($this->config);
-            $this->templateAstCache[$resolvedPath] = $parser->parse($content);
+            $this->templateAstCache[$resolvedPath] = $this->parser->parse($content);
         }
 
         return $this->templateAstCache[$resolvedPath];
@@ -189,7 +187,10 @@ final class TemplateInheritancePass implements AstPassInterface
         array &$loadedTemplates,
     ): DocumentNode {
         // Get parent template path
-        $parentPath = $this->getAttributeValue($extendsElement, $this->prefixHelper->buildName('extends'));
+        $parentPath = AttributeHelper::getStringAttributeValue(
+            $extendsElement,
+            $this->prefixHelper->buildName('extends'),
+        );
         $resolvedPath = $this->loader->resolve($parentPath, $context->templatePath);
 
         // Track parent template as dependency
@@ -235,9 +236,12 @@ final class TemplateInheritancePass implements AstPassInterface
         foreach ($document->children as $child) {
             if (
                 ($child instanceof ElementNode || $child instanceof FragmentNode) &&
-                $this->hasAttribute($child, $this->prefixHelper->buildName('include'))
+                AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('include'))
             ) {
-                $includePath = $this->getAttributeValue($child, $this->prefixHelper->buildName('include'));
+                $includePath = AttributeHelper::getStringAttributeValue(
+                    $child,
+                    $this->prefixHelper->buildName('include'),
+                );
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
 
                 // Track included template as dependency
@@ -258,9 +262,12 @@ final class TemplateInheritancePass implements AstPassInterface
                 // Process includes recursively
                 $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
                 // Check for s:with (scope isolation)
-                if ($this->hasAttribute($child, $this->prefixHelper->buildName('with'))) {
+                if (AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('with'))) {
                     // Wrap in scope isolation with variables from s:with
-                    $withValue = $this->getAttributeValue($child, $this->prefixHelper->buildName('with'));
+                    $withValue = AttributeHelper::getStringAttributeValue(
+                        $child,
+                        $this->prefixHelper->buildName('with'),
+                    );
                     $wrapped = $this->wrapInIsolatedScope($includeDocument, $withValue);
                     array_push($newChildren, ...$wrapped->children);
                 } else {
@@ -317,9 +324,12 @@ final class TemplateInheritancePass implements AstPassInterface
 
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                $blockName = AttributeHelper::getAttributeValue($child, $this->prefixHelper->buildName('block'));
+                $blockName = AttributeHelper::getStringAttributeValue(
+                    $child,
+                    $this->prefixHelper->buildName('block'),
+                );
 
-                if (is_string($blockName) && $blockName !== '') {
+                if ($blockName !== '') {
                     $blocks[$blockName] = $child;
                 }
 
@@ -376,9 +386,12 @@ final class TemplateInheritancePass implements AstPassInterface
         }
 
         // Check if this node has s:block attribute
-        $blockName = AttributeHelper::getAttributeValue($node, $this->prefixHelper->buildName('block'));
+        $blockName = AttributeHelper::getStringAttributeValue(
+            $node,
+            $this->prefixHelper->buildName('block'),
+        );
 
-        if (!is_string($blockName) || $blockName === '') {
+        if ($blockName === '') {
             $blockName = null;
         }
 
@@ -414,12 +427,10 @@ final class TemplateInheritancePass implements AstPassInterface
                     if ($hasDirectives) {
                         // Fragment has directives: return fragment so DirectiveExtractionPass can process it
                         // Remove s:block since it's already been processed
-                        $cleanAttrs = [];
-                        foreach ($childBlock->attributes as $attr) {
-                            if ($attr->name !== $this->prefixHelper->buildName('block')) {
-                                $cleanAttrs[] = $attr;
-                            }
-                        }
+                        $cleanAttrs = AttributeHelper::removeAttribute(
+                            $childBlock->attributes,
+                            $this->prefixHelper->buildName('block'),
+                        );
 
                         $wrappedFragment = NodeCloner::fragmentWithChildren(
                             $childBlock,
@@ -440,12 +451,10 @@ final class TemplateInheritancePass implements AstPassInterface
                 if ($hasDirectives) {
                     // Both are fragments
                     // Child fragment has directives: return it for later processing
-                    $cleanAttrs = [];
-                    foreach ($childBlock->attributes as $attr) {
-                        if ($attr->name !== $this->prefixHelper->buildName('block')) {
-                            $cleanAttrs[] = $attr;
-                        }
-                    }
+                    $cleanAttrs = AttributeHelper::removeAttribute(
+                        $childBlock->attributes,
+                        $this->prefixHelper->buildName('block'),
+                    );
 
                     return NodeCloner::fragmentWithAttributes($childBlock, $cleanAttrs);
                 }
@@ -466,32 +475,6 @@ final class TemplateInheritancePass implements AstPassInterface
         }
 
         return NodeCloner::fragmentWithChildren($node, $newChildren);
-    }
-
-    /**
-     * Check if element has attribute.
-     *
-     * @param \Sugar\Ast\ElementNode $element Element to check
-     * @param string $name Attribute name
-     * @return bool True if attribute exists
-     */
-    private function hasAttribute(ElementNode|FragmentNode $element, string $name): bool
-    {
-        return AttributeHelper::hasAttribute($element, $name);
-    }
-
-    /**
-     * Get attribute value from element.
-     *
-     * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $element Element to search
-     * @param string $name Attribute name
-     * @return string Attribute value
-     */
-    private function getAttributeValue(ElementNode|FragmentNode $element, string $name): string
-    {
-        $value = AttributeHelper::getAttributeValue($element, $name, '');
-
-        return is_string($value) ? $value : '';
     }
 
     /**
@@ -524,17 +507,10 @@ final class TemplateInheritancePass implements AstPassInterface
         }
 
         // Filter out template inheritance attributes
-        $cleanAttributes = [];
-        foreach ($node->attributes as $attr) {
-            if ($attr instanceof AttributeNode) {
-                // Keep all attributes except inheritance attributes
-                if (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
-                    $cleanAttributes[] = $attr;
-                }
-            } else {
-                $cleanAttributes[] = $attr;
-            }
-        }
+        $cleanAttributes = AttributeHelper::filterAttributes(
+            $node->attributes,
+            fn(AttributeNode $attr): bool => !$this->prefixHelper->isInheritanceAttribute($attr->name),
+        );
 
         // Recursively clean children
         $cleanChildren = [];

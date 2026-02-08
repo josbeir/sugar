@@ -4,22 +4,25 @@ declare(strict_types=1);
 namespace Sugar\Pass\Component\Helper;
 
 use Sugar\Ast\Helper\DirectivePrefixHelper;
-use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveRegistryInterface;
+use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
 /**
  * Groups component attributes into control flow, directives, bindings, and merges.
  */
 final class ComponentAttributeCategorizer
 {
+    private DirectiveClassifier $directiveClassifier;
+
     /**
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry
      * @param \Sugar\Ast\Helper\DirectivePrefixHelper $prefixHelper Directive prefix helper
      */
     public function __construct(
-        private readonly DirectiveRegistryInterface $registry,
+        DirectiveRegistryInterface $registry,
         private readonly DirectivePrefixHelper $prefixHelper,
     ) {
+        $this->directiveClassifier = new DirectiveClassifier($registry, $prefixHelper);
     }
 
     /**
@@ -40,7 +43,7 @@ final class ComponentAttributeCategorizer
 
                 if ($directiveName === 'bind') {
                     $componentBindings = $attr;
-                } elseif ($this->isControlFlowDirective($name)) {
+                } elseif ($this->directiveClassifier->isControlFlowDirectiveAttribute($name)) {
                     $controlFlow[] = $attr;
                 } else {
                     $attributeDirectives[] = $attr;
@@ -56,21 +59,5 @@ final class ComponentAttributeCategorizer
             componentBindings: $componentBindings,
             merge: $mergeAttrs,
         );
-    }
-
-    /**
-     * Determine whether a directive name maps to a control flow compiler.
-     */
-    private function isControlFlowDirective(string $directiveName): bool
-    {
-        $name = $this->prefixHelper->stripPrefix($directiveName);
-
-        if (!$this->registry->has($name)) {
-            return false;
-        }
-
-        $compiler = $this->registry->get($name);
-
-        return $compiler->getType() === DirectiveType::CONTROL_FLOW;
     }
 }

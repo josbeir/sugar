@@ -8,6 +8,8 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Ast\OutputNode;
+use Sugar\Enum\OutputContext;
 
 final class AttributeHelperTest extends TestCase
 {
@@ -95,6 +97,27 @@ final class AttributeHelperTest extends TestCase
 
         $this->assertNull(AttributeHelper::getAttributeValue($node, 'missing'));
         $this->assertSame('default', AttributeHelper::getAttributeValue($node, 'missing', 'default'));
+    }
+
+    public function testGetStringAttributeValueReturnsDefaultForNonString(): void
+    {
+        $node = new ElementNode(
+            'div',
+            [
+                new AttributeNode(
+                    'data',
+                    new OutputNode('($value)', true, OutputContext::HTML, 1, 1),
+                    1,
+                    1,
+                ),
+            ],
+            [],
+            false,
+            1,
+            1,
+        );
+
+        $this->assertSame('fallback', AttributeHelper::getStringAttributeValue($node, 'data', 'fallback'));
     }
 
     public function testRemoveAttribute(): void

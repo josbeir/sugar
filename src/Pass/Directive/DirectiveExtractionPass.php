@@ -25,6 +25,7 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
+use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -53,6 +54,8 @@ final class DirectiveExtractionPass implements AstPassInterface
 {
     private DirectivePrefixHelper $prefixHelper;
 
+    private DirectiveClassifier $directiveClassifier;
+
     private CompilationContext $context;
 
     /**
@@ -66,6 +69,7 @@ final class DirectiveExtractionPass implements AstPassInterface
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
     }
 
     /**
@@ -172,16 +176,7 @@ final class DirectiveExtractionPass implements AstPassInterface
     private function hasDirectiveAttribute(ElementNode $node): bool
     {
         foreach ($node->attributes as $attr) {
-            if ($this->prefixHelper->isDirective($attr->name)) {
-                $name = $this->prefixHelper->stripPrefix($attr->name);
-                if ($this->registry->has($name)) {
-                    $compiler = $this->registry->get($name);
-                    // Skip pass-through directives
-                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
-                        continue;
-                    }
-                }
-
+            if ($this->directiveClassifier->isNonPassThroughDirectiveAttribute($attr->name)) {
                 return true;
             }
         }
@@ -196,20 +191,7 @@ final class DirectiveExtractionPass implements AstPassInterface
     private function hasFragmentDirectiveAttribute(FragmentNode $node): bool
     {
         foreach ($node->attributes as $attr) {
-            if ($this->prefixHelper->isDirective($attr->name)) {
-                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
-                    continue;
-                }
-
-                $name = $this->prefixHelper->stripPrefix($attr->name);
-                if ($this->registry->has($name)) {
-                    $compiler = $this->registry->get($name);
-                    // Skip pass-through directives
-                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
-                        continue;
-                    }
-                }
-
+            if ($this->directiveClassifier->isNonPassThroughDirectiveAttribute($attr->name, false)) {
                 return true;
             }
         }
@@ -224,16 +206,7 @@ final class DirectiveExtractionPass implements AstPassInterface
     private function hasComponentDirectiveAttribute(ComponentNode $node): bool
     {
         foreach ($node->attributes as $attr) {
-            if ($this->prefixHelper->isDirective($attr->name)) {
-                $name = $this->prefixHelper->stripPrefix($attr->name);
-                if ($this->registry->has($name)) {
-                    $compiler = $this->registry->get($name);
-                    // Skip pass-through directives
-                    if ($compiler->getType() === DirectiveType::PASS_THROUGH) {
-                        continue;
-                    }
-                }
-
+            if ($this->directiveClassifier->isNonPassThroughDirectiveAttribute($attr->name)) {
                 return true;
             }
         }

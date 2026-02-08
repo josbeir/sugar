@@ -147,4 +147,18 @@ final class NodeTraverser
 
         return $matches;
     }
+
+    /**
+     * Find the first element node in a document.
+     */
+    public static function findRootElement(DocumentNode $document): ?ElementNode
+    {
+        foreach ($document->children as $child) {
+            if ($child instanceof ElementNode) {
+                return $child;
+            }
+        }
+
+        return null;
+    }
 }

@@ -63,4 +63,33 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $this->assertSame($text, $document->children[0]);
     }
+
+    public function testAppliesOverridesToFirstRootElementOnly(): void
+    {
+        $first = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('id', 'first', 1, 1)],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+        $second = new ElementNode(
+            tag: 'div',
+            attributes: [new AttributeNode('id', 'second', 2, 1)],
+            children: [],
+            selfClosing: false,
+            line: 2,
+            column: 1,
+        );
+
+        $document = $this->document()->withChildren([$first, $second])->build();
+
+        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+
+        $this->assertCount(2, $first->attributes);
+        $this->assertSame('', $first->attributes[1]->name);
+        $this->assertSame('second', $second->attributes[0]->value);
+        $this->assertCount(1, $second->attributes);
+    }
 }

@@ -6,6 +6,7 @@ namespace Sugar\Pass\Component\Helper;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Runtime\HtmlAttributeHelper;
@@ -23,7 +24,7 @@ final class ComponentAttributeOverrideHelper
      */
     public static function apply(DocumentNode $template, string $attrsVar): void
     {
-        $rootElement = self::findRootElement($template);
+        $rootElement = NodeTraverser::findRootElement($template);
         if (!$rootElement instanceof ElementNode) {
             return;
         }
@@ -114,20 +115,6 @@ final class ComponentAttributeOverrideHelper
         );
 
         $rootElement->attributes = $updatedAttributes;
-    }
-
-    /**
-     * Find the first element node in a document
-     */
-    private static function findRootElement(DocumentNode $template): ?ElementNode
-    {
-        foreach ($template->children as $child) {
-            if ($child instanceof ElementNode) {
-                return $child;
-            }
-        }
-
-        return null;
     }
 
     /**

@@ -94,6 +94,23 @@ final class AttributeHelper
     }
 
     /**
+     * Get attribute value as string or return default.
+     *
+     * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $node Node to get attribute from
+     * @param string $name Attribute name
+     * @param string $default Default value if attribute not found or not a string
+     */
+    public static function getStringAttributeValue(
+        ElementNode|FragmentNode $node,
+        string $name,
+        string $default = '',
+    ): string {
+        $value = self::getAttributeValue($node, $name, $default);
+
+        return is_string($value) ? $value : $default;
+    }
+
+    /**
      * Remove attribute by name (returns new array)
      *
      * @param array<\Sugar\Ast\AttributeNode> $attributes Attributes array
