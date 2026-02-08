@@ -7,10 +7,22 @@
 
 # 🍬 Sugar
 
+![Sugar cube](docs/public/hero/sugar-cube.svg)
+
 > A modern PHP templating engine that compiles to pure PHP. Write `s:if`, get auto-escaping. Zero magic, pure sweetness.
 
 > [!WARNING]
 > Sugar is under active development. Core features are stable, but the API may change before 1.0.
 
 ## Documentation
+
+Full documentation: https://josbeir.github.io/sugar/
+
+## License
+
+Sugar is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
+
+## Contributing
+
+Contributions are welcome. Please read [docs/guide/reference/contributing.md](docs/guide/reference/contributing.md) for setup steps and guidelines.
 
