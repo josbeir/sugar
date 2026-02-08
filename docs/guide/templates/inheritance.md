@@ -55,6 +55,22 @@ Keep layout files under a `layouts/` folder and partials under `partials/` to ma
 Only one `s:extends` directive is allowed per template.
 :::
 
+## Dependency Safety
+
+Sugar tracks template dependencies during inheritance and includes. Circular dependencies are detected and rejected so a template cannot extend or include itself indirectly.
+
+::: tip
+Keep layouts and partials layered in one direction (base -> page -> partials) to avoid accidental loops.
+:::
+
+::: details
+What is prevented
+
+- Circular inheritance (A extends B, B extends A)
+- Circular includes (A includes B, B includes A)
+- Diamond-shaped chains that would re-enter a template already on the stack
+:::
+
 ## Extends
 
 Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:extends` element can be empty; it just declares the parent template.
@@ -68,7 +84,7 @@ Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:ex
 </div>
 ```
 
-## Includes
+## Include
 
 Includes are great for shared fragments like headers, footers, or cards.
 
@@ -83,9 +99,13 @@ Includes are great for shared fragments like headers, footers, or cards.
     <div s:include="partials/hero"></div>
 </section>
 ```
+
+```html [Scoped variables]
+<div s:include="partials/user-card" s:with="['user' => $user]"></div>
+```
 :::
 
-## Include Scope and `s:with`
+### Include Scope and `s:with`
 
 Use `s:with` only in combination with `s:include` on the same element. It does not create a standalone scoped block and does not apply to child includes.
 
@@ -93,7 +113,7 @@ Use `s:with` only in combination with `s:include` on the same element. It does n
 <div s:include="partials/user-card" s:with="['user' => $user]"></div>
 ```
 
-## Extends + Include
+## Example
 
 Combine layouts and partials for full pages:
 
@@ -113,6 +133,25 @@ Combine layouts and partials for full pages:
 <div s:block="content">
     <aside s:include="partials/sidebar"></aside>
     <section s:include="partials/settings"></section>
+</div>
+```
+
+```html [Layout + scoped include]
+<div s:extends="../layouts/base.sugar.php"></div>
+<title s:block="title">Profile</title>
+<div s:block="content">
+    <div s:include="partials/user-card" s:with="['user' => $user]"></div>
+</div>
+```
+
+```html [Nested blocks]
+<div s:extends="../layouts/base.sugar.php"></div>
+<title s:block="title">Reports</title>
+<div s:block="content">
+    <section>
+        <div s:include="partials/report-summary"></div>
+        <div s:include="partials/report-table"></div>
+    </section>
 </div>
 ```
 :::

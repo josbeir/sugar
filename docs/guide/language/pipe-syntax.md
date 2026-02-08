@@ -12,7 +12,7 @@ Pipes keep templates readable by turning nested function calls into a left-to-ri
 :::
 
 ::: code-group
-```html [Template]
+```php [Template]
 <h1><?= $title |> strtoupper(...) |> substr(..., 0, 50) ?></h1>
 <p><?= $product->price |> number_format(..., 2) ?></p>
 ```
@@ -35,19 +35,19 @@ Pipes rewrite `value |> fn(...)` into `fn(value, ...)` at compile time. The plac
 ## Common Patterns
 
 ::: code-group
-```html [Formatting]
+```php [Formatting]
 <p><?= $price |> number_format(..., 2) ?></p>
 ```
 
-```html [Chaining]
+```php [Chaining]
 <span><?= $name |> trim(...) |> strtoupper(...) ?></span>
 ```
 
-```html [Named args]
+```php [Named args]
 <p><?= $price |> number_format(..., decimals: 2, thousands_separator: ',') ?></p>
 ```
 
-```html [Method call]
+```php [Method call]
 <p><?= $user |> $formatter->displayName(...) ?></p>
 ```
 :::
