@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Sugar <span style=\"font-size: .65em; opacity: 0.4\">(template engine)</span>"
   text: "Write PHP templates that compile into... PHP"
-  tagline: Context-aware escaping, without the template noise.
+  tagline: "Context-aware escaping, without the template noise."
   image:
     src: /hero/sugar-cube.svg
     alt: Sugar cube
@@ -29,6 +29,9 @@ features:
     details: Props, slots, and attribute merging with zero runtime cost.
 ---
 
+::: warning
+Don't worry: This **Sugar** is **safe** for diabetics. :drum:
+:::
 
 ## A Taste of the Syntax
 
@@ -96,4 +99,3 @@ features:
 <p><?= \Sugar\Escape\Escaper::html($summary) ?></p>
 ```
 :::
-
