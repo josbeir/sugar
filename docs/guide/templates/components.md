@@ -13,7 +13,7 @@ Components are template files resolved from a configurable components path and r
 
 ## Basic Component Usage
 
-**Component** (`components/button.sugar.php`):
+**Component** (`components/s-button.sugar.php`):
 ```html
 <button class="btn" type="button">
     <?= $slot ?>
@@ -26,15 +26,57 @@ Components are template files resolved from a configurable components path and r
 ```
 
 ::: tip
-Component tags use the `s-` prefix, so `components/button.sugar.php` becomes `<s-button>`.
+Component tags use the `s-` prefix, and component filenames should include the same prefix (for example, `components/s-button.sugar.php`).
 :::
+
+::: info
+If you change the prefix to `x-`, the filename becomes `components/x-button.sugar.php` and the tag becomes `<x-button>`.
+:::
+
+## Component Filename Pattern
+
+Component files must use the element prefix and end with `.sugar.php`:
+
+```text
+{prefix}-{name}.sugar.php
+```
+
+Examples:
+
+- `s-button.sugar.php` -> `<s-button>`
+- `s-user-card.sugar.php` -> `<s-user-card>`
+- `x-alert.sugar.php` -> `<x-alert>` when the prefix is `x-`
+
+::: info
+The fragment element filename (`s-template.sugar.php` or `x-template.sugar.php`) is reserved and not treated as a component.
+:::
+
+## Components in the Templates Tree
+
+This is the typical place components live. The highlighted lines show the component directory and files.
+
+```js
+templates/
+├── pages/
+│   ├── home.sugar.php
+│   └── profile.sugar.php
+├── layouts/
+│   └── base.sugar.php
+├── partials/
+│   ├── header.sugar.php
+│   └── footer.sugar.php
+└── components/ // [!code focus]
+    ├── s-button.sugar.php // [!code focus]
+    ├── s-card.sugar.php // [!code focus]
+    └── s-alert.sugar.php // [!code focus]
+```
 
 ## Props and Defaults
 
 Components receive props as variables. Define defaults at the top of the component:
 
 ::: code-group
-```php [components/card.sugar.php]
+```php [components/s-card.sugar.php]
 <?php
 $title ??= 'Untitled';
 $elevated ??= false;

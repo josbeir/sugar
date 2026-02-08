@@ -11,6 +11,26 @@ Layouts, blocks, and includes let you build pages from reusable pieces. Use `s:e
 Keep layout files under a `layouts/` folder and partials under `partials/` to make intent obvious.
 :::
 
+## Typical Folder Layout
+
+This structure keeps layout inheritance, includes, and components easy to discover.
+
+```text
+templates/
+├── pages/
+│   ├── home.sugar.php
+│   └── profile.sugar.php
+├── layouts/
+│   └── base.sugar.php
+├── partials/
+│   ├── header.sugar.php
+│   └── footer.sugar.php
+└── components/
+    ├── s-button.sugar.php
+    ├── s-card.sugar.php
+    └── s-alert.sugar.php
+```
+
 ## Layout Inheritance
 
 **Base Layout** (`layouts/base.sugar.php`):
