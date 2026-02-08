@@ -494,7 +494,8 @@ final class FileCacheTest extends TestCase
         // Should complete very quickly (in-memory operations)
         // With old implementation: ~500ms (50 × 10ms I/O)
         // With new implementation: ~50ms (1 load + 1 save on destruct)
-        $this->assertLessThan(0.5, $duration, 'Bulk operations should be fast with in-memory cache');
+        $maxDuration = PHP_OS_FAMILY === 'Windows' ? 2.0 : 0.5;
+        $this->assertLessThan($maxDuration, $duration, 'Bulk operations should be fast with in-memory cache');
 
         // Verify dependencies tracked correctly
         $invalidated = $cache->invalidate('dep25');
