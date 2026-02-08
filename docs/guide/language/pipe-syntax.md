@@ -7,6 +7,8 @@ description: PHP 8.5 pipe operator support in Sugar templates.
 
 Use PHP 8.5 pipe operator syntax (`|>`) in output expressions. Sugar compiles pipes to nested function calls at compile time.
 
+Unlike many template engines that ship with a built-in filter catalog, Sugar keeps filters BYO. We rely on PHP 8.5's native pipe syntax and let the framework or application define its own set of functions or helpers to pipe through.
+
 ::: info
 Pipes keep templates readable by turning nested function calls into a left-to-right flow.
 :::

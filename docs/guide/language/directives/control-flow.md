@@ -123,9 +123,15 @@ Repeat the element while a condition remains true.
 
 Repeat the element a fixed number of times.
 
-```html
+::: code-group
+```html [Basic]
 <span s:times="3">*</span>
 ```
+
+```html [With index]
+<span s:times="5 as $i">#<?= $i ?></span>
+```
+:::
 
 ### s:switch
 
