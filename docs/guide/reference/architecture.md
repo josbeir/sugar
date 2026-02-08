@@ -5,31 +5,111 @@ description: Compilation pipeline and caching flow.
 
 # Architecture
 
+Sugar turns templates into a small, predictable PHP AST and then emits optimized PHP code. The pipeline is designed to keep parsing and compilation deterministic, while runtime stays fast and cache-friendly.
+
+::: info
+Compilation happens once per template change. Rendering is a cached PHP include.
+:::
+
 ## Compilation Pipeline
 
-1. Parser
-2. DirectiveExtractionPass
-3. DirectiveCompilationPass
-4. ContextAnalysisPass
-5. ComponentExpansionPass
-6. CodeGenerator
+| Priority | Stage | Purpose | Notes |
+| --- | --- | --- | --- |
+| 1 | Parser | Converts template source into a Sugar AST. | Preserves line/column for error reporting. |
+| 2 | TemplateInheritancePass | Applies `s:extends` and merges blocks. | Optional, requires a template loader. |
+| 3 | DirectiveExtractionPass | Pulls out `s:*` directives and validates placement. | Produces directive nodes from attributes. |
+| 4 | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |
+| 5 | DirectiveCompilationPass | Rewrites directive nodes into executable AST nodes. | Produces control flow, attributes, and output nodes. |
+| 6 | ComponentExpansionPass | Resolves component tags into their AST. | Optional, requires a template loader. |
+| 7 | ComponentVariantAdjustmentPass | Normalizes component slot variables for variants. | Only used when compiling components. |
+| 8 | ContextAnalysisPass | Determines output context for escaping decisions. | Tags output nodes with HTML/attribute/URL/JS/CSS contexts. |
+| 9 | CodeGenerator | Emits pure PHP from the final AST. | Output is ready for opcache. |
 
-## Caching Flow
+::: tip
+If a template compiles, it will render deterministically. All runtime behavior is inside the generated PHP.
+:::
 
+## AST Shape
+
+Sugar keeps a small set of nodes so transformations remain predictable. Directives compile into nodes that the code generator can output without re-parsing.
+
+```php
+use Sugar\Ast\ElementNode;
+use Sugar\Ast\RawPhpNode;
+
+$element = new ElementNode(
+    tag: 'div',
+    attributes: [],
+    children: [new RawPhpNode('echo $name;', 12, 8)],
+    selfClosing: false,
+    line: 12,
+    column: 1,
+);
 ```
-Template Request
-      ↓
-Cache Lookup (by path hash)
-      ↓
-  Cache Hit? ──Yes──→ Load Cached Template
-      ↓                      ↓
-     No               Check Freshness (debug mode)
-      ↓                      ↓
-Compile Template        Fresh? ──No──→ Recompile
-      ↓                      ↓
-Track Dependencies          Yes
-      ↓                      ↓
-Cache Result          Return Compiled Code
-      ↓                      ↓
-Return Compiled Code   Execute Template
+
+::: details Why AST nodes matter
+Errors point to the source line/column, and transformations are composable because every pass consumes and returns nodes.
+:::
+
+## Directive Lifecycle
+
+Directives are **extracted** first and **compiled** later. This keeps validation separate from code generation.
+
+::: code-group
+```text [Extraction]
+HTML element + s:* attributes
+	↓
+Directive nodes (validated)
 ```
+
+```text [Compilation]
+Directive nodes
+	↓
+RawPhpNode / OutputNode / ElementNode
+```
+:::
+
+::: warning
+Directive compilation must be side-effect free. Any runtime work belongs in the generated PHP.
+:::
+
+## Context-Aware Escaping
+
+The context pass marks output nodes so the escaper can pick the right strategy. This lets the generator emit fast, context-safe code without guessing at runtime.
+
+::: details Example contexts
+- HTML text uses `htmlspecialchars()`.
+- Attribute values are escaped with attribute-aware rules.
+- URL parts use `rawurlencode()`.
+:::
+
+## Component Expansion
+
+Component tags are expanded into their template AST before code generation. That means components participate in the same directive and context logic as the parent template.
+
+## File Caching Flow
+
+![Caching flow diagram](/diagrams/cache-flow.png)
+
+::: info
+Cache entries store compiled PHP and dependency metadata, so debug mode can recompile only when inputs change.
+:::
+
+Sugar caches by a template path hash and writes a compiled PHP file plus a metadata file. In production, the cache is treated as immutable; in debug mode, dependency timestamps are checked to decide whether a recompilation is needed.
+
+::: details What gets cached
+- The generated PHP code ready for opcache.
+- A dependency list for templates, layouts, and components.
+- The original template path hash for quick lookup.
+:::
+
+## Debug and Errors
+
+Sugar keeps line/column data through all passes so errors can point back to the original template, even after component expansion.
+
+::: details Typical error sources
+- Unknown directives or invalid placement during extraction.
+- Invalid component names or missing templates during expansion.
+- Unsafe output when context detection finds ambiguous output.
+:::
+

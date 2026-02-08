@@ -81,7 +81,8 @@ export default defineConfig({
             { text: 'Caching', link: '/guide/runtime/caching' },
             { text: 'Template Context', link: '/guide/runtime/context' },
             { text: 'Debug Mode', link: '/guide/reference/debug' },
-            { text: 'Exceptions', link: '/guide/reference/exceptions' }
+            { text: 'Exceptions', link: '/guide/reference/exceptions' },
+            { text: 'Custom Directives', link: '/guide/development/custom-directives' }
           ]
         },
         {
