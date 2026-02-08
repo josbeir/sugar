@@ -371,6 +371,24 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString('</div>', $output);
     }
 
+    public function testCompileTextDirectiveNoWrap(): void
+    {
+        $source = '<div s:text="$userName" s:nowrap></div>';
+
+        $compiled = $this->compiler->compile($source);
+
+        $this->assertStringContainsString(Escaper::class . '::html($userName)', $compiled);
+        $this->assertStringNotContainsString('<div>', $compiled);
+        $this->assertStringNotContainsString('</div>', $compiled);
+
+        $output = $this->executeTemplate($compiled, [
+            'userName' => 'Sam',
+        ]);
+
+        $this->assertStringContainsString('Sam', $output);
+        $this->assertStringNotContainsString('<div>', $output);
+    }
+
     public function testCompileHtmlDirective(): void
     {
         $source = '<div s:html="$trustedContent"></div>';

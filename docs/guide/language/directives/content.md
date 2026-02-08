@@ -45,3 +45,11 @@ Only use `s:html` with trusted content.
 <div s:html="$snippet"></div>
 ```
 :::
+
+## No Wrapper Output
+
+Add `s:nowrap` to render content without the surrounding element:
+
+```html
+<div s:text="$headline" s:nowrap></div>
+```

@@ -14,6 +14,7 @@ use Sugar\Directive\IfContentDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\IssetDirective;
+use Sugar\Directive\NoWrapDirective;
 use Sugar\Directive\PassThroughDirective;
 use Sugar\Directive\SpreadDirective;
 use Sugar\Directive\SwitchDirective;
@@ -85,6 +86,8 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         'slot' => PassThroughDirective::class,
         'bind' => PassThroughDirective::class,
         'component' => PassThroughDirective::class,
+        // Content modifiers
+        'nowrap' => NoWrapDirective::class,
     ];
 
     /**

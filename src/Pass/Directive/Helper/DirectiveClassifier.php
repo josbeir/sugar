@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass\Directive\Helper;
 
 use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveRegistryInterface;
 
@@ -48,6 +49,10 @@ final readonly class DirectiveClassifier
         }
 
         $compiler = $this->registry->get($name);
+
+        if ($compiler instanceof ContentWrappingDirectiveInterface) {
+            return true;
+        }
 
         return $compiler->getType() !== DirectiveType::PASS_THROUGH;
     }

@@ -16,6 +16,7 @@ use Sugar\Directive\ClassDirective;
 use Sugar\Directive\ContentDirective;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\IfDirective;
+use Sugar\Directive\NoWrapDirective;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
@@ -35,6 +36,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $registry->register('class', ClassDirective::class);
         $registry->register('text', new ContentDirective(escape: true));
         $registry->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
+        $registry->register('nowrap', NoWrapDirective::class);
 
         return new DirectiveExtractionPass($registry, new SugarConfig());
     }
@@ -230,6 +232,51 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->assertCount(1, $element->children);
         $this->assertInstanceOf(DirectiveNode::class, $element->children[0]);
         $this->assertSame('text', $element->children[0]->name);
+    }
+
+    public function testElementWithContentDirectiveNoWrap(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:text', '$userName', 1, 5),
+                new AttributeNode('s:nowrap', null, 1, 20),
+            ],
+            children: [new TextNode('Ignored', 1, 30)],
+            selfClosing: false,
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $directive = $result->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $directive);
+        $this->assertSame('text', $directive->name);
+        $this->assertSame('$userName', $directive->expression);
+        $this->assertCount(0, $directive->children);
+    }
+
+    public function testThrowsWhenNoWrapUsedWithoutContentDirective(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('requires a content directive');
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:nowrap', null, 1, 5),
+            ],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testThrowsOnMultipleControlFlowDirectives(): void

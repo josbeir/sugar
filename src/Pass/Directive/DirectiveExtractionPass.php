@@ -19,6 +19,7 @@ use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
 use Sugar\Enum\DirectiveType;
@@ -223,7 +224,7 @@ final class DirectiveExtractionPass implements AstPassInterface
      * - Custom Extraction: Directives implementing ElementAwareDirectiveInterface (multiple allowed, processed in order)
      * - Attribute: Multiple allowed, remain as element attributes
      *
-     * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementAwareDirectiveInterface}>, remaining: array<\Sugar\Ast\AttributeNode>}
+     * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementAwareDirectiveInterface}>, remaining: array<\Sugar\Ast\AttributeNode>, wrapContentElement: bool}
      */
     private function extractDirective(ElementNode|ComponentNode $node): array
     {
@@ -233,6 +234,9 @@ final class DirectiveExtractionPass implements AstPassInterface
         $remainingAttrs = [];
         $controlFlowCount = 0;
         $contentCount = 0;
+          $wrapContentElement = true;
+          $wrapContentElementDirective = null;
+          $wrapContentElementAttr = null;
 
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
@@ -252,6 +256,14 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 // Get directive type
                 $compiler = $this->registry->get($name);
+
+                if ($compiler instanceof ContentWrappingDirectiveInterface) {
+                    $wrapContentElement = $compiler->shouldWrapContentElement();
+                    $wrapContentElementDirective = $name;
+                    $wrapContentElementAttr = $attr;
+                    continue;
+                }
+
                 $type = $compiler->getType();
 
                 // Pass-through directives are handled by other passes - keep them as-is
@@ -327,11 +339,26 @@ final class DirectiveExtractionPass implements AstPassInterface
             }
         }
 
+        if ($wrapContentElementDirective !== null && $contentDirective === null) {
+            throw $this->context->createException(
+                SyntaxException::class,
+                sprintf(
+                    'The s:%s directive requires a content directive like %s:text or %s:html on the same element.',
+                    $wrapContentElementDirective,
+                    $this->prefixHelper->getPrefix(),
+                    $this->prefixHelper->getPrefix(),
+                ),
+                $wrapContentElementAttr->line ?? $node->line,
+                $wrapContentElementAttr->column ?? $node->column,
+            );
+        }
+
         return [
             'controlFlow' => $controlFlowDirective,
             'content' => $contentDirective,
             'customExtraction' => $customExtractionDirectives,
             'remaining' => $remainingAttrs,
+            'wrapContentElement' => $wrapContentElement,
         ];
     }
 
@@ -410,6 +437,41 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there are only attribute directives, return ElementNode with them
         if ($directives['controlFlow'] === null && $directives['content'] === null) {
             return NodeCloner::withAttributesAndChildren($node, $directives['remaining'], $transformedChildren);
+        }
+
+        // If content directive requests no wrapper, return it without the element
+        if ($directives['content'] !== null && $directives['wrapContentElement'] === false) {
+            if ($directives['remaining'] !== []) {
+                throw $this->context->createException(
+                    SyntaxException::class,
+                    'Content directives without a wrapper cannot include other attributes.',
+                    $node->line,
+                    $node->column,
+                );
+            }
+
+            $contentDir = $directives['content'];
+            $contentNode = new DirectiveNode(
+                name: $contentDir['name'],
+                expression: $contentDir['expression'],
+                children: [],
+                line: $node->line,
+                column: $node->column,
+            );
+
+            if ($directives['controlFlow'] !== null) {
+                $controlDir = $directives['controlFlow'];
+
+                return new DirectiveNode(
+                    name: $controlDir['name'],
+                    expression: $controlDir['expression'],
+                    children: [$contentNode],
+                    line: $node->line,
+                    column: $node->column,
+                );
+            }
+
+            return $contentNode;
         }
 
         // If there's a content directive, wrap it as a DirectiveNode in children
@@ -527,6 +589,21 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $expression = $attr->value ?? 'true';
                 // Get directive type
                 $compiler = $this->registry->get($name);
+
+                if ($compiler instanceof ContentWrappingDirectiveInterface) {
+                    throw $this->context->createException(
+                        SyntaxException::class,
+                        sprintf(
+                            'The s:%s directive can only be used on elements with %s:text or %s:html.',
+                            $name,
+                            $this->prefixHelper->getPrefix(),
+                            $this->prefixHelper->getPrefix(),
+                        ),
+                        $attr->line,
+                        $attr->column,
+                    );
+                }
+
                 $type = $compiler->getType();
 
                 // Pass-through directives are handled by other passes - skip them
