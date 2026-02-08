@@ -51,13 +51,16 @@ Jump to the full pages
 
 ## Special Elements
 
-- `<s-template>` - Fragment element that renders only children.
+- `<s-template>` - Fragment element that renders only children and carries directives without adding HTML.
+
+Use it as a wrapper when you need directives or scoping without introducing a real DOM node. It is also used for template inheritance and includes.
 
 ```html
-<s-template>
+<s-template s:if="$show">
 	<h2>Only this output renders</h2>
 </s-template>
 ```
 
 For related examples, see:
-- [Loop Metadata](./loop-metadata.md)
+- [Template Inheritance](../templates/inheritance.md)
+- [Control Flow Directives](./directives/control-flow.md)

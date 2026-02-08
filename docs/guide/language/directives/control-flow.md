@@ -6,6 +6,7 @@ description: Wrap elements in conditional and loop structures.
 # Control Flow Directives
 
 Control flow directives wrap an element in a conditional or loop. Only one control-flow directive can appear on a single element.
+Use `<s-template>` when you want control flow without adding a wrapper element.
 
 ## Directives
 
