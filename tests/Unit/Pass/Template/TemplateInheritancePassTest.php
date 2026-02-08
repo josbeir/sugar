@@ -90,6 +90,45 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->assertTrue($titleFound, 'Title element should be present in result');
     }
 
+    public function testExtendsOnFragmentElement(): void
+    {
+        $document = new DocumentNode([
+            new FragmentNode([
+                $this->attr('s:extends', '../base.sugar.php'),
+            ], [], 1, 1),
+            new ElementNode('title', [$this->attr('s:block', 'title')], [
+                $this->createText('Child Title'),
+            ], false, 2, 1),
+        ]);
+
+        $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+        $this->assertInstanceOf(DocumentNode::class, $result);
+        $this->assertGreaterThan(0, count($result->children));
+
+        $titleFound = false;
+        $findTitle = function ($nodes) use (&$findTitle, &$titleFound): void {
+            foreach ($nodes as $child) {
+                if ($child instanceof ElementNode && $child->tag === 'title') {
+                    $titleFound = true;
+                    $this->assertGreaterThan(0, count($child->children));
+                    $this->assertInstanceOf(TextNode::class, $child->children[0]);
+                    $this->assertStringContainsString('Child Title', $child->children[0]->content);
+
+                    return;
+                }
+
+                if ($child instanceof ElementNode && $child->children !== []) {
+                    $findTitle($child->children);
+                }
+            }
+        };
+
+        $findTitle($result->children);
+
+        $this->assertTrue($titleFound, 'Title element should be present in result');
+    }
+
     public function testMultiLevelInheritance(): void
     {
         // Create grandparent template file

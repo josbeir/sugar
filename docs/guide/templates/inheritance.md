@@ -48,7 +48,7 @@ templates/
 
 **Child Template** (`pages/home.sugar.php`):
 ```html
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Home Page</title>
 <div s:block="content">
     <h2>Welcome!</h2>
@@ -57,12 +57,12 @@ templates/
 
 ::: code-group
 ```html [Override one block]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Home Page</title>
 ```
 
 ```html [Override multiple]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Home Page</title>
 <div s:block="content">
     <h2>Welcome!</h2>
@@ -96,11 +96,11 @@ What is prevented
 Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:extends` element can be empty; it just declares the parent template.
 
 ```html
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Account</title>
 <div s:block="content">
-    <div s:include="partials/account-header"></div>
-    <div s:include="partials/account-body"></div>
+    <s-template s:include="partials/account-header"></s-template>
+    <s-template s:include="partials/account-body"></s-template>
 </div>
 ```
 
@@ -110,18 +110,18 @@ Includes are great for shared fragments like headers, footers, or cards.
 
 ::: code-group
 ```html [Basic]
-<div s:include="partials/header"></div>
+<s-template s:include="partials/header"></s-template>
 ```
 
 ```html [Nested]
-<div s:include="partials/header"></div>
+<s-template s:include="partials/header"></s-template>
 <section>
-    <div s:include="partials/hero"></div>
+    <s-template s:include="partials/hero"></s-template>
 </section>
 ```
 
 ```html [Scoped variables]
-<div s:include="partials/user-card" s:with="['user' => $user]"></div>
+<s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 :::
 
@@ -130,7 +130,7 @@ Includes are great for shared fragments like headers, footers, or cards.
 Use `s:with` only in combination with `s:include` on the same element. It does not create a standalone scoped block and does not apply to child includes.
 
 ```html
-<div s:include="partials/user-card" s:with="['user' => $user]"></div>
+<s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 
 ## Example
@@ -139,38 +139,42 @@ Combine layouts and partials for full pages:
 
 ::: code-group
 ```html [Layout + header]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Dashboard</title>
 <div s:block="content">
-    <div s:include="partials/header"></div>
-    <div s:include="partials/stats"></div>
+    <s-template s:include="partials/header"></s-template>
+    <s-template s:include="partials/stats"></s-template>
 </div>
 ```
 
 ```html [Layout + sidebar]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Settings</title>
 <div s:block="content">
-    <aside s:include="partials/sidebar"></aside>
-    <section s:include="partials/settings"></section>
+    <aside>
+        <s-template s:include="partials/sidebar"></s-template>
+    </aside>
+    <section>
+        <s-template s:include="partials/settings"></s-template>
+    </section>
 </div>
 ```
 
 ```html [Layout + scoped include]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Profile</title>
 <div s:block="content">
-    <div s:include="partials/user-card" s:with="['user' => $user]"></div>
+    <s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 </div>
 ```
 
 ```html [Nested blocks]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Reports</title>
 <div s:block="content">
     <section>
-        <div s:include="partials/report-summary"></div>
-        <div s:include="partials/report-table"></div>
+        <s-template s:include="partials/report-summary"></s-template>
+        <s-template s:include="partials/report-table"></s-template>
     </section>
 </div>
 ```

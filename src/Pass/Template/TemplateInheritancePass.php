@@ -104,7 +104,7 @@ final class TemplateInheritancePass implements AstPassInterface
             $extendsElement = $this->findExtendsDirective($document);
 
             // Find the s:extends attribute for better error positioning
-            $extendsAttr = $extendsElement instanceof ElementNode
+            $extendsAttr = $extendsElement instanceof ElementNode || $extendsElement instanceof FragmentNode
                 ? AttributeHelper::findAttribute($extendsElement->attributes, $this->prefixHelper->buildName('extends'))
                 : null;
 
@@ -124,7 +124,7 @@ final class TemplateInheritancePass implements AstPassInterface
         // Find s:extends directive
         $extendsElement = $this->findExtendsDirective($document);
 
-        if ($extendsElement instanceof ElementNode) {
+        if ($extendsElement instanceof ElementNode || $extendsElement instanceof FragmentNode) {
             $document = $this->processExtends($extendsElement, $document, $context, $loadedTemplates);
         } else {
             // Process s:include directives
@@ -139,13 +139,13 @@ final class TemplateInheritancePass implements AstPassInterface
      * Find s:extends directive in document.
      *
      * @param \Sugar\Ast\DocumentNode $document Document to search
-     * @return \Sugar\Ast\ElementNode|null Element with s:extends or null
+     * @return \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode|null Element or fragment with s:extends or null
      */
-    private function findExtendsDirective(DocumentNode $document): ?ElementNode
+    private function findExtendsDirective(DocumentNode $document): ElementNode|FragmentNode|null
     {
         foreach ($document->children as $child) {
             if (
-                $child instanceof ElementNode &&
+                ($child instanceof ElementNode || $child instanceof FragmentNode) &&
                 AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('extends'))
             ) {
                 return $child;
@@ -174,14 +174,14 @@ final class TemplateInheritancePass implements AstPassInterface
     /**
      * Process s:extends directive.
      *
-     * @param \Sugar\Ast\ElementNode $extendsElement Element with s:extends
+     * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $extendsElement Element or fragment with s:extends
      * @param \Sugar\Ast\DocumentNode $childDocument Child document
      * @param \Sugar\Context\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return \Sugar\Ast\DocumentNode Processed parent document
      */
     private function processExtends(
-        ElementNode $extendsElement,
+        ElementNode|FragmentNode $extendsElement,
         DocumentNode $childDocument,
         CompilationContext $context,
         array &$loadedTemplates,

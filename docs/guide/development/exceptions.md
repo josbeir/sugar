@@ -29,7 +29,7 @@ Line: 12
 
 10 | <div s:if="$user">
 11 |     <span><?= $user->name ?></span>
-12 |     <div s:include="partials/unknown"></div>
+12 |     <s-template s:include="partials/unknown"></s-template>
 13 | </div>
 ```
 

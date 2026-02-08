@@ -77,11 +77,11 @@ Don't worry: This **Sugar** is **safe** for diabetics. :drum:
 
 ::: code-group
 ```html [Layout]
-<div s:extends="../layouts/base.sugar.php"></div>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Dashboard</title>
 <div s:block="content">
-    <div s:include="partials/header"></div>
-    <div s:include="partials/stats"></div>
+  <s-template s:include="partials/header"></s-template>
+  <s-template s:include="partials/stats"></s-template>
 </div>
 ```
 
