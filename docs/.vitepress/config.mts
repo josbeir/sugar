@@ -1,0 +1,105 @@
+import { defineConfig } from 'vitepress'
+
+// https://vitepress.dev/reference/site-config
+export default defineConfig({
+  title: "Sugar Templates",
+  description: "A modern PHP templating engine that compiles to pure PHP",
+  themeConfig: {
+    editLink: {
+      pattern: 'https://github.com/josbeir/sugar/edit/main/docs/:path',
+    },
+
+	search: {
+      provider: 'local'
+    },
+
+    logo: {
+      src: '/hero/sugar-cube-static.svg',
+      alt: 'Sugar cube'
+    },
+    // https://vitepress.dev/reference/default-theme-config
+    nav: [
+      { text: 'Home', link: '/' },
+      {
+        text: 'Guide',
+        items: [
+          { text: 'Introduction', link: '/guide/introduction/what-is-sugar' },
+          { text: 'Directives', link: '/guide/language/directives' },
+          { text: 'Language', link: '/guide/language/pipe-syntax' },
+          { text: 'Templates', link: '/guide/templates/components' },
+          { text: 'Development', link: '/guide/configuration/' },
+          { text: 'Reference', link: '/guide/reference/architecture' }
+        ]
+      }
+    ],
+
+	outline: {
+		level: [2, 3]
+	},
+
+    sidebar: {
+      '/guide/': [
+        {
+          text: 'Introduction',
+          items: [
+            { text: 'What Is Sugar', link: '/guide/introduction/what-is-sugar' },
+            { text: 'Getting Started', link: '/guide/introduction/getting-started' }
+          ]
+        },
+        {
+          text: 'Directives',
+          items: [
+            { text: 'Introduction', link: '/guide/language/directives' },
+            { text: 'Control Flow', link: '/guide/language/directives/control-flow' },
+            { text: 'Attribute', link: '/guide/language/directives/attribute' },
+            { text: 'Content', link: '/guide/language/directives/content' },
+            { text: 'Pass-through', link: '/guide/language/directives/pass-through' }
+          ]
+        },
+        {
+          text: 'Language',
+          items: [
+            { text: 'Pipe Syntax', link: '/guide/language/pipe-syntax' },
+            { text: 'Context-Aware Escaping', link: '/guide/language/escaping' },
+            { text: 'Conditional Wrappers', link: '/guide/language/conditional-wrappers' }
+          ]
+        },
+        {
+          text: 'Templates',
+          items: [
+            { text: 'Fragment Elements', link: '/guide/templates/fragments' },
+            { text: 'Template Inheritance', link: '/guide/templates/inheritance' },
+            { text: 'Components', link: '/guide/templates/components' }
+          ]
+        },
+        {
+          text: 'Development',
+          items: [
+            { text: 'Engine Configuration', link: '/guide/configuration/' },
+            { text: 'Template Loaders', link: '/guide/templates/template-loaders' },
+            { text: 'Caching', link: '/guide/runtime/caching' },
+            { text: 'Template Context', link: '/guide/runtime/context' },
+            { text: 'Debug Mode', link: '/guide/reference/debug' },
+            { text: 'Exceptions', link: '/guide/reference/exceptions' }
+          ]
+        },
+        {
+          text: 'Reference',
+          items: [
+            { text: 'Architecture', link: '/guide/reference/architecture' },
+            { text: 'Contributing', link: '/guide/reference/contributing' },
+            { text: 'License', link: '/guide/reference/license' }
+          ]
+        }
+      ]
+    },
+
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/josbeir/sugar' }
+    ],
+
+    footer: {
+      message: 'Released under the <a href="https://github.com/josbeir/sugar/blob/main/LICENSE.md">MIT License</a>.',
+    }
+  }
+})

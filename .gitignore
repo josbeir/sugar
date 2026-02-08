@@ -5,9 +5,11 @@ tmp/*
 .DS_Store
 .env
 .zed/*
-docs/*
 spec/*
 .phpunit.result.cache
 composer.lock
 .github/**/*.instructions.md
 *.xml
+docs/.vitepress/dist
+docs/.vitepress/cache
+node_modules/
