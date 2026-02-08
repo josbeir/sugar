@@ -4,23 +4,23 @@ declare(strict_types=1);
 namespace Sugar\Extension;
 
 use RuntimeException;
-use Sugar\Directive\BooleanAttributeCompiler;
-use Sugar\Directive\ClassCompiler;
-use Sugar\Directive\ContentCompiler;
-use Sugar\Directive\EmptyCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\ForelseCompiler;
-use Sugar\Directive\IfCompiler;
-use Sugar\Directive\IfContentCompiler;
-use Sugar\Directive\Interface\DirectiveCompilerInterface;
-use Sugar\Directive\IssetCompiler;
-use Sugar\Directive\PassThroughCompiler;
-use Sugar\Directive\SpreadCompiler;
-use Sugar\Directive\SwitchCompiler;
-use Sugar\Directive\TagCompiler;
-use Sugar\Directive\TimesCompiler;
-use Sugar\Directive\UnlessCompiler;
-use Sugar\Directive\WhileCompiler;
+use Sugar\Directive\BooleanAttributeDirective;
+use Sugar\Directive\ClassDirective;
+use Sugar\Directive\ContentDirective;
+use Sugar\Directive\EmptyDirective;
+use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\ForelseDirective;
+use Sugar\Directive\IfContentDirective;
+use Sugar\Directive\IfDirective;
+use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Directive\IssetDirective;
+use Sugar\Directive\PassThroughDirective;
+use Sugar\Directive\SpreadDirective;
+use Sugar\Directive\SwitchDirective;
+use Sugar\Directive\TagDirective;
+use Sugar\Directive\TimesDirective;
+use Sugar\Directive\UnlessDirective;
+use Sugar\Directive\WhileDirective;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\DidYouMean;
@@ -39,11 +39,11 @@ use Sugar\Exception\UnknownDirectiveException;
  * ```php
  * $registry = new DirectiveRegistry(); // Has all built-in directives
  * $registry->register('custom', CustomCompiler::class); // Add custom
- * $registry->register('if', MyIfCompiler::class); // Override built-in
+ * $registry->register('if', MyIfDirective::class); // Override built-in
  *
  * // Empty registry for complete customization:
  * $registry = DirectiveRegistry::empty();
- * $registry->register('if', IfCompiler::class);
+ * $registry->register('if', IfDirective::class);
  * ```
  */
 final class DirectiveRegistry implements DirectiveRegistryInterface
@@ -53,42 +53,42 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
      *
      * Maps directive names to their compiler class names or instances.
      *
-     * @var array<string, class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface>>
+     * @var array<string, class-string<\Sugar\Directive\Interface\DirectiveInterface>>
      */
     private const DEFAULT_DIRECTIVES = [
         // Control flow
-        'if' => IfCompiler::class,
-        'elseif' => IfCompiler::class,
-        'else' => IfCompiler::class,
-        'unless' => UnlessCompiler::class,
-        'isset' => IssetCompiler::class,
-        'empty' => EmptyCompiler::class,
-        'switch' => SwitchCompiler::class,
-        'case' => SwitchCompiler::class,
-        'default' => SwitchCompiler::class,
+        'if' => IfDirective::class,
+        'elseif' => IfDirective::class,
+        'else' => IfDirective::class,
+        'unless' => UnlessDirective::class,
+        'isset' => IssetDirective::class,
+        'empty' => EmptyDirective::class,
+        'switch' => SwitchDirective::class,
+        'case' => SwitchDirective::class,
+        'default' => SwitchDirective::class,
         // Loops
-        'foreach' => ForeachCompiler::class,
-        'forelse' => ForelseCompiler::class,
-        'while' => WhileCompiler::class,
-        'times' => TimesCompiler::class,
+        'foreach' => ForeachDirective::class,
+        'forelse' => ForelseDirective::class,
+        'while' => WhileDirective::class,
+        'times' => TimesDirective::class,
         // Attributes
-        'class' => ClassCompiler::class,
-        'spread' => SpreadCompiler::class,
+        'class' => ClassDirective::class,
+        'spread' => SpreadDirective::class,
         // Boolean attributes
-        'checked' => BooleanAttributeCompiler::class,
-        'selected' => BooleanAttributeCompiler::class,
-        'disabled' => BooleanAttributeCompiler::class,
+        'checked' => BooleanAttributeDirective::class,
+        'selected' => BooleanAttributeDirective::class,
+        'disabled' => BooleanAttributeDirective::class,
         // HTML manipulation
-        'tag' => TagCompiler::class,
-        'ifcontent' => IfContentCompiler::class,
+        'tag' => TagDirective::class,
+        'ifcontent' => IfContentDirective::class,
         // Pass-through (handled by other passes)
-        'slot' => PassThroughCompiler::class,
-        'bind' => PassThroughCompiler::class,
-        'component' => PassThroughCompiler::class,
+        'slot' => PassThroughDirective::class,
+        'bind' => PassThroughDirective::class,
+        'component' => PassThroughDirective::class,
     ];
 
     /**
-     * @var array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface|class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface>>
+     * @var array<string, \Sugar\Directive\Interface\DirectiveInterface|class-string<\Sugar\Directive\Interface\DirectiveInterface>>
      */
     private array $directives = [];
 
@@ -122,9 +122,9 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
      * Accepts either an instance or a class name for lazy instantiation.
      *
      * @param string $name Directive name (e.g., 'if', 'foreach', 'while')
-     * @param \Sugar\Directive\Interface\DirectiveCompilerInterface|class-string<\Sugar\Directive\Interface\DirectiveCompilerInterface> $compiler The compiler instance or class name
+     * @param \Sugar\Directive\Interface\DirectiveInterface|class-string<\Sugar\Directive\Interface\DirectiveInterface> $compiler The compiler instance or class name
      */
-    public function register(string $name, DirectiveCompilerInterface|string $compiler): void
+    public function register(string $name, DirectiveInterface|string $compiler): void
     {
         $this->directives[$name] = $compiler;
     }
@@ -146,10 +146,10 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
      * Instantiates the compiler if a class name was registered.
      *
      * @param string $name Directive name
-     * @return \Sugar\Directive\Interface\DirectiveCompilerInterface The compiler implementation
+     * @return \Sugar\Directive\Interface\DirectiveInterface The compiler implementation
      * @throws \Sugar\Exception\UnknownDirectiveException If directive is not registered
      */
-    public function get(string $name): DirectiveCompilerInterface
+    public function get(string $name): DirectiveInterface
     {
         if (!$this->has($name)) {
             $suggestion = DidYouMean::suggest($name, array_keys($this->directives));
@@ -164,7 +164,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
 
         // Lazy instantiation: if a class name was registered, instantiate it
         if (is_string($compiler)) {
-            $compiler = $this->resolveExtension($compiler, DirectiveCompilerInterface::class);
+            $compiler = $this->resolveExtension($compiler, DirectiveInterface::class);
             $this->directives[$name] = $compiler; // Cache the instance
         }
 
@@ -176,7 +176,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
      *
      * Resolves all lazy-loaded class strings to instances.
      *
-     * @return array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface>
+     * @return array<string, \Sugar\Directive\Interface\DirectiveInterface>
      */
     public function all(): array
     {
@@ -185,7 +185,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
             $this->get($name); // This will instantiate and cache it
         }
 
-        /** @var array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface> $directives */
+        /** @var array<string, \Sugar\Directive\Interface\DirectiveInterface> $directives */
         $directives = $this->directives;
 
         return $directives;
@@ -195,7 +195,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
      * Get directives of a specific type
      *
      * @param \Sugar\Enum\DirectiveType $type Directive type to filter by
-     * @return array<string, \Sugar\Directive\Interface\DirectiveCompilerInterface> Filtered directives
+     * @return array<string, \Sugar\Directive\Interface\DirectiveInterface> Filtered directives
      */
     public function getByType(DirectiveType $type): array
     {
@@ -223,9 +223,9 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
             $this->register($name, $compiler);
         }
 
-        // Register instance-based directives (ContentCompiler with different configs)
-        $this->register('text', new ContentCompiler(escape: true));
-        $this->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+        // Register instance-based directives (ContentDirective with different configs)
+        $this->register('text', new ContentDirective(escape: true));
+        $this->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
     }
 
     /**

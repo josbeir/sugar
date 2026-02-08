@@ -5,8 +5,8 @@ namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\DirectiveNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
-use Sugar\Directive\ForelseCompiler;
-use Sugar\Directive\SwitchCompiler;
+use Sugar\Directive\ForelseDirective;
+use Sugar\Directive\SwitchDirective;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\DirectivePairingPass;
 use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
@@ -16,10 +16,10 @@ final class DirectivePairingPassTest extends MiddlewarePassTestCase
     protected function getPass(): AstPassInterface
     {
         $registry = new DirectiveRegistry();
-        $registry->register('forelse', ForelseCompiler::class);
-        $registry->register('empty', ForelseCompiler::class);
-        $registry->register('switch', SwitchCompiler::class);
-        $registry->register('case', SwitchCompiler::class);
+        $registry->register('forelse', ForelseDirective::class);
+        $registry->register('empty', ForelseDirective::class);
+        $registry->register('switch', SwitchDirective::class);
+        $registry->register('case', SwitchDirective::class);
 
         return new DirectivePairingPass($registry);
     }
@@ -110,7 +110,7 @@ final class DirectivePairingPassTest extends MiddlewarePassTestCase
 
     public function testDoesNotPairNonPairedDirectiveTypes(): void
     {
-        // Switch doesn't implement PairedDirectiveCompilerInterface yet
+        // Switch doesn't implement PairedDirectiveInterface yet
         $switch = $this->directive('switch')
             ->expression('$value')
             ->at(1, 1)

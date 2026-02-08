@@ -8,9 +8,9 @@ use Sugar\Ast\DocumentNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
-use Sugar\Directive\BooleanAttributeCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\IfCompiler;
+use Sugar\Directive\BooleanAttributeDirective;
+use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\IfDirective;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
@@ -33,8 +33,8 @@ final class DirectiveIntegrationTest extends TestCase
     {
         $this->setUpCompiler(withDefaultDirectives: false);
 
-        $this->registry->register('if', new IfCompiler());
-        $this->registry->register('foreach', new ForeachCompiler());
+        $this->registry->register('if', new IfDirective());
+        $this->registry->register('foreach', new ForeachDirective());
 
         $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
         $pairingPass = new DirectivePairingPass($this->registry);
@@ -150,7 +150,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testBooleanAttributeCheckedFullPipeline(): void
     {
-        $this->registry->register('checked', new BooleanAttributeCompiler());
+        $this->registry->register('checked', new BooleanAttributeDirective());
 
         $template = '<input type="checkbox" s:checked="$isSubscribed">';
 
@@ -167,7 +167,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testBooleanAttributeSelectedFullPipeline(): void
     {
-        $this->registry->register('selected', new BooleanAttributeCompiler());
+        $this->registry->register('selected', new BooleanAttributeDirective());
 
         $template = '<option s:selected="$value === \'premium\'">Premium</option>';
 
@@ -184,7 +184,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testBooleanAttributeDisabledFullPipeline(): void
     {
-        $this->registry->register('disabled', new BooleanAttributeCompiler());
+        $this->registry->register('disabled', new BooleanAttributeDirective());
 
         $template = '<button s:disabled="$isProcessing">Submit</button>';
 
@@ -201,7 +201,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testAttributeDirectivesNoTrailingSpaces(): void
     {
-        $this->registry->register('checked', new BooleanAttributeCompiler());
+        $this->registry->register('checked', new BooleanAttributeDirective());
 
         $template = '<input type="text" name="email" s:checked="$subscribed">';
 
@@ -223,7 +223,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testMultipleAttributeDirectivesNoTrailingSpaces(): void
     {
-        $this->registry->register('checked', new BooleanAttributeCompiler());
+        $this->registry->register('checked', new BooleanAttributeDirective());
 
         $template = '<input type="checkbox" s:checked="$isActive" s:checked="$isEnabled">';
 
@@ -238,7 +238,7 @@ final class DirectiveIntegrationTest extends TestCase
 
     public function testSelfClosingElementsNoTrailingSpaces(): void
     {
-        $this->registry->register('checked', new BooleanAttributeCompiler());
+        $this->registry->register('checked', new BooleanAttributeDirective());
 
         $template = '<input type="checkbox" s:checked="$subscribed" />';
 

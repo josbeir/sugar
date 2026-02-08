@@ -12,10 +12,10 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
-use Sugar\Directive\ClassCompiler;
-use Sugar\Directive\ContentCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\IfCompiler;
+use Sugar\Directive\ClassDirective;
+use Sugar\Directive\ContentDirective;
+use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\IfDirective;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
@@ -30,11 +30,11 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     protected function getPass(): AstPassInterface
     {
         $registry = new DirectiveRegistry();
-        $registry->register('if', IfCompiler::class);
-        $registry->register('foreach', ForeachCompiler::class);
-        $registry->register('class', ClassCompiler::class);
-        $registry->register('text', new ContentCompiler(escape: true));
-        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
+        $registry->register('if', IfDirective::class);
+        $registry->register('foreach', ForeachDirective::class);
+        $registry->register('class', ClassDirective::class);
+        $registry->register('text', new ContentDirective(escape: true));
+        $registry->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
 
         return new DirectiveExtractionPass($registry, new SugarConfig());
     }

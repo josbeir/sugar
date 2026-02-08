@@ -12,7 +12,7 @@ use Sugar\Ast\Node;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Directive\Interface\PairedDirectiveCompilerInterface;
+use Sugar\Directive\Interface\PairedDirectiveInterface;
 use Sugar\Extension\DirectiveRegistryInterface;
 
 /**
@@ -77,7 +77,7 @@ final class DirectivePairingPass implements AstPassInterface
 
         $compiler = $this->registry->get($node->name);
 
-        if (!($compiler instanceof PairedDirectiveCompilerInterface)) {
+        if (!($compiler instanceof PairedDirectiveInterface)) {
             return;
         }
 

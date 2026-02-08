@@ -19,8 +19,8 @@ use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\Interface\DirectiveCompilerInterface;
-use Sugar\Directive\Interface\ElementExtractionInterface;
+use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
@@ -220,10 +220,10 @@ final class DirectiveExtractionPass implements AstPassInterface
      * Separates directives by type:
      * - Control Flow: Only one allowed, wraps the element
      * - Content: Only one allowed, injects into children
-     * - Custom Extraction: Directives implementing ElementExtractionInterface (multiple allowed, processed in order)
+     * - Custom Extraction: Directives implementing ElementAwareDirectiveInterface (multiple allowed, processed in order)
      * - Attribute: Multiple allowed, remain as element attributes
      *
-     * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementExtractionInterface}>, remaining: array<\Sugar\Ast\AttributeNode>}
+     * @return array{controlFlow: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, content: array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode}|null, customExtraction: array<array{name: string, expression: string, attr: \Sugar\Ast\AttributeNode, compiler: \Sugar\Directive\Interface\ElementAwareDirectiveInterface}>, remaining: array<\Sugar\Ast\AttributeNode>}
      */
     private function extractDirective(ElementNode|ComponentNode $node): array
     {
@@ -261,7 +261,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 }
 
                 // Check if directive needs custom extraction
-                if ($compiler instanceof ElementExtractionInterface) {
+                if ($compiler instanceof ElementAwareDirectiveInterface) {
                     $customExtractionDirectives[] = [
                         'name' => $name,
                         'expression' => $expression,
@@ -615,7 +615,7 @@ final class DirectiveExtractionPass implements AstPassInterface
      * Attribute directives like s:class and s:spread are compiled immediately
      * and added back as regular attributes with OutputNode values.
      *
-     * @param \Sugar\Directive\Interface\DirectiveCompilerInterface $compiler Directive compiler
+     * @param \Sugar\Directive\Interface\DirectiveInterface $compiler Directive compiler
      * @param string $name Directive name
      * @param string $expression Directive expression
      * @param int $line Line number
@@ -623,7 +623,7 @@ final class DirectiveExtractionPass implements AstPassInterface
      * @param array<\Sugar\Ast\AttributeNode> &$remainingAttrs Reference to remaining attributes array
      */
     private function compileAttributeDirective(
-        DirectiveCompilerInterface $compiler,
+        DirectiveInterface $compiler,
         string $name,
         string $expression,
         int $line,

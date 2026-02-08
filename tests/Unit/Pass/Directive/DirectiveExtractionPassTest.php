@@ -17,17 +17,17 @@ use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\ClassCompiler;
-use Sugar\Directive\ContentCompiler;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\IfCompiler;
-use Sugar\Directive\Interface\DirectiveCompilerInterface;
-use Sugar\Directive\Interface\ElementExtractionInterface;
-use Sugar\Directive\IssetCompiler;
-use Sugar\Directive\PassThroughCompiler;
-use Sugar\Directive\SpreadCompiler;
-use Sugar\Directive\TagCompiler;
-use Sugar\Directive\UnlessCompiler;
+use Sugar\Directive\ClassDirective;
+use Sugar\Directive\ContentDirective;
+use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\IfDirective;
+use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
+use Sugar\Directive\IssetDirective;
+use Sugar\Directive\PassThroughDirective;
+use Sugar\Directive\SpreadDirective;
+use Sugar\Directive\TagDirective;
+use Sugar\Directive\UnlessDirective;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\SyntaxException;
@@ -49,16 +49,16 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     {
         $registry = new DirectiveRegistry();
         // Register built-in directives needed for tests
-        $registry->register('if', IfCompiler::class);
-        $registry->register('foreach', ForeachCompiler::class);
-        $registry->register('class', ClassCompiler::class);
-        $registry->register('spread', SpreadCompiler::class);
-        $registry->register('tag', TagCompiler::class);
-        $registry->register('slot', PassThroughCompiler::class);
-        $registry->register('text', new ContentCompiler(escape: true));
-        $registry->register('html', new ContentCompiler(escape: false, context: OutputContext::RAW));
-        $registry->register('isset', IssetCompiler::class);
-        $registry->register('unless', UnlessCompiler::class);
+        $registry->register('if', IfDirective::class);
+        $registry->register('foreach', ForeachDirective::class);
+        $registry->register('class', ClassDirective::class);
+        $registry->register('spread', SpreadDirective::class);
+        $registry->register('tag', TagDirective::class);
+        $registry->register('slot', PassThroughDirective::class);
+        $registry->register('text', new ContentDirective(escape: true));
+        $registry->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
+        $registry->register('isset', IssetDirective::class);
+        $registry->register('unless', UnlessDirective::class);
 
         return $registry;
     }
@@ -373,7 +373,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testCustomExtractionReturnsFragmentWithoutElement(): void
     {
-        $compiler = new class () implements DirectiveCompilerInterface, ElementExtractionInterface {
+        $compiler = new class () implements DirectiveInterface, ElementAwareDirectiveInterface {
             public function extractFromElement(
                 ElementNode $element,
                 string $expression,
@@ -424,7 +424,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testIgnoresNonRawPhpNodesFromAttributeCompiler(): void
     {
-        $compiler = new class () implements DirectiveCompilerInterface {
+        $compiler = new class () implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [new TextNode('ignored', 1, 1)];

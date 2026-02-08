@@ -96,7 +96,7 @@ final class HashTest extends TestCase
 
     public function testShortHandlesConcatenatedData(): void
     {
-        // Test the actual use case in TagCompiler/IfContentCompiler
+        // Test the actual use case in TagDirective/IfContentDirective
         $expression = '$tagName';
         $line = 42;
         $column = 8;

@@ -10,7 +10,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\Interface\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
@@ -28,7 +28,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testCompilesSimpleDirective(): void
     {
-        $compiler = new class implements DirectiveCompilerInterface {
+        $compiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -62,7 +62,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testCompilesNestedDirectives(): void
     {
-        $ifCompiler = new class implements DirectiveCompilerInterface {
+        $ifCompiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -78,7 +78,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
             }
         };
 
-        $foreachCompiler = new class implements DirectiveCompilerInterface {
+        $foreachCompiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -162,7 +162,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testHandlesCompilerReturningMultipleNodes(): void
     {
-        $compiler = new class implements DirectiveCompilerInterface {
+        $compiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -197,7 +197,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testProcessesMultipleTopLevelDirectives(): void
     {
-        $compiler = new class implements DirectiveCompilerInterface {
+        $compiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -237,7 +237,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testHandlesDirectiveWithinElementChildren(): void
     {
-        $compiler = new class implements DirectiveCompilerInterface {
+        $compiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -279,7 +279,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
 
     public function testHandlesMixedContentWithDirectives(): void
     {
-        $compiler = new class implements DirectiveCompilerInterface {
+        $compiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -345,7 +345,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
     public function testRecursivelyProcessesCompiledNodes(): void
     {
         // Compiler that returns a node containing another directive
-        $outerCompiler = new class implements DirectiveCompilerInterface {
+        $outerCompiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [
@@ -367,7 +367,7 @@ final class DirectiveCompilationPassTest extends MiddlewarePassTestCase
             }
         };
 
-        $innerCompiler = new class implements DirectiveCompilerInterface {
+        $innerCompiler = new class implements DirectiveInterface {
             public function compile(Node $node, CompilationContext $context): array
             {
                 return [

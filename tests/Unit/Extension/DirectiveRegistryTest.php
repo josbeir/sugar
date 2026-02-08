@@ -8,7 +8,7 @@ use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\Interface\DirectiveCompilerInterface;
+use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveRegistry;
@@ -92,17 +92,17 @@ final class DirectiveRegistryTest extends TestCase
 
     public function testRegisterDirectiveByClassName(): void
     {
-        $this->registry->register('test', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirective::class);
 
         $this->assertTrue($this->registry->has('test'));
 
         $compiler = $this->registry->get('test');
-        $this->assertInstanceOf(TestDirectiveCompiler::class, $compiler);
+        $this->assertInstanceOf(TestDirective::class, $compiler);
     }
 
     public function testLazyInstantiationCachesInstance(): void
     {
-        $this->registry->register('test', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirective::class);
 
         $compiler1 = $this->registry->get('test');
         $compiler2 = $this->registry->get('test');
@@ -124,7 +124,7 @@ final class DirectiveRegistryTest extends TestCase
 
     public function testGetDirectiveThrowsForInvalidInterface(): void
     {
-        // Register a class that doesn't implement DirectiveCompilerInterface
+        // Register a class that doesn't implement DirectiveInterface
         /** @phpstan-ignore argument.type */
         $this->registry->register('invalid', stdClass::class);
 
@@ -153,8 +153,8 @@ final class DirectiveRegistryTest extends TestCase
 
     public function testGetDirectivesByTypeWithLazyLoading(): void
     {
-        $this->registry->register('test', TestDirectiveCompiler::class);
-        $this->registry->register('test2', TestDirectiveCompiler::class);
+        $this->registry->register('test', TestDirective::class);
+        $this->registry->register('test2', TestDirective::class);
 
         $controlFlowDirectives = $this->registry->getByType(DirectiveType::CONTROL_FLOW);
 
@@ -167,20 +167,20 @@ final class DirectiveRegistryTest extends TestCase
     {
         $compiler1 = $this->createMockDirectiveCompiler();
         $this->registry->register('eager', $compiler1);
-        $this->registry->register('lazy', TestDirectiveCompiler::class);
+        $this->registry->register('lazy', TestDirective::class);
 
         $all = $this->registry->all();
 
         $this->assertCount(2, $all);
         $this->assertSame($compiler1, $all['eager']);
-        $this->assertInstanceOf(TestDirectiveCompiler::class, $all['lazy']);
+        $this->assertInstanceOf(TestDirective::class, $all['lazy']);
     }
 
-    private function createMockDirectiveCompiler(?DirectiveType $type = null): DirectiveCompilerInterface
+    private function createMockDirectiveCompiler(?DirectiveType $type = null): DirectiveInterface
     {
         $type ??= DirectiveType::CONTROL_FLOW;
 
-        return new class ($type) implements DirectiveCompilerInterface {
+        return new class ($type) implements DirectiveInterface {
             public function __construct(private DirectiveType $type)
             {
             }

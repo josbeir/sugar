@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
-use Sugar\Directive\IfContentCompiler;
-use Sugar\Directive\TagCompiler;
+use Sugar\Directive\IfContentDirective;
+use Sugar\Directive\TagDirective;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
@@ -38,8 +38,8 @@ final class DirectiveCompilationPipelineTest extends TestCase
     {
         $this->setUpCompiler(withDefaultDirectives: false);
 
-        $this->registry->register('tag', new TagCompiler());
-        $this->registry->register('ifcontent', new IfContentCompiler());
+        $this->registry->register('tag', new TagDirective());
+        $this->registry->register('ifcontent', new IfContentDirective());
 
         $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
         $pairingPass = new DirectivePairingPass($this->registry);

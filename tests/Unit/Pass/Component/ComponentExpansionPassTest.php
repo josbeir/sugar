@@ -17,9 +17,9 @@ use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
-use Sugar\Directive\ForeachCompiler;
-use Sugar\Directive\IfCompiler;
-use Sugar\Directive\WhileCompiler;
+use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\IfDirective;
+use Sugar\Directive\WhileDirective;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
@@ -47,9 +47,9 @@ final class ComponentExpansionPassTest extends TestCase
         $registry = $this->createRegistry();
 
         // Register standard directives for testing
-        $registry->register('if', IfCompiler::class);
-        $registry->register('foreach', ForeachCompiler::class);
-        $registry->register('while', WhileCompiler::class);
+        $registry->register('if', IfDirective::class);
+        $registry->register('foreach', ForeachDirective::class);
+        $registry->register('while', WhileDirective::class);
 
         $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
         $this->pipeline = new AstPipeline([$pass]);
