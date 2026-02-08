@@ -32,16 +32,15 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         return new TemplateInheritancePass($loader, $parser, new SugarConfig());
     }
 
-    private function attr(string $name, string $value): AttributeNode
-    {
-        return new AttributeNode($name, $value, 1, 1);
-    }
-
     public function testProcessesTemplateWithoutInheritance(): void
     {
-        $document = new DocumentNode([
-            new ElementNode('div', [], [$this->createText('Hello')], false, 1, 1),
-        ]);
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->createText('Hello'))
+                    ->build(),
+            )
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
@@ -52,12 +51,17 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     public function testExtendsReplacesBlockContent(): void
     {
         // Child template with s:extends
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', '../base.sugar.php')], [], false, 1, 1),
-            new ElementNode('title', [$this->attr('s:block', 'title')], [
-                $this->createText('Child Title'),
-            ], false, 2, 1),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:extends', '../base.sugar.php')
+                    ->build(),
+                $this->element('title')
+                    ->attribute('s:block', 'title')
+                    ->withChild($this->createText('Child Title'))
+                    ->build(),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
 
@@ -92,14 +96,17 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
     public function testExtendsOnFragmentElement(): void
     {
-        $document = new DocumentNode([
-            new FragmentNode([
-                $this->attr('s:extends', '../base.sugar.php'),
-            ], [], 1, 1),
-            new ElementNode('title', [$this->attr('s:block', 'title')], [
-                $this->createText('Child Title'),
-            ], false, 2, 1),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                new FragmentNode([
+                    $this->attribute('s:extends', '../base.sugar.php'),
+                ], [], 1, 1),
+                $this->element('title')
+                    ->attribute('s:block', 'title')
+                    ->withChild($this->createText('Child Title'))
+                    ->build(),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
 
@@ -144,12 +151,17 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         );
 
         // Child extends parent
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', '../layouts/temp-app.sugar.php')], [], false, 1, 1),
-            new ElementNode('title', [$this->attr('s:block', 'title')], [
-                $this->createText('Page Title'),
-            ], false, 2, 1),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:extends', '../layouts/temp-app.sugar.php')
+                    ->build(),
+                $this->element('title')
+                    ->attribute('s:block', 'title')
+                    ->withChild($this->createText('Page Title'))
+                    ->build(),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
 
@@ -169,15 +181,24 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             '<header>Header Content</header>',
         );
 
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:include', 'partials/temp-header.sugar.php')], [], false, 1, 1),
-            $this->createText('Main Content'),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:include', 'partials/temp-header.sugar.php')
+                    ->build(),
+                $this->createText('Main Content'),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
         $this->assertInstanceOf(DocumentNode::class, $result);
-        $this->assertGreaterThan(1, count($result->children));
+        $this->assertCount(2, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+        $this->assertSame('div', $result->children[0]->tag);
+        $this->assertCount(1, $result->children[0]->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]->children[0]);
+        $this->assertSame('header', $result->children[0]->children[0]->tag);
 
         // Cleanup
         unlink($this->inheritanceFixturesPath . '/partials/temp-header.sugar.php');
@@ -191,12 +212,14 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             '<span><?= $user ?></span>',
         );
 
-        $document = new DocumentNode([
-            new ElementNode('div', [
-                $this->attr('s:include', 'partials/user.sugar.php'),
-                $this->attr('s:with', "['user' => \$userName]"),
-            ], [], false, 1, 1),
-        ]);
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:include', 'partials/user.sugar.php')
+                    ->attribute('s:with', "['user' => \$userName]")
+                    ->build(),
+            )
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
@@ -220,9 +243,13 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             '<div s:extends="circular-a.sugar.php"></div>',
         );
 
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', 'circular-a.sugar.php')], [], false, 1, 1),
-        ]);
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:extends', 'circular-a.sugar.php')
+                    ->build(),
+            )
+            ->build();
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Circular');
@@ -238,9 +265,13 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
     public function testThrowsOnTemplateNotFound(): void
     {
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', 'nonexistent.sugar.php')], [], false, 1, 1),
-        ]);
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:extends', 'nonexistent.sugar.php')
+                    ->build(),
+            )
+            ->build();
 
         $this->expectException(TemplateNotFoundException::class);
 
@@ -250,12 +281,17 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     public function testRelativePathResolution(): void
     {
         // Existing fixture at layouts/base.sugar.php
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', '../layouts/base.sugar.php')], [], false, 1, 1),
-            new ElementNode('title', [$this->attr('s:block', 'title')], [
-                $this->createText('Page'),
-            ], false, 2, 1),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:extends', '../layouts/base.sugar.php')
+                    ->build(),
+                $this->element('title')
+                    ->attribute('s:block', 'title')
+                    ->withChild($this->createText('Page'))
+                    ->build(),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
 
@@ -265,12 +301,17 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     public function testAbsolutePathResolution(): void
     {
         // Existing fixture at layouts/base.sugar.php
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:extends', '/layouts/base.sugar.php')], [], false, 1, 1),
-            new ElementNode('title', [$this->attr('s:block', 'title')], [
-                $this->createText('Page'),
-            ], false, 2, 1),
-        ]);
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:extends', '/layouts/base.sugar.php')
+                    ->build(),
+                $this->element('title')
+                    ->attribute('s:block', 'title')
+                    ->withChild($this->createText('Page'))
+                    ->build(),
+            ])
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
 
@@ -279,11 +320,14 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
     public function testPreservesNonInheritanceDirectives(): void
     {
-        $document = new DocumentNode([
-            new ElementNode('div', [$this->attr('s:if', '$show')], [
-                $this->createText('Content'),
-            ], false, 1, 1),
-        ]);
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:if', '$show')
+                    ->withChild($this->createText('Content'))
+                    ->build(),
+            )
+            ->build();
 
         $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
@@ -304,9 +348,13 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         file_put_contents($includePath, '<p><?= $message ?></p>');
 
         try {
-            $document = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:include', 'temp-include.sugar.php')], [], false, 1, 1),
-            ]);
+            $document = $this->document()
+                ->withChild(
+                    $this->element('div')
+                        ->attribute('s:include', 'temp-include.sugar.php')
+                        ->build(),
+                )
+                ->build();
 
             $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
@@ -314,9 +362,12 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             $this->assertInstanceOf(DocumentNode::class, $result);
             $this->assertCount(1, $result->children);
 
-            // The included content should be directly in the tree
+            // Wrapper element should be preserved with included content inside
             $this->assertInstanceOf(ElementNode::class, $result->children[0]);
-            $this->assertSame('p', $result->children[0]->tag);
+            $this->assertSame('div', $result->children[0]->tag);
+            $this->assertCount(1, $result->children[0]->children);
+            $this->assertInstanceOf(ElementNode::class, $result->children[0]->children[0]);
+            $this->assertSame('p', $result->children[0]->children[0]->tag);
         } finally {
             unlink($includePath);
         }
@@ -329,17 +380,22 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         file_put_contents($includePath, '<p><?= $title ?></p>');
 
         try {
-            $document = new DocumentNode([
-                new ElementNode('div', [
-                    $this->attr('s:include', 'temp-include-with.sugar.php'),
-                    $this->attr('s:with', "['title' => 'Hello']"),
-                ], [], false, 1, 1),
-            ]);
+            $document = $this->document()
+                ->withChild(
+                    $this->element('div')
+                        ->attribute('s:include', 'temp-include-with.sugar.php')
+                        ->attribute('s:with', "['title' => 'Hello']")
+                        ->build(),
+                )
+                ->build();
 
             $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
 
             // Should wrap in closure for isolation
             $this->assertInstanceOf(DocumentNode::class, $result);
+            $this->assertCount(1, $result->children);
+            $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+            $this->assertSame('div', $result->children[0]->tag);
 
             // Convert to string to check for closure pattern
             $code = $this->documentToString($result);
@@ -353,24 +409,72 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         }
     }
 
+    public function testIncludeWithNoWrapRemovesWrapper(): void
+    {
+        $includePath = $this->inheritanceFixturesPath . '/temp-include-nowrap.sugar.php';
+        file_put_contents($includePath, '<p>Included</p>');
+
+        try {
+            $document = $this->document()
+                ->withChild(
+                    $this->element('div')
+                        ->attribute('s:include', 'temp-include-nowrap.sugar.php')
+                        ->attributeNode($this->attributeNode('s:nowrap', null, 1, 10))
+                        ->build(),
+                )
+                ->build();
+
+            $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $this->assertCount(1, $result->children);
+            $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+            $this->assertSame('p', $result->children[0]->tag);
+        } finally {
+            unlink($includePath);
+        }
+    }
+
+    public function testIncludeNoWrapRejectsExtraAttributes(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:nowrap on s:include cannot include other attributes.');
+
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:include', 'partials/header.sugar.php')
+                    ->attributeNode($this->attributeNode('s:nowrap', null, 1, 10))
+                    ->attribute('class', 'wrapper')
+                    ->build(),
+            )
+            ->build();
+
+        $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
+    }
+
     public function testReplacesElementBlockWithDirectiveFragment(): void
     {
         $layoutPath = $this->inheritanceFixturesPath . '/temp-fragment-layout.sugar.php';
         file_put_contents($layoutPath, '<div s:block="content">Base</div>');
 
         try {
-            $document = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-fragment-layout.sugar.php')], [], false, 1, 1),
-                new FragmentNode(
-                    attributes: [
-                        $this->attr('s:block', 'content'),
-                        $this->attr('s:if', '$show'),
-                    ],
-                    children: [$this->createText('Child')],
-                    line: 1,
-                    column: 1,
-                ),
-            ]);
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-fragment-layout.sugar.php')
+                        ->build(),
+                    new FragmentNode(
+                        attributes: [
+                            $this->attribute('s:block', 'content'),
+                            $this->attribute('s:if', '$show'),
+                        ],
+                        children: [$this->createText('Child')],
+                        line: 1,
+                        column: 1,
+                    ),
+                ])
+                ->build();
 
             $result = $this->execute($document, $this->createTestContext('', 'page.sugar.php'));
 
@@ -401,18 +505,22 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         );
 
         try {
-            $document = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-fragment-root.sugar.php')], [], false, 1, 1),
-                new FragmentNode(
-                    attributes: [
-                        $this->attr('s:block', 'content'),
-                        $this->attr('s:if', '$show'),
-                    ],
-                    children: [$this->createText('Child')],
-                    line: 1,
-                    column: 1,
-                ),
-            ]);
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-fragment-root.sugar.php')
+                        ->build(),
+                    new FragmentNode(
+                        attributes: [
+                            $this->attribute('s:block', 'content'),
+                            $this->attribute('s:if', '$show'),
+                        ],
+                        children: [$this->createText('Child')],
+                        line: 1,
+                        column: 1,
+                    ),
+                ])
+                ->build();
 
             $result = $this->execute($document, $this->createTestContext('', 'page.sugar.php'));
 
@@ -483,20 +591,30 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         try {
             // First page extends layout
-            $page1 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-cached-layout.sugar.php')], [], false, 1, 1),
-                new ElementNode('title', [$this->attr('s:block', 'title')], [
-                    $this->createText('Page 1'),
-                ], false, 2, 1),
-            ]);
+            $page1 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-cached-layout.sugar.php')
+                        ->build(),
+                    $this->element('title')
+                        ->attribute('s:block', 'title')
+                        ->withChild($this->createText('Page 1'))
+                        ->build(),
+                ])
+                ->build();
 
             // Second page also extends same layout
-            $page2 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-cached-layout.sugar.php')], [], false, 1, 1),
-                new ElementNode('title', [$this->attr('s:block', 'title')], [
-                    $this->createText('Page 2'),
-                ], false, 2, 1),
-            ]);
+            $page2 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-cached-layout.sugar.php')
+                        ->build(),
+                    $this->element('title')
+                        ->attribute('s:block', 'title')
+                        ->withChild($this->createText('Page 2'))
+                        ->build(),
+                ])
+                ->build();
 
             // Execute both - layout should be parsed once and cached
             $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));
@@ -524,16 +642,24 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         try {
             // First page includes partial
-            $page1 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:include', 'temp-cached-partial.sugar.php')], [], false, 1, 1),
-                $this->createText('Page 1 Content'),
-            ]);
+            $page1 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:include', 'temp-cached-partial.sugar.php')
+                        ->build(),
+                    $this->createText('Page 1 Content'),
+                ])
+                ->build();
 
             // Second page also includes same partial
-            $page2 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:include', 'temp-cached-partial.sugar.php')], [], false, 1, 1),
-                $this->createText('Page 2 Content'),
-            ]);
+            $page2 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:include', 'temp-cached-partial.sugar.php')
+                        ->build(),
+                    $this->createText('Page 2 Content'),
+                ])
+                ->build();
 
             // Execute both - partial should be parsed once and cached
             $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));
@@ -565,20 +691,30 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         try {
             // Page extends layout 1
-            $page1 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-layout1.sugar.php')], [], false, 1, 1),
-                new ElementNode('title', [$this->attr('s:block', 'title')], [
-                    $this->createText('Page with L1'),
-                ], false, 2, 1),
-            ]);
+            $page1 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-layout1.sugar.php')
+                        ->build(),
+                    $this->element('title')
+                        ->attribute('s:block', 'title')
+                        ->withChild($this->createText('Page with L1'))
+                        ->build(),
+                ])
+                ->build();
 
             // Page extends layout 2
-            $page2 = new DocumentNode([
-                new ElementNode('div', [$this->attr('s:extends', 'temp-layout2.sugar.php')], [], false, 1, 1),
-                new ElementNode('h1', [$this->attr('s:block', 'title')], [
-                    $this->createText('Page with L2'),
-                ], false, 2, 1),
-            ]);
+            $page2 = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', 'temp-layout2.sugar.php')
+                        ->build(),
+                    $this->element('h1')
+                        ->attribute('s:block', 'title')
+                        ->withChild($this->createText('Page with L2'))
+                        ->build(),
+                ])
+                ->build();
 
             // Execute both
             $result1 = $this->execute($page1, $this->createTestContext('', 'page1.sugar.php'));

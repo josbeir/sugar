@@ -3,13 +3,11 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Directive;
 
-use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
-use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassDirective;
@@ -48,19 +46,19 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode(
+                $this->attributeNode(
                     's:foreach',
-                    new OutputNode('$items', true, OutputContext::HTML, 1, 5),
+                    $this->outputNode('$items', true, OutputContext::HTML, 1, 5),
                     1,
                     5,
                 ),
             ],
-            children: [new TextNode('Content', 1, 20)],
+            children: [$this->text('Content', 1, 20)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -71,15 +69,15 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode('s:if', '$show', 1, 5),
-                new AttributeNode('class', 'container', 1, 15),
+                $this->attribute('s:if', '$show', 1, 5),
+                $this->attribute('class', 'container', 1, 15),
             ],
-            children: [new TextNode('Content', 1, 20)],
+            children: [$this->text('Content', 1, 20)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -90,14 +88,14 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode('s:class', "['active' => true]", 1, 5),
+                $this->attribute('s:class', "['active' => true]", 1, 5),
             ],
-            children: [new TextNode('Content', 1, 20)],
+            children: [$this->text('Content', 1, 20)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -105,14 +103,14 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     {
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode('s:text', '$message', 1, 5),
+                $this->attribute('s:text', '$message', 1, 5),
             ],
-            children: [new TextNode('Default', 1, 20)],
+            children: [$this->text('Default', 1, 20)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -125,15 +123,15 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     {
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode('s:if', '$show', 1, 5),
-                new AttributeNode('s:html', '$content', 1, 15),
+                $this->attribute('s:if', '$show', 1, 5),
+                $this->attribute('s:html', '$content', 1, 15),
             ],
-            children: [new TextNode('Default', 1, 30)],
+            children: [$this->text('Default', 1, 30)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should have if directive wrapping html directive
@@ -149,18 +147,12 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testElementWithOnlyAttributeDirectivesNowWorks(): void
     {
         // Attribute-only directives are now supported - element remains ElementNode with compiled attributes
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:class', "['active' => true]", 1, 5),
-            ],
-            children: [new TextNode('Content', 1, 20)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:class', "['active' => true]")
+            ->withChild($this->text('Content', 1, 20))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should return ElementNode with compiled class attribute
@@ -179,18 +171,11 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
     public function testElementWithContentDirectiveOnly(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:text', '$userName', 1, 5),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:text', '$userName')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -202,19 +187,12 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
     public function testElementWithBothControlFlowAndContentDirective(): void
     {
-        $element = new ElementNode(
-            tag: 'span',
-            attributes: [
-                new AttributeNode('s:if', '$show', 1, 5),
-                new AttributeNode('s:text', '$message', 1, 15),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('span')
+            ->attribute('s:if', '$show')
+            ->attribute('s:text', '$message')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should wrap: if -> element containing text directive
@@ -236,19 +214,13 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
     public function testElementWithContentDirectiveNoWrap(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:text', '$userName', 1, 5),
-                new AttributeNode('s:nowrap', null, 1, 20),
-            ],
-            children: [new TextNode('Ignored', 1, 30)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:text', '$userName')
+            ->attributeNode($this->attributeNode('s:nowrap', null, 1, 20))
+            ->withChild($this->text('Ignored', 1, 30))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -264,18 +236,11 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('requires a content directive');
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:nowrap', null, 1, 5),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attributeNode($this->attributeNode('s:nowrap', null, 1, 5))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -284,20 +249,13 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Content directives without a wrapper cannot include other attributes');
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:text', '$userName', 1, 5),
-                new AttributeNode('s:nowrap', null, 1, 20),
-                new AttributeNode('class', 'badge', 1, 30),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:text', '$userName')
+            ->attributeNode($this->attributeNode('s:nowrap', null, 1, 20))
+            ->attribute('class', 'badge')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -308,14 +266,14 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         $fragment = new FragmentNode(
             attributes: [
-                new AttributeNode('s:nowrap', null, 1, 5),
+                $this->attributeNode('s:nowrap', null, 1, 5),
             ],
-            children: [new TextNode('Content', 1, 10)],
+            children: [$this->text('Content', 1, 10)],
             line: 1,
             column: 0,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -324,19 +282,13 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Only one control flow directive allowed per element');
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:if', '$condition', 1, 5),
-                new AttributeNode('s:foreach', '$items as $item', 1, 20),
-            ],
-            children: [new TextNode('Content', 1, 50)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:if', '$condition')
+            ->attribute('s:foreach', '$items as $item')
+            ->withChild($this->text('Content', 1, 50))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $this->execute($ast, $this->createTestContext());
     }
 
@@ -345,19 +297,12 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Only one content directive allowed per element');
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:text', '$text', 1, 5),
-                new AttributeNode('s:html', '$html', 1, 20),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:text', '$text')
+            ->attribute('s:html', '$html')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $this->execute($ast, $this->createTestContext());
     }
 }

@@ -5,21 +5,22 @@ namespace Sugar\Tests\Unit\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
-use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
-use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class AttributeHelperTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testFindAttributesByPrefix(): void
     {
         $attributes = [
-            new AttributeNode('s:if', '$show', 1, 1),
-            new AttributeNode('s:foreach', '$items as $item', 1, 10),
-            new AttributeNode('class', 'btn', 1, 20),
-            new AttributeNode('id', 'main-btn', 1, 30),
+            $this->attribute('s:if', '$show', 1, 1),
+            $this->attribute('s:foreach', '$items as $item', 1, 10),
+            $this->attribute('class', 'btn', 1, 20),
+            $this->attribute('id', 'main-btn', 1, 30),
         ];
 
         $result = AttributeHelper::findAttributesByPrefix($attributes, 's:');
@@ -32,8 +33,8 @@ final class AttributeHelperTest extends TestCase
     public function testFindAttributesByPrefixReturnsEmpty(): void
     {
         $attributes = [
-            new AttributeNode('class', 'btn', 1, 1),
-            new AttributeNode('id', 'main', 1, 10),
+            $this->attribute('class', 'btn', 1, 1),
+            $this->attribute('id', 'main', 1, 10),
         ];
 
         $result = AttributeHelper::findAttributesByPrefix($attributes, 's:');
@@ -43,17 +44,11 @@ final class AttributeHelperTest extends TestCase
 
     public function testHasAttributeWithPrefix(): void
     {
-        $node = new ElementNode(
-            'div',
-            [
-                new AttributeNode('s:if', '$show', 1, 1),
-                new AttributeNode('class', 'btn', 1, 10),
-            ],
-            [],
-            false,
-            1,
-            1,
-        );
+        $node = $this->element('div')
+            ->attribute('s:if', '$show')
+            ->attribute('class', 'btn')
+            ->at(1, 1)
+            ->build();
 
         $this->assertTrue(AttributeHelper::hasAttributeWithPrefix($node, 's:'));
         $this->assertFalse(AttributeHelper::hasAttributeWithPrefix($node, 'x:'));
@@ -63,7 +58,7 @@ final class AttributeHelperTest extends TestCase
     {
         $node = new FragmentNode(
             [
-                new AttributeNode('s:if', '$show', 1, 1),
+                $this->attribute('s:if', '$show', 1, 1),
             ],
             [],
             1,
@@ -75,17 +70,11 @@ final class AttributeHelperTest extends TestCase
 
     public function testGetAttributeValue(): void
     {
-        $node = new ElementNode(
-            'div',
-            [
-                new AttributeNode('id', 'main', 1, 1),
-                new AttributeNode('class', 'container', 1, 10),
-            ],
-            [],
-            false,
-            1,
-            1,
-        );
+        $node = $this->element('div')
+            ->attribute('id', 'main')
+            ->attribute('class', 'container')
+            ->at(1, 1)
+            ->build();
 
         $this->assertSame('main', AttributeHelper::getAttributeValue($node, 'id'));
         $this->assertSame('container', AttributeHelper::getAttributeValue($node, 'class'));
@@ -93,7 +82,7 @@ final class AttributeHelperTest extends TestCase
 
     public function testGetAttributeValueReturnsDefault(): void
     {
-        $node = new ElementNode('div', [], [], false, 1, 1);
+        $node = $this->element('div')->build();
 
         $this->assertNull(AttributeHelper::getAttributeValue($node, 'missing'));
         $this->assertSame('default', AttributeHelper::getAttributeValue($node, 'missing', 'default'));
@@ -101,21 +90,17 @@ final class AttributeHelperTest extends TestCase
 
     public function testGetStringAttributeValueReturnsDefaultForNonString(): void
     {
-        $node = new ElementNode(
-            'div',
-            [
-                new AttributeNode(
+        $node = $this->element('div')
+            ->attributeNode(
+                $this->attributeNode(
                     'data',
-                    new OutputNode('($value)', true, OutputContext::HTML, 1, 1),
+                    $this->outputNode('($value)', true, OutputContext::HTML, 1, 1),
                     1,
                     1,
                 ),
-            ],
-            [],
-            false,
-            1,
-            1,
-        );
+            )
+            ->at(1, 1)
+            ->build();
 
         $this->assertSame('fallback', AttributeHelper::getStringAttributeValue($node, 'data', 'fallback'));
     }
@@ -123,9 +108,9 @@ final class AttributeHelperTest extends TestCase
     public function testRemoveAttribute(): void
     {
         $attributes = [
-            new AttributeNode('id', 'main', 1, 1),
-            new AttributeNode('class', 'btn', 1, 10),
-            new AttributeNode('disabled', null, 1, 20),
+            $this->attribute('id', 'main', 1, 1),
+            $this->attribute('class', 'btn', 1, 10),
+            $this->attributeNode('disabled', null, 1, 20),
         ];
 
         $result = AttributeHelper::removeAttribute($attributes, 'class');
@@ -138,9 +123,9 @@ final class AttributeHelperTest extends TestCase
     public function testFilterAttributes(): void
     {
         $attributes = [
-            new AttributeNode('s:if', '$show', 1, 1),
-            new AttributeNode('class', 'btn', 1, 10),
-            new AttributeNode('s:foreach', '$items as $item', 1, 20),
+            $this->attribute('s:if', '$show', 1, 1),
+            $this->attribute('class', 'btn', 1, 10),
+            $this->attribute('s:foreach', '$items as $item', 1, 20),
         ];
 
         $result = AttributeHelper::filterAttributes(
@@ -156,9 +141,9 @@ final class AttributeHelperTest extends TestCase
     public function testFindAttributeIndex(): void
     {
         $attributes = [
-            new AttributeNode('id', 'main', 1, 1),
-            new AttributeNode('class', 'btn', 1, 10),
-            new AttributeNode('disabled', null, 1, 20),
+            $this->attribute('id', 'main', 1, 1),
+            $this->attribute('class', 'btn', 1, 10),
+            $this->attributeNode('disabled', null, 1, 20),
         ];
 
         $this->assertSame(0, AttributeHelper::findAttributeIndex($attributes, 'id'));

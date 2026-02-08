@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\AttributeNode;
-use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Component\Helper\SlotResolver;
@@ -22,14 +20,9 @@ final class SlotResolverTest extends TestCase
         $otherOutput = $this->outputNode('$content', true, OutputContext::HTML, 1, 1);
 
         $attributeOutput = $this->outputNode('$slot', true, OutputContext::HTML_ATTRIBUTE, 1, 1);
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('title', $attributeOutput, 1, 1)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attributeNode($this->attributeNode('title', $attributeOutput))
+            ->build();
 
         $fragment = new FragmentNode(
             attributes: [],

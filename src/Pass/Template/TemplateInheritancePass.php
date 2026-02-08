@@ -238,9 +238,46 @@ final class TemplateInheritancePass implements AstPassInterface
                 ($child instanceof ElementNode || $child instanceof FragmentNode) &&
                 AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('include'))
             ) {
+                $includeName = $this->prefixHelper->buildName('include');
+                $withName = $this->prefixHelper->buildName('with');
+                $nowrapName = $this->prefixHelper->buildName('nowrap');
+                $hasNoWrap = AttributeHelper::hasAttribute($child, $nowrapName);
+
+                if ($hasNoWrap && $child instanceof FragmentNode) {
+                    $nowrapAttr = AttributeHelper::findAttribute($child->attributes, $nowrapName);
+
+                    if (!$nowrapAttr instanceof AttributeNode) {
+                        $nowrapLine = $child->line;
+                        $nowrapColumn = $child->column;
+                    } else {
+                        $nowrapLine = $nowrapAttr->line;
+                        $nowrapColumn = $nowrapAttr->column;
+                    }
+
+                    throw $context->createException(
+                        SyntaxException::class,
+                        'The s:nowrap directive can only be used on elements with s:include.',
+                        $nowrapLine,
+                        $nowrapColumn,
+                    );
+                }
+
+                if ($hasNoWrap && $child instanceof ElementNode) {
+                    foreach ($child->attributes as $attr) {
+                        if (!in_array($attr->name, [$includeName, $withName, $nowrapName], true)) {
+                            throw $context->createException(
+                                SyntaxException::class,
+                                's:nowrap on s:include cannot include other attributes.',
+                                $attr->line,
+                                $attr->column,
+                            );
+                        }
+                    }
+                }
+
                 $includePath = AttributeHelper::getStringAttributeValue(
                     $child,
-                    $this->prefixHelper->buildName('include'),
+                    $includeName,
                 );
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
 
@@ -261,18 +298,26 @@ final class TemplateInheritancePass implements AstPassInterface
 
                 // Process includes recursively
                 $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
+
+                $includeChildren = $includeDocument->children;
+
                 // Check for s:with (scope isolation)
                 if (AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('with'))) {
                     // Wrap in scope isolation with variables from s:with
                     $withValue = AttributeHelper::getStringAttributeValue(
                         $child,
-                        $this->prefixHelper->buildName('with'),
+                        $withName,
                     );
                     $wrapped = $this->wrapInIsolatedScope($includeDocument, $withValue);
-                    array_push($newChildren, ...$wrapped->children);
+                    $includeChildren = $wrapped->children;
+                }
+
+                if ($child instanceof ElementNode && !$hasNoWrap) {
+                    // Preserve wrapper element and inject included content as children
+                    $newChildren[] = NodeCloner::withChildren($child, $includeChildren);
                 } else {
-                    // Open scope - add children directly
-                    array_push($newChildren, ...$includeDocument->children);
+                    // Fragment include remains wrapperless
+                    array_push($newChildren, ...$includeChildren);
                 }
             } elseif ($child instanceof ElementNode || $child instanceof FragmentNode) {
                 // Recursively process children

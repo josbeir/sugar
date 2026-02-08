@@ -4,40 +4,34 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
-use Sugar\Ast\OutputNode;
-use Sugar\Ast\TextNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Component\Helper\SlotResolver;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class SlotResolverTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testExtractsSlotsAndBuildsExpressions(): void
     {
         $slotResolver = new SlotResolver('s:slot');
 
-        $header = new ElementNode(
-            tag: 'h1',
-            attributes: [
-                new AttributeNode('s:slot', 'header', 1, 1),
-                new AttributeNode('class', 'title', 1, 1),
-            ],
-            children: [new TextNode('Header', 1, 1)],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $header = $this->element('h1')
+            ->attribute('s:slot', 'header')
+            ->attribute('class', 'title')
+            ->withChild($this->text('Header', 1, 1))
+            ->build();
 
         $footer = new FragmentNode(
-            attributes: [new AttributeNode('s:slot', 'footer', 1, 1)],
-            children: [new TextNode('Footer', 1, 1)],
+            attributes: [$this->attribute('s:slot', 'footer')],
+            children: [$this->text('Footer', 1, 1)],
             line: 1,
             column: 1,
         );
 
-        $default = new TextNode('Body', 1, 1);
+        $default = $this->text('Body', 1, 1);
 
         $slots = $slotResolver->extract([$header, $default, $footer]);
 
@@ -63,22 +57,16 @@ final class SlotResolverTest extends TestCase
     {
         $slotResolver = new SlotResolver('s:slot');
 
-        $header = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:slot', 'header', 1, 1),
-                new AttributeNode(
+        $header = $this->element('div')
+            ->attribute('s:slot', 'header')
+            ->attributeNode(
+                $this->attributeNode(
                     'data-id',
-                    new OutputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
-                    1,
-                    1,
+                    $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
                 ),
-            ],
-            children: [new OutputNode('$title', true, OutputContext::HTML, 1, 1)],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+            )
+            ->withChild($this->outputNode('$title', true, OutputContext::HTML, 1, 1))
+            ->build();
 
         $slots = $slotResolver->extract([$header]);
 

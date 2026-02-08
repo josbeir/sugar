@@ -3,10 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Directive;
 
-use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
@@ -65,19 +63,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsSimpleIfDirective(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:if', '$user', 1, 5),
-                new AttributeNode('class', 'card', 1, 15),
-            ],
-            children: [new TextNode('Content', 1, 20)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:if', '$user')
+            ->attribute('class', 'card')
+            ->withChild($this->text('Content', 1, 20))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertAst($result)
@@ -89,18 +81,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsForeachDirective(): void
     {
-        $element = new ElementNode(
-            tag: 'li',
-            attributes: [
-                new AttributeNode('s:foreach', '$items as $item', 1, 5),
-            ],
-            children: [new TextNode('Item', 1, 20)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('li')
+            ->attribute('s:foreach', '$items as $item')
+            ->withChild($this->text('Item', 1, 20))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertAst($result)
@@ -110,25 +96,18 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsNestedDirectives(): void
     {
-        $innerElement = new ElementNode(
-            tag: 'span',
-            attributes: [new AttributeNode('s:if', '$item->active', 2, 5)],
-            children: [new TextNode('Active', 2, 20)],
-            selfClosing: false,
-            line: 2,
-            column: 4,
-        );
+        $innerElement = $this->element('span')
+            ->attribute('s:if', '$item->active')
+            ->withChild($this->text('Active', 2, 20))
+            ->at(2, 4)
+            ->build();
 
-        $outerElement = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:foreach', '$items as $item', 1, 5)],
-            children: [$innerElement],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $outerElement = $this->element('div')
+            ->attribute('s:foreach', '$items as $item')
+            ->withChild($innerElement)
+            ->build();
 
-        $ast = new DocumentNode([$outerElement]);
+        $ast = $this->document()->withChild($outerElement)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Outer directive
@@ -149,21 +128,14 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testPreservesNonDirectiveAttributes(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('id', 'container', 1, 5),
-                new AttributeNode('s:if', '$show', 1, 15),
-                new AttributeNode('class', 'wrapper', 1, 25),
-                new AttributeNode('data-value', '123', 1, 35),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('id', 'container')
+            ->attribute('s:if', '$show')
+            ->attribute('class', 'wrapper')
+            ->attribute('data-value', '123')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
@@ -179,16 +151,11 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testHandlesDirectiveWithoutValue(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:isset', '$user', 1, 5)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:isset', '$user')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
@@ -199,25 +166,17 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testHandlesMultipleTopLevelDirectives(): void
     {
-        $element1 = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:if', '$show', 1, 0)],
-            children: [new TextNode('First', 1, 10)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element1 = $this->element('div')
+            ->attributeNode($this->attribute('s:if', '$show', 1, 0))
+            ->withChild($this->text('First', 1, 10))
+            ->build();
 
-        $element2 = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:unless', '$hide', 2, 0)],
-            children: [new TextNode('Second', 2, 10)],
-            selfClosing: false,
-            line: 2,
-            column: 0,
-        );
+        $element2 = $this->element('div')
+            ->attributeNode($this->attribute('s:unless', '$hide', 2, 0))
+            ->withChild($this->text('Second', 2, 10))
+            ->build();
 
-        $ast = new DocumentNode([$element1, $element2]);
+        $ast = $this->document()->withChildren([$element1, $element2])->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(2, $result->children);
@@ -229,16 +188,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testLeavesNonDirectiveElementsUnchanged(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('class', 'card', 1, 5)],
-            children: [new TextNode('Content', 1, 20)],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('class', 'card')
+            ->withChild($this->text('Content', 1, 20))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -251,13 +206,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     {
         $component = new ComponentNode(
             name: 'button',
-            attributes: [new AttributeNode('s:if', '$show', 1, 1)],
-            children: [new TextNode('Click', 1, 1)],
+            attributes: [$this->attribute('s:if', '$show')],
+            children: [$this->text('Click', 1, 1)],
             line: 1,
             column: 1,
         );
 
-        $ast = new DocumentNode([$component]);
+        $ast = $this->document()->withChild($component)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -273,13 +228,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     {
         $component = new ComponentNode(
             name: 'button',
-            attributes: [new AttributeNode('s:class', "['active' => true]", 1, 1)],
+            attributes: [$this->attribute('s:class', "['active' => true]")],
             children: [],
             line: 1,
             column: 1,
         );
 
-        $ast = new DocumentNode([$component]);
+        $ast = $this->document()->withChild($component)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -294,16 +249,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsCustomExtractionDirectiveToFragment(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:tag', '$tag', 1, 1)],
-            children: [new TextNode('Content', 1, 1)],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attribute('s:tag', '$tag')
+            ->withChild($this->text('Content', 1, 1))
+            ->at(1, 1)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -315,16 +267,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsSpreadDirectiveToAttributeOutput(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:spread', '$attrs', 1, 1)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attribute('s:spread', '$attrs')
+            ->at(1, 1)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -340,13 +288,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     public function testKeepsFragmentWithInheritanceAttributeOnly(): void
     {
         $fragment = new FragmentNode(
-            attributes: [new AttributeNode('s:block', 'content', 1, 1)],
-            children: [new TextNode('Content', 1, 1)],
+            attributes: [$this->attribute('s:block', 'content')],
+            children: [$this->text('Content', 1, 1)],
             line: 1,
             column: 1,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -357,13 +305,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     public function testKeepsFragmentWithPassThroughDirectiveOnly(): void
     {
         $fragment = new FragmentNode(
-            attributes: [new AttributeNode('s:slot', 'header', 1, 1)],
-            children: [new TextNode('Content', 1, 1)],
+            attributes: [$this->attribute('s:slot', 'header')],
+            children: [$this->text('Content', 1, 1)],
             line: 1,
             column: 1,
         );
 
-        $ast = new DocumentNode([$fragment]);
+        $ast = $this->document()->withChild($fragment)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -405,16 +353,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $pass = new DirectiveExtractionPass($registry, new SugarConfig());
         $pipeline = new AstPipeline([$pass]);
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:custom', '$value', 1, 1)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attribute('s:custom', '$value')
+            ->at(1, 1)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $pipeline->execute($ast, $this->createTestContext());
 
         $this->assertCount(1, $result->children);
@@ -442,16 +386,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $pass = new DirectiveExtractionPass($registry, new SugarConfig());
         $pipeline = new AstPipeline([$pass]);
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:textattr', 'value', 1, 1)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attribute('s:textattr', 'value')
+            ->at(1, 1)
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $pipeline->execute($ast, $this->createTestContext());
 
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
@@ -460,25 +400,17 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testTransformsNestedElementsWithoutDirectives(): void
     {
-        $innerElement = new ElementNode(
-            tag: 'span',
-            attributes: [],
-            children: [new TextNode('Inner', 2, 5)],
-            selfClosing: false,
-            line: 2,
-            column: 4,
-        );
+        $innerElement = $this->element('span')
+            ->withChild($this->text('Inner', 2, 5))
+            ->at(2, 4)
+            ->build();
 
-        $outerElement = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:if', '$show', 1, 5)],
-            children: [$innerElement],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $outerElement = $this->element('div')
+            ->attribute('s:if', '$show')
+            ->withChild($innerElement)
+            ->build();
 
-        $ast = new DocumentNode([$outerElement]);
+        $ast = $this->document()->withChild($outerElement)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
@@ -493,23 +425,18 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testThrowsOnDynamicOutputInDirectiveAttribute(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode(
+        $element = $this->element('div')
+            ->attributeNode(
+                $this->attributeNode(
                     's:if',
-                    new OutputNode('$dynamicValue', true, OutputContext::HTML, 1, 10),
+                    $this->outputNode('$dynamicValue', true, OutputContext::HTML, 1, 10),
                     1,
                     5,
                 ),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+            )
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
@@ -519,19 +446,13 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testHandlesSelfClosingElementWithDirective(): void
     {
-        $element = new ElementNode(
-            tag: 'input',
-            attributes: [
-                new AttributeNode('s:if', '$show', 1, 7),
-                new AttributeNode('type', 'text', 1, 15),
-            ],
-            children: [],
-            selfClosing: true,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('input')
+            ->attributeNode($this->attribute('s:if', '$show', 1, 7))
+            ->attributeNode($this->attribute('type', 'text', 1, 15))
+            ->selfClosing()
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         $directive = $result->children[0];
@@ -544,34 +465,24 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testHandlesComplexNesting(): void
     {
-        $deepElement = new ElementNode(
-            tag: 'p',
-            attributes: [new AttributeNode('s:unless', '$hidden', 3, 8)],
-            children: [new TextNode('Deep', 3, 20)],
-            selfClosing: false,
-            line: 3,
-            column: 8,
-        );
+        $deepElement = $this->element('p')
+            ->attributeNode($this->attribute('s:unless', '$hidden', 3, 8))
+            ->withChild($this->text('Deep', 3, 20))
+            ->at(3, 8)
+            ->build();
 
-        $midElement = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:foreach', '$items as $item', 2, 4)],
-            children: [$deepElement],
-            selfClosing: false,
-            line: 2,
-            column: 4,
-        );
+        $midElement = $this->element('div')
+            ->attributeNode($this->attribute('s:foreach', '$items as $item', 2, 4))
+            ->withChild($deepElement)
+            ->at(2, 4)
+            ->build();
 
-        $topElement = new ElementNode(
-            tag: 'section',
-            attributes: [new AttributeNode('s:if', '$show', 1, 8)],
-            children: [$midElement],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $topElement = $this->element('section')
+            ->attributeNode($this->attribute('s:if', '$show', 1, 8))
+            ->withChild($midElement)
+            ->build();
 
-        $ast = new DocumentNode([$topElement]);
+        $ast = $this->document()->withChild($topElement)->build();
         $result = $this->execute($ast, $this->createTestContext());
 
         // Top level: s:if directive
@@ -599,16 +510,11 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $registry = $this->createTestRegistry();
         $pass = new DirectiveExtractionPass($registry, SugarConfig::withPrefix('x'));
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('x:if', '$show', 1, 5)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('x:if', '$show')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, $this->createTestContext());
 
@@ -622,16 +528,11 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $registry = $this->createTestRegistry();
         $pass = new DirectiveExtractionPass($registry, SugarConfig::withPrefix('x'));
 
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('s:if', '$show', 1, 5)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 0,
-        );
+        $element = $this->element('div')
+            ->attribute('s:if', '$show')
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, $this->createTestContext());
 

@@ -60,6 +60,16 @@ final class ElementNodeBuilder
     }
 
     /**
+     * Add a pre-built attribute node
+     */
+    public function attributeNode(AttributeNode $attribute): self
+    {
+        $this->attributes[] = $attribute;
+
+        return $this;
+    }
+
+    /**
      * Add multiple attributes at once
      *
      * @param array<string, string> $attrs

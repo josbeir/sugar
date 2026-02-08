@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\AttributeNode;
-use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
@@ -19,17 +17,10 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
     public function testAppliesRuntimeAttributeOverrides(): void
     {
         $outputNode = $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1);
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('class', 'btn', 1, 1),
-                new AttributeNode('data-id', $outputNode, 1, 1),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+        $element = $this->element('div')
+            ->attribute('class', 'btn')
+            ->attributeNode($this->attributeNode('data-id', $outputNode))
+            ->build();
 
         $document = $this->document()->withChild($element)->build();
 
@@ -66,22 +57,12 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
     public function testAppliesOverridesToFirstRootElementOnly(): void
     {
-        $first = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('id', 'first', 1, 1)],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
-        $second = new ElementNode(
-            tag: 'div',
-            attributes: [new AttributeNode('id', 'second', 2, 1)],
-            children: [],
-            selfClosing: false,
-            line: 2,
-            column: 1,
-        );
+        $first = $this->element('div')
+            ->attribute('id', 'first')
+            ->build();
+        $second = $this->element('div')
+            ->attributeNode($this->attributeNode('id', 'second', 2, 1))
+            ->build();
 
         $document = $this->document()->withChildren([$first, $second])->build();
 

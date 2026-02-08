@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -27,11 +26,13 @@ use Sugar\Loader\FileTemplateLoader;
 use Sugar\Pass\Component\ComponentExpansionPass;
 use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ComponentExpansionPassTest extends TestCase
 {
     use CompilerTestTrait;
+    use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
     private FileTemplateLoader $loader;
@@ -62,14 +63,16 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testExpandsSimpleComponent(): void
     {
-        $ast = new DocumentNode([
-            new ComponentNode(
-                name: 'button',
-                children: [new TextNode('Click me', 1, 0)],
-                line: 1,
-                column: 0,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ComponentNode(
+                    name: 'button',
+                    children: [$this->text('Click me', 1, 0)],
+                    line: 1,
+                    column: 0,
+                ),
+            )
+            ->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
 
@@ -123,22 +126,24 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testComponentBindOutputExpressionUsesExpression(): void
     {
-        $ast = new DocumentNode([
-            new ComponentNode(
-                name: 'button',
-                attributes: [
-                    new AttributeNode(
-                        's:bind',
-                        new OutputNode('$bindings', true, OutputContext::HTML, 1, 1),
-                        1,
-                        1,
-                    ),
-                ],
-                children: [new TextNode('Click', 1, 1)],
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ComponentNode(
+                    name: 'button',
+                    attributes: [
+                        $this->attributeNode(
+                            's:bind',
+                            $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                            1,
+                            1,
+                        ),
+                    ],
+                    children: [$this->text('Click', 1, 1)],
+                    line: 1,
+                    column: 1,
+                ),
+            )
+            ->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
         $code = $this->astToString($result);
@@ -234,22 +239,24 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testOverridesClassAttributeWhenDynamicValueProvided(): void
     {
-        $ast = new DocumentNode([
-            new ComponentNode(
-                name: 'button',
-                attributes: [
-                    new AttributeNode(
-                        'class',
-                        new OutputNode('$class', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
-                        1,
-                        1,
-                    ),
-                ],
-                children: [new TextNode('Click', 1, 1)],
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ComponentNode(
+                    name: 'button',
+                    attributes: [
+                        $this->attributeNode(
+                            'class',
+                            $this->outputNode('$class', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                            1,
+                            1,
+                        ),
+                    ],
+                    children: [$this->text('Click', 1, 1)],
+                    line: 1,
+                    column: 1,
+                ),
+            )
+            ->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
         $code = $this->astToString($result);
@@ -260,24 +267,19 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testRuntimeComponentBindUsesOutputExpression(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:component', '$component', 1, 1),
-                new AttributeNode(
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attributeNode(
+                $this->attributeNode(
                     's:bind',
-                    new OutputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                    $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
                     1,
                     1,
                 ),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+            )
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
         $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
@@ -317,26 +319,22 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testCreatesRuntimeComponentCallForDynamicName(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode('s:component', '$component', 1, 1),
-                new AttributeNode('class', 'panel', 1, 1),
-                new AttributeNode('disabled', null, 1, 1),
-                new AttributeNode(
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attribute('class', 'panel')
+            ->attributeNode($this->attributeNode('disabled', null, 1, 1))
+            ->attributeNode(
+                $this->attributeNode(
                     'data-id',
-                    new OutputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                    $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
                     1,
                     1,
                 ),
-            ],
-            children: [new TextNode('Content', 1, 1)],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+            )
+            ->withChild($this->text('Content', 1, 1))
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
 
@@ -357,23 +355,18 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testThrowsWhenComponentNameIsNotString(): void
     {
-        $element = new ElementNode(
-            tag: 'div',
-            attributes: [
-                new AttributeNode(
+        $element = $this->element('div')
+            ->attributeNode(
+                $this->attributeNode(
                     's:component',
-                    new OutputNode('$name', true, OutputContext::HTML, 1, 1),
+                    $this->outputNode('$name', true, OutputContext::HTML, 1, 1),
                     1,
                     1,
                 ),
-            ],
-            children: [],
-            selfClosing: false,
-            line: 1,
-            column: 1,
-        );
+            )
+            ->build();
 
-        $ast = new DocumentNode([$element]);
+        $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
 
@@ -403,14 +396,16 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testThrowsExceptionForUndiscoveredComponent(): void
     {
-        $ast = new DocumentNode([
-            new ComponentNode(
-                name: 'nonexistent',
-                children: [],
-                line: 1,
-                column: 0,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                new ComponentNode(
+                    name: 'nonexistent',
+                    children: [],
+                    line: 1,
+                    column: 0,
+                ),
+            )
+            ->build();
 
         $this->expectException(ComponentNotFoundException::class);
         $this->expectExceptionMessage('Component "nonexistent" not found');
@@ -596,31 +591,23 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testRuntimeComponentAttributesIncludeOutputAndNull(): void
     {
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'div',
-                attributes: [
-                    new AttributeNode('s:component', '$component', 1, 0),
-                    new AttributeNode(
-                        'data-id',
-                        new OutputNode(
-                            expression: '$id',
-                            escape: true,
-                            context: OutputContext::HTML,
-                            line: 1,
-                            column: 0,
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:component', '$component')
+                    ->attributeNode(
+                        $this->attributeNode(
+                            'data-id',
+                            $this->outputNode('$id', true, OutputContext::HTML, 1, 0),
+                            1,
+                            0,
                         ),
-                        1,
-                        0,
-                    ),
-                    new AttributeNode('hidden', null, 1, 0),
-                ],
-                children: [new TextNode('Click', 1, 0)],
-                selfClosing: false,
-                line: 1,
-                column: 0,
-            ),
-        ]);
+                    )
+                    ->attributeNode($this->attributeNode('hidden', null, 1, 0))
+                    ->withChild($this->text('Click', 1, 0))
+                    ->build(),
+            )
+            ->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
 
@@ -731,11 +718,13 @@ final class ComponentExpansionPassTest extends TestCase
 
         // Create AST with same component used 3 times
         // Each button component will be loaded but should only be parsed once
-        $ast = new DocumentNode([
-            new ComponentNode(name: 'button', children: [new TextNode('First', 1, 0)], line: 1, column: 0),
-            new ComponentNode(name: 'button', children: [new TextNode('Second', 2, 0)], line: 2, column: 0),
-            new ComponentNode(name: 'button', children: [new TextNode('Third', 3, 0)], line: 3, column: 0),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                new ComponentNode(name: 'button', children: [$this->text('First', 1, 0)], line: 1, column: 0),
+                new ComponentNode(name: 'button', children: [$this->text('Second', 2, 0)], line: 2, column: 0),
+                new ComponentNode(name: 'button', children: [$this->text('Third', 3, 0)], line: 3, column: 0),
+            ])
+            ->build();
 
         $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
 
@@ -748,9 +737,11 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('Third', $output);
 
         // Verify caching by executing again with same component
-        $ast2 = new DocumentNode([
-            new ComponentNode(name: 'button', children: [new TextNode('Fourth', 4, 0)], line: 4, column: 0),
-        ]);
+        $ast2 = $this->document()
+            ->withChild(
+                new ComponentNode(name: 'button', children: [$this->text('Fourth', 4, 0)], line: 4, column: 0),
+            )
+            ->build();
 
         $result2 = (new AstPipeline([$pass]))->execute($ast2, $this->createContext());
         $output2 = $this->astToString($result2);
@@ -763,12 +754,14 @@ final class ComponentExpansionPassTest extends TestCase
         $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
 
         // Use different components multiple times each
-        $ast = new DocumentNode([
-            new ComponentNode(name: 'button', children: [new TextNode('Button 1', 1, 0)], line: 1, column: 0),
-            new ComponentNode(name: 'button', children: [new TextNode('Button 2', 2, 0)], line: 2, column: 0),
-            new ComponentNode(name: 'alert', children: [new TextNode('Alert 1', 3, 0)], line: 3, column: 0),
-            new ComponentNode(name: 'alert', children: [new TextNode('Alert 2', 4, 0)], line: 4, column: 0),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                new ComponentNode(name: 'button', children: [$this->text('Button 1', 1, 0)], line: 1, column: 0),
+                new ComponentNode(name: 'button', children: [$this->text('Button 2', 2, 0)], line: 2, column: 0),
+                new ComponentNode(name: 'alert', children: [$this->text('Alert 1', 3, 0)], line: 3, column: 0),
+                new ComponentNode(name: 'alert', children: [$this->text('Alert 2', 4, 0)], line: 4, column: 0),
+            ])
+            ->build();
 
         $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
         $output = $this->astToString($result);

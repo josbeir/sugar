@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Context;
 
-use Sugar\Ast\DocumentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Enum\OutputContext;
@@ -22,10 +21,12 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
 
     public function testDefaultsToHtmlContext(): void
     {
-        $ast = new DocumentNode([
-            $this->createText('Hello '),
-            new OutputNode('$name', true, OutputContext::HTML, 1, 7),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                $this->text('Hello '),
+                $this->outputNode('$name', true, OutputContext::HTML, 1, 7),
+            ])
+            ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 

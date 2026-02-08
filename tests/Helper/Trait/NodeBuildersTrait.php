@@ -77,4 +77,16 @@ trait NodeBuildersTrait
     {
         return new AttributeNode($name, $value, $line, $column);
     }
+
+    /**
+     * Create an attribute node with any value (including null or OutputNode)
+     */
+    protected function attributeNode(
+        string $name,
+        string|OutputNode|null $value,
+        int $line = 1,
+        int $column = 0,
+    ): AttributeNode {
+        return new AttributeNode($name, $value, $line, $column);
+    }
 }

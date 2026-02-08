@@ -8,9 +8,12 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\Helper\DirectivePrefixHelper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class ComponentAttributeCategorizerTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testCategorizesComponentAttributes(): void
     {
         $registry = new DirectiveRegistry();
@@ -18,10 +21,10 @@ final class ComponentAttributeCategorizerTest extends TestCase
         $categorizer = new ComponentAttributeCategorizer($registry, $prefixHelper);
 
         $attributes = [
-            new AttributeNode('s:if', '$user', 1, 1),
-            new AttributeNode('s:class', 'btn', 1, 1),
-            new AttributeNode('s:bind', "['type' => 'warning']", 1, 1),
-            new AttributeNode('id', 'main', 1, 1),
+            $this->attribute('s:if', '$user'),
+            $this->attribute('s:class', 'btn'),
+            $this->attribute('s:bind', "['type' => 'warning']"),
+            $this->attribute('id', 'main'),
         ];
 
         $categorized = $categorizer->categorize($attributes);
@@ -46,7 +49,7 @@ final class ComponentAttributeCategorizerTest extends TestCase
         $categorizer = new ComponentAttributeCategorizer($registry, $prefixHelper);
 
         $attributes = [
-            new AttributeNode('s:unknown', 'value', 1, 1),
+            $this->attribute('s:unknown', 'value'),
         ];
 
         $categorized = $categorizer->categorize($attributes);

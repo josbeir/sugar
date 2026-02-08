@@ -8,18 +8,21 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 /**
  * Tests for NodeTraverser utility
  */
 final class NodeTraverserTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testWalkTransformsNodes(): void
     {
         $nodes = [
-            new TextNode('Hello', 1, 1),
-            new ElementNode('div', [], [], false, 1, 1),
-            new TextNode('World', 1, 1),
+            $this->text('Hello', 1, 1),
+            $this->element('div')->build(),
+            $this->text('World', 1, 1),
         ];
 
         $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
@@ -45,7 +48,7 @@ final class NodeTraverserTest extends TestCase
     public function testWalkCanReturnMultipleNodes(): void
     {
         $nodes = [
-            new TextNode('Split', 1, 1),
+            $this->text('Split', 1, 1),
         ];
 
         $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
@@ -73,9 +76,9 @@ final class NodeTraverserTest extends TestCase
     public function testWalkRecursivelyProcessesChildren(): void
     {
         $nodes = [
-            new ElementNode('div', [], [
-                new TextNode('Child', 1, 1),
-            ], false, 1, 1),
+            $this->element('div')
+                ->withChild($this->text('Child', 1, 1))
+                ->build(),
         ];
 
         $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
@@ -100,15 +103,19 @@ final class NodeTraverserTest extends TestCase
     public function testWalkRecursiveVisitsAllNodes(): void
     {
         $visited = [];
-        $root = new ElementNode('root', [], [
-            new TextNode('A', 1, 1),
-            new ElementNode('div', [], [
-                new TextNode('B', 1, 1),
-                new ElementNode('span', [], [
-                    new TextNode('C', 1, 1),
-                ], false, 1, 1),
-            ], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChildren([
+                $this->text('A', 1, 1),
+                $this->element('div')
+                    ->withChildren([
+                        $this->text('B', 1, 1),
+                        $this->element('span')
+                            ->withChild($this->text('C', 1, 1))
+                            ->build(),
+                    ])
+                    ->build(),
+            ])
+            ->build();
 
         NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
             if ($node instanceof TextNode) {
@@ -122,11 +129,13 @@ final class NodeTraverserTest extends TestCase
     public function testWalkRecursiveVisitsElements(): void
     {
         $visited = [];
-        $root = new ElementNode('root', [], [
-            new ElementNode('div', [], [
-                new ElementNode('span', [], [], false, 1, 1),
-            ], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->element('span')->build())
+                    ->build(),
+            )
+            ->build();
 
         NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
             if ($node instanceof ElementNode) {
@@ -139,11 +148,13 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindFirstReturnsFirstMatch(): void
     {
-        $root = new ElementNode('root', [], [
-            new TextNode('Skip', 1, 1),
-            new ElementNode('div', [], [], false, 1, 1),
-            new ElementNode('span', [], [], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChildren([
+                $this->text('Skip', 1, 1),
+                $this->element('div')->build(),
+                $this->element('span')->build(),
+            ])
+            ->build();
 
         $result = NodeTraverser::findFirst($root, function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'div';
@@ -157,9 +168,9 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindFirstReturnsNullWhenNoMatch(): void
     {
-        $root = new ElementNode('root', [], [
-            new TextNode('Only text', 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChild($this->text('Only text', 1, 1))
+            ->build();
 
         $result = NodeTraverser::findFirst($root, function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'missing';
@@ -170,13 +181,17 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindFirstSearchesRecursively(): void
     {
-        $root = new ElementNode('root', [], [
-            new ElementNode('div', [], [
-                new ElementNode('span', [], [
-                    new ElementNode('target', [], [], false, 1, 1),
-                ], false, 1, 1),
-            ], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChild(
+                $this->element('div')
+                    ->withChild(
+                        $this->element('span')
+                            ->withChild($this->element('target')->build())
+                            ->build(),
+                    )
+                    ->build(),
+            )
+            ->build();
 
         $result = NodeTraverser::findFirst($root, function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'target';
@@ -190,12 +205,14 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindAllReturnsAllMatches(): void
     {
-        $root = new ElementNode('root', [], [
-            new ElementNode('div', [], [], false, 1, 1),
-            new TextNode('Text', 1, 1),
-            new ElementNode('span', [], [], false, 1, 1),
-            new ElementNode('p', [], [], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChildren([
+                $this->element('div')->build(),
+                $this->text('Text', 1, 1),
+                $this->element('span')->build(),
+                $this->element('p')->build(),
+            ])
+            ->build();
 
         $result = NodeTraverser::findAll($root, function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag !== 'root';
@@ -217,9 +234,9 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindAllReturnsEmptyArrayWhenNoMatch(): void
     {
-        $root = new ElementNode('root', [], [
-            new TextNode('Only text', 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChild($this->text('Only text', 1, 1))
+            ->build();
 
         $result = NodeTraverser::findAll($root, function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'missing';
@@ -230,13 +247,17 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindAllSearchesRecursively(): void
     {
-        $root = new ElementNode('root', [], [
-            new ElementNode('div', [], [
-                new ElementNode('span', [], [
-                    new ElementNode('p', [], [], false, 1, 1),
-                ], false, 1, 1),
-            ], false, 1, 1),
-        ], false, 1, 1);
+        $root = $this->element('root')
+            ->withChild(
+                $this->element('div')
+                    ->withChild(
+                        $this->element('span')
+                            ->withChild($this->element('p')->build())
+                            ->build(),
+                    )
+                    ->build(),
+            )
+            ->build();
 
         $result = NodeTraverser::findAll($root, function (Node $node): bool {
             return $node instanceof ElementNode;
@@ -271,7 +292,7 @@ final class NodeTraverserTest extends TestCase
     public function testWalkRecursiveHandlesEmptyArray(): void
     {
         $visited = false;
-        $root = new ElementNode('root', [], [], false, 1, 1);
+        $root = $this->element('root')->build();
 
         NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
             if ($node instanceof TextNode) {
@@ -284,7 +305,7 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindFirstHandlesEmptyArray(): void
     {
-        $root = new ElementNode('root', [], [], false, 1, 1);
+        $root = $this->element('root')->build();
 
         $result = NodeTraverser::findFirst($root, function (Node $node): bool {
             return $node instanceof TextNode;
@@ -295,7 +316,7 @@ final class NodeTraverserTest extends TestCase
 
     public function testFindAllHandlesEmptyArray(): void
     {
-        $root = new ElementNode('root', [], [], false, 1, 1);
+        $root = $this->element('root')->build();
 
         $result = NodeTraverser::findAll($root, function (Node $node): bool {
             return $node instanceof TextNode;

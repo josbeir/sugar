@@ -113,6 +113,10 @@ Includes are great for shared fragments like headers, footers, or cards.
 <s-template s:include="partials/header"></s-template>
 ```
 
+```html [Element wrapper]
+<div class="card" s:include="partials/alert"></div>
+```
+
 ```html [Nested]
 <s-template s:include="partials/header"></s-template>
 <section>
@@ -124,6 +128,15 @@ Includes are great for shared fragments like headers, footers, or cards.
 <s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 :::
+
+### Unwrap Includes
+
+`s:include` can be used on normal HTML elements. By default, the included content is inserted inside the element.
+Add `s:nowrap` to disable the wrapper element and insert the included content directly.
+
+```html
+<div s:include="partials/alert" s:nowrap></div>
+```
 
 ### Include Scope and `s:with`
 

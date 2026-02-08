@@ -6,7 +6,6 @@ namespace Sugar\Tests\Unit\Compiler\Pipeline;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\ComponentNode;
-use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
@@ -16,9 +15,12 @@ use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Context\CompilationContext;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class AstPipelineTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testCallsBeforeAndAfterInDepthFirstOrder(): void
     {
         $events = [];
@@ -51,16 +53,14 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'div',
-                attributes: [],
-                children: [new TextNode('Hi', 1, 1)],
-                selfClosing: false,
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->text('Hi', 1, 1))
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $pipeline = new AstPipeline([$pass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
@@ -96,16 +96,13 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'div',
-                attributes: [],
-                children: [],
-                selfClosing: false,
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
@@ -163,16 +160,14 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'div',
-                attributes: [],
-                children: [new TextNode('Skip', 1, 1)],
-                selfClosing: false,
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->text('Skip', 1, 1))
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $pipeline = new AstPipeline([$skipPass, $recordPass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
@@ -205,16 +200,13 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'outer',
-                attributes: [],
-                children: [],
-                selfClosing: false,
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('outer')
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $pipeline = new AstPipeline([$pass]);
         $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
@@ -256,22 +248,22 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ComponentNode(
-                name: 'button',
-                attributes: [],
-                children: [new TextNode('component', 1, 1)],
-                line: 1,
-                column: 1,
-            ),
-            new DirectiveNode(
-                name: 'if',
-                expression: '$flag',
-                children: [new TextNode('directive', 1, 1)],
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChildren([
+                new ComponentNode(
+                    name: 'button',
+                    attributes: [],
+                    children: [$this->text('component', 1, 1)],
+                    line: 1,
+                    column: 1,
+                ),
+                $this->directive('if')
+                    ->expression('$flag')
+                    ->withChild($this->text('directive', 1, 1))
+                    ->at(1, 1)
+                    ->build(),
+            ])
+            ->build();
 
         $pipeline = new AstPipeline([$pass]);
         $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
@@ -297,16 +289,13 @@ final class AstPipelineTest extends TestCase
             }
         };
 
-        $ast = new DocumentNode([
-            new ElementNode(
-                tag: 'div',
-                attributes: [],
-                children: [],
-                selfClosing: false,
-                line: 1,
-                column: 1,
-            ),
-        ]);
+        $ast = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->at(1, 1)
+                    ->build(),
+            )
+            ->build();
 
         $pipeline = new AstPipeline([$pass]);
 

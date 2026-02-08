@@ -53,14 +53,11 @@ abstract class DirectiveTestCase extends TestCase
         string $tagName = 'div',
         array $children = [],
     ): ElementNode {
-        return new ElementNode(
-            $tagName,
-            ['s:' . $this->getDirectiveName() => $expression], // @phpstan-ignore-line argument.type
-            $children,
-            false,
-            1,
-            1,
-        );
+        return $this->element($tagName)
+            ->attribute('s:' . $this->getDirectiveName(), $expression)
+            ->withChildren($children)
+            ->at(1, 1)
+            ->build();
     }
 
     /**
@@ -68,7 +65,7 @@ abstract class DirectiveTestCase extends TestCase
      */
     protected function createTextNode(string $content): TextNode
     {
-        return new TextNode($content, 1, 1);
+        return $this->text($content, 1, 1);
     }
 
     /**

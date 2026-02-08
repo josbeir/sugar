@@ -4,26 +4,23 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\AttributeNode;
-use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\NodeCloner;
-use Sugar\Ast\TextNode;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class NodeClonerTest extends TestCase
 {
+    use NodeBuildersTrait;
+
     public function testWithChildren(): void
     {
-        $node = new ElementNode(
-            'div',
-            [new AttributeNode('id', 'main', 1, 1)],
-            [new TextNode('old', 1, 1)],
-            false,
-            1,
-            1,
-        );
+        $node = $this->element('div')
+            ->attribute('id', 'main')
+            ->withChild($this->text('old', 1, 1))
+            ->at(1, 1)
+            ->build();
 
-        $newChildren = [new TextNode('new', 1, 1)];
+        $newChildren = [$this->text('new', 1, 1)];
         $result = NodeCloner::withChildren($node, $newChildren);
 
         $this->assertNotSame($node, $result);
@@ -34,17 +31,14 @@ final class NodeClonerTest extends TestCase
 
     public function testWithAttributesAndChildren(): void
     {
-        $node = new ElementNode(
-            'div',
-            [new AttributeNode('id', 'old', 1, 1)],
-            [new TextNode('old', 1, 1)],
-            false,
-            1,
-            1,
-        );
+        $node = $this->element('div')
+            ->attribute('id', 'old')
+            ->withChild($this->text('old', 1, 1))
+            ->at(1, 1)
+            ->build();
 
-        $newAttributes = [new AttributeNode('id', 'new', 1, 1)];
-        $newChildren = [new TextNode('new', 1, 1)];
+        $newAttributes = [$this->attribute('id', 'new', 1, 1)];
+        $newChildren = [$this->text('new', 1, 1)];
         $result = NodeCloner::withAttributesAndChildren($node, $newAttributes, $newChildren);
 
         $this->assertNotSame($node, $result);
@@ -59,13 +53,13 @@ final class NodeClonerTest extends TestCase
     public function testFragmentWithChildren(): void
     {
         $node = new FragmentNode(
-            [new AttributeNode('s:if', '$show', 1, 1)],
-            [new TextNode('old', 1, 1)],
+            [$this->attribute('s:if', '$show', 1, 1)],
+            [$this->text('old', 1, 1)],
             1,
             1,
         );
 
-        $newChildren = [new TextNode('new', 1, 1)];
+        $newChildren = [$this->text('new', 1, 1)];
         $result = NodeCloner::fragmentWithChildren($node, $newChildren);
 
         $this->assertNotSame($node, $result);
@@ -78,13 +72,13 @@ final class NodeClonerTest extends TestCase
     public function testFragmentWithAttributes(): void
     {
         $node = new FragmentNode(
-            [new AttributeNode('s:if', 'old', 1, 1)],
-            [new TextNode('content', 1, 1)],
+            [$this->attribute('s:if', 'old', 1, 1)],
+            [$this->text('content', 1, 1)],
             1,
             1,
         );
 
-        $newAttributes = [new AttributeNode('s:if', 'new', 1, 1)];
+        $newAttributes = [$this->attribute('s:if', 'new', 1, 1)];
         $result = NodeCloner::fragmentWithAttributes($node, $newAttributes);
 
         $this->assertNotSame($node, $result);
@@ -96,14 +90,11 @@ final class NodeClonerTest extends TestCase
 
     public function testImmutabilityWithChildren(): void
     {
-        $original = new ElementNode(
-            'span',
-            [new AttributeNode('class', 'original', 1, 1)],
-            [new TextNode('text', 1, 1)],
-            false,
-            5,
-            10,
-        );
+        $original = $this->element('span')
+            ->attribute('class', 'original')
+            ->withChild($this->text('text', 1, 1))
+            ->at(5, 10)
+            ->build();
 
         $modified = NodeCloner::withChildren($original, []);
 
