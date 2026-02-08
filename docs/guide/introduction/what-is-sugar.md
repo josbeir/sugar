@@ -96,8 +96,11 @@ Full comparison matrix
 
 ## Why Sugar
 
-- `s:` attribute syntax keeps templates readable.
-- Context-aware escaping defeats XSS by default.
-- Pure PHP output is fast and debuggable.
-- Scope isolation prevents accidental variable leakage.
-- Zero dependencies in the core engine.
+| Benefit | Why it matters |
+| --- | --- |
+| `s:` attributes keep templates readable | Control flow and output stay close to the HTML. |
+| Context-aware escaping by default | XSS protection across HTML, attribute, URL, JS, and CSS contexts. |
+| Pure PHP output | Fast execution and debuggable stack traces. |
+| Scope isolation | Prevents accidental variable leakage between templates. |
+| Still PHP, so IDEs play nice | Native syntax highlighting, navigation, and refactors work out of the box. (at least for code within PHP tags) |
+| Zero core dependencies | Easy to embed and audit. |

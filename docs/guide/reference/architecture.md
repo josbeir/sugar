@@ -15,7 +15,7 @@ Compilation happens once per template change. Rendering is a cached PHP include.
 
 | Priority | Stage | Purpose | Notes |
 | --- | --- | --- | --- |
-| 1 | Parser | Converts template source into a Sugar AST. | Preserves line/column for error reporting. |
+| 1 | Parser | Converts template source into a Sugar AST. | Uses `PhpToken` for PHP-aware tokenization and preserves line/column for error reporting. |
 | 2 | TemplateInheritancePass | Applies `s:extends` and merges blocks. | Optional, requires a template loader. |
 | 3 | DirectiveExtractionPass | Pulls out `s:*` directives and validates placement. | Produces directive nodes from attributes. |
 | 4 | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |

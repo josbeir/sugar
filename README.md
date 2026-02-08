@@ -20,9 +20,9 @@ Full documentation: https://josbeir.github.io/sugar/
 
 ## License
 
-Sugar is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
+Sugar is licensed under the MIT License. See [LICENSE](LICENSE.md).
 
 ## Contributing
 
-Contributions are welcome. Please read [docs/guide/reference/contributing.md](docs/guide/reference/contributing.md) for setup steps and guidelines.
+Contributions are welcome. Please read [Contributing](https://josbeir.github.io/sugar/guide/reference/contributing.html) for setup steps and guidelines.
 
