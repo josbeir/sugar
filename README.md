@@ -1042,7 +1042,7 @@ Slot content is pre-rendered HTML from component usage. Sugar's ComponentExpansi
 The high-level `Engine` API provides caching, template loading, and context binding out of the box:
 
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Cache\FileCache;
 
@@ -1180,7 +1180,7 @@ $loader->addComponent('custom-widget', $componentSource);
 
 **Example with Engine:**
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 
 // Load templates from database
 $templates = $db->query('SELECT path, source FROM templates')->fetchAll();
@@ -1206,7 +1206,7 @@ Sugar includes a powerful file-based caching system with automatic dependency tr
 The `FileCache` automatically tracks template dependencies (layouts, includes, components) and invalidates cached templates when any dependency changes:
 
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 use Sugar\Cache\FileCache;
 use Sugar\Loader\FileTemplateLoader;
 
@@ -1303,7 +1303,7 @@ Sugar supports binding a context object to templates, enabling `$this` access fo
 Pass a context object when building the engine:
 
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 
 // Create a view context with helper methods
 $viewContext = new class {
@@ -1377,7 +1377,7 @@ The context object is bound to the template closure using `Closure->bindTo()`, p
 The `EngineBuilder` provides a fluent API for configuring all aspects of the template engine:
 
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 use Sugar\Cache\FileCache;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Config\SugarConfig;
@@ -1534,7 +1534,7 @@ The compiled output is pure PHP that can be cached and executed with opcache for
 Enable debug mode during development to add source location comments to compiled templates. This helps trace errors back to your original template source:
 
 ```php
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)

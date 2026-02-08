@@ -5,7 +5,7 @@ namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
-use Sugar\Engine\Engine;
+use Sugar\Engine;
 use Sugar\Loader\FileTemplateLoader;
 
 /**

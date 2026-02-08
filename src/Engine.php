@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Engine;
+namespace Sugar;
 
 use Closure;
 use Sugar\Cache\CachedTemplate;
@@ -9,7 +9,8 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
-use Sugar\EngineBuilder;
+use Sugar\Engine\CompiledTemplateResult;
+use Sugar\Engine\EngineBuilder;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -42,7 +43,7 @@ final class Engine implements EngineInterface
      * Create a builder for fluent engine configuration
      *
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
-     * @return \Sugar\EngineBuilder Builder instance
+     * @return \Sugar\Engine\EngineBuilder Builder instance
      */
     public static function builder(SugarConfig $config = new SugarConfig()): EngineBuilder
     {
