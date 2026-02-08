@@ -61,7 +61,8 @@ export default defineConfig({
           items: [
             { text: 'Pipe Syntax', link: '/guide/language/pipe-syntax' },
             { text: 'Context-Aware Escaping', link: '/guide/language/escaping' },
-            { text: 'Conditional Wrappers', link: '/guide/language/conditional-wrappers' }
+            { text: 'Empty Checking', link: '/guide/language/empty-checking' },
+            { text: 'Loop Metadata', link: '/guide/language/loop-metadata' }
           ]
         },
         {

@@ -40,7 +40,14 @@ features:
 <div s:empty>No items found</div>
 ```
 
-```php [Components]
+```html [Components]
+<!-- components/card.sugar.php -->
+<article class="card">
+  <header><?= $header ?? '' ?></header>
+  <section><?= $slot ?></section>
+</article>
+
+<!-- usage -->
 <s-card s:bind="$cardProps">
     <div s:slot="header">Welcome back</div>
     <p>Hello, <?= $user->name ?></p>
@@ -48,7 +55,11 @@ features:
 ```
 
 ```php [Pipes]
+<!-- template -->
 <h1><?= $title |> strtoupper(...) |> substr(..., 0, 50) ?></h1>
+
+<!-- compiled -->
+<h1><?= \Sugar\Escape\Escaper::html(substr(strtoupper($title), 0, 50)) ?></h1>
 ```
 
 ```php [Mixed PHP]
@@ -72,9 +83,17 @@ features:
 ```
 
 ```html [Safe Output]
+<!-- template -->
 <a href="/search?q=<?= $query ?>">Search</a>
 <div data-user="<?= $userName ?>"></div>
 <style>.badge::before { content: '<?= $label ?>'; }</style>
+<p><?= $summary ?></p>
+
+<!-- compiled -->
+<a href="/search?q=<?= \Sugar\Escape\Escaper::url($query) ?>">Search</a>
+<div data-user="<?= \Sugar\Escape\Escaper::attr($userName) ?>"></div>
+<style>.badge::before { content: '<?= \Sugar\Escape\Escaper::css($label) ?>'; }</style>
+<p><?= \Sugar\Escape\Escaper::html($summary) ?></p>
 ```
 :::
 

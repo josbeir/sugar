@@ -60,4 +60,4 @@ Jump to the full pages
 ```
 
 For related examples, see:
-- [Conditional Wrappers](./conditional-wrappers.md)
+- [Loop Metadata](./loop-metadata.md)
