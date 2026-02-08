@@ -1,3 +1,6 @@
+.VPHomeHero {
+	overflow: hidden;
+}
 .VPHomeHero .image {
   position: relative;
   isolation: isolate;
@@ -24,22 +27,6 @@
   pointer-events: none;
 }
 
-.VPHomeHero .image::after {
-  content: "";
-  position: absolute;
-  left: 58%;
-  bottom: 14px;
-  width: clamp(180px, 32vw, 300px);
-  height: clamp(36px, 5vw, 46px);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(52, 38, 28, 0.18), rgba(52, 38, 28, 0) 70%);
-  filter: blur(6px);
-  opacity: 0.6;
-  z-index: 0;
-  pointer-events: none;
-}
-
 html.dark .VPHomeHero .image::before {
   background:
     radial-gradient(60% 60% at 55% 45%, rgba(120, 170, 210, 0.32) 0%, rgba(120, 170, 210, 0) 60%),
@@ -48,24 +35,9 @@ html.dark .VPHomeHero .image::before {
   opacity: 0.5;
 }
 
-html.dark .VPHomeHero .image::after {
-  background: radial-gradient(closest-side, rgba(12, 10, 16, 0.45), rgba(12, 10, 16, 0) 70%);
-  opacity: 0.6;
-}
-
 @media (max-width: 960px) {
   .VPHomeHero .image::before {
     inset: -6% -12% -6% -12%;
     opacity: 0.75;
-  }
-
-  .VPHomeHero .image::after {
-    opacity: 0.5;
-  }
-}
-
-@media (max-width: 640px) {
-  .VPHomeHero .image::after {
-    display: none;
   }
 }
