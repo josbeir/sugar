@@ -279,6 +279,46 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->execute($ast, $this->createTestContext());
     }
 
+    public function testThrowsWhenNoWrapHasOtherAttributes(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Content directives without a wrapper cannot include other attributes');
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [
+                new AttributeNode('s:text', '$userName', 1, 5),
+                new AttributeNode('s:nowrap', null, 1, 20),
+                new AttributeNode('class', 'badge', 1, 30),
+            ],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$element]);
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testThrowsWhenNoWrapUsedOnFragment(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('can only be used on elements');
+
+        $fragment = new FragmentNode(
+            attributes: [
+                new AttributeNode('s:nowrap', null, 1, 5),
+            ],
+            children: [new TextNode('Content', 1, 10)],
+            line: 1,
+            column: 0,
+        );
+
+        $ast = new DocumentNode([$fragment]);
+        $this->execute($ast, $this->createTestContext());
+    }
+
     public function testThrowsOnMultipleControlFlowDirectives(): void
     {
         $this->expectException(SyntaxException::class);

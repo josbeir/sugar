@@ -274,6 +274,40 @@ final class ParserTest extends TestCase
         $this->assertNull($input->attributes[3]->value); // Boolean attribute
     }
 
+    public function testParseUnquotedAttributeValue(): void
+    {
+        $template = '<div data-id=123></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertSame('data-id', $element->attributes[0]->name);
+        $this->assertSame('123', $element->attributes[0]->value);
+    }
+
+    public function testParseQuotedAttributeWithEscapedQuote(): void
+    {
+        $template = '<div title="He said \\"hi\\""></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertSame('title', $element->attributes[0]->name);
+        $this->assertSame('He said "hi"', $element->attributes[0]->value);
+    }
+
+    public function testParseDoctypeAsTextNode(): void
+    {
+        $template = '<!DOCTYPE html><div>ok</div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(2, $doc->children);
+        $this->assertInstanceOf(TextNode::class, $doc->children[0]);
+        $this->assertSame('<!DOCTYPE html>', $doc->children[0]->content);
+        $this->assertInstanceOf(ElementNode::class, $doc->children[1]);
+        $this->assertSame('div', $doc->children[1]->tag);
+    }
+
     public function testParseRawPipeDisablesEscaping(): void
     {
         $source = '<?= $html |> raw() ?>';

@@ -27,7 +27,7 @@ export default defineConfig({
           { text: 'Directives', link: '/guide/language/directives' },
           { text: 'Language', link: '/guide/language/pipe-syntax' },
           { text: 'Templates', link: '/guide/templates/components' },
-          { text: 'Development', link: '/guide/configuration/' },
+          { text: 'Development', link: '/guide/development/' },
           { text: 'Reference', link: '/guide/reference/architecture' }
         ]
       }
@@ -47,6 +47,13 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Templates',
+          items: [
+            { text: 'Template Inheritance', link: '/guide/templates/inheritance' },
+            { text: 'Components', link: '/guide/templates/components' }
+          ]
+        },
+        {
           text: 'Directives',
           items: [
             { text: 'Introduction', link: '/guide/language/directives' },
@@ -61,32 +68,22 @@ export default defineConfig({
           items: [
             { text: 'Pipe Syntax', link: '/guide/language/pipe-syntax' },
             { text: 'Context-Aware Escaping', link: '/guide/language/escaping' },
+            { text: 'Fragment Elements', link: '/guide/language/fragments' },
             { text: 'Empty Checking', link: '/guide/language/empty-checking' },
             { text: 'Loop Metadata', link: '/guide/language/loop-metadata' }
           ]
         },
         {
-          text: 'Templates',
-          items: [
-            { text: 'Fragment Elements', link: '/guide/templates/fragments' },
-            { text: 'Template Inheritance', link: '/guide/templates/inheritance' },
-            { text: 'Components', link: '/guide/templates/components' }
-          ]
-        },
-        {
           text: 'Development',
           items: [
-            { text: 'Engine Configuration', link: '/guide/configuration/' },
-            { text: 'Template Loaders', link: '/guide/templates/template-loaders' },
-            { text: 'Caching', link: '/guide/runtime/caching' },
-            { text: 'Template Context', link: '/guide/runtime/context' },
-            { text: 'Debug Mode', link: '/guide/reference/debug' },
-            { text: 'Exceptions', link: '/guide/reference/exceptions' },
+            { text: 'Engine Configuration', link: '/guide/development/' },
+            { text: 'Exceptions', link: '/guide/development/exceptions' },
             { text: 'Custom Directives', link: '/guide/development/custom-directives' }
           ]
         },
         {
           text: 'Reference',
+		  collapsed: true,
           items: [
             { text: 'Architecture', link: '/guide/reference/architecture' },
             { text: 'Contributing', link: '/guide/reference/contributing' },
