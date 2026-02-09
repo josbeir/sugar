@@ -103,6 +103,26 @@ final class PipeSyntaxIntegrationTest extends TestCase
         $this->assertSame('apple, banana, cherry', $result);
     }
 
+    public function testPipeWithCallableStringStage(): void
+    {
+        $template = '<?= $name |> "strtoupper" ?>';
+
+        $compiled = $this->compiler->compile($template);
+        $result = $this->executeTemplate($compiled, ['name' => 'john']);
+
+        $this->assertSame('JOHN', $result);
+    }
+
+    public function testPipeWithClosureStage(): void
+    {
+        $template = '<?= $name |> (fn($x) => strtoupper($x)) ?>';
+
+        $compiled = $this->compiler->compile($template);
+        $result = $this->executeTemplate($compiled, ['name' => 'john']);
+
+        $this->assertSame('JOHN', $result);
+    }
+
     public function testMultiplePipesInTemplate(): void
     {
         $template = '<?= $first |> strtoupper(...) ?> and <?= $second |> strtolower(...) ?>';

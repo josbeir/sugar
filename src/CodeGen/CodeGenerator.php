@@ -348,8 +348,13 @@ final class CodeGenerator
         $result = $baseExpression;
 
         foreach ($pipes as $pipe) {
-            // Replace ... placeholder with the current result
-            $result = str_replace('...', $result, $pipe);
+            if (str_contains($pipe, '...')) {
+                // Replace ... placeholder with the current result
+                $result = str_replace('...', $result, $pipe);
+            } else {
+                // Treat pipe stage as a callable expression
+                $result = sprintf('(%s)(%s)', $pipe, $result);
+            }
         }
 
         return $result;

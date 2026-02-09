@@ -49,6 +49,15 @@ Pipes rewrite `value |> fn(...)` into `fn(value, ...)` at compile time. The plac
 <p><?= $price |> number_format(..., decimals: 2, thousands_separator: ',') ?></p>
 ```
 
+```php [Closures]
+<p><?= $title |> (fn($s) => strtoupper($s))(...) ?></p>
+```
+
+```php [Callable stages]
+<p><?= $title |> "strtoupper" ?></p>
+<p><?= $title |> (fn($s) => strtoupper($s)) ?></p>
+```
+
 ```php [Method call]
 <p><?= $user |> $formatter->displayName(...) ?></p>
 ```
