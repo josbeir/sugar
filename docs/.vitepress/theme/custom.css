@@ -41,3 +41,80 @@ html.dark .VPHomeHero .image::before {
     opacity: 0.75;
   }
 }
+
+.comparison-table {
+  margin: 16px 0 24px;
+  max-width: 100%;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.comparison-table::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+}
+
+html.dark .comparison-table::after {
+  background: linear-gradient(to right, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.9));
+}
+
+.comparison-table:hover {
+  z-index: 3;
+}
+
+.comparison-table:hover::after {
+  opacity: 0;
+}
+
+.comparison-table__inner {
+  max-width: 100%;
+  width: 860px;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.comparison-table:hover .comparison-table__inner {
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+}
+
+.comparison-table table {
+  width: 100%;
+  min-width: max-content;
+  margin: 0;
+  white-space: nowrap;
+  transition: box-shadow 0.2s ease;
+}
+
+.comparison-table:hover table {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 960px) {
+  .comparison-table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .comparison-table__inner {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .comparison-table table {
+    min-width: 900px;
+  }
+
+  .comparison-table:hover .comparison-table__inner {
+    width: 100%;
+    max-width: 100%;
+  }
+}

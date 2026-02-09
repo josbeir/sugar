@@ -20,36 +20,69 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 
 ## Feature Comparison
 
-Here is a compact comparison with the most common decision points:
+Legend: :white_check_mark: yes, :x: no or limited (text used where not binary or when features are optional)
 
-| Area | Sugar | Typical alternatives |
-| --- | --- | --- |
-| Performance | Opcache + compiled PHP | Compiled templates or helper-based output |
-| Auto-escaping | All contexts (HTML, attr, URL, JS, CSS) | Often HTML-only or context-limited |
-| PHP interop | Full PHP, no extra language | Mixed (some restrict PHP usage) |
-| Scope isolation | Closure-based | Varies by engine |
-| Components | `s-` templates, props + slots | Class or macro based |
-| Pipes/filters | Native PHP 8.5 &#124;> | Engine-specific filters |
+These are high-level defaults as commonly described; behavior can vary by version, configuration, and framework integration. Use this table as a quick orientation and confirm details in the official docs for your stack.
 
-::: details
-Full comparison matrix
+<div class="comparison-table">
+<div class="comparison-table__inner">
 
-| Feature | Sugar | Blade | Twig | Latte | Tempest |
-|---------|-------|-------|------|-------|---------|
-| **Performance** | Opcache | Opcache | Compiled | Compiled | Compiled |
-| **Learning Curve** | Native PHP + `s:` attributes | Custom | Python-like | PHP-like | HTML + `:attr` |
-| **Parser** | ✅ AST-based | Regex | ✅ AST-based | ✅ AST-based | ✅ AST-based |
-| **Auto-Escaping** | ✅ All contexts | HTML only | ✅ On by default | ✅ All contexts | ✅ HTML only |
-| **PHP Interop** | ✅ Full | ✅ Full | Limited | ✅ Full | ✅ Full |
-| **Scope Isolation** | ✅ Closure | ❌ None | ✅ Yes | ✅ Sandbox | ✅ Component |
-| **Inheritance** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Components |
-| **Components** | ✅ `s-` files | ✅ Class/File | Macros/Embed | N:attributes | ✅ `x-` files |
-| **IDE Support** | Native | Plugins | Plugins | PhpStorm | Native PHP |
-| **Security** | ✅ Auto + isolate | Basic HTML | ✅ Sandbox mode | ✅ Context + Sandbox | ✅ Auto HTML |
-| **Debugging** | ✅ Native traces | Good | Can be hard | ✅ Tracy plugin | ✅ Native traces |
-| **Caching** | ✅ Opcache | ✅ Opcache | File cache | ✅ Opcache | ✅ Compiled |
-| **Pipes/Filters** | ✅ PHP 8.5 &#124;> | Helpers | `|upper` | `|upper` | Native funcs |
-:::
+| Feature | Sugar | Blade | Twig | Latte | Tempest | Smarty |
+| --- | --- | --- | --- | --- | --- | --- |
+| Learning Curve | PHP + `s:` attributes | Custom | Python-like | PHP-like | HTML + `:attr` | Custom |
+| AST parser | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| Context-aware escaping | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | Optional |
+| Full PHP interop | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: |
+| Scope isolation | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| Layout inheritance | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: |
+| Compiles to PHP | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Components | `s-` files | Class/File | Macros/Embed | N:attributes | `x-` files | Blocks/partials |
+| IDE Support | Native PHP | Plugins | Plugins | Plugins | Native PHP | Plugins |
+| Security | Auto + isolate | Basic HTML | Sandbox mode | Context + Sandbox | Auto + isolate | Auto optional |
+| Debugging | Native traces | Good | Can be hard | Tracy plugin | Native traces | Plugins |
+| Pipes/Filters | Native `\|>` - funcs | Helpers | `\|upper` | `\|upper` | Native funcs | Modifiers |
+
+</div>
+</div>
+
+**Notes on the criteria:**
+
+- **Performance**: whether templates compile to PHP and benefit from opcache at runtime.
+- **Learning curve**: how much new syntax you need to learn beyond PHP and HTML.
+- **AST parser**: whether the engine parses templates into a structured AST before compiling.
+- **Context-aware escaping**: automatic escaping beyond HTML (attributes, URLs, JS, CSS).
+- **PHP interop**: ability to use PHP directly in templates without a separate language layer.
+- **Scope isolation**: whether includes/components isolate variables by default.
+- **Compiles to PHP**: whether the engine produces PHP code that can be cached by OPcache at runtime.
+
+## How Sugar Compares (Neutral Overview)
+
+Every engine makes different tradeoffs in syntax, safety, and integration. Sugar is designed to feel like native PHP templates with attribute-driven directives. Other engines lean into custom syntax, tag-based DSLs, or class-based components. None of these approaches are universally better; they fit different teams and constraints.
+
+### Syntax and Familiarity
+
+Sugar keeps standard PHP and HTML intact, adding `s:` attributes for structure. That makes it easy for teams already comfortable with PHP templates. Engines like Blade or Twig offer more opinionated syntax that can be cleaner for designers, but they also introduce a separate language to learn and debug.
+
+### Escaping and Safety
+
+Sugar focuses on context-aware escaping across HTML, attributes, URLs, JS, and CSS. Some engines default to HTML-only escaping or require explicit filters for non-HTML contexts. In practice, the best choice depends on how much dynamic data your templates handle and how strict you want the defaults to be.
+
+### Components and Composition
+
+Sugar uses `s-` prefixed component templates with props and slots. Other engines may use class-based components, macros, or custom tags. Sugar leans on template binding to keep logic close to the template without requiring class-backed components.
+
+### Inheritance and Includes
+
+Sugar supports layout inheritance and includes with scope isolation. Some engines expose more granular inheritance features (like named stacks), while others prioritize component composition over layout inheritance. If your app is component-first, you may lean more on component systems than template inheritance regardless of engine.
+
+### Performance and Debugging
+
+Sugar compiles to pure PHP and relies on opcache, similar to many engines. Debugging experience often comes down to the quality of compiled output and source mapping. Sugar aims to keep compiled output readable so stack traces are still useful.
+
+### When Sugar Is a Good Fit
+
+Sugar tends to work well for teams that want a PHP-first template style, attribute-based control flow, and context-aware escaping without adopting a separate template language. If your team prefers a full DSL or a framework-specific component model, another engine might feel more natural.
+
 
 ## Before and After
 
