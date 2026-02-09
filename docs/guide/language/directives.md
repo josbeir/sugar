@@ -15,7 +15,7 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 
 | Type | What it does | Examples |
 | --- | --- | --- |
-| Control Flow | Wraps elements in conditions or loops. | `s:if`, `s:foreach`, `s:switch` |
+| Control Flow | Wraps elements in conditions or loops. | `s:if`, `s:foreach`, `s:switch`, `s:try` |
 | Attribute | Computes or merges attributes. | `s:class`, `s:spread`, `s:tag` |
 | Content | Replaces element content with output. | `s:text`, `s:html` |
 | Pass-through | Handled by other passes. | `s:slot`, `s:bind` |

@@ -8,6 +8,7 @@ use Sugar\Directive\BooleanAttributeDirective;
 use Sugar\Directive\ClassDirective;
 use Sugar\Directive\ContentDirective;
 use Sugar\Directive\EmptyDirective;
+use Sugar\Directive\FinallyDirective;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\ForelseDirective;
 use Sugar\Directive\IfContentDirective;
@@ -20,6 +21,7 @@ use Sugar\Directive\SpreadDirective;
 use Sugar\Directive\SwitchDirective;
 use Sugar\Directive\TagDirective;
 use Sugar\Directive\TimesDirective;
+use Sugar\Directive\TryDirective;
 use Sugar\Directive\UnlessDirective;
 use Sugar\Directive\WhileDirective;
 use Sugar\Enum\DirectiveType;
@@ -67,6 +69,8 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         'switch' => SwitchDirective::class,
         'case' => SwitchDirective::class,
         'default' => SwitchDirective::class,
+        'try' => TryDirective::class,
+        'finally' => FinallyDirective::class,
         // Loops
         'foreach' => ForeachDirective::class,
         'forelse' => ForelseDirective::class,

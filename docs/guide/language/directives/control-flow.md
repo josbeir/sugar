@@ -20,6 +20,8 @@ Use `<s-template>` when you want control flow without adding a wrapper element.
 - `s:times` - Loop a fixed number of times.
 - `s:switch` - Switch/case rendering.
 - `s:ifcontent` - Render wrappers only if they contain output.
+- `s:try` - Wrap output in a try block with optional finally.
+- `s:finally` - Optional sibling for s:try cleanup.
 
 ## Examples
 
@@ -172,5 +174,18 @@ Render the wrapper only when it would contain output.
     <?php if ($showContent): ?>
         <p>Some content here</p>
     <?php endif; ?>
+</div>
+```
+
+### s:try / s:finally
+
+Wrap output in a `try` block with an optional `finally` sibling. There is no `s:catch` directive; if `s:finally` is omitted, Sugar emits a catch that returns `null` to keep the PHP valid and silently stop output on errors.
+
+```html
+<div s:try>
+    <?= $content ?>
+</div>
+<div s:finally>
+    <?php $logger->flush(); ?>
 </div>
 ```

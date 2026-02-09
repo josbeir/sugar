@@ -9,8 +9,10 @@ use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\BooleanAttributeDirective;
+use Sugar\Directive\FinallyDirective;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\IfDirective;
+use Sugar\Directive\TryDirective;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
@@ -35,6 +37,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         $this->registry->register('if', new IfDirective());
         $this->registry->register('foreach', new ForeachDirective());
+        $this->registry->register('try', new TryDirective());
+        $this->registry->register('finally', new FinallyDirective());
 
         $extractionPass = new DirectiveExtractionPass($this->registry, new SugarConfig());
         $pairingPass = new DirectivePairingPass($this->registry);
@@ -102,6 +106,32 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertStringContainsString('<?php endif; ?>', $code);
         $this->assertStringContainsString('<ul>', $code);
         $this->assertStringContainsString('<li>', $code);
+    }
+
+    public function testTryFinallyDirectiveFullPipeline(): void
+    {
+        $template = '<div s:try>Run</div><div s:finally>Cleanup</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $this->assertStringContainsString('<?php try { ?>', $code);
+        $this->assertStringContainsString('<?php } finally { ?>', $code);
+        $this->assertStringContainsString('<?php } ?>', $code);
+        $this->assertStringContainsString('<div>Run</div>', $code);
+        $this->assertStringContainsString('<div>Cleanup</div>', $code);
+    }
+
+    public function testFinallyDirectiveRequiresTry(): void
+    {
+        $this->expectExceptionMessage('s:finally must follow s:try');
+
+        $template = '<div s:finally>Cleanup</div>';
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+
+        $this->generator->generate($transformed);
     }
 
     public function testRawPipeOutputFullPipeline(): void
