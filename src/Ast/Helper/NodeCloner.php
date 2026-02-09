@@ -73,6 +73,7 @@ final class NodeCloner
             children: $newChildren,
             line: $node->line,
             column: $node->column,
+            selfClosing: $node->selfClosing,
         );
     }
 
@@ -90,6 +91,7 @@ final class NodeCloner
             children: $node->children,
             line: $node->line,
             column: $node->column,
+            selfClosing: $node->selfClosing,
         );
     }
 }

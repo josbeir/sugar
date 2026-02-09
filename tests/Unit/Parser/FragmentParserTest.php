@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\TextNode;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
@@ -27,6 +28,20 @@ final class FragmentParserTest extends TestCase
 
         $fragment = $doc->children[0];
         $this->assertCount(1, $fragment->children);
+    }
+
+    public function testParsesSelfClosingFragment(): void
+    {
+        $html = '<s-template s:if="$show" /><div>After</div>';
+        $doc = $this->parser->parse($html);
+
+        $this->assertCount(2, $doc->children);
+        $this->assertInstanceOf(FragmentNode::class, $doc->children[0]);
+        $this->assertInstanceOf(ElementNode::class, $doc->children[1]);
+
+        $fragment = $doc->children[0];
+        $this->assertTrue($fragment->selfClosing);
+        $this->assertCount(0, $fragment->children);
     }
 
     public function testParsesFragmentWithDirective(): void

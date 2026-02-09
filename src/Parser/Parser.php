@@ -58,12 +58,15 @@ final readonly class Parser
         $nodes = [];
         $i = 0;
         $count = count($tokens);
+        $pendingAttribute = null;
+        $pendingAttributeContinuation = null;
 
         while ($i < $count) {
             $token = $tokens[$i];
 
             if ($token->isOutput()) {
                 [$expression, $nextIndex] = $this->extractExpression($tokens, $i + 1);
+                $expression = $this->normalizeOutputExpression($expression);
 
                 // Parse pipe syntax if present
                 $pipes = $this->parsePipes($expression);
@@ -72,7 +75,7 @@ final readonly class Parser
                 $shouldEscape = !$pipes['raw'];
                 $outputContext = $pipes['raw'] ? OutputContext::RAW : OutputContext::HTML;
 
-                $nodes[] = new OutputNode(
+                $outputNode = new OutputNode(
                     expression: $finalExpression,
                     escape: $shouldEscape,
                     context: $outputContext,
@@ -80,6 +83,18 @@ final readonly class Parser
                     column: $token->pos,
                     pipes: $pipeChain,
                 );
+
+                if (is_array($pendingAttribute)) {
+                    $element = $pendingAttribute['element'];
+                    $attrIndex = $pendingAttribute['attrIndex'];
+                    $element->attributes[$attrIndex]->value = $outputNode;
+                    $pendingAttributeContinuation = $element;
+                    $pendingAttribute = null;
+                    $i = $nextIndex;
+                    continue;
+                }
+
+                $nodes[] = $outputNode;
                 $i = $nextIndex;
                 continue;
             }
@@ -97,11 +112,20 @@ final readonly class Parser
             }
 
             if ($token->isHtml()) {
-                if ($token->containsHtml()) {
-                    $htmlNodes = $this->parseHtml($token->content(), $token->line, $token->pos);
+                $html = $token->content();
+                if ($pendingAttributeContinuation instanceof ElementNode) {
+                    $html = $this->applyAttributeContinuation($html, $pendingAttributeContinuation);
+                    $pendingAttributeContinuation = null;
+                }
+
+                if (str_contains($html, '<') || str_contains($html, '>')) {
+                    $htmlNodes = $this->parseHtml($html, $token->line, $token->pos);
                     $nodes = array_merge($nodes, $htmlNodes);
+                    if ($pendingAttribute === null) {
+                        $pendingAttribute = $this->detectOpenAttribute($html, $htmlNodes);
+                    }
                 } else {
-                    $nodes[] = new TextNode($token->content(), $token->line, $token->pos);
+                    $nodes[] = new TextNode($html, $token->line, $token->pos);
                 }
 
                 $i++;
@@ -140,6 +164,19 @@ final readonly class Parser
         }
 
         return [trim($expression), $i];
+    }
+
+    /**
+     * Normalize output expression to support trailing semicolons.
+     */
+    private function normalizeOutputExpression(string $expression): string
+    {
+        $expression = trim($expression);
+        if ($expression !== '' && str_ends_with($expression, ';')) {
+            return rtrim($expression, " \t\n\r\0\x0B;");
+        }
+
+        return $expression;
     }
 
     /**
@@ -322,6 +359,7 @@ final readonly class Parser
                 children: [],
                 line: $line,
                 column: $column,
+                selfClosing: $selfClosing,
             );
         }
 
@@ -457,11 +495,13 @@ final readonly class Parser
                 $stack[count($stack) - 1][] = $node;
                 // Push reference to this element's children array onto stack
                 $stack[] = &$node->children;
-            } elseif ($node instanceof FragmentNode) {
-                // Fragment node - treat like element
+            } elseif ($node instanceof FragmentNode && !$node->selfClosing) {
+                // Fragment node - treat like element when not self-closing
                 $stack[count($stack) - 1][] = $node;
                 // Push reference to this fragment's children array onto stack
                 $stack[] = &$node->children;
+            } elseif ($node instanceof FragmentNode) {
+                $stack[count($stack) - 1][] = $node;
             } elseif ($node instanceof ComponentNode) {
                 // Component node - treat like element (non-self-closing)
                 $stack[count($stack) - 1][] = $node;
@@ -479,5 +519,127 @@ final readonly class Parser
         }
 
         return $root;
+    }
+
+    /**
+     * Detect if the HTML fragment ends with an open attribute quote.
+     *
+     * @param string $html HTML fragment
+     * @param array<\Sugar\Ast\Node|\Sugar\Parser\ClosingTagMarker> $htmlNodes Parsed nodes
+     * @return array{element: \Sugar\Ast\ElementNode, attrIndex: int}|null
+     */
+    private function detectOpenAttribute(string $html, array $htmlNodes): ?array
+    {
+        if (preg_match("/([A-Za-z_:][\\w:.-]*)\\s*=\\s*([\"'])\\s*$/", $html, $matches) !== 1) {
+            return null;
+        }
+
+        $attrName = $matches[1];
+
+        $element = null;
+        foreach (array_reverse($htmlNodes) as $node) {
+            if ($node instanceof ElementNode) {
+                $element = $node;
+                break;
+            }
+        }
+
+        if (!$element instanceof ElementNode) {
+            return null;
+        }
+
+        foreach ($element->attributes as $index => $attr) {
+            if ($attr->name === $attrName) {
+                return ['element' => $element, 'attrIndex' => $index];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Continue parsing attributes after an inline output attribute value.
+     */
+    private function applyAttributeContinuation(string $html, ElementNode $element): string
+    {
+        $pos = 0;
+        $len = strlen($html);
+
+        if ($pos < $len && ($html[$pos] === '"' || $html[$pos] === "'")) {
+            $pos++;
+        }
+
+        while ($pos < $len) {
+            $char = $html[$pos];
+
+            if ($char === '>') {
+                $pos++;
+                break;
+            }
+
+            if ($char === '/' && isset($html[$pos + 1]) && $html[$pos + 1] === '>') {
+                $element->selfClosing = true;
+                $pos += 2;
+                break;
+            }
+
+            if (ctype_space($char)) {
+                $pos++;
+                continue;
+            }
+
+            $name = '';
+            while ($pos < $len && !in_array($html[$pos], ['=', '>', '/', ' ', "\t", "\n", "\r"], true)) {
+                $name .= $html[$pos++];
+            }
+
+            if ($name === '') {
+                break;
+            }
+
+            while ($pos < $len && ctype_space($html[$pos])) {
+                $pos++;
+            }
+
+            $value = null;
+            if ($pos < $len && $html[$pos] === '=') {
+                $pos++;
+
+                while ($pos < $len && ctype_space($html[$pos])) {
+                    $pos++;
+                }
+
+                if ($pos < $len) {
+                    $quote = $html[$pos];
+                    if ($quote === '"' || $quote === "'") {
+                        $pos++;
+                        $value = '';
+                        while ($pos < $len && $html[$pos] !== $quote) {
+                            if ($html[$pos] === '\\' && isset($html[$pos + 1]) && $html[$pos + 1] === $quote) {
+                                $value .= $quote;
+                                $pos += 2;
+                            } else {
+                                $value .= $html[$pos++];
+                            }
+                        }
+
+                        if ($pos < $len) {
+                            $pos++;
+                        }
+                    } else {
+                        $value = '';
+                        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
+                            $value .= $html[$pos++];
+                        }
+                    }
+                } else {
+                    $value = '';
+                }
+            }
+
+            $element->attributes[] = new AttributeNode($name, $value, $element->line, $element->column);
+        }
+
+        return substr($html, $pos);
     }
 }

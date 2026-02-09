@@ -49,6 +49,16 @@ final class ParserTest extends TestCase
         $this->assertSame('$title', $ast->children[0]->expression);
     }
 
+    public function testParseOutputAllowsTrailingSemicolon(): void
+    {
+        $source = '<?= time(); ?>';
+        $ast = $this->parser->parse($source);
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(OutputNode::class, $ast->children[0]);
+        $this->assertSame('time()', $ast->children[0]->expression);
+    }
+
     public function testParseHtmlWithOutput(): void
     {
         $source = '<h1><?= $title ?></h1>';
@@ -99,6 +109,39 @@ final class ParserTest extends TestCase
         $this->assertCount(1, $element->attributes);
         $this->assertSame('class', $element->attributes[0]->name);
         $this->assertSame('test', $element->attributes[0]->value);
+    }
+
+    public function testParseAttributeWithInlineOutput(): void
+    {
+        $template = '<a href="<?= $url ?>">Link</a>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('href', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('Link', $element->children[0]->content);
+    }
+
+    public function testParseAttributeWithInlineOutputAndPipe(): void
+    {
+        $template = '<a href="<?= $url |> raw() ?>">Link</a>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('href', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertFalse($element->attributes[0]->value->escape);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('Link', $element->children[0]->content);
     }
 
     public function testParseNestedElements(): void
