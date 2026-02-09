@@ -8,6 +8,7 @@ use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\CacheMetadata;
 use Sugar\Cache\FileCache;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
+use Sugar\Util\Hash;
 
 /**
  * Tests for FileCache implementation
@@ -235,6 +236,35 @@ final class FileCacheTest extends TestCase
 
         unlink($sourcePath);
         // Cleanup new cache dir
+        $this->removeTempDir($cacheDir);
+    }
+
+    public function testDebugModeChecksSourceTimestampWithBlocksKey(): void
+    {
+        $sourcePath = sys_get_temp_dir() . '/sugar_source_blocks_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime, debug: true);
+        $cacheKey = $sourcePath . '::blocks:' . Hash::make('sidebar');
+
+        $this->cache->put($cacheKey, '<?php echo "cached v1";', $metadata);
+        $cached = $this->cache->get($cacheKey, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        file_put_contents($sourcePath, '<?php echo "v2";');
+        $this->bumpFileMtime($sourcePath);
+        clearstatcache();
+
+        $cacheDir = sys_get_temp_dir() . '/sugar_newcache_' . uniqid();
+        mkdir($cacheDir, 0755, true);
+        $newCache = new FileCache($cacheDir);
+        $newCache->put($cacheKey, '<?php echo "cached v1";', $metadata);
+
+        $cached = $newCache->get($cacheKey, debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
         $this->removeTempDir($cacheDir);
     }
 

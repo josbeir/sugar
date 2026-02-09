@@ -15,9 +15,10 @@ interface EngineInterface
      *
      * @param string $template Template path or inline template
      * @param array<string, mixed> $data Template variables
+     * @param array<string>|null $blocks Restrict output to these block names
      * @return string Rendered output
      */
-    public function render(string $template, array $data = []): string;
+    public function render(string $template, array $data = [], ?array $blocks = null): string;
 
     /**
      * Compile a template to PHP code

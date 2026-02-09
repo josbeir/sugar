@@ -106,4 +106,24 @@ final class EngineTest extends TestCase
         $this->assertStringContainsString('<?php', $compiled);
         $this->assertStringContainsString('$value', $compiled);
     }
+
+    public function testRenderWithBlocksOnlyIgnoresExtends(): void
+    {
+        file_put_contents(
+            $this->templateDir . '/base.sugar.php',
+            '<main s:block="content">Base</main><aside s:block="sidebar">Base</aside>',
+        );
+        file_put_contents(
+            $this->templateDir . '/child.sugar.php',
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<div s:block="sidebar"><p>Side</p></div>' .
+            '<div s:block="content"><p>Main</p></div>',
+        );
+
+        $engine = $this->createEngine($this->templateDir);
+
+        $result = $engine->render('child.sugar.php', [], ['content', 'sidebar']);
+
+        $this->assertSame('<p>Side</p><p>Main</p>', trim($result));
+    }
 }

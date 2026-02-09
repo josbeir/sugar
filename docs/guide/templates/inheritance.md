@@ -118,6 +118,27 @@ Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:ex
 </div>
 ```
 
+## Render Only Specific Blocks
+
+You can render one or more blocks directly by passing a list of block names as the third argument to `Engine::render()`.
+This skips layout inheritance and outputs only the matching block contents in template order. Includes still run before block extraction. It is especially handy when you need to return partials for AJAX responses or other incremental updates.
+
+```php
+echo $engine->render('pages/home', ['user' => $user], ['sidebar', 'content']);
+```
+
+```html
+<!-- pages/home.sugar.php -->
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<aside s:block="sidebar">...</aside>
+<section s:block="content">...</section>
+```
+
+```text
+<!-- Output -->
+...sidebar contents...content contents...
+```
+
 ## Include
 
 Includes are great for shared fragments like headers, footers, or cards.

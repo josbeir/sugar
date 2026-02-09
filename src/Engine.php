@@ -14,6 +14,8 @@ use Sugar\Engine\EngineBuilder;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
+use Sugar\Util\ArrayHelper;
+use Sugar\Util\Hash;
 
 /**
  * Sugar template engine
@@ -53,10 +55,12 @@ final class Engine implements EngineInterface
     /**
      * @inheritDoc
      */
-    public function render(string $template, array $data = []): string
+    public function render(string $template, array $data = [], ?array $blocks = null): string
     {
+        $blocks = ArrayHelper::normalizeStringList($blocks);
+
         // Get compiled PHP code
-        $compiled = $this->getCompiledTemplate($template);
+        $compiled = $this->getCompiledTemplate($template, $blocks);
 
         // Execute the compiled template
         return $this->execute($compiled->path, $data, $compiled->tracker);
@@ -78,10 +82,17 @@ final class Engine implements EngineInterface
      * @param string $template Template path
      * @return \Sugar\Engine\CompiledTemplateResult Compiled path and tracker
      */
-    private function getCompiledTemplate(string $template): CompiledTemplateResult
+
+    /**
+     * @param array<string>|null $blocks
+     */
+    private function getCompiledTemplate(string $template, ?array $blocks): CompiledTemplateResult
     {
         // Use template as cache key
         $cacheKey = $template;
+        if ($blocks !== null) {
+            $cacheKey .= '::blocks:' . Hash::make((string)json_encode($blocks));
+        }
 
         // Try to get from cache
         $cached = $this->cache->get($cacheKey, $this->debug);
@@ -96,7 +107,13 @@ final class Engine implements EngineInterface
         $tracker = new DependencyTracker();
 
         // Compile with dependency tracking
-        $compiled = $this->compiler->compile($source, $template, $this->debug, $tracker);
+        $compiled = $this->compiler->compile(
+            $source,
+            $template,
+            $this->debug,
+            $tracker,
+            $blocks,
+        );
 
         // Build metadata from tracker
         $metadata = $tracker->getMetadata($template, $this->debug);

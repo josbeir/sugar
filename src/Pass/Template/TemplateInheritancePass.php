@@ -96,6 +96,13 @@ final class TemplateInheritancePass implements AstPassInterface
         CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
+        if ($context->blocks !== null) {
+            $document = $this->processIncludes($document, $context, $loadedTemplates);
+            $document = $this->extractBlocks($document, $context->blocks);
+
+            return $this->removeInheritanceAttributes($document);
+        }
+
         $currentTemplate = $context->templatePath;
 
         // Check for circular inheritance
@@ -133,6 +140,47 @@ final class TemplateInheritancePass implements AstPassInterface
 
         // Remove template inheritance attributes (s:block, s:extends, s:include, s:with)
         return $this->removeInheritanceAttributes($document);
+    }
+
+    /**
+     * Extract only the requested blocks in template order.
+     *
+     * @param array<string> $blockNames
+     */
+    private function extractBlocks(DocumentNode $document, array $blockNames): DocumentNode
+    {
+        $targets = array_fill_keys($blockNames, true);
+        $children = [];
+
+        $this->collectBlockChildren($document->children, $targets, $children);
+
+        return new DocumentNode($children);
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node> $nodes
+     * @param array<string, bool> $targets
+     * @param array<\Sugar\Ast\Node> $output
+     */
+    private function collectBlockChildren(array $nodes, array $targets, array &$output): void
+    {
+        foreach ($nodes as $node) {
+            if (!($node instanceof ElementNode) && !($node instanceof FragmentNode)) {
+                continue;
+            }
+
+            $blockName = AttributeHelper::getStringAttributeValue(
+                $node,
+                $this->prefixHelper->buildName('block'),
+            );
+
+            if ($blockName !== '' && isset($targets[$blockName])) {
+                array_push($output, ...$node->children);
+                continue;
+            }
+
+            $this->collectBlockChildren($node->children, $targets, $output);
+        }
     }
 
     /**

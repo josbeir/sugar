@@ -12,6 +12,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
+use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
@@ -134,6 +135,45 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $findTitle($result->children);
 
         $this->assertTrue($titleFound, 'Title element should be present in result');
+    }
+
+    public function testBlocksModeExtractsRequestedBlocksInTemplateOrder(): void
+    {
+        $document = $this->document()
+            ->withChildren([
+                $this->element('s-template')
+                    ->attribute('s:extends', '../base.sugar.php')
+                    ->build(),
+                $this->element('div')
+                    ->attribute('s:block', 'sidebar')
+                    ->withChild($this->createText('Side'))
+                    ->build(),
+                $this->element('div')
+                    ->attribute('s:block', 'content')
+                    ->withChild($this->createText('Main'))
+                    ->build(),
+                $this->element('p')
+                    ->withChild($this->createText('Ignored'))
+                    ->build(),
+            ])
+            ->build();
+
+        $context = new CompilationContext(
+            templatePath: 'pages/home.sugar.php',
+            source: '',
+            debug: false,
+            tracker: null,
+            blocks: ['content', 'sidebar'],
+        );
+
+        $result = $this->execute($document, $context);
+
+        $this->assertInstanceOf(DocumentNode::class, $result);
+        $this->assertCount(2, $result->children);
+        $this->assertInstanceOf(TextNode::class, $result->children[0]);
+        $this->assertInstanceOf(TextNode::class, $result->children[1]);
+        $this->assertSame('Side', $result->children[0]->content);
+        $this->assertSame('Main', $result->children[1]->content);
     }
 
     public function testMultiLevelInheritance(): void

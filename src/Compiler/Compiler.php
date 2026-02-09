@@ -93,12 +93,14 @@ final class Compiler implements CompilerInterface
         ?string $templatePath = null,
         bool $debug = false,
         ?DependencyTracker $tracker = null,
+        ?array $blocks = null,
     ): string {
         $context = $this->createContext(
             $templatePath ?? 'inline-template',
             $source,
             $debug,
             $tracker,
+            $blocks,
         );
 
         // Step 1: Parse template source into AST
@@ -146,19 +148,21 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * Create a compilation context for a template.
+     * @param array<string>|null $blocks
      */
     private function createContext(
         string $templatePath,
         string $source,
         bool $debug,
         ?DependencyTracker $tracker,
+        ?array $blocks = null,
     ): CompilationContext {
         return new CompilationContext(
             $templatePath,
             $source,
             $debug,
             $tracker,
+            $blocks,
         );
     }
 

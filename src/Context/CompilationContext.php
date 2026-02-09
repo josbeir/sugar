@@ -22,12 +22,14 @@ final class CompilationContext
      * @param string $source Template source code
      * @param bool $debug Enable debug mode
      * @param \Sugar\Cache\DependencyTracker|null $tracker Dependency tracker for cache invalidation
+     * @param array<string>|null $blocks Restrict output to these block names
      */
     public function __construct(
         public readonly string $templatePath,
         public readonly string $source,
         public readonly bool $debug = false,
         public readonly ?DependencyTracker $tracker = null,
+        public readonly ?array $blocks = null,
     ) {
     }
 
