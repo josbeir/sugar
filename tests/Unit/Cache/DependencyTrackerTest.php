@@ -18,12 +18,13 @@ final class DependencyTrackerTest extends TestCase
         $tracker->addDependency('/templates/layout.sugar.php');
         $tracker->addDependency('/templates/header.sugar.php');
 
-        $metadata = $tracker->getMetadata('/templates/page.sugar.php');
+        $metadata = $tracker->getMetadata('/templates/page.sugar.php', true);
 
         $this->assertSame(
             ['/templates/layout.sugar.php', '/templates/header.sugar.php'],
             $metadata->dependencies,
         );
+        $this->assertTrue($metadata->debug);
     }
 
     public function testTracksComponents(): void

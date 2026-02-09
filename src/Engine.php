@@ -99,7 +99,7 @@ final class Engine implements EngineInterface
         $compiled = $this->compiler->compile($source, $template, $this->debug, $tracker);
 
         // Build metadata from tracker
-        $metadata = $tracker->getMetadata($template);
+        $metadata = $tracker->getMetadata($template, $this->debug);
 
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);

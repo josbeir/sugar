@@ -47,7 +47,7 @@ final class DependencyTracker
      * @param string $sourcePath Source template path
      * @return \Sugar\Cache\CacheMetadata Metadata with dependencies and timestamps
      */
-    public function getMetadata(string $sourcePath): CacheMetadata
+    public function getMetadata(string $sourcePath, bool $debug = false): CacheMetadata
     {
         $sourceTimestamp = 0;
         if (file_exists($sourcePath)) {
@@ -60,6 +60,7 @@ final class DependencyTracker
             components: array_keys($this->components),
             sourceTimestamp: $sourceTimestamp,
             compiledTimestamp: time(),
+            debug: $debug,
         );
     }
 

@@ -250,6 +250,10 @@ Debug mode makes compiled output easier to trace back to the original template s
 Turn on debug mode when you are inspecting compiled templates or troubleshooting template output.
 :::
 
+::: info
+When you toggle debug mode, Sugar recompiles templates so compiled output matches the selected mode (debug comments are not reused in production renders).
+:::
+
 ### Enable Debug Mode
 
 Enable debug mode to add source location comments to compiled templates:

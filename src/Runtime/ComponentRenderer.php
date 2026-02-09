@@ -90,7 +90,7 @@ final class ComponentRenderer
             tracker: $tracker,
         );
 
-        $metadata = $tracker->getMetadata($componentPath);
+        $metadata = $tracker->getMetadata($componentPath, $this->debug);
 
         if ($this->tracker instanceof DependencyTracker) {
             foreach ($metadata->dependencies as $dependency) {

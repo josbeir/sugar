@@ -81,6 +81,10 @@ final class FileCache implements TemplateCacheInterface
         $metadataPath = $this->getMetadataPath($cachePath);
         $metadata = $this->loadMetadata($metadataPath);
 
+        if ($metadata->debug !== $debug) {
+            return null;
+        }
+
         // Debug mode: check freshness
         if ($debug && !$this->isFresh($key, $metadata)) {
             return null;
@@ -113,6 +117,7 @@ final class FileCache implements TemplateCacheInterface
             components: $metadata->components,
             sourceTimestamp: $metadata->sourceTimestamp,
             compiledTimestamp: time(),
+            debug: $metadata->debug,
         );
 
         // Write metadata
@@ -274,6 +279,7 @@ final class FileCache implements TemplateCacheInterface
             components: $data['components'] ?? [],
             sourceTimestamp: $data['sourceTimestamp'] ?? 0,
             compiledTimestamp: $data['compiledTimestamp'] ?? 0,
+            debug: $data['debug'] ?? false,
         );
     }
 
@@ -290,6 +296,7 @@ final class FileCache implements TemplateCacheInterface
             'components' => $metadata->components,
             'sourceTimestamp' => $metadata->sourceTimestamp,
             'compiledTimestamp' => $metadata->compiledTimestamp,
+            'debug' => $metadata->debug,
         ];
 
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
