@@ -124,6 +124,6 @@ final class EngineTest extends TestCase
 
         $result = $engine->render('child.sugar.php', [], ['content', 'sidebar']);
 
-        $this->assertSame('<p>Side</p><p>Main</p>', trim($result));
+        $this->assertSame('<div><p>Side</p></div><div><p>Main</p></div>', trim($result));
     }
 }

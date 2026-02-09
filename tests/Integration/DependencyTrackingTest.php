@@ -196,7 +196,7 @@ final class DependencyTrackingTest extends TestCase
 <div s:extends="template-inheritance/base.sugar.php"></div>
 
 <div s:block="content">
-    <div s:include="partials/header.sugar.php"></div>
+    <div s:include="template-inheritance/partials/header.sugar.php"></div>
     <s-button>Click me</s-button>
     <p>Content here</p>
 </div>

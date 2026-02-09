@@ -175,7 +175,17 @@ final class TemplateInheritancePass implements AstPassInterface
             );
 
             if ($blockName !== '' && isset($targets[$blockName])) {
-                array_push($output, ...$node->children);
+                $hasNoWrap = AttributeHelper::hasAttribute(
+                    $node,
+                    $this->prefixHelper->buildName('nowrap'),
+                );
+
+                if ($hasNoWrap) {
+                    array_push($output, ...$node->children);
+                } else {
+                    $output[] = $node;
+                }
+
                 continue;
             }
 
@@ -247,6 +257,9 @@ final class TemplateInheritancePass implements AstPassInterface
         // Load and parse parent template (with caching)
         $parentContent = $this->loader->load($resolvedPath);
         $parentDocument = $this->getOrParseTemplate($resolvedPath, $parentContent);
+
+        // Resolve includes in child before merging so relative paths use the child template path
+        $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates);
 
         // Collect blocks from child
         $childBlocks = $this->collectBlocks($childDocument);
@@ -362,7 +375,15 @@ final class TemplateInheritancePass implements AstPassInterface
 
                 if ($child instanceof ElementNode && !$hasNoWrap) {
                     // Preserve wrapper element and inject included content as children
-                    $newChildren[] = NodeCloner::withChildren($child, $includeChildren);
+                    $cleanAttributes = AttributeHelper::filterAttributes(
+                        $child->attributes,
+                        fn(AttributeNode $attr): bool => !in_array(
+                            $attr->name,
+                            [$includeName, $withName, $nowrapName],
+                            true,
+                        ),
+                    );
+                    $newChildren[] = NodeCloner::withAttributesAndChildren($child, $cleanAttributes, $includeChildren);
                 } else {
                     // Fragment include remains wrapperless
                     array_push($newChildren, ...$includeChildren);
@@ -497,8 +518,8 @@ final class TemplateInheritancePass implements AstPassInterface
                     return NodeCloner::withChildren($node, $childBlock->children);
                 }
 
-                // Parent is fragment, child is element: use child's children
-                return NodeCloner::fragmentWithChildren($node, $childBlock->children);
+                // Parent is fragment, child is element: preserve child wrapper
+                return $childBlock;
             }
 
             if ($childBlock instanceof FragmentNode) {
@@ -599,10 +620,19 @@ final class TemplateInheritancePass implements AstPassInterface
             return $node;
         }
 
+        $stripNoWrap = AttributeHelper::hasAttribute(
+            $node,
+            $this->prefixHelper->buildName('block'),
+        ) || AttributeHelper::hasAttribute(
+            $node,
+            $this->prefixHelper->buildName('include'),
+        );
+
         // Filter out template inheritance attributes
         $cleanAttributes = AttributeHelper::filterAttributes(
             $node->attributes,
-            fn(AttributeNode $attr): bool => !$this->prefixHelper->isInheritanceAttribute($attr->name),
+            fn(AttributeNode $attr): bool => !$this->prefixHelper->isInheritanceAttribute($attr->name)
+                && (!$stripNoWrap || $attr->name !== $this->prefixHelper->buildName('nowrap')),
         );
 
         // Recursively clean children

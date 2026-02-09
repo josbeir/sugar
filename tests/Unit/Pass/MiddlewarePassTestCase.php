@@ -14,6 +14,7 @@ use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\CustomConstraintsTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
  * Base class for middleware pass tests
@@ -24,6 +25,7 @@ abstract class MiddlewarePassTestCase extends TestCase
     use CompilerTestTrait;
     use CustomConstraintsTrait;
     use NodeBuildersTrait;
+    use TempDirectoryTrait;
 
     protected AstPassInterface $pass;
 

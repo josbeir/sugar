@@ -32,7 +32,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testSimpleInheritanceWithBlockReplacement(): void
     {
         $template = $this->loadTemplate('template-inheritance/simple-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'simple-child.sugar.php');
 
         // Verify compiled output contains the block content from child
         $this->assertStringContainsString('My Page Title', $compiled);
@@ -51,7 +51,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         );
 
         $template = $this->loadTemplate('template-inheritance/absolute-only-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'absolute-only-child.sugar.php');
 
         $this->assertStringContainsString('My Absolute Page Title', $compiled);
         $this->assertStringContainsString('Absolute Welcome', $compiled);
@@ -61,7 +61,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testMultiLevelInheritance(): void
     {
         $template = $this->loadTemplate('template-inheritance/multilevel-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'multilevel-child.sugar.php');
 
         // Should have grandparent structure with child's block content
         $this->assertStringContainsString('<html>', $compiled);
@@ -83,7 +83,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testCombiningInheritanceWithDirectives(): void
     {
         $template = $this->loadTemplate('template-inheritance/directive-combo.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/list.sugar.php');
+        $compiled = $this->compiler->compile($template, 'directive-combo.sugar.php');
 
         // Should have foreach directive compiled
         $this->assertStringContainsString('foreach', $compiled);
@@ -104,7 +104,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testInheritancePreservesContextAwareEscaping(): void
     {
         $template = $this->loadTemplate('template-inheritance/escaping-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'escaping-test.sugar.php');
 
         // HTML context escaping should be applied
         $this->assertStringContainsString('Escaper::html', $compiled);
@@ -115,7 +115,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testExecuteCompiledInheritedTemplate(): void
     {
         $template = $this->loadTemplate('template-inheritance/execution-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'execution-test.sugar.php');
 
         // Execute the compiled template
         $output = $this->executeTemplate($compiled, ['name' => 'World']);
@@ -128,7 +128,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     public function testSupportsExtensionlessTemplatePaths(): void
     {
         $template = $this->loadTemplate('template-inheritance/extensionless-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'pages/test.sugar.php');
+        $compiled = $this->compiler->compile($template, 'extensionless-test.sugar.php');
 
         // Should successfully resolve "base" to "base.sugar.php" and "partials/header" to "partials/header.sugar.php"
         $this->assertStringContainsString('Extension-less Test', $compiled);

@@ -198,18 +198,8 @@ final class CodeGenerator
         // Close opening tag
         if ($node->selfClosing) {
             $buffer->write(' />');
-
-            // Add debug comment after self-closing tag
-            if ($this->context->debug) {
-                $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
-            }
         } else {
             $buffer->write('>');
-
-            // Add debug comment after opening tag
-            if ($this->context->debug) {
-                $buffer->write(sprintf(' <!-- L%d:C%d -->', $node->line, $node->column));
-            }
 
             // Children
             foreach ($node->children as $child) {

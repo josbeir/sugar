@@ -11,6 +11,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
+use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
@@ -137,6 +138,118 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->assertTrue($titleFound, 'Title element should be present in result');
     }
 
+    public function testExtendsPreservesChildElementWrapperWhenParentBlockIsFragment(): void
+    {
+        $parentPath = $this->inheritanceFixturesPath . '/layouts/temp-fragment.sugar.php';
+        file_put_contents(
+            $parentPath,
+            '<s-template s:block="content">Original</s-template>',
+        );
+
+        $document = $this->document()
+            ->withChildren([
+                $this->element('s-template')
+                    ->attribute('s:extends', '../layouts/temp-fragment.sugar.php')
+                    ->build(),
+                $this->element('div')
+                    ->attribute('s:block', 'content')
+                    ->attribute('class', 'myblock')
+                    ->withChild($this->createText('Child'))
+                    ->build(),
+            ])
+            ->build();
+
+        $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+        $this->assertInstanceOf(DocumentNode::class, $result);
+
+        $divFound = false;
+        $findDiv = function (array $nodes) use (&$findDiv, &$divFound): void {
+            foreach ($nodes as $child) {
+                if ($child instanceof ElementNode && $child->tag === 'div') {
+                    $divFound = true;
+                    $this->assertInstanceOf(TextNode::class, $child->children[0]);
+                    $this->assertSame('Child', $child->children[0]->content);
+
+                    return;
+                }
+
+                if ($child instanceof ElementNode && $child->children !== []) {
+                    $findDiv($child->children);
+                }
+            }
+        };
+
+        $findDiv($result->children);
+
+        $this->assertTrue($divFound, 'Child element wrapper should be preserved');
+
+        unlink($parentPath);
+    }
+
+    public function testExtendsResolvesChildIncludesRelativeToChildTemplate(): void
+    {
+        $tempDir = $this->createTempDir('sugar_inheritance_');
+        $layoutsDir = $tempDir . '/layouts';
+        $pagesDir = $tempDir . '/pages';
+
+        mkdir($layoutsDir, 0755, true);
+        mkdir($pagesDir, 0755, true);
+
+        file_put_contents($layoutsDir . '/temp-include-layout.sugar.php', '<main s:block="content">Base</main>');
+        file_put_contents($pagesDir . '/temp-child-include.sugar.php', '<p>Included</p>');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $parser = new Parser(new SugarConfig());
+        $pass = new TemplateInheritancePass($loader, $parser, new SugarConfig());
+        $pipeline = new AstPipeline([$pass]);
+
+        try {
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('s-template')
+                        ->attribute('s:extends', '../layouts/temp-include-layout.sugar.php')
+                        ->build(),
+                    $this->element('div')
+                        ->attribute('s:block', 'content')
+                        ->withChild(
+                            $this->element('div')
+                                ->attribute('s:include', 'temp-child-include.sugar.php')
+                                ->build(),
+                        )
+                        ->build(),
+                ])
+                ->build();
+
+            $result = $pipeline->execute($document, $this->createTestContext('pages/home.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+
+            $found = false;
+            $findIncluded = function (array $nodes) use (&$findIncluded, &$found): void {
+                foreach ($nodes as $child) {
+                    if ($child instanceof ElementNode && $child->tag === 'p') {
+                        $found = true;
+                        $this->assertInstanceOf(TextNode::class, $child->children[0]);
+                        $this->assertSame('Included', $child->children[0]->content);
+
+                        return;
+                    }
+
+                    if ($child instanceof ElementNode && $child->children !== []) {
+                        $findIncluded($child->children);
+                    }
+                }
+            };
+
+            $findIncluded($result->children);
+
+            $this->assertTrue($found, 'Child include should resolve relative to child template path');
+        } finally {
+            $this->removeTempDir($tempDir);
+        }
+    }
+
     public function testBlocksModeExtractsRequestedBlocksInTemplateOrder(): void
     {
         $document = $this->document()
@@ -170,10 +283,62 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         $this->assertInstanceOf(DocumentNode::class, $result);
         $this->assertCount(2, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+        $this->assertInstanceOf(ElementNode::class, $result->children[1]);
+        $this->assertSame('div', $result->children[0]->tag);
+        $this->assertSame('div', $result->children[1]->tag);
+        $this->assertInstanceOf(TextNode::class, $result->children[0]->children[0]);
+        $this->assertInstanceOf(TextNode::class, $result->children[1]->children[0]);
+        $this->assertSame('Side', $result->children[0]->children[0]->content);
+        $this->assertSame('Main', $result->children[1]->children[0]->content);
+    }
+
+    public function testBlocksModeRespectsNoWrapOnBlock(): void
+    {
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:block', 'content')
+                    ->attribute('s:nowrap', '')
+                    ->withChild($this->createText('Wrapped'))
+                    ->build(),
+            ])
+            ->build();
+
+        $context = new CompilationContext(
+            templatePath: 'pages/home.sugar.php',
+            source: '',
+            debug: false,
+            tracker: null,
+            blocks: ['content'],
+        );
+
+        $result = $this->execute($document, $context);
+
+        $this->assertInstanceOf(DocumentNode::class, $result);
+        $this->assertCount(1, $result->children);
         $this->assertInstanceOf(TextNode::class, $result->children[0]);
-        $this->assertInstanceOf(TextNode::class, $result->children[1]);
-        $this->assertSame('Side', $result->children[0]->content);
-        $this->assertSame('Main', $result->children[1]->content);
+        $this->assertSame('Wrapped', $result->children[0]->content);
+    }
+
+    public function testRemovesNoWrapFromBlockAfterInheritanceProcessing(): void
+    {
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:block', 'content')
+                    ->attribute('s:nowrap', '')
+                    ->withChild($this->createText('Content'))
+                    ->build(),
+            ])
+            ->build();
+
+        $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+        $this->assertInstanceOf(DocumentNode::class, $result);
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+        $this->assertSame([], $result->children[0]->attributes);
     }
 
     public function testMultiLevelInheritance(): void

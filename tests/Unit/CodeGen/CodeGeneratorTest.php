@@ -519,7 +519,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('<!-- L5:C10 -->', $code);
+        $this->assertStringNotContainsString('<!-- L5:C10 -->', $code);
     }
 
     public function testGenerateSelfClosingElementInDebugMode(): void
@@ -535,7 +535,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('<br /> <!-- L3:C8 -->', $code);
+        $this->assertStringNotContainsString('<!-- L3:C8 -->', $code);
     }
 
     public function testGenerateSimplePipe(): void

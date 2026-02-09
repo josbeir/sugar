@@ -118,10 +118,26 @@ Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:ex
 </div>
 ```
 
+## Block Wrappers and s:nowrap
+
+Blocks keep their wrapper element by default. Add `s:nowrap` to remove the wrapper and return only the block children. This works for blocks in normal renders and in block-only renders. If you want a block without a wrapper element by design, use `<s-template s:block="...">`; using the fragment element here is often cognitively clearer than relying on `s:nowrap`.
+
+```html
+<div s:block="content" s:nowrap>
+    <p>Just the children render</p>
+</div>
+```
+
+```html
+<s-template s:block="content">
+    <p>No wrapper element</p>
+</s-template>
+```
+
 ## Render Only Specific Blocks
 
 You can render one or more blocks directly by passing a list of block names as the third argument to `Engine::render()`.
-This skips layout inheritance and outputs only the matching block contents in template order. Includes still run before block extraction. It is especially handy when you need to return partials for AJAX responses or other incremental updates.
+This skips layout inheritance and outputs the matching blocks in template order, preserving their wrapper elements. Includes still run before block extraction. It is especially handy when you need to return partials for AJAX responses or other incremental updates.
 
 ```php
 echo $engine->render('pages/home', ['user' => $user], ['sidebar', 'content']);
