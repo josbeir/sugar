@@ -52,6 +52,34 @@ $config = SugarConfig::withPrefix('v');
 After changing the prefix, use it consistently in templates and component tags.
 :::
 
+## Custom Self-Closing Tags
+
+Sugar treats HTML void elements as self-closing automatically. If you need to add or override the list (for custom tags, SVG-like tags, or HTML subsets), provide a custom list on the config:
+
+::: code-group
+```php [Replace list]
+use Sugar\Config\SugarConfig;
+
+$config = (new SugarConfig())
+    ->withSelfClosingTags([
+        'meta',
+        'link',
+        'custom',
+    ]);
+```
+
+```php [Add to defaults]
+use Sugar\Config\SugarConfig;
+
+$config = (new SugarConfig())
+    ->withSelfClosingTags([
+        ...SugarConfig::DEFAULT_SELF_CLOSING_TAGS,
+        'custom',
+        'svg',
+    ]);
+```
+:::
+
 ## Custom Directive Registry
 
 Register only the directives you want to allow in a given environment:

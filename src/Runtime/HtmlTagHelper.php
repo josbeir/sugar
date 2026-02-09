@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Runtime;
 
 use RuntimeException;
+use Sugar\Config\SugarConfig;
 
 /**
  * Helper for dynamic HTML tag manipulation
@@ -83,14 +84,12 @@ final class HtmlTagHelper
      * Check if a tag is self-closing
      *
      * @param string $tagName The tag name to check
+     * @param array<string>|null $selfClosingTags Optional override list of self-closing tags
      * @return bool True if the tag is self-closing
      */
-    public static function isSelfClosing(string $tagName): bool
+    public static function isSelfClosing(string $tagName, ?array $selfClosingTags = null): bool
     {
-        $selfClosingTags = [
-            'area', 'base', 'br', 'col', 'embed', 'hr', 'img',
-            'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
-        ];
+        $selfClosingTags ??= SugarConfig::DEFAULT_SELF_CLOSING_TAGS;
 
         return in_array(strtolower($tagName), $selfClosingTags, true);
     }

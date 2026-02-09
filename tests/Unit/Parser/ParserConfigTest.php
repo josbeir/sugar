@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Test\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
@@ -45,5 +47,28 @@ final class ParserConfigTest extends TestCase
         // Should parse as regular element, not fragment
         $this->assertCount(1, $ast->children);
         $this->assertNotInstanceOf(FragmentNode::class, $ast->children[0]);
+    }
+
+    public function testCustomSelfClosingTags(): void
+    {
+        $config = new SugarConfig(selfClosingTags: ['custom']);
+        $parser = $this->createParser($config);
+
+        $ast = $parser->parse('<custom><div>Content</div>');
+
+        $this->assertCount(2, $ast->children);
+
+        $custom = $ast->children[0];
+        $this->assertInstanceOf(ElementNode::class, $custom);
+        $this->assertSame('custom', $custom->tag);
+        $this->assertTrue($custom->selfClosing);
+        $this->assertCount(0, $custom->children);
+
+        $div = $ast->children[1];
+        $this->assertInstanceOf(ElementNode::class, $div);
+        $this->assertSame('div', $div->tag);
+        $this->assertCount(1, $div->children);
+        $this->assertInstanceOf(TextNode::class, $div->children[0]);
+        $this->assertSame('Content', $div->children[0]->content);
     }
 }

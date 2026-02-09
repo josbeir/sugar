@@ -137,6 +137,27 @@ final class ParserTest extends TestCase
         $this->assertCount(0, $element->children);
     }
 
+    public function testParseVoidElementWithoutSlash(): void
+    {
+        $template = '<meta charset="utf-8"><div>Content</div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(2, $doc->children);
+
+        $meta = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $meta);
+        $this->assertSame('meta', $meta->tag);
+        $this->assertTrue($meta->selfClosing);
+        $this->assertCount(0, $meta->children);
+
+        $div = $doc->children[1];
+        $this->assertInstanceOf(ElementNode::class, $div);
+        $this->assertSame('div', $div->tag);
+        $this->assertCount(1, $div->children);
+        $this->assertInstanceOf(TextNode::class, $div->children[0]);
+        $this->assertSame('Content', $div->children[0]->content);
+    }
+
     public function testParseDirectiveAttribute(): void
     {
         $template = '<div s:if="$condition">text</div>';

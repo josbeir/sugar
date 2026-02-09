@@ -64,4 +64,15 @@ final class SugarConfigTest extends TestCase
         // This test verifies readonly behavior exists
         // Actual readonly enforcement is at PHP language level
     }
+
+    public function testWithSelfClosingTagsReturnsNewConfig(): void
+    {
+        $config = new SugarConfig(directivePrefix: 'x', elementPrefix: 'x-');
+        $updated = $config->withSelfClosingTags(['meta', 'custom']);
+
+        $this->assertSame('x', $updated->directivePrefix);
+        $this->assertSame('x-', $updated->elementPrefix);
+        $this->assertSame(['meta', 'custom'], $updated->selfClosingTags);
+        $this->assertSame(SugarConfig::DEFAULT_SELF_CLOSING_TAGS, $config->selfClosingTags);
+    }
 }

@@ -14,6 +14,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
+use Sugar\Runtime\HtmlTagHelper;
 
 final readonly class Parser
 {
@@ -293,6 +294,18 @@ final readonly class Parser
             $attributes[] = new AttributeNode($attrName, $attrValue, $line, $column);
         }
 
+        $isFragment = $tagName === $this->config->getFragmentElement();
+        $isComponent = $this->prefixHelper->hasElementPrefix($tagName) && !$isFragment;
+
+        if (
+            !$selfClosing
+            && !$isFragment
+            && !$isComponent
+            && HtmlTagHelper::isSelfClosing($tagName, $this->config->selfClosingTags)
+        ) {
+            $selfClosing = true;
+        }
+
         $element = new ElementNode(
             tag: $tagName,
             attributes: $attributes,
@@ -303,7 +316,7 @@ final readonly class Parser
         );
 
         // Handle fragment element (e.g., <s-template>, <x-template>)
-        if ($tagName === $this->config->getFragmentElement()) {
+        if ($isFragment) {
             $element = new FragmentNode(
                 attributes: $attributes,
                 children: [],
@@ -314,7 +327,7 @@ final readonly class Parser
 
         // Handle component elements (e.g., <s-button>, <x-alert>)
         // Components start with elementPrefix but are NOT the fragment element
-        if ($this->prefixHelper->hasElementPrefix($tagName) && $tagName !== $this->config->getFragmentElement()) {
+        if ($isComponent) {
             $componentName = $this->prefixHelper->stripElementPrefix($tagName);
             $element = new ComponentNode(
                 name: $componentName,

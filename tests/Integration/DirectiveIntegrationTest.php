@@ -247,8 +247,8 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Should NOT have space before closing tag after PHP code
         $this->assertStringNotContainsString('?> >', $code);
-        // Should end cleanly with no space between PHP close tag and angle bracket
-        $this->assertStringContainsString('?>>', $code);
+        // Void element should auto-close cleanly after PHP output
+        $this->assertStringContainsString('?> />', $code);
     }
 
     public function testMultipleAttributeDirectivesNoTrailingSpaces(): void
