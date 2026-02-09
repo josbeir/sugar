@@ -70,6 +70,32 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertStringNotContainsString('App Layout', $compiled); // Parent's title was overridden
     }
 
+    public function testAppendBlockContent(): void
+    {
+        $template = $this->loadTemplate('template-inheritance/append-child.sugar.php');
+        $compiled = $this->compiler->compile($template, 'append-child.sugar.php');
+
+        $basePos = strpos($compiled, 'Base content');
+        $extraPos = strpos($compiled, 'Extra');
+
+        $this->assertNotFalse($basePos);
+        $this->assertNotFalse($extraPos);
+        $this->assertLessThan($extraPos, $basePos);
+    }
+
+    public function testPrependBlockContent(): void
+    {
+        $template = $this->loadTemplate('template-inheritance/prepend-child.sugar.php');
+        $compiled = $this->compiler->compile($template, 'prepend-child.sugar.php');
+
+        $basePos = strpos($compiled, 'Base content');
+        $extraPos = strpos($compiled, 'Extra');
+
+        $this->assertNotFalse($basePos);
+        $this->assertNotFalse($extraPos);
+        $this->assertGreaterThan($extraPos, $basePos);
+    }
+
     public function testIncludeWithOpenScope(): void
     {
         $template = $this->loadTemplate('template-inheritance/include-test.sugar.php');

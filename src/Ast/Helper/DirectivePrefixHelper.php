@@ -121,7 +121,7 @@ final readonly class DirectivePrefixHelper
     /**
      * Check if attribute is a template inheritance attribute
      *
-     * Inheritance attributes (block, extends, include, with) are processed
+     * Inheritance attributes (block, append, prepend, extends, include, with) are processed
      * by TemplateInheritancePass and should not be treated as regular directives.
      *
      * @param string $name Attribute name (with or without prefix)
@@ -130,6 +130,6 @@ final readonly class DirectivePrefixHelper
     {
         $stripped = $this->stripPrefix($name);
 
-        return in_array($stripped, ['block', 'extends', 'include', 'with'], true);
+        return in_array($stripped, ['block', 'append', 'prepend', 'extends', 'include', 'with'], true);
     }
 }

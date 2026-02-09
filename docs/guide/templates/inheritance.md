@@ -45,50 +45,6 @@ By default, inheritance and include paths resolve relative to the current templa
 ```
 :::
 
-## Layout Inheritance
-
-**Base Layout** (`layouts/base.sugar.php`):
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title s:block="title">Default Title</title>
-</head>
-<body>
-    <main s:block="content">Default content</main>
-</body>
-</html>
-```
-
-**Child Template** (`pages/home.sugar.php`):
-```html
-<s-template s:extends="../layouts/base.sugar.php"></s-template>
-<title s:block="title">Home Page</title>
-<div s:block="content">
-    <h2>Welcome!</h2>
-</div>
-```
-
-::: code-group
-```html [Override one block]
-<s-template s:extends="../layouts/base.sugar.php"></s-template>
-<title s:block="title">Home Page</title>
-```
-
-```html [Override multiple]
-<s-template s:extends="../layouts/base.sugar.php"></s-template>
-<title s:block="title">Home Page</title>
-<div s:block="content">
-    <h2>Welcome!</h2>
-    <p>Latest updates below.</p>
-</div>
-```
-:::
-
-::: warning
-Only one `s:extends` directive is allowed per template.
-:::
-
 ## Dependency Safety
 
 Sugar tracks template dependencies during inheritance and includes. Circular dependencies are detected and rejected so a template cannot extend or include itself indirectly.
@@ -105,36 +61,212 @@ What is prevented
 - Diamond-shaped chains that would re-enter a template already on the stack
 :::
 
-## Extends
+## Layout Inheritance
 
 Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:extends` element can be empty; it just declares the parent template.
 
-```html
+When a parent block is an element, that wrapper is preserved and the child's wrapper is discarded (only the child's children replace the parent's children). If the parent block is a fragment, the child's wrapper is preserved.
+
+::: code-group
+```html [Parent layout]
+<!-- layouts/base.sugar.php -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title s:block="title">Default Title</title>
+</head>
+<body>
+    <main s:block="content">Default content</main>
+</body>
+</html>
+```
+
+```html [Child template]
+<!-- pages/home.sugar.php -->
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
-<title s:block="title">Account</title>
+<title s:block="title">Home Page</title>
 <div s:block="content">
-    <s-template s:include="partials/account-header"></s-template>
-    <s-template s:include="partials/account-body"></s-template>
+    <h2>Welcome!</h2>
 </div>
 ```
 
-## Block Wrappers and s:nowrap
+```html [Rendered output]
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Page</title>
+</head>
+<body>
+    <main>
+        <h2>Welcome!</h2>
+    </main>
+</body>
+</html>
+```
+:::
 
-Blocks keep their wrapper element by default. Add `s:nowrap` to remove the wrapper and return only the block children. This works for blocks in normal renders and in block-only renders. If you want a block without a wrapper element by design, use `<s-template s:block="...">`; using the fragment element here is often cognitively clearer than relying on `s:nowrap`.
+::: tip
+Notice how the parent's `<main>` wrapper is preserved and the child's `<div>` wrapper is dropped. If you want the child wrapper preserved on replace, define the parent block as a fragment (`<s-template s:block="...">`).
+:::
+
+::: warning
+Only one `s:extends` directive is allowed per template.
+:::
+
+## Blocks
+
+Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend it. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
 
 ```html
-<div s:block="content" s:nowrap>
-    <p>Just the children render</p>
-</div>
+<!-- Invalid: multiple block directives on one element -->
+<section s:block="content" s:append="content">
+    <p>Not allowed</p>
+</section>
 ```
 
 ```html
-<s-template s:block="content">
-    <p>No wrapper element</p>
+<!-- Valid: multiple append elements targeting the same block -->
+<section s:append="content"><p>First</p></section>
+<section s:append="content"><p>Second</p></section>
+```
+
+### Append and Prepend Blocks
+
+Use `s:append` or `s:prepend` in a child template to add content to a parent block instead of replacing it. When the parent block is an element, the appended/prepended element wrapper is stripped and its children are inserted into the parent block. When the parent block is a fragment, the wrapper is preserved.
+
+::: code-group
+```html [Append: before]
+<!-- layout: layouts/base.sugar.php -->
+<main s:block="content">
+    <p>Base content</p>
+</main>
+
+<!-- child: pages/home.sugar.php -->
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<s-template s:append="content">
+    <p>Appended content</p>
 </s-template>
 ```
 
-## Render Only Specific Blocks
+```html [Append: after]
+<main>
+    <p>Base content</p>
+    <p>Appended content</p>
+</main>
+```
+:::
+
+::: code-group
+```html [Prepend: before]
+<!-- layout: layouts/base.sugar.php -->
+<main s:block="content">
+    <p>Base content</p>
+</main>
+
+<!-- child: pages/home.sugar.php -->
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<s-template s:prepend="content">
+    <p>Prepended content</p>
+</s-template>
+```
+
+```html [Prepend: after]
+<main>
+    <p>Prepended content</p>
+    <p>Base content</p>
+</main>
+```
+:::
+
+::: code-group
+```html [With wrapper: before]
+<!-- layout: layouts/base.sugar.php -->
+<main s:block="content">
+    <p>Base content</p>
+</main>
+
+<!-- child: pages/home.sugar.php -->
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<s-template s:append="content">
+    <section class="alert">
+        <p>Wrapped content</p>
+    </section>
+</s-template>
+```
+
+```html [With wrapper: after]
+<main>
+    <p>Base content</p>
+    <section class="alert">
+        <p>Wrapped content</p>
+    </section>
+</main>
+```
+:::
+
+::: code-group
+```html [Parent fragment: before]
+<!-- layout: layouts/base.sugar.php -->
+<s-template s:block="content">
+    <p>Base content</p>
+</s-template>
+
+<!-- child: pages/home.sugar.php -->
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<section class="alert" s:append="content">
+    <p>Wrapped content</p>
+</section>
+```
+
+```html [Parent fragment: after]
+<p>Base content</p>
+<section class="alert">
+    <p>Wrapped content</p>
+</section>
+```
+:::
+
+### Block Wrappers
+
+Blocks keep their wrapper element by default. The wrapper that survives depends on the parent block type:
+
+::: code-group
+```html [Parent element]
+<!-- Parent layout -->
+<main s:block="content">
+    <p>Base content</p>
+</main>
+
+<!-- Child replaces -->
+<div s:block="content">
+    <p>New content</p>
+</div>
+
+<!-- Output: parent wrapper preserved -->
+<main>
+    <p>New content</p>
+</main>
+```
+
+```html [Parent fragment]
+<!-- Parent layout -->
+<s-template s:block="content">
+    <p>Base content</p>
+</s-template>
+
+<!-- Child replaces -->
+<div s:block="content">
+    <p>New content</p>
+</div>
+
+<!-- Output: child wrapper preserved -->
+<div>
+    <p>New content</p>
+</div>
+```
+:::
+
+### Render Only Specific Blocks
 
 You can render one or more blocks directly by passing a list of block names as the third argument to `Engine::render()`.
 This skips layout inheritance and outputs the matching blocks in template order, preserving their wrapper elements. Includes still run before block extraction. It is especially handy when you need to return partials for AJAX responses or other incremental updates.
@@ -179,15 +311,6 @@ Includes are great for shared fragments like headers, footers, or cards.
 <s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 :::
-
-### Unwrap Includes
-
-`s:include` can be used on normal HTML elements. By default, the included content is inserted inside the element.
-Add `s:nowrap` to disable the wrapper element and insert the included content directly.
-
-```html
-<div s:include="partials/alert" s:nowrap></div>
-```
 
 ### Include Scope and `s:with`
 

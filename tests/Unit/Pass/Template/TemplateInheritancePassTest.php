@@ -96,6 +96,139 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->assertTrue($titleFound, 'Title element should be present in result');
     }
 
+    public function testExtendsAppendsBlockContent(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/layouts/temp-append-layout.sugar.php';
+        file_put_contents($layoutPath, '<div s:block="content"><span>Base</span></div>');
+
+        try {
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', '../layouts/temp-append-layout.sugar.php')
+                        ->build(),
+                    $this->element('div')
+                        ->attribute('s:append', 'content')
+                        ->withChild(
+                            $this->element('span')
+                                ->withChild($this->createText('Extra'))
+                                ->build(),
+                        )
+                        ->build(),
+                ])
+                ->build();
+
+            $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $code = $this->documentToString($result);
+            $this->assertStringContainsString('<div><span>Base</span><span>Extra</span></div>', $code);
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
+    public function testExtendsPrependsBlockContent(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/layouts/temp-prepend-layout.sugar.php';
+        file_put_contents($layoutPath, '<div s:block="content"><span>Base</span></div>');
+
+        try {
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', '../layouts/temp-prepend-layout.sugar.php')
+                        ->build(),
+                    $this->element('div')
+                        ->attribute('s:prepend', 'content')
+                        ->withChild(
+                            $this->element('span')
+                                ->withChild($this->createText('Extra'))
+                                ->build(),
+                        )
+                        ->build(),
+                ])
+                ->build();
+
+            $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $code = $this->documentToString($result);
+            $this->assertStringContainsString('<div><span>Extra</span><span>Base</span></div>', $code);
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
+    public function testExtendsAppendsDirectiveFragment(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/layouts/temp-append-directive.sugar.php';
+        file_put_contents($layoutPath, '<div s:block="content"><span>Base</span></div>');
+
+        try {
+            $document = $this->document()
+                ->withChildren([
+                    $this->element('div')
+                        ->attribute('s:extends', '../layouts/temp-append-directive.sugar.php')
+                        ->build(),
+                    new FragmentNode(
+                        attributes: [
+                            $this->attribute('s:append', 'content'),
+                            $this->attribute('s:if', '$show'),
+                        ],
+                        children: [
+                            $this->element('span')
+                                ->withChild($this->createText('Extra'))
+                                ->build(),
+                        ],
+                        line: 1,
+                        column: 1,
+                    ),
+                ])
+                ->build();
+
+            $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+
+            $this->assertInstanceOf(DocumentNode::class, $result);
+            $div = $this->findElement('div', $result);
+            $this->assertInstanceOf(ElementNode::class, $div);
+            $this->assertCount(2, $div->children);
+            $this->assertInstanceOf(ElementNode::class, $div->children[0]);
+            $this->assertInstanceOf(FragmentNode::class, $div->children[1]);
+            $this->assertSame('s:if', $div->children[1]->attributes[0]->name);
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
+    public function testThrowsOnMultipleBlockDirectives(): void
+    {
+        $layoutPath = $this->inheritanceFixturesPath . '/layouts/temp-multi-block.sugar.php';
+        file_put_contents($layoutPath, '<div s:block="content">Base</div>');
+
+        $document = $this->document()
+            ->withChildren([
+                $this->element('div')
+                    ->attribute('s:extends', '../layouts/temp-multi-block.sugar.php')
+                    ->build(),
+                $this->element('div')
+                    ->attribute('s:block', 'content')
+                    ->attribute('s:append', 'content')
+                    ->withChild($this->createText('Child'))
+                    ->build(),
+            ])
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one of s:block, s:append, or s:prepend');
+
+        try {
+            $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+        } finally {
+            unlink($layoutPath);
+        }
+    }
+
     public function testExtendsOnFragmentElement(): void
     {
         $document = $this->document()
@@ -291,54 +424,6 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->assertInstanceOf(TextNode::class, $result->children[1]->children[0]);
         $this->assertSame('Side', $result->children[0]->children[0]->content);
         $this->assertSame('Main', $result->children[1]->children[0]->content);
-    }
-
-    public function testBlocksModeRespectsNoWrapOnBlock(): void
-    {
-        $document = $this->document()
-            ->withChildren([
-                $this->element('div')
-                    ->attribute('s:block', 'content')
-                    ->attribute('s:nowrap', '')
-                    ->withChild($this->createText('Wrapped'))
-                    ->build(),
-            ])
-            ->build();
-
-        $context = new CompilationContext(
-            templatePath: 'pages/home.sugar.php',
-            source: '',
-            debug: false,
-            tracker: null,
-            blocks: ['content'],
-        );
-
-        $result = $this->execute($document, $context);
-
-        $this->assertInstanceOf(DocumentNode::class, $result);
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(TextNode::class, $result->children[0]);
-        $this->assertSame('Wrapped', $result->children[0]->content);
-    }
-
-    public function testRemovesNoWrapFromBlockAfterInheritanceProcessing(): void
-    {
-        $document = $this->document()
-            ->withChildren([
-                $this->element('div')
-                    ->attribute('s:block', 'content')
-                    ->attribute('s:nowrap', '')
-                    ->withChild($this->createText('Content'))
-                    ->build(),
-            ])
-            ->build();
-
-        $result = $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
-
-        $this->assertInstanceOf(DocumentNode::class, $result);
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
-        $this->assertSame([], $result->children[0]->attributes);
     }
 
     public function testMultiLevelInheritance(): void
@@ -612,50 +697,6 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         } finally {
             unlink($includePath);
         }
-    }
-
-    public function testIncludeWithNoWrapRemovesWrapper(): void
-    {
-        $includePath = $this->inheritanceFixturesPath . '/temp-include-nowrap.sugar.php';
-        file_put_contents($includePath, '<p>Included</p>');
-
-        try {
-            $document = $this->document()
-                ->withChild(
-                    $this->element('div')
-                        ->attribute('s:include', 'temp-include-nowrap.sugar.php')
-                        ->attributeNode($this->attributeNode('s:nowrap', null, 1, 10))
-                        ->build(),
-                )
-                ->build();
-
-            $result = $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
-
-            $this->assertInstanceOf(DocumentNode::class, $result);
-            $this->assertCount(1, $result->children);
-            $this->assertInstanceOf(ElementNode::class, $result->children[0]);
-            $this->assertSame('p', $result->children[0]->tag);
-        } finally {
-            unlink($includePath);
-        }
-    }
-
-    public function testIncludeNoWrapRejectsExtraAttributes(): void
-    {
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('s:nowrap on s:include cannot include other attributes.');
-
-        $document = $this->document()
-            ->withChild(
-                $this->element('div')
-                    ->attribute('s:include', 'partials/header.sugar.php')
-                    ->attributeNode($this->attributeNode('s:nowrap', null, 1, 10))
-                    ->attribute('class', 'wrapper')
-                    ->build(),
-            )
-            ->build();
-
-        $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
     }
 
     public function testReplacesElementBlockWithDirectiveFragment(): void

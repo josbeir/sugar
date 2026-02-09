@@ -16,6 +16,7 @@ use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
+use Sugar\Enum\BlockMergeMode;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -98,7 +99,7 @@ final class TemplateInheritancePass implements AstPassInterface
     ): DocumentNode {
         if ($context->blocks !== null) {
             $document = $this->processIncludes($document, $context, $loadedTemplates);
-            $document = $this->extractBlocks($document, $context->blocks);
+            $document = $this->extractBlocks($document, $context->blocks, $context);
 
             return $this->removeInheritanceAttributes($document);
         }
@@ -138,7 +139,7 @@ final class TemplateInheritancePass implements AstPassInterface
             $document = $this->processIncludes($document, $context, $loadedTemplates);
         }
 
-        // Remove template inheritance attributes (s:block, s:extends, s:include, s:with)
+        // Remove template inheritance attributes (s:block, s:append, s:prepend, s:extends, s:include, s:with)
         return $this->removeInheritanceAttributes($document);
     }
 
@@ -147,12 +148,15 @@ final class TemplateInheritancePass implements AstPassInterface
      *
      * @param array<string> $blockNames
      */
-    private function extractBlocks(DocumentNode $document, array $blockNames): DocumentNode
-    {
+    private function extractBlocks(
+        DocumentNode $document,
+        array $blockNames,
+        CompilationContext $context,
+    ): DocumentNode {
         $targets = array_fill_keys($blockNames, true);
         $children = [];
 
-        $this->collectBlockChildren($document->children, $targets, $children);
+        $this->collectBlockChildren($document->children, $targets, $children, $context);
 
         return new DocumentNode($children);
     }
@@ -162,34 +166,27 @@ final class TemplateInheritancePass implements AstPassInterface
      * @param array<string, bool> $targets
      * @param array<\Sugar\Ast\Node> $output
      */
-    private function collectBlockChildren(array $nodes, array $targets, array &$output): void
-    {
+    private function collectBlockChildren(
+        array $nodes,
+        array $targets,
+        array &$output,
+        CompilationContext $context,
+    ): void {
         foreach ($nodes as $node) {
             if (!($node instanceof ElementNode) && !($node instanceof FragmentNode)) {
                 continue;
             }
 
-            $blockName = AttributeHelper::getStringAttributeValue(
-                $node,
-                $this->prefixHelper->buildName('block'),
-            );
+            $blockDirective = $this->getBlockDirective($node, $context);
+            $blockName = $blockDirective['name'] ?? '';
 
             if ($blockName !== '' && isset($targets[$blockName])) {
-                $hasNoWrap = AttributeHelper::hasAttribute(
-                    $node,
-                    $this->prefixHelper->buildName('nowrap'),
-                );
-
-                if ($hasNoWrap) {
-                    array_push($output, ...$node->children);
-                } else {
-                    $output[] = $node;
-                }
+                $output[] = $node;
 
                 continue;
             }
 
-            $this->collectBlockChildren($node->children, $targets, $output);
+            $this->collectBlockChildren($node->children, $targets, $output, $context);
         }
     }
 
@@ -262,7 +259,7 @@ final class TemplateInheritancePass implements AstPassInterface
         $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates);
 
         // Collect blocks from child
-        $childBlocks = $this->collectBlocks($childDocument);
+        $childBlocks = $this->collectBlocks($childDocument, $context);
 
         // Replace blocks in parent
         $parentDocument = $this->replaceBlocks($parentDocument, $childBlocks);
@@ -301,41 +298,6 @@ final class TemplateInheritancePass implements AstPassInterface
             ) {
                 $includeName = $this->prefixHelper->buildName('include');
                 $withName = $this->prefixHelper->buildName('with');
-                $nowrapName = $this->prefixHelper->buildName('nowrap');
-                $hasNoWrap = AttributeHelper::hasAttribute($child, $nowrapName);
-
-                if ($hasNoWrap && $child instanceof FragmentNode) {
-                    $nowrapAttr = AttributeHelper::findAttribute($child->attributes, $nowrapName);
-
-                    if (!$nowrapAttr instanceof AttributeNode) {
-                        $nowrapLine = $child->line;
-                        $nowrapColumn = $child->column;
-                    } else {
-                        $nowrapLine = $nowrapAttr->line;
-                        $nowrapColumn = $nowrapAttr->column;
-                    }
-
-                    throw $context->createException(
-                        SyntaxException::class,
-                        'The s:nowrap directive can only be used on elements with s:include.',
-                        $nowrapLine,
-                        $nowrapColumn,
-                    );
-                }
-
-                if ($hasNoWrap && $child instanceof ElementNode) {
-                    foreach ($child->attributes as $attr) {
-                        if (!in_array($attr->name, [$includeName, $withName, $nowrapName], true)) {
-                            throw $context->createException(
-                                SyntaxException::class,
-                                's:nowrap on s:include cannot include other attributes.',
-                                $attr->line,
-                                $attr->column,
-                            );
-                        }
-                    }
-                }
-
                 $includePath = AttributeHelper::getStringAttributeValue(
                     $child,
                     $includeName,
@@ -373,13 +335,13 @@ final class TemplateInheritancePass implements AstPassInterface
                     $includeChildren = $wrapped->children;
                 }
 
-                if ($child instanceof ElementNode && !$hasNoWrap) {
+                if ($child instanceof ElementNode) {
                     // Preserve wrapper element and inject included content as children
                     $cleanAttributes = AttributeHelper::filterAttributes(
                         $child->attributes,
                         fn(AttributeNode $attr): bool => !in_array(
                             $attr->name,
-                            [$includeName, $withName, $nowrapName],
+                            [$includeName, $withName],
                             true,
                         ),
                     );
@@ -430,25 +392,26 @@ final class TemplateInheritancePass implements AstPassInterface
      * Collect s:block definitions from document.
      *
      * @param \Sugar\Ast\DocumentNode $document Document to search
-     * @return array<string, \Sugar\Ast\Node> Block name => Block node
+     * @return array<string, array{node: \Sugar\Ast\Node, mode: \Sugar\Enum\BlockMergeMode, attributeName: string}>
      */
-    private function collectBlocks(DocumentNode $document): array
+    private function collectBlocks(DocumentNode $document, CompilationContext $context): array
     {
         $blocks = [];
 
         foreach ($document->children as $child) {
             if ($child instanceof ElementNode || $child instanceof FragmentNode) {
-                $blockName = AttributeHelper::getStringAttributeValue(
-                    $child,
-                    $this->prefixHelper->buildName('block'),
-                );
+                $blockDirective = $this->getBlockDirective($child, $context);
 
-                if ($blockName !== '') {
-                    $blocks[$blockName] = $child;
+                if ($blockDirective !== null) {
+                    $blocks[$blockDirective['name']] = [
+                        'node' => $child,
+                        'mode' => $blockDirective['mode'],
+                        'attributeName' => $blockDirective['attributeName'],
+                    ];
                 }
 
                 // Recursively collect from children
-                $blocks = [...$blocks, ...$this->collectBlocksFromChildren($child->children)];
+                $blocks = [...$blocks, ...$this->collectBlocksFromChildren($child->children, $context)];
             }
         }
 
@@ -459,20 +422,20 @@ final class TemplateInheritancePass implements AstPassInterface
      * Collect blocks from children recursively.
      *
      * @param array<\Sugar\Ast\Node> $children Children to search
-     * @return array<string, \Sugar\Ast\Node> Block name => Block node
+     * @return array<string, array{node: \Sugar\Ast\Node, mode: \Sugar\Enum\BlockMergeMode, attributeName: string}>
      */
-    private function collectBlocksFromChildren(array $children): array
+    private function collectBlocksFromChildren(array $children, CompilationContext $context): array
     {
         $doc = new DocumentNode($children);
 
-        return $this->collectBlocks($doc);
+        return $this->collectBlocks($doc, $context);
     }
 
     /**
      * Replace blocks in document with child blocks.
      *
      * @param \Sugar\Ast\DocumentNode $document Parent document
-     * @param array<string, \Sugar\Ast\Node> $childBlocks Child blocks
+     * @param array<string, array{node: \Sugar\Ast\Node, mode: \Sugar\Enum\BlockMergeMode, attributeName: string}> $childBlocks Child blocks
      * @return \Sugar\Ast\DocumentNode Document with replaced blocks
      */
     private function replaceBlocks(DocumentNode $document, array $childBlocks): DocumentNode
@@ -490,7 +453,7 @@ final class TemplateInheritancePass implements AstPassInterface
      * Replace blocks in a node recursively.
      *
      * @param \Sugar\Ast\Node $node Node to process
-     * @param array<string, \Sugar\Ast\Node> $childBlocks Child blocks
+     * @param array<string, array{node: \Sugar\Ast\Node, mode: \Sugar\Enum\BlockMergeMode, attributeName: string}> $childBlocks Child blocks
      * @return \Sugar\Ast\Node Processed node
      */
     private function replaceBlocksInNode(Node $node, array $childBlocks): Node
@@ -511,71 +474,11 @@ final class TemplateInheritancePass implements AstPassInterface
 
         // If block exists in child, replace content
         if ($blockName !== null && isset($childBlocks[$blockName])) {
-            $childBlock = $childBlocks[$blockName];
-            if ($childBlock instanceof ElementNode) {
-                // Child is element: keep parent wrapper, replace children
-                if ($node instanceof ElementNode) {
-                    return NodeCloner::withChildren($node, $childBlock->children);
-                }
+            $childBlock = $childBlocks[$blockName]['node'];
+            $mode = $childBlocks[$blockName]['mode'];
+            $attributeName = $childBlocks[$blockName]['attributeName'];
 
-                // Parent is fragment, child is element: preserve child wrapper
-                return $childBlock;
-            }
-
-            if ($childBlock instanceof FragmentNode) {
-                // Child is fragment: check if it has directive attributes
-                $hasDirectives = false;
-                foreach ($childBlock->attributes as $attr) {
-                    // Check for directive attributes that are NOT inheritance attributes
-                    if (
-                        $this->prefixHelper->isDirective($attr->name) &&
-                        !$this->prefixHelper->isInheritanceAttribute($attr->name)
-                    ) {
-                        $hasDirectives = true;
-                        break;
-                    }
-                }
-
-                if ($node instanceof ElementNode) {
-                    // Parent is element
-                    if ($hasDirectives) {
-                        // Fragment has directives: return fragment so DirectiveExtractionPass can process it
-                        // Remove s:block since it's already been processed
-                        $cleanAttrs = AttributeHelper::removeAttribute(
-                            $childBlock->attributes,
-                            $this->prefixHelper->buildName('block'),
-                        );
-
-                        $wrappedFragment = NodeCloner::fragmentWithChildren(
-                            $childBlock,
-                            $childBlock->children,
-                        );
-                        $wrappedFragment = NodeCloner::fragmentWithAttributes(
-                            $wrappedFragment,
-                            $cleanAttrs,
-                        );
-
-                        return NodeCloner::withChildren($node, [$wrappedFragment]);
-                    }
-
-                    // No directives: just use fragment's children
-                    return NodeCloner::withChildren($node, $childBlock->children);
-                }
-
-                if ($hasDirectives) {
-                    // Both are fragments
-                    // Child fragment has directives: return it for later processing
-                    $cleanAttrs = AttributeHelper::removeAttribute(
-                        $childBlock->attributes,
-                        $this->prefixHelper->buildName('block'),
-                    );
-
-                    return NodeCloner::fragmentWithAttributes($childBlock, $cleanAttrs);
-                }
-
-                // No directives: merge children
-                return NodeCloner::fragmentWithChildren($node, $childBlock->children);
-            }
+            return $this->mergeBlock($node, $childBlock, $mode, $attributeName);
         }
 
         // Recursively process children
@@ -620,19 +523,10 @@ final class TemplateInheritancePass implements AstPassInterface
             return $node;
         }
 
-        $stripNoWrap = AttributeHelper::hasAttribute(
-            $node,
-            $this->prefixHelper->buildName('block'),
-        ) || AttributeHelper::hasAttribute(
-            $node,
-            $this->prefixHelper->buildName('include'),
-        );
-
         // Filter out template inheritance attributes
         $cleanAttributes = AttributeHelper::filterAttributes(
             $node->attributes,
-            fn(AttributeNode $attr): bool => !$this->prefixHelper->isInheritanceAttribute($attr->name)
-                && (!$stripNoWrap || $attr->name !== $this->prefixHelper->buildName('nowrap')),
+            fn(AttributeNode $attr): bool => !$this->prefixHelper->isInheritanceAttribute($attr->name),
         );
 
         // Recursively clean children
@@ -649,5 +543,215 @@ final class TemplateInheritancePass implements AstPassInterface
             NodeCloner::fragmentWithChildren($node, $cleanChildren),
             $cleanAttributes,
         );
+    }
+
+    /**
+     * @return array{name: string, mode: \Sugar\Enum\BlockMergeMode, attributeName: string}|null
+     */
+    private function getBlockDirective(ElementNode|FragmentNode $node, CompilationContext $context): ?array
+    {
+        $blockAttr = $this->prefixHelper->buildName('block');
+        $appendAttr = $this->prefixHelper->buildName('append');
+        $prependAttr = $this->prefixHelper->buildName('prepend');
+
+        $found = [];
+        if (AttributeHelper::hasAttribute($node, $blockAttr)) {
+            $found[] = $blockAttr;
+        }
+
+        if (AttributeHelper::hasAttribute($node, $appendAttr)) {
+            $found[] = $appendAttr;
+        }
+
+        if (AttributeHelper::hasAttribute($node, $prependAttr)) {
+            $found[] = $prependAttr;
+        }
+
+        if (count($found) > 1) {
+            $attr = AttributeHelper::findAttribute($node->attributes, $found[1])
+                ?? AttributeHelper::findAttribute($node->attributes, $found[0]);
+            $line = $attr instanceof AttributeNode ? $attr->line : $node->line;
+            $column = $attr instanceof AttributeNode ? $attr->column : $node->column;
+
+            throw $context->createException(
+                SyntaxException::class,
+                'Only one of s:block, s:append, or s:prepend is allowed on a single element.',
+                $line,
+                $column,
+            );
+        }
+
+        $attributeName = $found[0] ?? null;
+        if ($attributeName === null) {
+            return null;
+        }
+
+        $name = AttributeHelper::getStringAttributeValue($node, $attributeName);
+        if ($name === '') {
+            return null;
+        }
+
+        $mode = match ($attributeName) {
+            $appendAttr => BlockMergeMode::APPEND,
+            $prependAttr => BlockMergeMode::PREPEND,
+            default => BlockMergeMode::REPLACE,
+        };
+
+        return [
+            'name' => $name,
+            'mode' => $mode,
+            'attributeName' => $attributeName,
+        ];
+    }
+
+    /**
+     * Merge child block into the parent based on merge mode.
+     */
+    private function mergeBlock(
+        ElementNode|FragmentNode $parent,
+        Node $child,
+        BlockMergeMode $mode,
+        string $attributeName,
+    ): Node {
+        if ($mode === BlockMergeMode::REPLACE) {
+            return $this->replaceBlock($parent, $child, $attributeName);
+        }
+
+        return $this->mergeBlockChildren($parent, $child, $mode, $attributeName);
+    }
+
+    /**
+     * Replace the parent block with the child block content.
+     */
+    private function replaceBlock(
+        ElementNode|FragmentNode $parent,
+        Node $child,
+        string $attributeName,
+    ): Node {
+        if ($child instanceof ElementNode) {
+            if ($parent instanceof ElementNode) {
+                return NodeCloner::withChildren($parent, $child->children);
+            }
+
+            return $child;
+        }
+
+        if ($child instanceof FragmentNode) {
+            $hasDirectives = $this->fragmentHasDirectives($child);
+            $cleanAttrs = $this->removeBlockAttribute($child, $attributeName);
+
+            if ($parent instanceof ElementNode) {
+                if ($hasDirectives) {
+                    $wrappedFragment = NodeCloner::fragmentWithChildren($child, $child->children);
+                    $wrappedFragment = NodeCloner::fragmentWithAttributes($wrappedFragment, $cleanAttrs);
+
+                    return NodeCloner::withChildren($parent, [$wrappedFragment]);
+                }
+
+                return NodeCloner::withChildren($parent, $child->children);
+            }
+
+            if ($hasDirectives) {
+                return NodeCloner::fragmentWithAttributes($child, $cleanAttrs);
+            }
+
+            return NodeCloner::fragmentWithChildren($parent, $child->children);
+        }
+
+        return $parent;
+    }
+
+    /**
+     * Append or prepend child block content into the parent block.
+     */
+    private function mergeBlockChildren(
+        ElementNode|FragmentNode $parent,
+        Node $child,
+        BlockMergeMode $mode,
+        string $attributeName,
+    ): Node {
+        if ($child instanceof ElementNode) {
+            if ($parent instanceof ElementNode) {
+                $merged = $this->mergeChildren($parent->children, $child->children, $mode);
+
+                return NodeCloner::withChildren($parent, $merged);
+            }
+
+            $merged = $this->mergeChildren($parent->children, [$child], $mode);
+
+            return NodeCloner::fragmentWithChildren($parent, $merged);
+        }
+
+        if ($child instanceof FragmentNode) {
+            $hasDirectives = $this->fragmentHasDirectives($child);
+            $cleanAttrs = $this->removeBlockAttribute($child, $attributeName);
+
+            if ($parent instanceof ElementNode) {
+                if ($hasDirectives) {
+                    $wrappedFragment = NodeCloner::fragmentWithChildren($child, $child->children);
+                    $wrappedFragment = NodeCloner::fragmentWithAttributes($wrappedFragment, $cleanAttrs);
+                    $merged = $this->mergeChildren($parent->children, [$wrappedFragment], $mode);
+
+                    return NodeCloner::withChildren($parent, $merged);
+                }
+
+                $merged = $this->mergeChildren($parent->children, $child->children, $mode);
+
+                return NodeCloner::withChildren($parent, $merged);
+            }
+
+            if ($hasDirectives) {
+                $wrappedFragment = NodeCloner::fragmentWithChildren($child, $child->children);
+                $wrappedFragment = NodeCloner::fragmentWithAttributes($wrappedFragment, $cleanAttrs);
+                $merged = $this->mergeChildren($parent->children, [$wrappedFragment], $mode);
+
+                return NodeCloner::fragmentWithChildren($parent, $merged);
+            }
+
+            $merged = $this->mergeChildren($parent->children, $child->children, $mode);
+
+            return NodeCloner::fragmentWithChildren($parent, $merged);
+        }
+
+        return $parent;
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node> $base
+     * @param array<\Sugar\Ast\Node> $additional
+     * @return array<\Sugar\Ast\Node>
+     */
+    private function mergeChildren(array $base, array $additional, BlockMergeMode $mode): array
+    {
+        return match ($mode) {
+            BlockMergeMode::APPEND => [...$base, ...$additional],
+            BlockMergeMode::PREPEND => [...$additional, ...$base],
+            BlockMergeMode::REPLACE => $additional,
+        };
+    }
+
+    /**
+     * Check for non-inheritance directives on a fragment.
+     */
+    private function fragmentHasDirectives(FragmentNode $node): bool
+    {
+        foreach ($node->attributes as $attr) {
+            if (
+                $this->prefixHelper->isDirective($attr->name) &&
+                !$this->prefixHelper->isInheritanceAttribute($attr->name)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<\Sugar\Ast\AttributeNode>
+     */
+    private function removeBlockAttribute(FragmentNode $node, string $attributeName): array
+    {
+        return AttributeHelper::removeAttribute($node->attributes, $attributeName);
     }
 }
