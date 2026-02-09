@@ -56,8 +56,8 @@ final class SnippetGenerator
 
             // Add error pointer after the error line (only if column > 0)
             if ($i === $line && $column > 0) {
-                $pointerPadding = $padding + 3 + $column - 1; // padding + " | " + column position
-                $pointer = str_repeat(' ', $pointerPadding) . '^';
+                $pointerPrefix = str_repeat(' ', $padding) . ' | ';
+                $pointer = $pointerPrefix . str_repeat('.', $column - 1) . '^';
                 $snippetLines[] = $pointer;
             }
         }

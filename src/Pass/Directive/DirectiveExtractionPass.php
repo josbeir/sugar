@@ -24,7 +24,9 @@ use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
+use Sugar\Exception\DidYouMean;
 use Sugar\Exception\SyntaxException;
+use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
@@ -254,8 +256,17 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 $expression = $attr->value ?? 'true';
 
-                // Get directive type
-                $compiler = $this->registry->get($name);
+                try {
+                    // Get directive type
+                    $compiler = $this->registry->get($name);
+                } catch (UnknownDirectiveException) {
+                    throw $this->context->createException(
+                        SyntaxException::class,
+                        $this->buildUnknownDirectiveMessage($name),
+                        $attr->line,
+                        $this->directiveColumn($attr),
+                    );
+                }
 
                 if ($compiler instanceof ContentWrappingDirectiveInterface) {
                     $wrapContentElement = $compiler->shouldWrapContentElement();
@@ -587,8 +598,17 @@ final class DirectiveExtractionPass implements AstPassInterface
                 }
 
                 $expression = $attr->value ?? 'true';
-                // Get directive type
-                $compiler = $this->registry->get($name);
+                try {
+                    // Get directive type
+                    $compiler = $this->registry->get($name);
+                } catch (UnknownDirectiveException) {
+                    throw $this->context->createException(
+                        SyntaxException::class,
+                        $this->buildUnknownDirectiveMessage($name),
+                        $attr->line,
+                        $this->directiveColumn($attr),
+                    );
+                }
 
                 if ($compiler instanceof ContentWrappingDirectiveInterface) {
                     throw $this->context->createException(
@@ -684,6 +704,46 @@ final class DirectiveExtractionPass implements AstPassInterface
             line: $node->line,
             column: $node->column,
         );
+    }
+
+    /**
+     * Build an unknown directive error message with suggestions.
+     */
+    private function buildUnknownDirectiveMessage(string $name): string
+    {
+        $suggestion = DidYouMean::suggest($name, array_keys($this->registry->all()));
+        if ($suggestion === null) {
+            $suggestion = DidYouMean::suggest($name, $this->inheritanceDirectiveNames());
+        }
+
+        $message = sprintf('Unknown directive "%s"', $name);
+        if ($suggestion !== null) {
+            $message .= sprintf('. Did you mean "%s"?', $suggestion);
+        }
+
+        return $message;
+    }
+
+    /**
+     * Place the error column on the directive name instead of the prefix.
+     */
+    private function directiveColumn(AttributeNode $attr): int
+    {
+        if (!$this->prefixHelper->isDirective($attr->name)) {
+            return $attr->column;
+        }
+
+        $offset = strlen($this->prefixHelper->getPrefix()) + 1;
+
+        return $attr->column + $offset;
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function inheritanceDirectiveNames(): array
+    {
+        return ['block', 'append', 'prepend', 'extends', 'include', 'with'];
     }
 
     /**

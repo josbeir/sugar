@@ -79,6 +79,31 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
             ->hasChildCount(1);
     }
 
+    public function testUnknownDirectiveShowsSnippetAndSuggestion(): void
+    {
+        $element = $this->element('p')
+            ->attributeNode($this->attributeNode('s:blik', 'true', 2, 8))
+            ->at(2, 5)
+            ->withChild($this->text('Test', 2, 20))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $context = $this->createTestContext(
+            'test.sugar.php',
+            "<div>\n    <p s:blik=\"true\">Test</p>\n</div>",
+        );
+
+        try {
+            $this->execute($ast, $context);
+            $this->fail('Expected SyntaxException for unknown directive.');
+        } catch (SyntaxException $syntaxException) {
+            $this->assertStringContainsString('Unknown directive "blik"', $syntaxException->getMessage());
+            $this->assertStringContainsString('Did you mean "block"', $syntaxException->getMessage());
+            $this->assertNotNull($syntaxException->snippet);
+            $this->assertStringContainsString('s:blik', $syntaxException->snippet);
+        }
+    }
+
     public function testExtractsForeachDirective(): void
     {
         $element = $this->element('li')

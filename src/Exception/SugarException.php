@@ -53,31 +53,25 @@ abstract class SugarException extends Exception
      */
     protected function formatMessage(string $message): string
     {
-        $parts = [];
+        $formattedMessage = $message;
 
-        // Add location if available
         if ($this->templatePath !== null) {
-            $location = $this->templatePath;
-
+            $location = sprintf('template: %s', $this->templatePath);
             if ($this->templateLine !== null) {
-                $location .= ':' . $this->templateLine;
-
-                if ($this->templateColumn !== null) {
-                    $location .= ':' . $this->templateColumn;
-                }
+                $location .= sprintf(' line:%d', $this->templateLine);
             }
 
-            $parts[] = 'Template: ' . $location;
+            if ($this->templateColumn !== null && $this->templateColumn > 0) {
+                $location .= sprintf(' column:%d', $this->templateColumn);
+            }
+
+            $formattedMessage .= sprintf(' (%s)', $location);
         }
 
-        // Add main message
-        $parts[] = $message;
-
-        // Add snippet if available
         if ($this->snippet !== null) {
-            $parts[] = $this->snippet;
+            return $formattedMessage . "\n\n" . $this->snippet;
         }
 
-        return implode("\n\n", $parts);
+        return $formattedMessage;
     }
 }

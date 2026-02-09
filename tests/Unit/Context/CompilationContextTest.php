@@ -61,7 +61,7 @@ PHP;
         $this->assertNotNull($exception->snippet);
 
         // Verify snippet shows context
-        $message = $exception->getMessage();
+        $message = $this->normalizeSnippet($exception->getMessage());
         $this->assertStringContainsString(' 1 | <div s:if="$user">', $message);
         $this->assertStringContainsString(' 2 |     <p s:forech="$items">', $message);
         $this->assertStringContainsString('^', $message); // Error pointer
@@ -126,6 +126,7 @@ PHP;
 
         $snippet = $context->generateSnippet(line: 2, column: 8);
 
+        $snippet = $this->normalizeSnippet($snippet);
         $this->assertStringContainsString(' 1 | line 1', $snippet);
         $this->assertStringContainsString(' 2 | line 2 error here', $snippet);
         $this->assertStringContainsString('^', $snippet);
@@ -150,6 +151,7 @@ PHP;
         $snippet = $context->generateSnippet(line: 4, column: 8, contextLines: 1);
 
         // Should show only 1 line before and after
+        $snippet = $this->normalizeSnippet($snippet);
         $this->assertStringContainsString(' 3 | line 3', $snippet);
         $this->assertStringContainsString(' 4 | line 4 error', $snippet);
         $this->assertStringContainsString(' 5 | line 5', $snippet);
@@ -199,5 +201,10 @@ PHP;
         // But different column positions
         $this->assertSame(5, $exception1->templateColumn);
         $this->assertSame(10, $exception2->templateColumn);
+    }
+
+    private function normalizeSnippet(string $snippet): string
+    {
+        return str_replace("\u{00A0}", ' ', $snippet);
     }
 }

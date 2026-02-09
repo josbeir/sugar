@@ -42,7 +42,7 @@ final readonly class Parser
     public function parse(string $source): DocumentNode
     {
         $tokens = SugarToken::tokenize($source);
-        $nodes = $this->parseTokens($tokens);
+        $nodes = $this->parseTokens($tokens, $source);
 
         return new DocumentNode($nodes);
     }
@@ -51,9 +51,10 @@ final readonly class Parser
      * Parse tokens into AST nodes
      *
      * @param array<\Sugar\Parser\SugarToken> $tokens Token stream
+     * @param string $source Template source code
      * @return array<\Sugar\Ast\Node> AST nodes
      */
-    private function parseTokens(array $tokens): array
+    private function parseTokens(array $tokens, string $source): array
     {
         $nodes = [];
         $i = 0;
@@ -65,6 +66,7 @@ final readonly class Parser
             $token = $tokens[$i];
 
             if ($token->isOutput()) {
+                $column = $this->columnFromOffset($source, $token->pos);
                 [$expression, $nextIndex] = $this->extractExpression($tokens, $i + 1);
                 $expression = $this->normalizeOutputExpression($expression);
 
@@ -80,7 +82,7 @@ final readonly class Parser
                     escape: $shouldEscape,
                     context: $outputContext,
                     line: $token->line,
-                    column: $token->pos,
+                    column: $column,
                     pipes: $pipeChain,
                 );
 
@@ -100,8 +102,9 @@ final readonly class Parser
             }
 
             if ($token->isOpenTag()) {
+                $column = $this->columnFromOffset($source, $token->pos);
                 [$code, $nextIndex] = $this->extractPhpBlock($tokens, $i + 1);
-                $nodes[] = new RawPhpNode($code, $token->line, $token->pos);
+                $nodes[] = new RawPhpNode($code, $token->line, $column);
                 $i = $nextIndex;
                 continue;
             }
@@ -112,6 +115,7 @@ final readonly class Parser
             }
 
             if ($token->isHtml()) {
+                $column = $this->columnFromOffset($source, $token->pos);
                 $html = $token->content();
                 if ($pendingAttributeContinuation instanceof ElementNode) {
                     $html = $this->applyAttributeContinuation($html, $pendingAttributeContinuation);
@@ -119,13 +123,13 @@ final readonly class Parser
                 }
 
                 if (str_contains($html, '<') || str_contains($html, '>')) {
-                    $htmlNodes = $this->parseHtml($html, $token->line, $token->pos);
+                    $htmlNodes = $this->parseHtml($html, $token->line, $column);
                     $nodes = array_merge($nodes, $htmlNodes);
                     if ($pendingAttribute === null) {
                         $pendingAttribute = $this->detectOpenAttribute($html, $htmlNodes);
                     }
                 } else {
-                    $nodes[] = new TextNode($html, $token->line, $token->pos);
+                    $nodes[] = new TextNode($html, $token->line, $column);
                 }
 
                 $i++;
@@ -177,6 +181,24 @@ final readonly class Parser
         }
 
         return $expression;
+    }
+
+    /**
+     * Convert an absolute offset into a 1-based column index.
+     */
+    private function columnFromOffset(string $source, int $offset): int
+    {
+        if ($offset <= 0) {
+            return 1;
+        }
+
+        $before = substr($source, 0, $offset);
+        $lastNewline = strrpos($before, "\n");
+        if ($lastNewline === false) {
+            return $offset + 1;
+        }
+
+        return $offset - $lastNewline;
     }
 
     /**
@@ -306,6 +328,7 @@ final readonly class Parser
         // Parse attributes
         $attributes = [];
         $selfClosing = false;
+        $elementColumn = $column + $start;
 
         while ($pos < $len) {
             $char = $html[$pos];
@@ -327,8 +350,10 @@ final readonly class Parser
             }
 
             // Parse attribute
+            $attrStart = $pos;
             [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            $attributes[] = new AttributeNode($attrName, $attrValue, $line, $column);
+            $attrColumn = $column + $attrStart;
+            $attributes[] = new AttributeNode($attrName, $attrValue, $line, $attrColumn);
         }
 
         $isFragment = $tagName === $this->config->getFragmentElement();
@@ -349,7 +374,7 @@ final readonly class Parser
             children: [],
             selfClosing: $selfClosing,
             line: $line,
-            column: $column,
+            column: $elementColumn,
         );
 
         // Handle fragment element (e.g., <s-template>, <x-template>)
@@ -358,7 +383,7 @@ final readonly class Parser
                 attributes: $attributes,
                 children: [],
                 line: $line,
-                column: $column,
+                column: $elementColumn,
                 selfClosing: $selfClosing,
             );
         }
@@ -372,7 +397,7 @@ final readonly class Parser
                 attributes: $attributes,
                 children: [],
                 line: $line,
-                column: $column,
+                column: $elementColumn,
             );
         }
 

@@ -36,8 +36,8 @@ final class SugarExceptionTest extends TestCase
 
         // Message should be formatted with location
         $message = $exception->getMessage();
-        $this->assertStringContainsString('views/profile.sugar.php:42', $message);
         $this->assertStringContainsString('Syntax error', $message);
+        $this->assertStringContainsString('template: views/profile.sugar.php line:42', $message);
     }
 
     public function testExceptionWithFullLocation(): void
@@ -53,9 +53,9 @@ final class SugarExceptionTest extends TestCase
         $this->assertSame(15, $exception->templateLine);
         $this->assertSame(8, $exception->templateColumn);
 
-        // Message should include line:column
+        // Message should include line and column
         $message = $exception->getMessage();
-        $this->assertStringContainsString('components/button.sugar.php:15:8', $message);
+        $this->assertStringContainsString('template: components/button.sugar.php line:15 column:8', $message);
     }
 
     public function testExceptionWithSnippet(): void
@@ -106,9 +106,9 @@ SNIPPET;
 
         $message = $exception->getMessage();
 
-        // Should have format: Template: path:line:column\nMessage\n\nSnippet
+        // Should have format: Message (template: path Line:x Column:y)\n\nSnippet
         $this->assertMatchesRegularExpression(
-            '/Template: test\.sugar\.php:10:5\s+Test error\s+10 \| test line/',
+            '/Test error \(template: test\.sugar\.php line:10 column:5\)\s+10 \| test line/',
             $message,
         );
     }

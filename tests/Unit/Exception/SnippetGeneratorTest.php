@@ -23,12 +23,12 @@ PHP;
 
         $snippet = SnippetGenerator::generate($source, line: 2, column: 8, contextLines: 1);
 
-        $expected = <<<'SNIPPET'
- 1 | <div>
- 2 |     <p s:forech="$items">
-            ^
- 3 |         <?= $item ?>
-SNIPPET;
+        $expected = implode("\n", [
+            ' 1 | <div>',
+            ' 2 |     <p s:forech="$items">',
+            '   | .......^',
+            ' 3 |         <?= $item ?>',
+        ]);
 
         $this->assertSame($expected, $snippet);
     }
@@ -54,7 +54,7 @@ PHP;
         $this->assertStringContainsString(' 4 | </head>', $snippet);
         $this->assertStringContainsString(' 5 | <body>', $snippet);
         $this->assertStringContainsString(' 6 |     <div s:if="$invalid">', $snippet);
-        $this->assertStringContainsString('               ^', $snippet); // Error pointer
+        $this->assertStringContainsString('  | ...........^', $snippet); // Error pointer
         $this->assertStringContainsString(' 7 |         Content', $snippet);
         $this->assertStringContainsString(' 8 |     </div>', $snippet);
     }
@@ -71,7 +71,7 @@ PHP;
 
         // Should not show lines before line 1
         $this->assertStringContainsString(' 1 | <div s:unknown="value">', $snippet);
-        $this->assertStringContainsString('         ^', $snippet);
+        $this->assertStringContainsString('  | ....^', $snippet);
         $this->assertStringContainsString(' 2 |     Content', $snippet);
         $this->assertStringNotContainsString(' 0 |', $snippet);
     }
@@ -89,7 +89,7 @@ PHP;
         // Should not show lines after last line
         $this->assertStringContainsString(' 2 |     Content', $snippet);
         $this->assertStringContainsString(' 3 | </div invalid>', $snippet);
-        $this->assertStringContainsString('         ^', $snippet);
+        $this->assertStringContainsString('  | ....^', $snippet);
         $this->assertStringNotContainsString(' 4 |', $snippet);
     }
 
@@ -101,7 +101,7 @@ PHP;
 
         // Should work with single line file
         $this->assertStringContainsString(' 1 | <div s:error="value">', $snippet);
-        $this->assertStringContainsString('         ^', $snippet);
+        $this->assertStringContainsString('  | ....^', $snippet);
     }
 
     public function testLineNumberPadding(): void
