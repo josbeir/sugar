@@ -29,7 +29,7 @@ These are high-level defaults as commonly described; behavior can vary by versio
 
 | Feature | Sugar | Blade | Twig | Latte | Tempest | Smarty |
 | --- | --- | --- | --- | --- | --- | --- |
-| Learning Curve | PHP + `s:` attributes | Custom | Python-like | PHP-like | HTML + `:attr` | Custom |
+| Learning Curve | PHP + `s:` | Custom | Python-like | PHP-like | PHP + `:attr` | Custom |
 | AST parser | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
 | Context-aware escaping | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | Optional |
 | Full PHP interop | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: |

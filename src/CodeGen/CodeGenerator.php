@@ -315,7 +315,7 @@ final class CodeGenerator
     private function generateDirective(DirectiveNode $node, OutputBuffer $buffer): void
     {
         // For now, output as comment - full directive support comes in next phase
-        $buffer->write('<!-- Directive: ' . $node->name . ' = ' . htmlspecialchars($node->expression) . ' -->');
+        $buffer->write('<!-- Directive: ' . $node->name . ' = ' . Escaper::html($node->expression) . ' -->');
     }
 
     /**

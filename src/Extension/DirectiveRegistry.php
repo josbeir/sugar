@@ -79,6 +79,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         // Attributes
         'class' => ClassDirective::class,
         'spread' => SpreadDirective::class,
+        'attr' => SpreadDirective::class,
         // Boolean attributes
         'checked' => BooleanAttributeDirective::class,
         'selected' => BooleanAttributeDirective::class,

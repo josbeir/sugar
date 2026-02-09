@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Runtime;
 
+use Sugar\Escape\Escaper;
+
 /**
  * Utility class for HTML attribute manipulation at runtime
  *
@@ -90,15 +92,15 @@ final class HtmlAttributeHelper
 
             // Boolean true: output attribute name only
             if ($value === true) {
-                $result[] = htmlspecialchars($key, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+                $result[] = Escaper::attr($key);
                 continue;
             }
 
             // Regular attribute: key="value"
-            $escapedKey = htmlspecialchars($key, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+            $escapedKey = Escaper::attr($key);
             // After checking null, false, true above, value must be stringable
             assert(is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
-            $escapedValue = htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+            $escapedValue = Escaper::attr((string)$value);
             $result[] = sprintf('%s="%s"', $escapedKey, $escapedValue);
         }
 

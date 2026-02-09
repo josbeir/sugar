@@ -10,7 +10,7 @@ Attribute directives compute or adjust attributes while keeping templates readab
 ## Directives
 
 - `s:class` - Conditional class lists.
-- `s:spread` - Spread attributes from arrays.
+- `s:spread` / `s:attr` - Spread attributes from arrays.
 - `s:checked` - Conditionally add `checked`.
 - `s:selected` - Conditionally add `selected`.
 - `s:disabled` - Conditionally add `disabled`.
@@ -32,13 +32,19 @@ Build classes from an associative array of conditions.
 ```
 :::
 
-### s:spread
+### s:spread / s:attr
 
-Spread an array of attributes onto the element.
+Spread an array of attributes onto the element. `s:attr` is a short alias.
 
 ::: code-group
 ```html [Simple]
 <div s:spread="$attrs"></div>
+<div s:attr="$attrs"></div>
+```
+
+```html [Rendered]
+<!-- $attrs = ['id' => 'user-1', 'class' => 'card', 'disabled' => true] -->
+<div id="user-1" class="card" disabled></div>
 ```
 
 ```html [Merged]
