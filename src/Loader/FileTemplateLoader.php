@@ -29,13 +29,15 @@ class FileTemplateLoader extends AbstractTemplateLoader
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      * @param array<string>|string $templatePaths Paths to search for templates (searched in order)
      * @param array<string>|string $componentPaths Paths to scan for component templates
+     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     public function __construct(
         SugarConfig $config = new SugarConfig(),
         string|array $templatePaths = [],
         string|array $componentPaths = [],
+        bool $absolutePathsOnly = false,
     ) {
-        parent::__construct($config);
+        parent::__construct($config, $absolutePathsOnly);
 
         $templatePaths = is_string($templatePaths) ? [$templatePaths] : $templatePaths;
         $componentPaths = is_string($componentPaths) ? [$componentPaths] : $componentPaths;

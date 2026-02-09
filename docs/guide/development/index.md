@@ -112,6 +112,22 @@ $loader = new FileTemplateLoader(
 ```
 :::
 
+::: tip
+If you want template lookups to ignore the current template path, enable `absolutePathsOnly: true`. This enforces root-style paths like `layouts/base.sugar.php` and avoids `../` segments.
+:::
+
+```php
+use Sugar\Loader\FileTemplateLoader;
+use Sugar\Config\SugarConfig;
+
+$loader = new FileTemplateLoader(
+    config: new SugarConfig(),
+    templatePaths: __DIR__ . '/templates',
+    componentPaths: 'components',
+    absolutePathsOnly: true
+);
+```
+
 ### StringTemplateLoader
 
 Use in-memory templates for tests, demos, or dynamic content.
@@ -127,7 +143,8 @@ $loader = new StringTemplateLoader(
     ],
     components: [
         'button' => '<button class="btn"><?= $slot ?></button>',
-    ]
+    ],
+    absolutePathsOnly: true
 );
 ```
 

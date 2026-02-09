@@ -247,6 +247,30 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
         $this->assertStringNotContainsString('Default', $result);
     }
 
+    public function testAbsoluteOnlyResolutionUsesTemplateRoot(): void
+    {
+        $loader = new StringTemplateLoader(
+            config: new SugarConfig(),
+            templates: [
+                'layouts/base' => '<html><body><div s:block="content">Default</div></body></html>',
+                'pages/home' => '<div s:extends="layouts/base">' .
+                    '<s-template s:block="content">Home Content</s-template>' .
+                    '</div>',
+            ],
+            components: [],
+            absolutePathsOnly: true,
+        );
+
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $result = $engine->render('pages/home');
+
+        $this->assertStringContainsString('<html><body><div>Home Content</div></body></html>', $result);
+        $this->assertStringNotContainsString('Default', $result);
+    }
+
     public function testHandlesTemplateIncludes(): void
     {
         $loader = new StringTemplateLoader(

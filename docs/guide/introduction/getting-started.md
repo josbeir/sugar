@@ -50,7 +50,7 @@ echo $engine->render('pages/home', [
 ```
 
 ::: tip
-With `FileTemplateLoader`, template includes are resolved relative to the component path.
+By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths relative to the current template. If you prefer absolute-only lookups, pass `absolutePathsOnly: true` and use root-style paths like `layouts/base.sugar.php`.
 :::
 
 ## Example Template

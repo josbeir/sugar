@@ -11,7 +11,7 @@ Layouts, blocks, and includes let you build pages from reusable pieces. Use `s:e
 Keep layout files under a `layouts/` folder and partials under `partials/` to make intent obvious.
 :::
 
-## Typical Folder Layout
+## Folder Layout and Paths
 
 This structure keeps layout inheritance, includes, and components easy to discover.
 
@@ -30,6 +30,20 @@ templates/
     ├── s-card.sugar.php
     └── s-alert.sugar.php
 ```
+
+By default, inheritance and include paths resolve relative to the current template. To enforce root-style paths, enable the loader option documented in [Engine Configuration](../development/index.md#template-loaders).
+
+::: code-group
+```html [Relative]
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+<s-template s:include="partials/header"></s-template>
+```
+
+```html [Absolute-only]
+<s-template s:extends="layouts/base.sugar.php"></s-template>
+<s-template s:include="partials/header"></s-template>
+```
+:::
 
 ## Layout Inheritance
 

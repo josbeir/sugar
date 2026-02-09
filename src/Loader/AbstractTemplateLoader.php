@@ -23,9 +23,11 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
      * Constructor.
      *
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
+     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     public function __construct(
         protected readonly SugarConfig $config = new SugarConfig(),
+        protected readonly bool $absolutePathsOnly = false,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
     }
@@ -37,6 +39,10 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
     {
         // Absolute paths (starting with /)
         if (str_starts_with($path, '/')) {
+            return $this->normalizePath($path);
+        }
+
+        if ($this->absolutePathsOnly) {
             return $this->normalizePath($path);
         }
 

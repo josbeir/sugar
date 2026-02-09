@@ -26,13 +26,15 @@ class StringTemplateLoader extends AbstractTemplateLoader
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      * @param array<string, string> $templates Templates (path => source)
      * @param array<string, string> $components Components (name => source)
+     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     public function __construct(
         SugarConfig $config = new SugarConfig(),
         array $templates = [],
         array $components = [],
+        bool $absolutePathsOnly = false,
     ) {
-        parent::__construct($config);
+        parent::__construct($config, $absolutePathsOnly);
         $this->templates = $templates;
         $this->components = $components;
     }

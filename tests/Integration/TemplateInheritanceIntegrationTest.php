@@ -40,6 +40,24 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertStringContainsString('This is the page content', $compiled);
     }
 
+    public function testAbsoluteOnlyResolutionUsesTemplateRoot(): void
+    {
+        $config = new SugarConfig();
+        $this->setUpCompiler(
+            config: $config,
+            withTemplateLoader: true,
+            templatePaths: [$this->templatesPath],
+            absolutePathsOnly: true,
+        );
+
+        $template = $this->loadTemplate('template-inheritance/absolute-only-child.sugar.php');
+        $compiled = $this->compiler->compile($template, 'pages/home.sugar.php');
+
+        $this->assertStringContainsString('My Absolute Page Title', $compiled);
+        $this->assertStringContainsString('Absolute Welcome', $compiled);
+        $this->assertStringContainsString('Absolute content.', $compiled);
+    }
+
     public function testMultiLevelInheritance(): void
     {
         $template = $this->loadTemplate('template-inheritance/multilevel-child.sugar.php');

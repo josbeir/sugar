@@ -38,6 +38,7 @@ trait CompilerTestTrait
      * @param bool $withDefaultDirectives Whether to load default directives
      * @param array<string> $templatePaths Template paths for loader (only used if withTemplateLoader=true)
      * @param array<string> $componentPaths Component paths for loader (only used if withTemplateLoader=true)
+     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     protected function setUpCompiler(
         ?SugarConfig $config = null,
@@ -45,6 +46,7 @@ trait CompilerTestTrait
         bool $withDefaultDirectives = true,
         array $templatePaths = [],
         array $componentPaths = [],
+        bool $absolutePathsOnly = false,
     ): void {
         $this->parser = new Parser($config);
         $this->escaper = new Escaper();
@@ -58,6 +60,7 @@ trait CompilerTestTrait
             $config ?? new SugarConfig(),
             $templatePaths,
             $componentPaths,
+            $absolutePathsOnly,
         );
         $this->compiler = new Compiler(
             parser: $this->parser,
