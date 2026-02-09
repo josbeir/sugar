@@ -113,6 +113,15 @@ Notice how the parent's `<main>` wrapper is preserved and the child's `<div>` wr
 Only one `s:extends` directive is allowed per template.
 :::
 
+## Template Inheritance Directives
+
+- `s:extends` - Declare the parent layout this template inherits from.
+- `s:block` - Replace a named block in the parent template.
+- `s:append` - Add content after a parent block without replacing it.
+- `s:prepend` - Add content before a parent block without replacing it.
+- `s:include` - Insert another template at this location.
+- `s:with` - Pass scoped variables to an `s:include`.
+
 ## Blocks
 
 Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend it. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
