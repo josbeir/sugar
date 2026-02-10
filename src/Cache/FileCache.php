@@ -485,6 +485,10 @@ final class FileCache implements TemplateCacheInterface
             return false;
         }
 
+        if (!file_exists($metadata->sourcePath)) {
+            return false; // Source removed
+        }
+
         $sourceTime = $this->getModTime($metadata->sourcePath);
         if ($sourceTime > $metadata->sourceTimestamp) {
             return false; // Source changed
@@ -492,6 +496,10 @@ final class FileCache implements TemplateCacheInterface
 
         // Check all dependencies
         foreach ($metadata->dependencies as $dependency) {
+            if (!file_exists($dependency)) {
+                return false; // Dependency removed
+            }
+
             $depTime = $this->getModTime($dependency);
             if ($depTime > $metadata->compiledTimestamp) {
                 return false; // Dependency changed
@@ -500,6 +508,10 @@ final class FileCache implements TemplateCacheInterface
 
         // Check all components
         foreach ($metadata->components as $component) {
+            if (!file_exists($component)) {
+                return false; // Component removed
+            }
+
             $compTime = $this->getModTime($component);
             if ($compTime > $metadata->compiledTimestamp) {
                 return false; // Component changed

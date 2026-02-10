@@ -93,8 +93,11 @@ final class FileCacheTest extends TestCase
     public function testDebugModeMismatchSkipsCache(): void
     {
         $compiled = '<?php echo "Debug";';
+        $sourcePath = sys_get_temp_dir() . '/sugar_debug_only_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
         $metadata = new CacheMetadata(
-            sourcePath: '/templates/debug-only.sugar.php',
+            sourcePath: $sourcePath,
+            sourceTimestamp: (int)filemtime($sourcePath),
             debug: true,
         );
 
@@ -105,6 +108,8 @@ final class FileCacheTest extends TestCase
 
         $cached = $this->cache->get('/templates/debug-only.sugar.php', debug: true);
         $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
     }
 
     public function testPutSanitizesCacheFileName(): void
@@ -353,7 +358,7 @@ final class FileCacheTest extends TestCase
         unlink($pagePath);
     }
 
-    public function testDebugModeIgnoresMissingDependencyFiles(): void
+    public function testDebugModeTreatsMissingDependencyFilesAsStale(): void
     {
         $sourcePath = sys_get_temp_dir() . '/sugar_missing_dep_' . uniqid() . '.php';
         file_put_contents($sourcePath, '<?php echo "v1";');
@@ -369,7 +374,7 @@ final class FileCacheTest extends TestCase
         $this->cache->put($sourcePath, '<?php echo "cached";', $metadata);
 
         $cached = $this->cache->get($sourcePath, debug: true);
-        $this->assertInstanceOf(CachedTemplate::class, $cached);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
 
         unlink($sourcePath);
     }
