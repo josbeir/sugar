@@ -4,6 +4,16 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Sugar Templates",
   description: "A modern PHP templating engine that compiles to pure PHP",
+  head: [
+    [
+      'script',
+      {
+        'data-collect-dnt': 'true',
+        async: 'true',
+        src: 'https://scripts.simpleanalyticscdn.com/latest.js'
+      }
+    ]
+  ],
   themeConfig: {
     editLink: {
       pattern: 'https://github.com/josbeir/sugar/edit/main/docs/:path',
