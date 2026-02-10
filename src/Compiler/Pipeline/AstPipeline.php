@@ -18,11 +18,75 @@ use Sugar\Context\CompilationContext;
 final class AstPipeline
 {
     /**
+     * @var array<int, array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int, sequence: int}>
+     */
+    private array $passEntries = [];
+
+    /**
+     * @var array<\Sugar\Compiler\Pipeline\AstPassInterface>
+     */
+    private array $passes = [];
+
+    private bool $passesReady = false;
+
+    private int $sequence = 0;
+
+    /**
      * @param array<\Sugar\Compiler\Pipeline\AstPassInterface> $passes
      */
     public function __construct(
-        private readonly array $passes,
+        array $passes = [],
     ) {
+        foreach ($passes as $pass) {
+            $this->addPass($pass);
+        }
+    }
+
+    /**
+     * Append a single compiler pass to the pipeline.
+     *
+     * Lower priorities run first; equal priorities preserve insertion order.
+     *
+     * @param \Sugar\Compiler\Pipeline\AstPassInterface $pass Pass to add
+     * @param int $priority Ordering priority (negative before, positive after)
+     * @return $this
+     */
+    public function addPass(AstPassInterface $pass, int $priority = 0)
+    {
+        $this->passEntries[] = [
+            'pass' => $pass,
+            'priority' => $priority,
+            'sequence' => $this->sequence,
+        ];
+        $this->sequence++;
+        $this->passesReady = false;
+
+        return $this;
+    }
+
+    /**
+     * @return array<\Sugar\Compiler\Pipeline\AstPassInterface>
+     */
+    private function getPasses(): array
+    {
+        if ($this->passesReady) {
+            return $this->passes;
+        }
+
+        $entries = $this->passEntries;
+        usort($entries, static function (array $left, array $right): int {
+            $priority = $left['priority'] <=> $right['priority'];
+            if ($priority !== 0) {
+                return $priority;
+            }
+
+            return $left['sequence'] <=> $right['sequence'];
+        });
+
+        $this->passes = array_map(static fn(array $entry): AstPassInterface => $entry['pass'], $entries);
+        $this->passesReady = true;
+
+        return $this->passes;
     }
 
     /**
@@ -30,6 +94,7 @@ final class AstPipeline
      */
     public function execute(DocumentNode $ast, CompilationContext $context): DocumentNode
     {
+        $this->passes = $this->getPasses();
         $processed = $this->walkNode($ast, $context, null, 0, 0);
 
         if (count($processed) !== 1 || !($processed[0] instanceof DocumentNode)) {

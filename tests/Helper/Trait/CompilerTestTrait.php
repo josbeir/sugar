@@ -81,6 +81,7 @@ trait CompilerTestTrait
      *
      * @param array<string, string> $templates
      * @param array<string, string> $components
+     * @param array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],
@@ -88,6 +89,7 @@ trait CompilerTestTrait
         ?SugarConfig $config = null,
         bool $withDefaultDirectives = true,
         bool $absolutePathsOnly = false,
+        array $customPasses = [],
     ): void {
         $this->parser = new Parser($config);
         $this->escaper = new Escaper();
@@ -109,6 +111,7 @@ trait CompilerTestTrait
             registry: $registry,
             templateLoader: $this->templateLoader,
             config: $config,
+            customPasses: $customPasses,
         );
 
         $this->registry = $registry;

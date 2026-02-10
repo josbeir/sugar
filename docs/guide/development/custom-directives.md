@@ -28,6 +28,29 @@ $engine = Engine::builder()
     ->build();
 ```
 
+## Registering via Extensions
+
+If you plan to reuse a directive across projects, package it as an extension. Extensions register directives (and optional compiler passes) through a `RegistrationContext` and are added to the engine builder.
+
+```php
+use Sugar\Extension\ExtensionInterface;
+use Sugar\Extension\RegistrationContext;
+use Sugar\Engine;
+
+final class UiExtension implements ExtensionInterface
+{
+    public function register(RegistrationContext $context): void
+    {
+        $context->directive('badge', BadgeDirective::class);
+    }
+}
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withExtension(new UiExtension())
+    ->build();
+```
+
 ## Interfaces
 
 ### DirectiveInterface

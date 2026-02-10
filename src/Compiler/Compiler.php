@@ -28,6 +28,20 @@ use Sugar\Pass\Template\TemplateInheritancePass;
  */
 final class Compiler implements CompilerInterface
 {
+    private const PRIORITY_TEMPLATE_INHERITANCE = 0;
+
+    private const PRIORITY_DIRECTIVE_EXTRACTION = 10;
+
+    private const PRIORITY_DIRECTIVE_PAIRING = 20;
+
+    private const PRIORITY_DIRECTIVE_COMPILATION = 30;
+
+    private const PRIORITY_COMPONENT_EXPANSION = 40;
+
+    private const PRIORITY_COMPONENT_VARIANTS = 45;
+
+    private const PRIORITY_CONTEXT_ANALYSIS = 50;
+
     private readonly DirectiveRegistryInterface $registry;
 
     private readonly DirectivePairingPass $directivePairingPass;
@@ -47,6 +61,11 @@ final class Compiler implements CompilerInterface
     private readonly TemplateLoaderInterface $templateLoader;
 
     /**
+     * @var array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}>
+     */
+    private readonly array $customPasses;
+
+    /**
      * Constructor
      *
      * @param \Sugar\Parser\Parser $parser Template parser
@@ -54,6 +73,7 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry with registered compilers
      * @param \Sugar\Loader\TemplateLoaderInterface $templateLoader Template loader for inheritance
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
+     * @param array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses Custom compiler passes with priorities
      */
     public function __construct(
         private readonly Parser $parser,
@@ -61,11 +81,13 @@ final class Compiler implements CompilerInterface
         DirectiveRegistryInterface $registry,
         TemplateLoaderInterface $templateLoader,
         ?SugarConfig $config = null,
+        array $customPasses = [],
     ) {
         $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
         $this->registry = $registry;
         $this->templateLoader = $templateLoader;
+        $this->customPasses = $customPasses;
 
         // Create passes
         $this->directivePairingPass = new DirectivePairingPass($this->registry);
@@ -194,23 +216,27 @@ final class Compiler implements CompilerInterface
         bool $enableInheritance,
         ?ComponentVariantAdjustmentPass $variantAdjustments = null,
     ): AstPipeline {
-        $passes = [];
+        $pipeline = new AstPipeline();
 
         if ($enableInheritance) {
-            $passes[] = $this->templateInheritancePass;
+            $pipeline->addPass($this->templateInheritancePass, self::PRIORITY_TEMPLATE_INHERITANCE);
         }
 
-        $passes[] = $this->directiveExtractionPass;
-        $passes[] = $this->directivePairingPass;
-        $passes[] = $this->directiveCompilationPass;
-        $passes[] = $this->componentExpansionPass;
+        $pipeline->addPass($this->directiveExtractionPass, self::PRIORITY_DIRECTIVE_EXTRACTION);
+        $pipeline->addPass($this->directivePairingPass, self::PRIORITY_DIRECTIVE_PAIRING);
+        $pipeline->addPass($this->directiveCompilationPass, self::PRIORITY_DIRECTIVE_COMPILATION);
+        $pipeline->addPass($this->componentExpansionPass, self::PRIORITY_COMPONENT_EXPANSION);
 
         if ($variantAdjustments instanceof ComponentVariantAdjustmentPass) {
-            $passes[] = $variantAdjustments;
+            $pipeline->addPass($variantAdjustments, self::PRIORITY_COMPONENT_VARIANTS);
         }
 
-        $passes[] = $this->contextPass;
+        $pipeline->addPass($this->contextPass, self::PRIORITY_CONTEXT_ANALYSIS);
 
-        return new AstPipeline($passes);
+        foreach ($this->customPasses as $entry) {
+            $pipeline->addPass($entry['pass'], $entry['priority']);
+        }
+
+        return $pipeline;
     }
 }

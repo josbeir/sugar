@@ -77,6 +77,7 @@ export default defineConfig({
           text: 'Development',
           items: [
             { text: 'Engine Configuration', link: '/guide/development/' },
+            { text: 'Creating Extensions', link: '/guide/development/creating-extensions' },
             { text: 'Exceptions', link: '/guide/development/exceptions' },
             { text: 'Custom Directives', link: '/guide/development/custom-directives' }
           ]

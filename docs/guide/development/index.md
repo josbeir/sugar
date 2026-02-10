@@ -111,6 +111,8 @@ $registry->register('foreach', ForeachDirective::class);
 $registry->register('custom', CustomDirective::class);
 ```
 
+For directive design details, see [Custom Directives](/guide/development/custom-directives).
+
 ::: details
 When to customize the directive registry
 
@@ -118,6 +120,21 @@ When to customize the directive registry
 - Add project-specific directives
 - Provide feature flags by swapping registries
 :::
+
+## Extensions
+
+For reusable, shareable features, register extensions on the engine builder. Extensions can bundle directives and compiler passes for clean, modular composition.
+
+```php
+use Sugar\Engine;
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withExtension(new UiExtension())
+    ->build();
+```
+
+See [Creating Extensions](/guide/development/creating-extensions) for the full extension workflow.
 
 ## Template Loaders
 

@@ -12,6 +12,8 @@ use Sugar\Engine;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\DirectiveRegistryInterface;
+use Sugar\Extension\ExtensionInterface;
+use Sugar\Extension\RegistrationContext;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 use Sugar\Util\Hash;
@@ -34,6 +36,11 @@ final class EngineBuilder
     private bool $debug = false;
 
     private ?object $templateContext = null;
+
+    /**
+     * @var array<\Sugar\Extension\ExtensionInterface>
+     */
+    private array $extensions = [];
 
     /**
      * Constructor
@@ -114,6 +121,22 @@ final class EngineBuilder
     }
 
     /**
+     * Register an extension
+     *
+     * Extensions can provide custom directives and compiler passes.
+     * Multiple extensions can be registered and are applied in order.
+     *
+     * @param \Sugar\Extension\ExtensionInterface $extension Extension to register
+     * @return $this
+     */
+    public function withExtension(ExtensionInterface $extension)
+    {
+        $this->extensions[] = $extension;
+
+        return $this;
+    }
+
+    /**
      * Build the engine
      *
      * @return \Sugar\Engine Configured engine instance
@@ -139,6 +162,19 @@ final class EngineBuilder
         // Use provided registry or create new one with defaults
         $registry = $this->registry ?? new DirectiveRegistry();
 
+        // Process extensions: register directives and collect custom passes
+        $customPasses = [];
+        foreach ($this->extensions as $extension) {
+            $context = new RegistrationContext();
+            $extension->register($context);
+
+            foreach ($context->getDirectives() as $name => $compiler) {
+                $registry->register($name, $compiler);
+            }
+
+            array_push($customPasses, ...$context->getPasses());
+        }
+
         // Create compiler with all dependencies
         $compiler = new Compiler(
             parser: $parser,
@@ -146,6 +182,7 @@ final class EngineBuilder
             registry: $registry,
             templateLoader: $this->loader,
             config: $this->config,
+            customPasses: $customPasses,
         );
 
         return new Engine(

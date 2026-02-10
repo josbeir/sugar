@@ -43,6 +43,8 @@ Render the element only when the expression evaluates to true.
 
 Render the element only when the expression evaluates to false.
 
+For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
+
 ```html
 <div s:unless="$isReady">Loading...</div>
 ```
@@ -59,6 +61,8 @@ Render the element when the variable is set (not null and defined).
 
 Render the element when the value is empty.
 
+For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
+
 ```html
 <div s:empty="$items">No items found</div>
 ```
@@ -66,6 +70,8 @@ Render the element when the value is empty.
 ### s:foreach
 
 Repeat the element for every item in an iterable.
+
+For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadata).
 
 ::: code-group
 ```html [List]
@@ -93,6 +99,10 @@ Repeat the element for every item in an iterable.
 ### s:forelse
 
 Loop over items and fall back to an `s:empty` sibling when empty.
+
+For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadata).
+
+For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
 ::: code-group
 ```html [Basic]

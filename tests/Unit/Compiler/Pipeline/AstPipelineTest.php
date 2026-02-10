@@ -271,6 +271,106 @@ final class AstPipelineTest extends TestCase
         $this->assertSame(['component', 'directive'], $pass->events);
     }
 
+    public function testAddPassRespectsPriorityAndInsertionOrder(): void
+    {
+        $events = [];
+        $first = new class ($events, 'first') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $second = new class ($events, 'second') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $third = new class ($events, 'third') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipeline = new AstPipeline();
+        $pipeline->addPass($first, 0);
+        $pipeline->addPass($second, -10);
+        $pipeline->addPass($third, 0);
+
+        $pipeline->execute($this->document()->build(), $this->createContext());
+
+        $this->assertSame(['second', 'first', 'third'], $events);
+    }
+
     public function testThrowsWhenPipelineReturnsNonDocumentNode(): void
     {
         $pass = new class () implements AstPassInterface {

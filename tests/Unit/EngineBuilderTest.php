@@ -10,7 +10,10 @@ use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Engine\EngineBuilder;
 use Sugar\Extension\DirectiveRegistry;
+use Sugar\Extension\ExtensionInterface;
+use Sugar\Extension\RegistrationContext;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
@@ -150,6 +153,55 @@ final class EngineBuilderTest extends TestCase
             ->withDirectiveRegistry($registry)
             ->withDebug(false)
             ->withTemplateContext($context)
+            ->build();
+
+        $this->assertInstanceOf(Engine::class, $engine);
+    }
+
+    public function testWithExtension(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+
+        $extension = new class implements ExtensionInterface {
+            public function register(RegistrationContext $context): void
+            {
+                // no-op extension for testing
+            }
+        };
+
+        $builder = new EngineBuilder();
+        $result = $builder
+            ->withTemplateLoader($loader)
+            ->withExtension($extension);
+
+        // Should return builder for fluent API
+        $this->assertSame($builder, $result);
+
+        $engine = $builder->build();
+        $this->assertInstanceOf(Engine::class, $engine);
+    }
+
+    public function testMultipleExtensions(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+
+        $ext1 = new class implements ExtensionInterface {
+            public function register(RegistrationContext $context): void
+            {
+            }
+        };
+
+        $ext2 = new class implements ExtensionInterface {
+            public function register(RegistrationContext $context): void
+            {
+            }
+        };
+
+        $builder = new EngineBuilder();
+        $engine = $builder
+            ->withTemplateLoader($loader)
+            ->withExtension($ext1)
+            ->withExtension($ext2)
             ->build();
 
         $this->assertInstanceOf(Engine::class, $engine);
