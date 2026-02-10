@@ -28,10 +28,6 @@ use Sugar\Parser\Parser;
 use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
 use Sugar\Pass\Component\Helper\ComponentSlots;
 use Sugar\Pass\Component\Helper\SlotResolver;
-use Sugar\Pass\Directive\DirectiveCompilationPass;
-use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Pass\Template\TemplateInheritancePass;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Runtime\RuntimeEnvironment;
 
@@ -48,14 +44,6 @@ final class ComponentExpansionPass implements AstPassInterface
     private readonly DirectivePrefixHelper $prefixHelper;
 
     private readonly string $slotAttrName;
-
-    private readonly TemplateInheritancePass $inheritancePass;
-
-    private readonly DirectiveExtractionPass $directiveExtractionPass;
-
-    private readonly DirectivePairingPass $directivePairingPass;
-
-    private readonly DirectiveCompilationPass $directiveCompilationPass;
 
     private readonly AstPipeline $componentTemplatePipeline;
 
@@ -75,25 +63,18 @@ final class ComponentExpansionPass implements AstPassInterface
      * @param \Sugar\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Extension registry for directive type checking
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
+     * @param \Sugar\Compiler\Pipeline\AstPipeline $componentTemplatePipeline Pipeline for component templates
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
         private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
+        AstPipeline $componentTemplatePipeline,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
-        $this->inheritancePass = new TemplateInheritancePass($loader, $parser, $config);
-        $this->directiveExtractionPass = new DirectiveExtractionPass($this->registry, $config);
-        $this->directivePairingPass = new DirectivePairingPass($this->registry);
-        $this->directiveCompilationPass = new DirectiveCompilationPass($this->registry);
-        $this->componentTemplatePipeline = new AstPipeline([
-            $this->inheritancePass,
-            $this->directiveExtractionPass,
-            $this->directivePairingPass,
-            $this->directiveCompilationPass,
-        ]);
+        $this->componentTemplatePipeline = $componentTemplatePipeline;
         $this->attributeCategorizer = new ComponentAttributeCategorizer($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
     }

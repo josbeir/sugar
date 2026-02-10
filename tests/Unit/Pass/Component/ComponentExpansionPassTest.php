@@ -13,7 +13,11 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
+use Sugar\Compiler\Pipeline\CompilerPipelineFactory;
+use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachDirective;
@@ -23,7 +27,6 @@ use Sugar\Enum\OutputContext;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\StringTemplateLoader;
-use Sugar\Pass\Component\ComponentExpansionPass;
 use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -39,10 +42,13 @@ final class ComponentExpansionPassTest extends TestCase
 
     private AstPipeline $pipeline;
 
+    private SugarConfig $config;
+
     protected function setUp(): void
     {
+        $this->config = new SugarConfig();
         $this->loader = new StringTemplateLoader(
-            config: new SugarConfig(),
+            config: $this->config,
             components: [
                 'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
                 'button' => $this->loadTemplate('components/s-button.sugar.php'),
@@ -51,14 +57,20 @@ final class ComponentExpansionPassTest extends TestCase
         );
 
         $this->parser = $this->createParser();
-        $registry = $this->createRegistry();
+        $this->registry = $this->createRegistry();
+        $pipelineFactory = new CompilerPipelineFactory(
+            $this->loader,
+            $this->parser,
+            $this->registry,
+            $this->config,
+        );
 
         // Register standard directives for testing
-        $registry->register('if', IfDirective::class);
-        $registry->register('foreach', ForeachDirective::class);
-        $registry->register('while', WhileDirective::class);
+        $this->registry->register('if', IfDirective::class);
+        $this->registry->register('foreach', ForeachDirective::class);
+        $this->registry->register('while', WhileDirective::class);
 
-        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+        $pass = $pipelineFactory->getComponentExpansionPass();
         $this->pipeline = new AstPipeline([$pass]);
     }
 
@@ -92,6 +104,45 @@ final class ComponentExpansionPassTest extends TestCase
         // The expanded output should contain the button element
         $output = $this->astToString($result);
         $this->assertStringContainsString('<button class="btn">', $output);
+    }
+
+    public function testCustomPassesApplyToComponentTemplates(): void
+    {
+        $this->loader->addComponent('plain', '<div>hello</div>');
+
+        $pass = new class implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof TextNode) {
+                    $node->content = strtoupper($node->content);
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipelineFactory = new CompilerPipelineFactory(
+            $this->loader,
+            $this->parser,
+            $this->registry,
+            $this->config,
+            [
+                ['pass' => $pass, 'priority' => 35],
+            ],
+        );
+        $componentPass = $pipelineFactory->getComponentExpansionPass();
+        $pipeline = new AstPipeline([$componentPass]);
+
+        $ast = $this->parser->parse('<s-plain></s-plain>');
+        $result = $pipeline->execute($ast, $this->createContext());
+
+        $output = $this->astToString($result);
+        $this->assertStringContainsString('HELLO', $output);
     }
 
     public function testInjectsDefaultSlotContent(): void
@@ -704,7 +755,13 @@ final class ComponentExpansionPassTest extends TestCase
     {
         // Create a tracking parser to count parse calls
         $registry = $this->createRegistry();
-        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+        $pipelineFactory = new CompilerPipelineFactory(
+            $this->loader,
+            $this->parser,
+            $registry,
+            $this->config,
+        );
+        $pass = $pipelineFactory->getComponentExpansionPass();
 
         // Create AST with same component used 3 times
         // Each button component will be loaded but should only be parsed once
@@ -741,7 +798,13 @@ final class ComponentExpansionPassTest extends TestCase
     public function testCachesSeparateComponentsSeparately(): void
     {
         $registry = $this->createRegistry();
-        $pass = new ComponentExpansionPass($this->loader, $this->parser, $registry, new SugarConfig());
+        $pipelineFactory = new CompilerPipelineFactory(
+            $this->loader,
+            $this->parser,
+            $registry,
+            $this->config,
+        );
+        $pass = $pipelineFactory->getComponentExpansionPass();
 
         // Use different components multiple times each
         $ast = $this->document()

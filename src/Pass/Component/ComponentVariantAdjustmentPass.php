@@ -12,7 +12,11 @@ use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
 use Sugar\Pass\Component\Helper\SlotResolver;
 
 /**
- * Applies component variant adjustments without extra traversals.
+ * Applies component-specific adjustments during compilation.
+ *
+ * This pass runs after component expansion to:
+ * - Disable escaping for slot variables so slot HTML is not double-escaped.
+ * - Apply attribute overrides on the component root once merged props are known.
  */
 final class ComponentVariantAdjustmentPass implements AstPassInterface
 {

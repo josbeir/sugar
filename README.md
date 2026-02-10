@@ -4,6 +4,7 @@
 	<img src="docs/public/hero/sugar-cube.svg" alt="Sugar cube" width="200" />
 </div>
 
+
 <div align="center">
 	<a href="https://github.com/josbeir/sugar/actions">
 		<img src="https://github.com/josbeir/sugar/actions/workflows/ci.yml/badge.svg" alt="Build Status" />
