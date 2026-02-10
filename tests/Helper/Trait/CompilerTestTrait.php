@@ -8,6 +8,8 @@ use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
+use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
 
 /**
@@ -25,7 +27,7 @@ trait CompilerTestTrait
 
     protected Compiler $compiler;
 
-    protected FileTemplateLoader $templateLoader;
+    protected TemplateLoaderInterface $templateLoader;
 
     /**
      * Set up compiler dependencies
@@ -71,6 +73,44 @@ trait CompilerTestTrait
         );
 
         // Set registry property for tests that need access
+        $this->registry = $registry;
+    }
+
+    /**
+     * Set up compiler dependencies using a StringTemplateLoader.
+     *
+     * @param array<string, string> $templates
+     * @param array<string, string> $components
+     */
+    protected function setUpCompilerWithStringLoader(
+        array $templates = [],
+        array $components = [],
+        ?SugarConfig $config = null,
+        bool $withDefaultDirectives = true,
+        bool $absolutePathsOnly = false,
+    ): void {
+        $this->parser = new Parser($config);
+        $this->escaper = new Escaper();
+
+        $registry = $withDefaultDirectives
+            ? new DirectiveRegistry()
+            : DirectiveRegistry::empty();
+
+        $this->templateLoader = new StringTemplateLoader(
+            $config ?? new SugarConfig(),
+            $templates,
+            $components,
+            $absolutePathsOnly,
+        );
+
+        $this->compiler = new Compiler(
+            parser: $this->parser,
+            escaper: $this->escaper,
+            registry: $registry,
+            templateLoader: $this->templateLoader,
+            config: $config,
+        );
+
         $this->registry = $registry;
     }
 

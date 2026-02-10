@@ -8,7 +8,7 @@ use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Escape\Escaper;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -25,19 +25,17 @@ final class ComponentIntegrationTest extends TestCase
     use TempDirectoryTrait;
     use TemplateTestHelperTrait;
 
-    private string $templatesPath;
-
     private SugarConfig $config;
 
     protected function setUp(): void
     {
-        $this->templatesPath = SUGAR_TEST_TEMPLATES_PATH;
+        $templatesPath = SUGAR_TEST_TEMPLATES_PATH;
         $this->config = new SugarConfig();
 
         $this->setUpCompiler(
             config: $this->config,
             withTemplateLoader: true,
-            templatePaths: [$this->templatesPath],
+            templatePaths: [$templatesPath],
             componentPaths: ['components'],
         );
     }
@@ -553,13 +551,13 @@ final class ComponentIntegrationTest extends TestCase
         // Test s:spread directive inside component template
         // Now works without needing s:text since we allow attribute-only directives
         $componentTemplate = '<div class="container" s:spread="$attrs ?? []"><?= $slot ?></div>';
-        file_put_contents(
-            $this->templatesPath . '/components/s-container.sugar.php',
-            $componentTemplate,
-        );
 
-        // Rediscover components to include the new one
-        $this->setUp();
+        $this->setUpCompilerWithStringLoader(
+            components: [
+                'container' => $componentTemplate,
+            ],
+            config: $this->config,
+        );
 
         // Use component with spread attributes
         $template = '<s-container s:bind="[\'attrs\' => [\'data-id\' => \'123\', \'aria-label\' => \'Container\']]">Content</s-container>';
@@ -577,9 +575,6 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('data-id="123"', $output);
         $this->assertStringContainsString('aria-label="Container"', $output);
         $this->assertStringContainsString('Content', $output);
-
-        // Cleanup
-        unlink($this->templatesPath . '/components/s-container.sugar.php');
     }
 
     public function testFragmentElementWithNamedSlot(): void
@@ -748,14 +743,24 @@ final class ComponentIntegrationTest extends TestCase
 
     private function createEngineWithTemplate(string $template): Engine
     {
-        $templateDir = $this->createTempDir('sugar_templates_');
-        $templatePath = $templateDir . '/dynamic.sugar.php';
-        file_put_contents($templatePath, $template);
+        $components = $this->loadComponentSources([
+            'alert',
+            'button',
+            'card',
+            'custom-panel',
+            'base-panel',
+        ]);
 
-        $loader = new FileTemplateLoader(
-            $this->config,
-            [$this->templatesPath, $templateDir],
-            ['components'],
+        $templates = [
+            'dynamic' => $template,
+            's-base-panel.sugar.php' => $components['base-panel'],
+            'components/s-base-panel.sugar.php' => $components['base-panel'],
+        ];
+
+        $loader = new StringTemplateLoader(
+            config: $this->config,
+            templates: $templates,
+            components: $components,
         );
 
         $cacheDir = $this->createTempDir('sugar_cache_');
@@ -765,5 +770,20 @@ final class ComponentIntegrationTest extends TestCase
             ->withTemplateLoader($loader)
             ->withCache($cache)
             ->build();
+    }
+
+    /**
+     * @param array<string> $names
+     * @return array<string, string>
+     */
+    private function loadComponentSources(array $names): array
+    {
+        $sources = [];
+
+        foreach ($names as $name) {
+            $sources[$name] = $this->loadTemplate('components/s-' . $name . '.sugar.php');
+        }
+
+        return $sources;
     }
 }

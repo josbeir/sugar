@@ -256,7 +256,7 @@ final class FileTemplateLoaderTest extends TestCase
     public function testResolveToFilePathWithAbsolutePath(): void
     {
         $tempDir = $this->createTempDir('sugar_test_');
-        $path = $tempDir . '/absolute.sugar.php';
+        $path = $tempDir . DIRECTORY_SEPARATOR . 'absolute.sugar.php';
         file_put_contents($path, 'content');
 
         $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
@@ -272,12 +272,12 @@ final class FileTemplateLoaderTest extends TestCase
     public function testResolveToFilePathAddsSuffixForAbsolutePath(): void
     {
         $tempDir = $this->createTempDir('sugar_test_');
-        $path = $tempDir . '/absolute.sugar.php';
+        $path = $tempDir . DIRECTORY_SEPARATOR . 'absolute.sugar.php';
         file_put_contents($path, 'content');
 
         $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
 
-        $resolved = $loader->resolveToFilePath($tempDir . '/absolute');
+        $resolved = $loader->resolveToFilePath($tempDir . DIRECTORY_SEPARATOR . 'absolute');
 
         $this->assertSame(realpath($path), $resolved);
 

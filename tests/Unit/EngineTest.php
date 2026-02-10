@@ -37,10 +37,9 @@ final class EngineTest extends TestCase
 
     public function testRenderSimpleTemplate(): void
     {
-        $templatePath = $this->templateDir . '/simple.sugar.php';
-        file_put_contents($templatePath, '<h1><?= $title ?></h1>');
-
-        $engine = $this->createEngine($this->templateDir);
+        $engine = $this->createStringEngine([
+            'simple.sugar.php' => '<h1><?= $title ?></h1>',
+        ]);
 
         $result = $engine->render('simple.sugar.php', ['title' => 'Hello World']);
 
@@ -49,11 +48,11 @@ final class EngineTest extends TestCase
 
     public function testRenderWithCache(): void
     {
-        $templatePath = $this->templateDir . '/cached.sugar.php';
-        file_put_contents($templatePath, '<p><?= $message ?></p>');
-
         $cache = new FileCache($this->cacheDir);
-        $engine = $this->createEngine($this->templateDir, cache: $cache);
+        $engine = $this->createStringEngine(
+            templates: ['cached.sugar.php' => '<p><?= $message ?></p>'],
+            cache: $cache,
+        );
 
         // First render - compiles and caches
         $result1 = $engine->render('cached.sugar.php', ['message' => 'First']);
@@ -96,10 +95,9 @@ final class EngineTest extends TestCase
 
     public function testCompileReturnsPhpCode(): void
     {
-        $templatePath = $this->templateDir . '/compile.sugar.php';
-        file_put_contents($templatePath, '<span><?= $value ?></span>');
-
-        $engine = $this->createEngine($this->templateDir);
+        $engine = $this->createStringEngine([
+            'compile.sugar.php' => '<span><?= $value ?></span>',
+        ]);
 
         $compiled = $engine->compile('compile.sugar.php');
 
@@ -109,18 +107,12 @@ final class EngineTest extends TestCase
 
     public function testRenderWithBlocksOnlyIgnoresExtends(): void
     {
-        file_put_contents(
-            $this->templateDir . '/base.sugar.php',
-            '<main s:block="content">Base</main><aside s:block="sidebar">Base</aside>',
-        );
-        file_put_contents(
-            $this->templateDir . '/child.sugar.php',
-            '<s-template s:extends="base.sugar.php"></s-template>' .
-            '<div s:block="sidebar"><p>Side</p></div>' .
-            '<div s:block="content"><p>Main</p></div>',
-        );
-
-        $engine = $this->createEngine($this->templateDir);
+        $engine = $this->createStringEngine([
+            'base.sugar.php' => '<main s:block="content">Base</main><aside s:block="sidebar">Base</aside>',
+            'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
+                '<div s:block="sidebar"><p>Side</p></div>' .
+                '<div s:block="content"><p>Main</p></div>',
+        ]);
 
         $result = $engine->render('child.sugar.php', [], ['content', 'sidebar']);
 

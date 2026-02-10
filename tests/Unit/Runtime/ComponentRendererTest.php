@@ -9,25 +9,28 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ComponentRendererTest extends TestCase
 {
     use CompilerTestTrait;
     use TempDirectoryTrait;
+    use TemplateTestHelperTrait;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->setUpCompiler(
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            components: [
+                'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
+            ],
             config: new SugarConfig(),
-            withTemplateLoader: true,
-            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
-            componentPaths: ['components'],
         );
     }
 
@@ -70,10 +73,7 @@ final class ComponentRendererTest extends TestCase
 
         $this->assertStringContainsString('Save', $output);
 
-        $loader = $this->templateLoader;
-        $this->assertInstanceOf(FileTemplateLoader::class, $loader);
-
-        $componentPath = $loader->getComponentPath('alert');
+        $componentPath = $this->templateLoader->getComponentPath('alert');
         $cacheKey = $componentPath . '::slots:footer|slot';
 
         $cached = $cache->get($cacheKey);
@@ -83,24 +83,14 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesSlotValues(): void
     {
-        $tempDir = $this->createTempDir('sugar_components_');
-        $componentsDir = $tempDir . '/components';
-        mkdir($componentsDir, 0755, true);
-
-        file_put_contents(
-            $componentsDir . '/s-slot-test.sugar.php',
+        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
+        $this->templateLoader->addComponent(
+            'slot-test',
             '<div class="slot-test">'
             . '<div class="header"><?= $header ?></div>'
             . '<div class="body"><?= $slot ?></div>'
             . '<div class="footer"><?= $footer ?></div>'
             . '</div>',
-        );
-
-        $this->setUpCompiler(
-            config: new SugarConfig(),
-            withTemplateLoader: true,
-            templatePaths: [$tempDir],
-            componentPaths: ['components'],
         );
 
         $renderer = $this->createRenderer();
@@ -126,20 +116,10 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesAttributes(): void
     {
-        $tempDir = $this->createTempDir('sugar_components_');
-        $componentsDir = $tempDir . '/components';
-        mkdir($componentsDir, 0755, true);
-
-        file_put_contents(
-            $componentsDir . '/s-attr-test.sugar.php',
+        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
+        $this->templateLoader->addComponent(
+            'attr-test',
             '<div class="box" s:spread="$__sugar_attrs"><?= $slot ?></div>',
-        );
-
-        $this->setUpCompiler(
-            config: new SugarConfig(),
-            withTemplateLoader: true,
-            templatePaths: [$tempDir],
-            componentPaths: ['components'],
         );
 
         $renderer = $this->createRenderer();
@@ -168,20 +148,10 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentBindsTemplateContext(): void
     {
-        $tempDir = $this->createTempDir('sugar_components_');
-        $componentsDir = $tempDir . '/components';
-        mkdir($componentsDir, 0755, true);
-
-        file_put_contents(
-            $componentsDir . '/s-context-test.sugar.php',
+        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
+        $this->templateLoader->addComponent(
+            'context-test',
             '<div><?= $this->greet() ?></div>',
-        );
-
-        $this->setUpCompiler(
-            config: new SugarConfig(),
-            withTemplateLoader: true,
-            templatePaths: [$tempDir],
-            componentPaths: ['components'],
         );
 
         $context = new class {
@@ -205,10 +175,7 @@ final class ComponentRendererTest extends TestCase
 
         $renderer->renderComponent(name: 'alert');
 
-        $loader = $this->templateLoader;
-        $this->assertInstanceOf(FileTemplateLoader::class, $loader);
-
-        $componentPath = $loader->getComponentFilePath('alert');
+        $componentPath = $this->templateLoader->getComponentFilePath('alert');
         $metadata = $tracker->getMetadata($componentPath);
 
         $this->assertContains($componentPath, $metadata->components);
@@ -221,12 +188,9 @@ final class ComponentRendererTest extends TestCase
     ): ComponentRenderer {
         $cache = $cache ?? $this->createCache();
 
-        $loader = $this->templateLoader;
-        $this->assertInstanceOf(FileTemplateLoader::class, $loader);
-
         return new ComponentRenderer(
             compiler: $this->compiler,
-            loader: $loader,
+            loader: $this->templateLoader,
             cache: $cache,
             tracker: $tracker,
             templateContext: $context,

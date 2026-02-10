@@ -163,33 +163,30 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testIncludeWithWithHasIsolatedScope(): void
     {
-        // Create temporary included template
-        $includePath = $this->templatesPath . '/partials/temp-isolated.sugar.php';
-        file_put_contents($includePath, '<div class="alert"><?= $message ?></div>');
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'partials/temp-isolated.sugar.php' => '<div class="alert"><?= $message ?></div>',
+            ],
+            config: new SugarConfig(),
+        );
 
-        try {
-            $template = '<?php $message = "parent message"; ?>' .
-                '<div s:include="partials/temp-isolated.sugar.php" s:with="[\'message\' => \'included message\']"></div>' .
-                '<p><?= $message ?></p>';
+        $template = '<?php $message = "parent message"; ?>' .
+            '<div s:include="partials/temp-isolated.sugar.php" s:with="[\'message\' => \'included message\']"></div>' .
+            '<p><?= $message ?></p>';
 
-            $compiled = $this->compiler->compile($template, 'home.sugar.php');
+        $compiled = $this->compiler->compile($template, 'home.sugar.php');
 
-            // Should contain closure for isolation with bindTo and type hints
-            $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
-            $this->assertStringContainsString('return ob_get_clean(); })->bindTo($this ?? null)', $compiled);
-            $this->assertStringContainsString("(['message' => 'included message']);", $compiled);
+        // Should contain closure for isolation with bindTo and type hints
+        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
+        $this->assertStringContainsString('return ob_get_clean(); })->bindTo($this ?? null)', $compiled);
+        $this->assertStringContainsString("(['message' => 'included message']);", $compiled);
 
-            // Execute to verify isolation
-            $output = $this->executeTemplate($compiled, ['message' => 'parent message']);
+        // Execute to verify isolation
+        $output = $this->executeTemplate($compiled, ['message' => 'parent message']);
 
-            // Verify included template got isolated variable
-            $this->assertStringContainsString('<div class="alert">included message</div>', $output);
-            // Verify parent variable not overwritten
-            $this->assertStringContainsString('<p>parent message</p>', $output);
-        } finally {
-            if (file_exists($includePath)) {
-                unlink($includePath);
-            }
-        }
+        // Verify included template got isolated variable
+        $this->assertStringContainsString('<div class="alert">included message</div>', $output);
+        // Verify parent variable not overwritten
+        $this->assertStringContainsString('<p>parent message</p>', $output);
     }
 }

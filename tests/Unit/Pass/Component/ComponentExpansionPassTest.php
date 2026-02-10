@@ -22,7 +22,7 @@ use Sugar\Directive\WhileDirective;
 use Sugar\Enum\OutputContext;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Pass\Component\ComponentExpansionPass;
 use Sugar\Runtime\RuntimeEnvironment;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
@@ -35,14 +35,20 @@ final class ComponentExpansionPassTest extends TestCase
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
-    private FileTemplateLoader $loader;
+    private StringTemplateLoader $loader;
 
     private AstPipeline $pipeline;
 
     protected function setUp(): void
     {
-        $this->loader = $this->createComponentLoader();
-        $this->loader->discoverComponents('.');
+        $this->loader = new StringTemplateLoader(
+            config: new SugarConfig(),
+            components: [
+                'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
+                'button' => $this->loadTemplate('components/s-button.sugar.php'),
+                'card' => $this->loadTemplate('components/s-card.sugar.php'),
+            ],
+        );
 
         $this->parser = $this->createParser();
         $registry = $this->createRegistry();
@@ -153,23 +159,17 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testComponentWithNoRootElementSkipsMerge(): void
     {
-        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-plain.sugar.php';
-        file_put_contents($componentPath, 'Plain <?= $slot ?>');
-        $this->loader->discoverComponents('.');
+        $this->loader->addComponent('plain', 'Plain <?= $slot ?>');
 
-        try {
-            $template = '<s-plain class="extra">Text</s-plain>';
-            $ast = $this->parser->parse($template);
+        $template = '<s-plain class="extra">Text</s-plain>';
+        $ast = $this->parser->parse($template);
 
-            $result = $this->executePipeline($ast, $this->createContext());
-            $code = $this->astToString($result);
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
 
-            $this->assertStringContainsString('Plain', $code);
-            $this->assertStringContainsString('Text', $code);
-            $this->assertStringNotContainsString('class="extra"', $code);
-        } finally {
-            unlink($componentPath);
-        }
+        $this->assertStringContainsString('Plain', $code);
+        $this->assertStringContainsString('Text', $code);
+        $this->assertStringNotContainsString('class="extra"', $code);
     }
 
     public function testComponentMergesAttributeDirectives(): void
@@ -185,45 +185,33 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testNestedComponentDirectiveExpandsInTemplate(): void
     {
-        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-wrapper.sugar.php';
-        file_put_contents($componentPath, '<div s:component="button">Inner</div>');
-        $this->loader->discoverComponents('.');
+        $this->loader->addComponent('wrapper', '<div s:component="button">Inner</div>');
 
-        try {
-            $template = '<s-wrapper></s-wrapper>';
-            $ast = $this->parser->parse($template);
+        $template = '<s-wrapper></s-wrapper>';
+        $ast = $this->parser->parse($template);
 
-            $result = $this->executePipeline($ast, $this->createContext());
-            $code = $this->astToString($result);
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
 
-            $this->assertStringContainsString('<button class="btn">', $code);
-            $this->assertStringContainsString('Inner', $code);
-        } finally {
-            unlink($componentPath);
-        }
+        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertStringContainsString('Inner', $code);
     }
 
     public function testNestedComponentNamedSlotsExpand(): void
     {
-        $componentPath = __DIR__ . '/../../../fixtures/templates/components/s-panel.sugar.php';
-        file_put_contents(
-            $componentPath,
+        $this->loader->addComponent(
+            'panel',
             '<s-card><div s:slot="header">Head</div>Body</s-card>',
         );
-        $this->loader->discoverComponents('.');
 
-        try {
-            $template = '<s-panel></s-panel>';
-            $ast = $this->parser->parse($template);
+        $template = '<s-panel></s-panel>';
+        $ast = $this->parser->parse($template);
 
-            $result = $this->executePipeline($ast, $this->createContext());
-            $code = $this->astToString($result);
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
 
-            $this->assertStringContainsString('Head', $code);
-            $this->assertStringContainsString('Body', $code);
-        } finally {
-            unlink($componentPath);
-        }
+        $this->assertStringContainsString('Head', $code);
+        $this->assertStringContainsString('Body', $code);
     }
 
     public function testMergesStringClassAttributesOnRootElement(): void
@@ -292,29 +280,22 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testNestedTemplateWithDynamicComponentDirectiveCreatesRuntimeCall(): void
     {
-        $dynamicComponentPath = __DIR__ . '/../../../fixtures/templates/components/s-dynamic-panel.sugar.php';
-        file_put_contents($dynamicComponentPath, '<div s:component="$componentName"></div>');
+        $this->loader->addComponent('dynamic-panel', '<div s:component="$componentName"></div>');
 
-        try {
-            $this->loader->discoverComponents('.');
+        $ast = $this->parser->parse('<s-dynamic-panel></s-dynamic-panel>');
+        $result = $this->executePipeline($ast, $this->createContext());
 
-            $ast = $this->parser->parse('<s-dynamic-panel></s-dynamic-panel>');
-            $result = $this->executePipeline($ast, $this->createContext());
+        $this->assertGreaterThan(0, count($result->children));
 
-            $this->assertGreaterThan(0, count($result->children));
-
-            $hasRuntimeCall = false;
-            foreach ($result->children as $child) {
-                if ($child instanceof RuntimeCallNode) {
-                    $hasRuntimeCall = true;
-                    break;
-                }
+        $hasRuntimeCall = false;
+        foreach ($result->children as $child) {
+            if ($child instanceof RuntimeCallNode) {
+                $hasRuntimeCall = true;
+                break;
             }
-
-            $this->assertTrue($hasRuntimeCall);
-        } finally {
-            unlink($dynamicComponentPath);
         }
+
+        $this->assertTrue($hasRuntimeCall);
     }
 
     public function testCreatesRuntimeComponentCallForDynamicName(): void
@@ -375,11 +356,10 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testExpandsNestedComponents(): void
     {
-        // Create a temporary component that uses another component
-        $nestedComponentPath = __DIR__ . '/../../../fixtures/templates/components/s-panel.sugar.php';
-        file_put_contents($nestedComponentPath, '<div class="panel"><s-button><?= $slot ?></s-button></div>');
-
-        $this->loader->discoverComponents('.');
+        $this->loader->addComponent(
+            'panel',
+            '<div class="panel"><s-button><?= $slot ?></s-button></div>',
+        );
 
         $template = '<s-panel>Submit</s-panel>';
         $ast = $this->parser->parse($template);
@@ -387,11 +367,9 @@ final class ComponentExpansionPassTest extends TestCase
         $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
-            $this->assertStringContainsString('<div class="panel">', $code);
-            $this->assertStringContainsString('<button class="btn">', $code);
-            $this->assertStringContainsString('Submit', $code);
-
-        unlink($nestedComponentPath);
+        $this->assertStringContainsString('<div class="panel">', $code);
+        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertStringContainsString('Submit', $code);
     }
 
     public function testThrowsExceptionForUndiscoveredComponent(): void

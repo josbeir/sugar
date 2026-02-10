@@ -79,13 +79,17 @@ class FileTemplateLoader extends AbstractTemplateLoader
     public function resolveToFilePath(string $path, string $currentTemplate = ''): string
     {
         if ($this->isAbsolutePath($path)) {
-            if (is_file($path)) {
-                return realpath($path) ?: $path;
+            $resolved = realpath($path);
+            if ($resolved !== false) {
+                return $resolved;
             }
 
             $suffix = $this->config->fileSuffix;
-            if (!str_ends_with($path, $suffix) && is_file($path . $suffix)) {
-                return realpath($path . $suffix) ?: $path . $suffix;
+            if (!str_ends_with($path, $suffix)) {
+                $resolved = realpath($path . $suffix);
+                if ($resolved !== false) {
+                    return $resolved;
+                }
             }
         }
 
@@ -100,15 +104,9 @@ class FileTemplateLoader extends AbstractTemplateLoader
      */
     protected function isAbsolutePath(string $path): bool
     {
-        if (str_starts_with($path, '/')) {
-            return true;
-        }
-
-        if (preg_match('#^[A-Za-z]:[\\/]#', $path) === 1) {
-            return true;
-        }
-
-        return str_starts_with($path, '\\\\');
+        return str_starts_with($path, '/')
+            || ($path[1] ?? '') === ':'
+            || str_starts_with($path, '\\\\');
     }
 
     /**

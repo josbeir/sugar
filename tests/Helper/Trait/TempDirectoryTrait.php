@@ -25,14 +25,15 @@ trait TempDirectoryTrait
      */
     protected function createTempDir(string $prefix = 'sugar_test_'): string
     {
-        $dir = sys_get_temp_dir() . '/' . $prefix . uniqid();
+        $base = rtrim(sys_get_temp_dir(), '/\\');
+        $dir = $base . DIRECTORY_SEPARATOR . $prefix . uniqid();
         if (!mkdir($dir, 0755, true)) {
             throw new RuntimeException('Failed to create temporary directory: ' . $dir);
         }
 
         $this->tempDirectories[] = $dir;
 
-        return $dir;
+        return realpath($dir) ?: $dir;
     }
 
     /**

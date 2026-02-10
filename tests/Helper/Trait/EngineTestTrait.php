@@ -7,6 +7,7 @@ use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Loader\FileTemplateLoader;
+use Sugar\Loader\StringTemplateLoader;
 
 /**
  * Helper trait for creating Engine instances in tests
@@ -67,5 +68,44 @@ trait EngineTestTrait
             $cache,
             $debug,
         );
+    }
+
+    /**
+     * Create an Engine with a string-based template loader
+     *
+     * @param array<string, string> $templates Template map (path => source)
+     * @param array<string, string> $components Component map (name => source)
+     * @param object|null $context Optional context object to bind as $this
+     * @param TemplateCacheInterface|null $cache Optional cache implementation
+     * @param bool $debug Debug mode (default: false)
+     * @return Engine Configured engine instance
+     */
+    protected function createStringEngine(
+        array $templates,
+        array $components = [],
+        ?object $context = null,
+        ?TemplateCacheInterface $cache = null,
+        bool $debug = false,
+    ): Engine {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader(
+            config: $config,
+            templates: $templates,
+            components: $components,
+        );
+
+        $builder = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->withDebug($debug);
+
+        if ($context !== null) {
+            $builder = $builder->withTemplateContext($context);
+        }
+
+        if ($cache instanceof TemplateCacheInterface) {
+            $builder = $builder->withCache($cache);
+        }
+
+        return $builder->build();
     }
 }
