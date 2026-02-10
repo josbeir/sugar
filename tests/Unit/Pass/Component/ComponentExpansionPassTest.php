@@ -655,6 +655,18 @@ final class ComponentExpansionPassTest extends TestCase
                 if ($attr->value !== null) {
                     if ($attr->value instanceof OutputNode) {
                         $html .= '="<?= ' . $attr->value->expression . ' ?>"';
+                    } elseif (is_array($attr->value)) {
+                        $html .= '="';
+                        foreach ($attr->value as $part) {
+                            if ($part instanceof OutputNode) {
+                                $html .= '<?= ' . $part->expression . ' ?>';
+                                continue;
+                            }
+
+                            $html .= $part;
+                        }
+
+                        $html .= '"';
                     } else {
                         $html .= '="' . $attr->value . '"';
                     }

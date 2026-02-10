@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Sugar\Runtime;
 
+use Sugar\Escape\Escaper;
+
 if (!function_exists('Sugar\Runtime\raw')) {
     /**
      * Output raw/unescaped content
@@ -20,28 +22,28 @@ if (!function_exists('Sugar\Runtime\raw')) {
      *
      * WARNING: Only use with trusted content to prevent XSS attacks.
      *
-     * @param mixed $value The value to output without escaping
+     * @param mixed|null $value The value to output without escaping
      * @return mixed The same value, unmodified
      */
-    function raw(mixed $value): mixed
+    function raw(mixed $value = null): mixed
     {
         return $value;
     }
 }
 
-if (!function_exists('Sugar\Runtime\r')) {
+if (!function_exists('Sugar\Runtime\json')) {
     /**
-     * Short alias for raw() function
+     * Output JSON-encoded content
      *
-     * Convenience alias for raw() - outputs content without escaping.
+     * The parser detects this function at compile-time and replaces it with
+     * context-aware escaping. This runtime stub keeps templates functional
+     * if parser detection fails.
      *
-     * WARNING: Only use with trusted content to prevent XSS attacks.
-     *
-     * @param mixed $value The value to output without escaping
-     * @return mixed The same value, unmodified
+     * @param mixed|null $value The value to encode as JSON
+     * @return string JSON-encoded value
      */
-    function r(mixed $value): mixed
+    function json(mixed $value = null): string
     {
-        return $value;
+        return Escaper::json($value);
     }
 }

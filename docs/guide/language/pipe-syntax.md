@@ -72,7 +72,23 @@ Pipes work inside directive expressions and preserve auto-escaping:
 <a href="/search?q=<?= $query |> rawurlencode(...) ?>">Search</a>
 ```
 
-## Raw Output
+## Special Pipe Syntax
+
+Sugar provides two special pipes that control output escaping and are not regular function calls:
+
+### JSON Output
+
+Use `|> json()` to force JSON encoding with context-aware escaping. In HTML contexts it compiles to `Escaper::json()`. In attribute contexts it compiles to `Escaper::attrJson()`.
+
+```html
+<!-- HTML context with variable -->
+<p><?= $metadata |> json() ?></p>
+
+<!-- Attribute context -->
+<div x-data="{ data: <?= $payload |> json() ?> }"></div>
+```
+
+### Raw Output
 
 ::: warning
 Only use `|> raw()` with trusted HTML. Never pass user input to raw output.
@@ -80,6 +96,18 @@ Only use `|> raw()` with trusted HTML. Never pass user input to raw output.
 
 ```html
 <div><?= $article->renderedBody |> raw() ?></div>
+```
+
+### IDE Stubs
+
+Function stubs are provided for `json()` and `raw()` in `Sugar\Runtime` to help IDEs understand the pipe syntax. Import them in your template files for better autocomplete:
+
+```php
+use function Sugar\Runtime\{json, raw};
+
+// Now IDEs will recognize json() and raw() in pipes
+<?= $payload |> json() ?>
+<?= $html |> raw() ?>
 ```
 
 ::: details

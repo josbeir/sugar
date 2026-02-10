@@ -361,6 +361,23 @@ final class ComponentExpansionPass implements AstPassInterface
                 throw new SyntaxException($message);
             }
 
+            if (is_array($bindingsValue)) {
+                $message = sprintf(
+                    '%s attribute cannot contain mixed output expressions',
+                    $this->prefixHelper->buildName('bind'),
+                );
+                if ($context instanceof CompilationContext) {
+                    throw $context->createException(
+                        SyntaxException::class,
+                        $message,
+                        $bindAttribute->line,
+                        $bindAttribute->column,
+                    );
+                }
+
+                throw new SyntaxException($message);
+            }
+
             $bindingsExpression = $bindingsValue instanceof OutputNode
                 ? $bindingsValue->expression
                 : $bindingsValue;
@@ -408,6 +425,18 @@ final class ComponentExpansionPass implements AstPassInterface
                 $value = $attr->value->expression;
             } elseif ($attr->value === null) {
                 $value = 'null';
+            } elseif (is_array($attr->value)) {
+                $parts = [];
+                foreach ($attr->value as $part) {
+                    if ($part instanceof OutputNode) {
+                        $parts[] = '(' . $part->expression . ')';
+                        continue;
+                    }
+
+                    $parts[] = var_export($part, true);
+                }
+
+                $value = $parts === [] ? 'null' : implode(' . ', $parts);
             } else {
                 $value = var_export($attr->value, true);
             }
@@ -498,6 +527,23 @@ final class ComponentExpansionPass implements AstPassInterface
                 $message = sprintf(
                     '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
                     $this->prefixHelper->buildName('bind'),
+                    $this->prefixHelper->buildName('bind'),
+                );
+                if ($context instanceof CompilationContext) {
+                    throw $context->createException(
+                        SyntaxException::class,
+                        $message,
+                        $bindAttribute->line,
+                        $bindAttribute->column,
+                    );
+                }
+
+                throw new SyntaxException($message);
+            }
+
+            if (is_array($bindingsExpression)) {
+                $message = sprintf(
+                    '%s attribute cannot contain mixed output expressions',
                     $this->prefixHelper->buildName('bind'),
                 );
                 if ($context instanceof CompilationContext) {

@@ -139,6 +139,21 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
         $this->assertSame(OutputContext::RAW, $result->children[1]->context);
     }
 
+    public function testPreservesJsonContext(): void
+    {
+        $ast = $this->document()
+            ->withChildren([
+                $this->text(''),
+                $this->outputNode('$data', true, OutputContext::JSON, 1, 1),
+            ])
+            ->build();
+
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
+        $this->assertSame(OutputContext::JSON, $result->children[1]->context);
+    }
+
     public function testHandlesSelfClosingTags(): void
     {
         $ast = $this->document()

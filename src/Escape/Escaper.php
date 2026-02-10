@@ -21,6 +21,7 @@ final class Escaper implements EscaperInterface
             OutputContext::HTML_ATTRIBUTE => self::attr($value),
             OutputContext::JAVASCRIPT => self::js($value),
             OutputContext::JSON => self::json($value),
+            OutputContext::JSON_ATTRIBUTE => self::attrJson($value),
             OutputContext::CSS => self::css($value),
             OutputContext::URL => self::url($value),
             OutputContext::RAW => self::raw($value),
@@ -37,6 +38,7 @@ final class Escaper implements EscaperInterface
             OutputContext::HTML_ATTRIBUTE => sprintf(Escaper::class . '::attr(%s)', $expression),
             OutputContext::JAVASCRIPT => sprintf(Escaper::class . '::js(%s)', $expression),
             OutputContext::JSON => sprintf(Escaper::class . '::json(%s)', $expression),
+            OutputContext::JSON_ATTRIBUTE => sprintf(Escaper::class . '::attrJson(%s)', $expression),
             OutputContext::CSS => sprintf(Escaper::class . '::css(%s)', $expression),
             OutputContext::URL => sprintf(Escaper::class . '::url(%s)', $expression),
             OutputContext::RAW => $expression,
@@ -55,7 +57,10 @@ final class Escaper implements EscaperInterface
             throw new InvalidArgumentException('Cannot auto-escape arrays/objects in HTML context');
         }
 
-        assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
+        assert(
+            is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')),
+            'HTML attribute escaping expects a scalar, null, or stringable object',
+        );
 
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -69,6 +74,10 @@ final class Escaper implements EscaperInterface
     public static function attr(mixed $value): string
     {
         // Attributes use same escaping as HTML but we're explicit about context
+        if (is_array($value) || (is_object($value) && !method_exists($value, '__toString'))) {
+            throw new InvalidArgumentException('Cannot auto-escape arrays/objects in HTML attribute context');
+        }
+
         assert(is_scalar($value) || $value === null || (is_object($value) && method_exists($value, '__toString')));
 
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -103,6 +112,22 @@ final class Escaper implements EscaperInterface
     public static function json(mixed $value): string
     {
         return json_encode($value, JSON_HEX_TAG | JSON_HEX_AMP | JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Escape JSON for HTML attribute output
+     *
+     * @param mixed $value Value to escape
+     * @return string Escaped JSON safe for attribute output
+     */
+    public static function attrJson(mixed $value): string
+    {
+        $json = json_encode(
+            $value,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+        );
+
+        return htmlspecialchars($json, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**

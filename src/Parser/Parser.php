@@ -14,6 +14,8 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
+use Sugar\Parser\Helper\AttributeContinuationHelper;
+use Sugar\Parser\Helper\PipeParser;
 use Sugar\Runtime\HtmlTagHelper;
 
 final readonly class Parser
@@ -60,7 +62,6 @@ final readonly class Parser
         $i = 0;
         $count = count($tokens);
         $pendingAttribute = null;
-        $pendingAttributeContinuation = null;
 
         while ($i < $count) {
             $token = $tokens[$i];
@@ -71,11 +72,21 @@ final readonly class Parser
                 $expression = $this->normalizeOutputExpression($expression);
 
                 // Parse pipe syntax if present
-                $pipes = $this->parsePipes($expression);
+                $pipes = PipeParser::parse($expression);
                 $finalExpression = $pipes['expression'];
                 $pipeChain = $pipes['pipes'];
                 $shouldEscape = !$pipes['raw'];
-                $outputContext = $pipes['raw'] ? OutputContext::RAW : OutputContext::HTML;
+                if ($pipes['raw']) {
+                    $outputContext = OutputContext::RAW;
+                } elseif ($pipes['json']) {
+                    $outputContext = is_array($pendingAttribute)
+                        ? OutputContext::JSON_ATTRIBUTE
+                        : OutputContext::JSON;
+                } else {
+                    $outputContext = is_array($pendingAttribute)
+                        ? OutputContext::HTML_ATTRIBUTE
+                        : OutputContext::HTML;
+                }
 
                 $outputNode = new OutputNode(
                     expression: $finalExpression,
@@ -89,9 +100,10 @@ final readonly class Parser
                 if (is_array($pendingAttribute)) {
                     $element = $pendingAttribute['element'];
                     $attrIndex = $pendingAttribute['attrIndex'];
-                    $element->attributes[$attrIndex]->value = $outputNode;
-                    $pendingAttributeContinuation = $element;
-                    $pendingAttribute = null;
+                    AttributeContinuationHelper::appendAttributeValuePart(
+                        $element->attributes[$attrIndex],
+                        $outputNode,
+                    );
                     $i = $nextIndex;
                     continue;
                 }
@@ -117,16 +129,22 @@ final readonly class Parser
             if ($token->isHtml()) {
                 $column = $this->columnFromOffset($source, $token->pos);
                 $html = $token->content();
-                if ($pendingAttributeContinuation instanceof ElementNode) {
-                    $html = $this->applyAttributeContinuation($html, $pendingAttributeContinuation);
-                    $pendingAttributeContinuation = null;
+                if (is_array($pendingAttribute)) {
+                    [$html, $pendingAttribute] = AttributeContinuationHelper::consumeAttributeContinuation(
+                        $html,
+                        $pendingAttribute,
+                    );
+                    if ($html === '') {
+                        $i++;
+                        continue;
+                    }
                 }
 
                 if (str_contains($html, '<') || str_contains($html, '>')) {
                     $htmlNodes = $this->parseHtml($html, $token->line, $column);
                     $nodes = array_merge($nodes, $htmlNodes);
                     if ($pendingAttribute === null) {
-                        $pendingAttribute = $this->detectOpenAttribute($html, $htmlNodes);
+                        $pendingAttribute = AttributeContinuationHelper::detectOpenAttribute($html, $htmlNodes);
                     }
                 } else {
                     $nodes[] = new TextNode($html, $token->line, $column);
@@ -199,19 +217,6 @@ final readonly class Parser
         }
 
         return $offset - $lastNewline;
-    }
-
-    /**
-     * Parse pipe syntax from expression
-     *
-     * Delegates to PipeParser utility for DRY implementation.
-     *
-     * @param string $expression The expression to parse
-     * @return array{expression: string, pipes: array<string>|null, raw: bool} Base expression, pipe chain, and raw flag
-     */
-    private function parsePipes(string $expression): array
-    {
-        return PipeParser::parse($expression);
     }
 
     /**
@@ -544,132 +549,5 @@ final readonly class Parser
         }
 
         return $root;
-    }
-
-    /**
-     * Detect if the HTML fragment ends with an open attribute quote.
-     *
-     * @param string $html HTML fragment
-     * @param array<\Sugar\Ast\Node|\Sugar\Parser\ClosingTagMarker> $htmlNodes Parsed nodes
-     * @return array{element: \Sugar\Ast\ElementNode, attrIndex: int}|null
-     */
-    private function detectOpenAttribute(string $html, array $htmlNodes): ?array
-    {
-        $attrName = null;
-        if (preg_match("/([A-Za-z_:][\\w:.-]*)\\s*=\\s*([\"'])\\s*$/", $html, $matches) === 1) {
-            $attrName = $matches[1];
-        } elseif (preg_match('/([A-Za-z_:][\\w:.-]*)\\s*=\\s*$/', $html, $matches) === 1) {
-            $attrName = $matches[1];
-        }
-
-        if ($attrName === null) {
-            return null;
-        }
-
-        $element = null;
-        foreach (array_reverse($htmlNodes) as $node) {
-            if ($node instanceof ElementNode) {
-                $element = $node;
-                break;
-            }
-        }
-
-        if (!$element instanceof ElementNode) {
-            return null;
-        }
-
-        foreach ($element->attributes as $index => $attr) {
-            if ($attr->name === $attrName) {
-                return ['element' => $element, 'attrIndex' => $index];
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Continue parsing attributes after an inline output attribute value.
-     */
-    private function applyAttributeContinuation(string $html, ElementNode $element): string
-    {
-        $pos = 0;
-        $len = strlen($html);
-
-        if ($pos < $len && ($html[$pos] === '"' || $html[$pos] === "'")) {
-            $pos++;
-        }
-
-        while ($pos < $len) {
-            $char = $html[$pos];
-
-            if ($char === '>') {
-                $pos++;
-                break;
-            }
-
-            if ($char === '/' && isset($html[$pos + 1]) && $html[$pos + 1] === '>') {
-                $element->selfClosing = true;
-                $pos += 2;
-                break;
-            }
-
-            if (ctype_space($char)) {
-                $pos++;
-                continue;
-            }
-
-            $name = '';
-            while ($pos < $len && !in_array($html[$pos], ['=', '>', '/', ' ', "\t", "\n", "\r"], true)) {
-                $name .= $html[$pos++];
-            }
-
-            if ($name === '') {
-                break;
-            }
-
-            while ($pos < $len && ctype_space($html[$pos])) {
-                $pos++;
-            }
-
-            $value = null;
-            if ($pos < $len && $html[$pos] === '=') {
-                $pos++;
-
-                while ($pos < $len && ctype_space($html[$pos])) {
-                    $pos++;
-                }
-
-                if ($pos < $len) {
-                    $quote = $html[$pos];
-                    if ($quote === '"' || $quote === "'") {
-                        $pos++;
-                        $value = '';
-                        while ($pos < $len && $html[$pos] !== $quote) {
-                            if ($html[$pos] === '\\' && isset($html[$pos + 1]) && $html[$pos + 1] === $quote) {
-                                $value .= $quote;
-                                $pos += 2;
-                            } else {
-                                $value .= $html[$pos++];
-                            }
-                        }
-
-                        if ($pos < $len) {
-                            $pos++;
-                        }
-                    } else {
-                        $value = '';
-                        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
-                            $value .= $html[$pos++];
-                        }
-                    }
-                } else {
-                    $value = '';
-                }
-            }
-
-            $element->attributes[] = new AttributeNode($name, $value, $element->line, $element->column);
-        }
-
-        return substr($html, $pos);
     }
 }

@@ -14,6 +14,7 @@ final class OutputContextTest extends TestCase
         $this->assertSame('html_attr', OutputContext::HTML_ATTRIBUTE->value);
         $this->assertSame('javascript', OutputContext::JAVASCRIPT->value);
         $this->assertSame('json', OutputContext::JSON->value);
+        $this->assertSame('json_attr', OutputContext::JSON_ATTRIBUTE->value);
         $this->assertSame('css', OutputContext::CSS->value);
         $this->assertSame('url', OutputContext::URL->value);
         $this->assertSame('raw', OutputContext::RAW->value);
@@ -23,7 +24,7 @@ final class OutputContextTest extends TestCase
     {
         $cases = OutputContext::cases();
 
-        $this->assertCount(7, $cases);
+        $this->assertCount(8, $cases);
     }
 
     public function testTryFrom(): void

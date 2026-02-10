@@ -245,7 +245,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $name = $this->prefixHelper->stripPrefix($attr->name);
 
                 // Directive expressions must be strings, not OutputNodes
-                if ($attr->value instanceof OutputNode) {
+                if ($attr->value instanceof OutputNode || is_array($attr->value)) {
                     throw $this->context->createException(
                         SyntaxException::class,
                         'Directive attributes cannot contain dynamic output expressions',
@@ -588,7 +588,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 }
 
                 // Directive expressions must be strings, not OutputNodes
-                if ($attr->value instanceof OutputNode) {
+                if ($attr->value instanceof OutputNode || is_array($attr->value)) {
                     throw $this->context->createException(
                         SyntaxException::class,
                         'Directive attributes cannot contain dynamic output expressions',

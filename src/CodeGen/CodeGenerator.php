@@ -253,7 +253,16 @@ final class CodeGenerator
         if ($attribute->value !== null) {
             $buffer->write('="');
 
-            if ($attribute->value instanceof OutputNode) {
+            if (is_array($attribute->value)) {
+                foreach ($attribute->value as $part) {
+                    if ($part instanceof OutputNode) {
+                        $this->generateOutput($part, $buffer);
+                        continue;
+                    }
+
+                    $buffer->write($part);
+                }
+            } elseif ($attribute->value instanceof OutputNode) {
                 // Dynamic attribute value
                 $this->generateOutput($attribute->value, $buffer);
             } else {

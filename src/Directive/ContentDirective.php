@@ -11,7 +11,7 @@ use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Parser\PipeParser;
+use Sugar\Parser\Helper\PipeParser;
 
 /**
  * Compiler for content directives (text, html)
@@ -54,7 +54,13 @@ readonly class ContentDirective implements DirectiveInterface
         $parsed = PipeParser::parse($node->expression);
 
         $escape = $this->escape && !$parsed['raw'];
-        $context = $parsed['raw'] ? OutputContext::RAW : $this->context;
+        if ($parsed['raw']) {
+            $context = OutputContext::RAW;
+        } elseif ($parsed['json']) {
+            $context = OutputContext::JSON;
+        } else {
+            $context = $this->context;
+        }
 
         // Create OutputNode with configured escaping
         $outputNode = new OutputNode(

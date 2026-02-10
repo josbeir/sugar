@@ -58,6 +58,16 @@ final class CompilerTest extends TestCase
         $this->assertStringNotContainsString('Escaper::html', $result);
     }
 
+    public function testCompileWithJsonPipeInHtmlContext(): void
+    {
+        $source = $this->loadTemplate('json-context.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        $this->assertStringContainsString(Escaper::class . '::json($data)', $result);
+        $this->assertStringNotContainsString(Escaper::class . '::html($data)', $result);
+    }
+
     public function testCompileWithCssContext(): void
     {
         $source = $this->loadTemplate('css-context.sugar.php');
@@ -76,8 +86,39 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<a href="', $result);
-        $this->assertStringContainsString(Escaper::class . '::html($url)', $result);
+        $this->assertStringContainsString(Escaper::class . '::attr($url)', $result);
         $this->assertStringContainsString('Link</a>', $result);
+    }
+
+    public function testCompileWithJsonAttributeContext(): void
+    {
+        $source = $this->loadTemplate('attribute-json.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        $this->assertStringContainsString(Escaper::class . '::attrJson($data)', $result);
+    }
+
+    public function testCompileWithMixedAttributeValue(): void
+    {
+        $source = $this->loadTemplate('attribute-mixed.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        $this->assertStringContainsString('x-data="{ data: ', $result);
+        $this->assertStringContainsString(Escaper::class . '::attr($var)', $result);
+        $this->assertStringContainsString(", other: 'bli' }\"", $result);
+    }
+
+    public function testCompileWithMixedJsonAttributeValue(): void
+    {
+        $source = $this->loadTemplate('attribute-json-mixed.sugar.php');
+
+        $result = $this->compiler->compile($source);
+
+        $this->assertStringContainsString('x-data="{ data: ', $result);
+        $this->assertStringContainsString(Escaper::class . '::attrJson($array)', $result);
+        $this->assertStringContainsString(", other: 'bli' }\"", $result);
     }
 
     public function testCompileWithRawPhp(): void
@@ -106,7 +147,7 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString(Escaper::class . '::js($config', $result);
 
         // Check attribute context
-        $this->assertStringContainsString(Escaper::class . '::html($link)', $result);
+        $this->assertStringContainsString(Escaper::class . '::attr($link)', $result);
 
         // Check body HTML context
         $this->assertStringContainsString(Escaper::class . '::html($heading)', $result);

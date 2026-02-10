@@ -171,6 +171,10 @@ final class ContextAnalysisPass implements AstPassInterface
             return $node;
         }
 
+        if ($node->context === OutputContext::JSON || $node->context === OutputContext::JSON_ATTRIBUTE) {
+            return $node;
+        }
+
         // Determine context based on position
         $newContext = $inAttribute
             ? OutputContext::HTML_ATTRIBUTE

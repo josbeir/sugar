@@ -43,6 +43,12 @@ final class SlotResolver
             foreach ($node->attributes as $attr) {
                 if ($attr->value instanceof OutputNode) {
                     self::disableEscaping($attr->value, $slotVars);
+                } elseif (is_array($attr->value)) {
+                    foreach ($attr->value as $part) {
+                        if ($part instanceof OutputNode) {
+                            self::disableEscaping($part, $slotVars);
+                        }
+                    }
                 }
             }
         }
@@ -227,6 +233,18 @@ final class SlotResolver
                 if ($attr->value !== null) {
                     if ($attr->value instanceof OutputNode) {
                         $html .= '="<?= ' . $attr->value->expression . ' ?>"';
+                    } elseif (is_array($attr->value)) {
+                        $html .= '="';
+                        foreach ($attr->value as $part) {
+                            if ($part instanceof OutputNode) {
+                                $html .= '<?= ' . $part->expression . ' ?>';
+                                continue;
+                            }
+
+                            $html .= $part;
+                        }
+
+                        $html .= '"';
                     } else {
                         $html .= '="' . $attr->value . '"';
                     }

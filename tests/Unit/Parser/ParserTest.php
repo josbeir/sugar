@@ -10,6 +10,7 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class ParserTest extends TestCase
@@ -122,6 +123,7 @@ final class ParserTest extends TestCase
         $this->assertSame('href', $element->attributes[0]->name);
         $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
         $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $element->attributes[0]->value->context);
         $this->assertCount(1, $element->children);
         $this->assertInstanceOf(TextNode::class, $element->children[0]);
         $this->assertSame('Link', $element->children[0]->content);
@@ -144,6 +146,45 @@ final class ParserTest extends TestCase
         $this->assertSame('Link', $element->children[0]->content);
     }
 
+    public function testParseAttributeWithJsonPipeUsesJsonAttributeContext(): void
+    {
+        $template = '<div data-config="<?= $config |> json() ?>"></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('data-config', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$config', $element->attributes[0]->value->expression);
+        $this->assertSame(OutputContext::JSON_ATTRIBUTE, $element->attributes[0]->value->context);
+    }
+
+    public function testParseAttributeWithMixedOutputs(): void
+    {
+        $template = '<div x-data="{ data: <?= $var ?>, other: \'<?= $name ?>\' }"></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+
+        $attribute = $element->attributes[0];
+        $this->assertSame('x-data', $attribute->name);
+        $this->assertIsArray($attribute->value);
+        $this->assertCount(5, $attribute->value);
+
+        $this->assertSame('{ data: ', $attribute->value[0]);
+        $this->assertInstanceOf(OutputNode::class, $attribute->value[1]);
+        $this->assertSame('$var', $attribute->value[1]->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $attribute->value[1]->context);
+        $this->assertSame(", other: '", $attribute->value[2]);
+        $this->assertInstanceOf(OutputNode::class, $attribute->value[3]);
+        $this->assertSame('$name', $attribute->value[3]->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $attribute->value[3]->context);
+        $this->assertSame("' }", $attribute->value[4]);
+    }
+
     public function testParseAttributeContinuationAfterInlineOutput(): void
     {
         $template = '<img src="<?= $url ?>" alt="Logo" data-id="1" />';
@@ -160,6 +201,22 @@ final class ParserTest extends TestCase
         $this->assertSame('Logo', $element->attributes[1]->value);
         $this->assertSame('data-id', $element->attributes[2]->name);
         $this->assertSame('1', $element->attributes[2]->value);
+    }
+
+    public function testParseAttributeContinuationWithOutputAttribute(): void
+    {
+        $template = '<div data-id="<?= $id ?>" other="<?= $other ?>"></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(2, $element->attributes);
+        $this->assertSame('data-id', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$id', $element->attributes[0]->value->expression);
+        $this->assertSame('other', $element->attributes[1]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[1]->value);
+        $this->assertSame('$other', $element->attributes[1]->value->expression);
     }
 
     public function testParseAttributeContinuationWithSingleQuotes(): void

@@ -82,6 +82,22 @@ Use `|> raw()` for trusted HTML:
 
 Only use raw output for trusted content. Never pass user input to `|> raw()`.
 
+## JSON Output (`|> json()`)
+
+Use `|> json()` when you want JSON output with context-aware escaping. In HTML, it compiles to `Escaper::json()`. Inside attributes it compiles to `Escaper::attrJson()` so quotes stay safe.
+
+```html
+<script>
+	const payload = <?= $payload |> json() ?>;
+</script>
+
+<div x-data="{ data: <?= $payload |> json() ?> }"></div>
+```
+
+::: tip
+Use `|> json()` for arrays/objects. It keeps escaping enabled, unlike `|> raw()`.
+:::
+
 ::: details
 Need a reminder of the escape helpers?
 
@@ -90,4 +106,5 @@ Need a reminder of the escape helpers?
 - `Escaper::url()` for URL parts
 - `Escaper::js()` for JavaScript
 - `Escaper::css()` for CSS
+- `Escaper::json()` for JSON output
 :::

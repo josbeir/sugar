@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Parser;
+namespace Sugar\Parser\Helper;
 
 /**
  * Utility for parsing pipe operator syntax
@@ -29,20 +29,20 @@ final class PipeParser
      * If no pipes are found, returns the original expression with null pipes.
      *
      * @param string $expression Expression to parse
-     * @return array{expression: string, pipes: array<string>|null, raw: bool} Base expression, pipe chain, and raw flag
+     * @return array{expression: string, pipes: array<string>|null, raw: bool, json: bool} Base expression, pipe chain, and flags
      */
     public static function parse(string $expression): array
     {
         // Quick check - no pipe operator present
         if (!str_contains($expression, '|>')) {
-            return ['expression' => $expression, 'pipes' => null, 'raw' => false];
+            return ['expression' => $expression, 'pipes' => null, 'raw' => false, 'json' => false];
         }
 
         // Split by pipe operator (with optional whitespace)
         $parts = preg_split('/\s*\|\>\s*/', $expression);
 
         if ($parts === false || count($parts) < 2) {
-            return ['expression' => $expression, 'pipes' => null, 'raw' => false];
+            return ['expression' => $expression, 'pipes' => null, 'raw' => false, 'json' => false];
         }
 
         // First part is the base expression, rest are pipe transformations
@@ -50,10 +50,16 @@ final class PipeParser
         $pipes = array_map('trim', $parts);
 
         $raw = false;
+        $json = false;
         $filteredPipes = [];
         foreach ($pipes as $pipe) {
-            if (preg_match('/^raw\s*\(\s*\)$/', $pipe) === 1) {
+            if (self::isPipeFunction($pipe, 'raw')) {
                 $raw = true;
+                continue;
+            }
+
+            if (self::isPipeFunction($pipe, 'json')) {
+                $json = true;
                 continue;
             }
 
@@ -64,6 +70,17 @@ final class PipeParser
             'expression' => $baseExpression,
             'pipes' => $filteredPipes !== [] ? $filteredPipes : null,
             'raw' => $raw,
+            'json' => $json,
         ];
+    }
+
+    /**
+     * Check if a pipe stage matches a no-arg function call.
+     */
+    private static function isPipeFunction(string $pipe, string $name): bool
+    {
+        $pattern = sprintf('/^%s\s*\(\s*\)$/', preg_quote($name, '/'));
+
+        return preg_match($pattern, $pipe) === 1;
     }
 }

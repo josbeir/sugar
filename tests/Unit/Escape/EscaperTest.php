@@ -157,6 +157,14 @@ final class EscaperTest extends TestCase
         $this->assertStringContainsString('&quot;', $result);
     }
 
+    public function testEscapesJsonForAttribute(): void
+    {
+        $result = $this->escaper->escape(['name' => 'a"b'], OutputContext::JSON_ATTRIBUTE);
+
+        $this->assertStringContainsString('&quot;', $result);
+        $this->assertStringNotContainsString('"', $result);
+    }
+
     // CSS Context Tests
 
     public function testEscapesCss(): void
@@ -260,6 +268,14 @@ final class EscaperTest extends TestCase
         $code = $this->escaper->generateEscapeCode('$payload', OutputContext::JSON);
 
         $this->assertStringContainsString('Escaper::json', $code);
+        $this->assertStringContainsString('$payload', $code);
+    }
+
+    public function testGenerateEscapeCodeForJsonAttribute(): void
+    {
+        $code = $this->escaper->generateEscapeCode('$payload', OutputContext::JSON_ATTRIBUTE);
+
+        $this->assertStringContainsString('Escaper::attrJson', $code);
         $this->assertStringContainsString('$payload', $code);
     }
 

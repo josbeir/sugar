@@ -130,6 +130,20 @@ final class ComponentAttributeOverrideHelper
             return 'null';
         }
 
+        if (is_array($attr->value)) {
+            $parts = [];
+            foreach ($attr->value as $part) {
+                if ($part instanceof OutputNode) {
+                    $parts[] = '(' . $part->expression . ')';
+                    continue;
+                }
+
+                $parts[] = var_export($part, true);
+            }
+
+            return $parts === [] ? 'null' : implode(' . ', $parts);
+        }
+
         return var_export($attr->value, true);
     }
 
