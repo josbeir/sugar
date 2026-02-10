@@ -23,6 +23,7 @@ use Sugar\Directive\IfDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
 use Sugar\Directive\IssetDirective;
+use Sugar\Directive\NoWrapDirective;
 use Sugar\Directive\PassThroughDirective;
 use Sugar\Directive\SpreadDirective;
 use Sugar\Directive\TagDirective;
@@ -58,6 +59,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $registry->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
         $registry->register('isset', IssetDirective::class);
         $registry->register('unless', UnlessDirective::class);
+        $registry->register('nowrap', NoWrapDirective::class);
 
         return $registry;
     }
@@ -78,6 +80,74 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
             ->containsDirective('if')
             ->withExpression('$user')
             ->hasChildCount(1);
+    }
+
+    public function testNoWrapRequiresContentDirective(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:nowrap', 'true')
+            ->withChild($this->text('Content', 1, 20))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('requires a content directive');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testNoWrapWithExtraAttributesThrows(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:nowrap', 'true')
+            ->attribute('s:text', '$content')
+            ->attribute('class', 'card')
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Content directives without a wrapper');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testFragmentRejectsAttributeDirective(): void
+    {
+        $fragment = $this->fragment(
+            attributes: [$this->attribute('s:class', "['active' => true]")],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('<s-template> cannot have attribute directives');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testFragmentRejectsRegularAttribute(): void
+    {
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:if', '$show'),
+                $this->attribute('class', 'card'),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('<s-template> cannot have regular HTML attributes');
+
+        $this->execute($ast, $this->createTestContext());
     }
 
     public function testUnknownDirectiveShowsSnippetAndSuggestion(): void
@@ -152,6 +222,58 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->assertSame('$item->active', $innerDirective->expression);
     }
 
+    public function testThrowsOnMultipleControlFlowDirectives(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:if', '$show')
+            ->attribute('s:foreach', '$items as $item')
+            ->withChild($this->text('Item', 1, 1))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one control flow directive allowed');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testThrowsOnMultipleContentDirectives(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:text', '$title')
+            ->attribute('s:html', '$html')
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one content directive allowed');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testDirectiveRejectsOutputExpressionValue(): void
+    {
+        $attribute = new AttributeNode(
+            name: 's:if',
+            value: new OutputNode('$show', true, OutputContext::HTML, 1, 5),
+            line: 1,
+            column: 5,
+        );
+
+        $element = $this->element('div')
+            ->attributeNode($attribute)
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
     public function testPreservesNonDirectiveAttributes(): void
     {
         $element = $this->element('div')
@@ -173,6 +295,39 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->assertSame('id', $wrappedElement->attributes[0]->name);
         $this->assertSame('class', $wrappedElement->attributes[1]->name);
         $this->assertSame('data-value', $wrappedElement->attributes[2]->name);
+    }
+
+    public function testExtractsContentDirectiveWrappingElement(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:text', '$title')
+            ->withChild($this->text('Content', 1, 1))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
+        $this->assertSame('text', $result->children[0]->name);
+        $this->assertCount(1, $result->children[0]->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]->children[0]);
+    }
+
+    public function testNoWrapReturnsContentDirectiveWithoutWrapper(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:nowrap', 'true')
+            ->attribute('s:text', '$title')
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(DirectiveNode::class, $result->children[0]);
+        $this->assertSame('text', $result->children[0]->name);
+        $this->assertCount(0, $result->children[0]->children);
     }
 
     public function testHandlesDirectiveWithoutValue(): void

@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Config\SugarConfig;
+use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -231,5 +232,66 @@ final class FileTemplateLoaderTest extends TestCase
             $this->assertStringContainsString($tempDir2, $templateNotFoundException->getMessage());
             $this->assertStringContainsString('not found in paths:', $templateNotFoundException->getMessage());
         }
+    }
+
+    public function testDiscoversAndLoadsComponents(): void
+    {
+        $tempDir = $this->createTempDir('sugar_components_');
+        $componentsDir = $tempDir . '/components';
+        mkdir($componentsDir, 0755, true);
+
+        file_put_contents($componentsDir . '/s-button.sugar.php', '<button>Click</button>');
+        file_put_contents($componentsDir . '/s-template.sugar.php', '<div>Ignored</div>');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir], ['components']);
+
+        $this->assertTrue($loader->hasComponent('button'));
+        $this->assertSame('<button>Click</button>', $loader->loadComponent('button'));
+
+        unlink($componentsDir . '/s-button.sugar.php');
+        unlink($componentsDir . '/s-template.sugar.php');
+        $this->removeTempDir($tempDir);
+    }
+
+    public function testResolveToFilePathWithAbsolutePath(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        $path = $tempDir . '/absolute.sugar.php';
+        file_put_contents($path, 'content');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+
+        $resolved = $loader->resolveToFilePath($path);
+
+        $this->assertSame(realpath($path), $resolved);
+
+        unlink($path);
+        $this->removeTempDir($tempDir);
+    }
+
+    public function testResolveToFilePathAddsSuffixForAbsolutePath(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        $path = $tempDir . '/absolute.sugar.php';
+        file_put_contents($path, 'content');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+
+        $resolved = $loader->resolveToFilePath($tempDir . '/absolute');
+
+        $this->assertSame(realpath($path), $resolved);
+
+        unlink($path);
+        $this->removeTempDir($tempDir);
+    }
+
+    public function testLoadComponentThrowsWhenMissing(): void
+    {
+        $tempDir = $this->createTempDir('sugar_components_');
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir], ['components']);
+
+        $this->expectException(ComponentNotFoundException::class);
+
+        $loader->loadComponent('missing');
     }
 }

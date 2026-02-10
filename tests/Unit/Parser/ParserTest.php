@@ -144,6 +144,54 @@ final class ParserTest extends TestCase
         $this->assertSame('Link', $element->children[0]->content);
     }
 
+    public function testParseAttributeContinuationAfterInlineOutput(): void
+    {
+        $template = '<img src="<?= $url ?>" alt="Logo" data-id="1" />';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertTrue($element->selfClosing);
+        $this->assertCount(3, $element->attributes);
+        $this->assertSame('src', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertSame('alt', $element->attributes[1]->name);
+        $this->assertSame('Logo', $element->attributes[1]->value);
+        $this->assertSame('data-id', $element->attributes[2]->name);
+        $this->assertSame('1', $element->attributes[2]->value);
+    }
+
+    public function testParseAttributeContinuationWithSingleQuotes(): void
+    {
+        $template = '<a href=\'<?= $url ?>\' class="btn">Link</a>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(2, $element->attributes);
+        $this->assertSame('href', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertSame('class', $element->attributes[1]->name);
+        $this->assertSame('btn', $element->attributes[1]->value);
+    }
+
+    public function testParseAttributeContinuationWithoutQuotes(): void
+    {
+        $template = '<div data-id=<?= $id ?> class="box"></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(2, $element->attributes);
+        $this->assertSame('data-id', $element->attributes[0]->name);
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
+        $this->assertSame('$id', $element->attributes[0]->value->expression);
+        $this->assertSame('class', $element->attributes[1]->name);
+        $this->assertSame('box', $element->attributes[1]->value);
+    }
+
     public function testParseNestedElements(): void
     {
         $template = '<div><a>link</a> label</div>';
@@ -178,6 +226,24 @@ final class ParserTest extends TestCase
         $this->assertSame('br', $element->tag);
         $this->assertTrue($element->selfClosing);
         $this->assertCount(0, $element->children);
+    }
+
+    public function testParseImplicitSelfClosingTag(): void
+    {
+        $template = '<img src="logo.png"><div>After</div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(2, $doc->children);
+
+        $img = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $img);
+        $this->assertSame('img', $img->tag);
+        $this->assertTrue($img->selfClosing);
+        $this->assertCount(0, $img->children);
+
+        $div = $doc->children[1];
+        $this->assertInstanceOf(ElementNode::class, $div);
+        $this->assertSame('div', $div->tag);
     }
 
     public function testParseVoidElementWithoutSlash(): void
@@ -360,6 +426,18 @@ final class ParserTest extends TestCase
         $this->assertSame('He said "hi"', $element->attributes[0]->value);
     }
 
+    public function testParseAttributeWithEqualsButNoValue(): void
+    {
+        $template = '<div data-empty=></div>';
+        $doc = $this->parser->parse($template);
+
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('data-empty', $element->attributes[0]->name);
+        $this->assertSame('', $element->attributes[0]->value);
+    }
+
     public function testParseDoctypeAsTextNode(): void
     {
         $template = '<!DOCTYPE html><div>ok</div>';
@@ -370,6 +448,48 @@ final class ParserTest extends TestCase
         $this->assertSame('<!DOCTYPE html>', $doc->children[0]->content);
         $this->assertInstanceOf(ElementNode::class, $doc->children[1]);
         $this->assertSame('div', $doc->children[1]->tag);
+    }
+
+    public function testParseCdataAsTextNode(): void
+    {
+        $template = '<![CDATA[Hello]]><div>ok</div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(2, $doc->children);
+        $this->assertInstanceOf(TextNode::class, $doc->children[0]);
+        $this->assertSame('<![CDATA[Hello]]>', $doc->children[0]->content);
+    }
+
+    public function testParseSpecialTagWithoutClosingBracket(): void
+    {
+        $template = '<!DOCTYPE html';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $this->assertInstanceOf(TextNode::class, $doc->children[0]);
+        $this->assertSame('<!DOCTYPE html', $doc->children[0]->content);
+    }
+
+    public function testParseClosingTagWithoutEndBracket(): void
+    {
+        $template = '</div';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(0, $doc->children);
+    }
+
+    public function testParseClosingTagWithTrailingWhitespace(): void
+    {
+        $template = '<div>text</div   >';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertSame('div', $element->tag);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('text', $element->children[0]->content);
     }
 
     public function testParseRawPipeDisablesEscaping(): void

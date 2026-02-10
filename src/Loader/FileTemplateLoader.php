@@ -78,7 +78,7 @@ class FileTemplateLoader extends AbstractTemplateLoader
      */
     public function resolveToFilePath(string $path, string $currentTemplate = ''): string
     {
-        if (str_starts_with($path, '/')) {
+        if ($this->isAbsolutePath($path)) {
             if (is_file($path)) {
                 return realpath($path) ?: $path;
             }
@@ -93,6 +93,22 @@ class FileTemplateLoader extends AbstractTemplateLoader
         $fullPath = $this->findTemplateFilePath($resolvedPath, $path);
 
         return realpath($fullPath) ?: $fullPath;
+    }
+
+    /**
+     * Determine whether a path is absolute (Unix, Windows drive, or UNC).
+     */
+    protected function isAbsolutePath(string $path): bool
+    {
+        if (str_starts_with($path, '/')) {
+            return true;
+        }
+
+        if (preg_match('#^[A-Za-z]:[\\/]#', $path) === 1) {
+            return true;
+        }
+
+        return str_starts_with($path, '\\\\');
     }
 
     /**

@@ -555,11 +555,16 @@ final readonly class Parser
      */
     private function detectOpenAttribute(string $html, array $htmlNodes): ?array
     {
-        if (preg_match("/([A-Za-z_:][\\w:.-]*)\\s*=\\s*([\"'])\\s*$/", $html, $matches) !== 1) {
-            return null;
+        $attrName = null;
+        if (preg_match("/([A-Za-z_:][\\w:.-]*)\\s*=\\s*([\"'])\\s*$/", $html, $matches) === 1) {
+            $attrName = $matches[1];
+        } elseif (preg_match('/([A-Za-z_:][\\w:.-]*)\\s*=\\s*$/', $html, $matches) === 1) {
+            $attrName = $matches[1];
         }
 
-        $attrName = $matches[1];
+        if ($attrName === null) {
+            return null;
+        }
 
         $element = null;
         foreach (array_reverse($htmlNodes) as $node) {
