@@ -336,10 +336,10 @@ final class CodeGenerator
         $location = sprintf('%s:%d:%d', $templatePath, $node->line, $node->column);
 
         if ($context !== '') {
-            return sprintf(' /* sugar: %s %s */', $location, $context);
+            return sprintf("\n/* sugar: %s %s */", $location, $context);
         }
 
-        return sprintf(' /* sugar: %s */', $location);
+        return sprintf("\n/* sugar: %s */", $location);
     }
 
     /**

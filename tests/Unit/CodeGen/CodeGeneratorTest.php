@@ -228,7 +228,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->debugGenerator->generate($ast);
 
         $this->assertStringContainsString('/* sugar: test.sugar.php:2:4 */', $code);
-        $this->assertStringContainsString('<?php if ($user): /* sugar: test.sugar.php:2:4 */ ?>', $code);
+        $this->assertStringContainsString("<?php if (\$user):\n/* sugar: test.sugar.php:2:4 */ ?>", $code);
     }
 
     public function testDebugCommentOnOutputNode(): void
