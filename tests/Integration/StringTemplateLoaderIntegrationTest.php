@@ -225,6 +225,23 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
         $this->assertStringContainsString('<div>Plain</div>', $engine->render('plain'));
     }
 
+    public function testSupportsCustomSuffix(): void
+    {
+        $config = (new SugarConfig())->withFileSuffix('.sugar.tpl');
+        $loader = new StringTemplateLoader(
+            config: $config,
+            templates: [
+                'custom.sugar.tpl' => '<div>Custom</div>',
+            ],
+        );
+
+        $engine = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->assertStringContainsString('<div>Custom</div>', $engine->render('custom'));
+    }
+
     public function testHandlesTemplateInheritance(): void
     {
         $loader = new StringTemplateLoader(

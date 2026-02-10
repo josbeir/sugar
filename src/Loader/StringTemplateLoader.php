@@ -73,9 +73,11 @@ class StringTemplateLoader extends AbstractTemplateLoader
             return $this->templates[$normalized];
         }
 
-        // Try with .sugar.php extension
-        if (isset($this->templates[$normalized . '.sugar.php'])) {
-            return $this->templates[$normalized . '.sugar.php'];
+        $suffix = $this->config->fileSuffix;
+
+        // Try with configured suffix
+        if (isset($this->templates[$normalized . $suffix])) {
+            return $this->templates[$normalized . $suffix];
         }
 
         // Try with .php extension
@@ -108,6 +110,6 @@ class StringTemplateLoader extends AbstractTemplateLoader
     protected function resolveComponentPath(string $name): string
     {
         // For StringTemplateLoader, use a virtual path for inheritance resolution
-        return 'components/' . $name . '.sugar.php';
+        return 'components/' . $name . $this->config->fileSuffix;
     }
 }

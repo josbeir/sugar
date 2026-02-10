@@ -61,54 +61,45 @@ class FileTemplateLoader extends AbstractTemplateLoader
     public function load(string $path): string
     {
         $resolvedPath = $this->resolve($path);
+        $fullPath = $this->findTemplateFilePath($resolvedPath, $path);
 
-        // Search all template paths in order
-        foreach ($this->templatePaths as $basePath) {
-            $fullPath = $basePath . '/' . ltrim($resolvedPath, '/');
+        $content = file_get_contents($fullPath);
+        if ($content === false) {
+            throw new TemplateNotFoundException(
+                sprintf('Failed to read template "%s" at path "%s"', $path, $fullPath),
+            );
+        }
 
-            // Try with the path as-is first
-            if (is_file($fullPath)) {
-                $content = file_get_contents($fullPath);
-                if ($content === false) {
-                    throw new TemplateNotFoundException(
-                        sprintf('Failed to read template "%s" at path "%s"', $path, $fullPath),
-                    );
-                }
+        return $content;
+    }
 
-                return $content;
+    /**
+     * @inheritDoc
+     */
+    public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+    {
+        if (str_starts_with($path, '/')) {
+            if (is_file($path)) {
+                return realpath($path) ?: $path;
             }
 
-            // If not found and doesn't end with .sugar.php, try adding the extension
-            if (!str_ends_with($fullPath, '.sugar.php')) {
-                $fullPathWithExtension = $fullPath . '.sugar.php';
-                if (is_file($fullPathWithExtension)) {
-                    $content = file_get_contents($fullPathWithExtension);
-                    if ($content === false) {
-                        throw new TemplateNotFoundException(
-                            sprintf('Failed to read template "%s" at path "%s"', $path, $fullPathWithExtension),
-                        );
-                    }
-
-                    return $content;
-                }
+            $suffix = $this->config->fileSuffix;
+            if (!str_ends_with($path, $suffix) && is_file($path . $suffix)) {
+                return realpath($path . $suffix) ?: $path . $suffix;
             }
         }
 
-        // Not found in any path
-        throw new TemplateNotFoundException(
-            sprintf(
-                'Template "%s" not found in paths: %s',
-                $path,
-                implode(', ', $this->templatePaths),
-            ),
-        );
+        $resolvedPath = $this->resolve($path, $currentTemplate);
+        $fullPath = $this->findTemplateFilePath($resolvedPath, $path);
+
+        return realpath($fullPath) ?: $fullPath;
     }
 
     /**
      * Discover components in directory
      *
-     * Scans recursively for {elementPrefix}*.sugar.php files (e.g., s-button.sugar.php)
-     * Excludes {elementPrefix}template.sugar.php (that's the fragment element)
+     * Scans recursively for {elementPrefix}*{fileSuffix} files (e.g., s-button.sugar.php)
+     * Excludes {elementPrefix}template{fileSuffix} (that's the fragment element)
      *
      * @param string $path Relative path from template paths (e.g., 'components')
      */
@@ -151,12 +142,13 @@ class FileTemplateLoader extends AbstractTemplateLoader
 
             $filename = $file->getFilename();
 
-            // Must end with .sugar.php
-            if (!str_ends_with($filename, '.sugar.php')) {
+            $suffix = $this->config->fileSuffix;
+            // Must end with the configured suffix
+            if (!str_ends_with($filename, $suffix)) {
                 continue;
             }
 
-            $basename = $file->getBasename('.sugar.php');
+            $basename = $file->getBasename($suffix);
 
             // Must start with element prefix
             if (!$this->prefixHelper->hasElementPrefix($basename)) {
@@ -208,6 +200,36 @@ class FileTemplateLoader extends AbstractTemplateLoader
 
         // Reuse existing load() method with relative path
         return $this->load($this->components[$name]);
+    }
+
+    /**
+     * Find the full template path in configured template roots.
+     */
+    private function findTemplateFilePath(string $resolvedPath, string $originalPath): string
+    {
+        foreach ($this->templatePaths as $basePath) {
+            $fullPath = $basePath . '/' . ltrim($resolvedPath, '/');
+
+            if (is_file($fullPath)) {
+                return $fullPath;
+            }
+
+            $suffix = $this->config->fileSuffix;
+            if (!str_ends_with($fullPath, $suffix)) {
+                $fullPathWithExtension = $fullPath . $suffix;
+                if (is_file($fullPathWithExtension)) {
+                    return $fullPathWithExtension;
+                }
+            }
+        }
+
+        throw new TemplateNotFoundException(
+            sprintf(
+                'Template "%s" not found in paths: %s',
+                $originalPath,
+                implode(', ', $this->templatePaths),
+            ),
+        );
     }
 
     /**

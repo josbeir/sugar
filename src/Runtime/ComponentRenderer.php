@@ -75,6 +75,7 @@ final class ComponentRenderer
     private function getCompiledComponent(string $name, array $slotNames): string
     {
         $componentPath = $this->loader->getComponentPath($name);
+        $componentSourcePath = $this->loader->getComponentFilePath($name);
         $cacheKey = $componentPath . '::slots:' . implode('|', $slotNames);
 
         $cached = $this->cache->get($cacheKey, $this->debug);
@@ -90,7 +91,7 @@ final class ComponentRenderer
             tracker: $tracker,
         );
 
-        $metadata = $tracker->getMetadata($componentPath, $this->debug);
+        $metadata = $tracker->getMetadata($componentSourcePath, $this->debug);
 
         if ($this->tracker instanceof DependencyTracker) {
             foreach ($metadata->dependencies as $dependency) {

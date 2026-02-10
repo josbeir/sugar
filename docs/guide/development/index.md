@@ -80,6 +80,21 @@ $config = (new SugarConfig())
 ```
 :::
 
+## Custom Template Suffix
+
+Sugar defaults to `.sugar.php` for template filenames. If your project uses a different suffix, override it once on the config:
+
+```php
+use Sugar\Config\SugarConfig;
+
+$config = (new SugarConfig())
+    ->withFileSuffix('.sugar.tpl');
+```
+
+::: tip
+Use the same `SugarConfig` instance for loaders and the engine so template lookups and component discovery stay consistent.
+:::
+
 ## Custom Directive Registry
 
 Register only the directives you want to allow in a given environment:

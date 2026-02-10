@@ -249,7 +249,9 @@ final class TemplateInheritancePass implements AstPassInterface
         $resolvedPath = $this->loader->resolve($parentPath, $context->templatePath);
 
         // Track parent template as dependency
-        $context->tracker?->addDependency($resolvedPath);
+        $context->tracker?->addDependency(
+            $this->loader->resolveToFilePath($parentPath, $context->templatePath),
+        );
 
         // Load and parse parent template (with caching)
         $parentContent = $this->loader->load($resolvedPath);
@@ -305,7 +307,9 @@ final class TemplateInheritancePass implements AstPassInterface
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
 
                 // Track included template as dependency
-                $context->tracker?->addDependency($resolvedPath);
+                $context->tracker?->addDependency(
+                    $this->loader->resolveToFilePath($includePath, $context->templatePath),
+                );
 
                 // Load and parse included template (with caching)
                 $includeContent = $this->loader->load($resolvedPath);

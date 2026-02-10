@@ -76,10 +76,15 @@ final class DependencyTrackingTest extends TestCase
         $this->compiler->compile($source, 'simple-child.sugar.php', false, $tracker);
 
         // Get metadata
-        $metadata = $tracker->getMetadata('simple-child.sugar.php');
+        $metadata = $tracker->getMetadata(
+            $this->templateLoader->resolveToFilePath('simple-child.sugar.php'),
+        );
 
         // Should track the parent layout
-        $this->assertContains('base.sugar.php', $metadata->dependencies);
+        $this->assertContains(
+            $this->templateLoader->resolveToFilePath('base.sugar.php'),
+            $metadata->dependencies,
+        );
     }
 
     public function testTracksIncludeDependency(): void
@@ -99,10 +104,15 @@ final class DependencyTrackingTest extends TestCase
         $this->compiler->compile($source, 'include-test.sugar.php', false, $tracker);
 
         // Get metadata
-        $metadata = $tracker->getMetadata('include-test.sugar.php');
+        $metadata = $tracker->getMetadata(
+            $this->templateLoader->resolveToFilePath('include-test.sugar.php'),
+        );
 
         // Should track the included partial
-        $this->assertContains('partials/header.sugar.php', $metadata->dependencies);
+        $this->assertContains(
+            $this->templateLoader->resolveToFilePath('partials/header.sugar.php'),
+            $metadata->dependencies,
+        );
     }
 
     public function testTracksComponentDependency(): void
@@ -125,7 +135,10 @@ final class DependencyTrackingTest extends TestCase
         $metadata = $tracker->getMetadata('page-with-button');
 
         // Should track the button component
-        $this->assertContains('button', $metadata->components);
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('button'),
+            $metadata->components,
+        );
     }
 
     public function testTracksMultipleComponents(): void
@@ -148,9 +161,18 @@ final class DependencyTrackingTest extends TestCase
         $metadata = $tracker->getMetadata('multi-component');
 
         // Should track all components
-        $this->assertContains('button', $metadata->components);
-        $this->assertContains('badge', $metadata->components);
-        $this->assertContains('alert', $metadata->components);
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('button'),
+            $metadata->components,
+        );
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('badge'),
+            $metadata->components,
+        );
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('alert'),
+            $metadata->components,
+        );
         $this->assertCount(3, $metadata->components);
     }
 
@@ -174,7 +196,10 @@ final class DependencyTrackingTest extends TestCase
         $metadata = $tracker->getMetadata('duplicate-components');
 
         // Should track button only once
-        $this->assertContains('button', $metadata->components);
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('button'),
+            $metadata->components,
+        );
         $this->assertCount(1, $metadata->components);
     }
 
@@ -212,9 +237,15 @@ SUGAR;
         // var_dump($metadata->dependencies);
 
         // Should track all dependencies
-        $this->assertContains('template-inheritance/base.sugar.php', $metadata->dependencies);
+        $this->assertContains(
+            $this->templateLoader->resolveToFilePath('template-inheritance/base.sugar.php'),
+            $metadata->dependencies,
+        );
         // The include path is resolved relative to the parent template
         $this->assertGreaterThan(0, count($metadata->dependencies));
-        $this->assertContains('button', $metadata->components);
+        $this->assertContains(
+            $this->templateLoader->getComponentFilePath('button'),
+            $metadata->components,
+        );
     }
 }

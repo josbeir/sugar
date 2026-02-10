@@ -24,6 +24,15 @@ interface TemplateLoaderInterface
     public function resolve(string $path, string $currentTemplate = ''): string;
 
     /**
+     * Resolve a template path to an absolute filesystem path.
+     *
+     * @param string $path Path to resolve
+     * @param string $currentTemplate Current template path (for relative resolution)
+     * @return string Absolute filesystem path when available
+     */
+    public function resolveToFilePath(string $path, string $currentTemplate = ''): string;
+
+    /**
      * Load a component template by name.
      *
      * @param string $name Component name (without prefix, e.g., "button" for "s-button")
@@ -41,4 +50,12 @@ interface TemplateLoaderInterface
      * @return string Component path (e.g., "components/button.sugar.php")
      */
     public function getComponentPath(string $name): string;
+
+    /**
+     * Get the resolved filesystem path for a component.
+     *
+     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
+     * @return string Component file path
+     */
+    public function getComponentFilePath(string $name): string;
 }

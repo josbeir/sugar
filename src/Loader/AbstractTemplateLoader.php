@@ -58,6 +58,14 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+    {
+        return $this->resolve($path, $currentTemplate);
+    }
+
+    /**
      * Check if component exists
      *
      * @param string $name Component name (e.g., "button")
@@ -115,6 +123,16 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
         }
 
         return $this->resolveComponentPath($name);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getComponentFilePath(string $name): string
+    {
+        $componentPath = $this->getComponentPath($name);
+
+        return $this->resolveToFilePath($componentPath);
     }
 
     /**

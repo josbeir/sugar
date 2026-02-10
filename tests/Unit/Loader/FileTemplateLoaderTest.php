@@ -93,6 +93,22 @@ final class FileTemplateLoaderTest extends TestCase
         $this->assertStringContainsString('<title s:block="title">Base Title</title>', $content);
     }
 
+    public function testLoadsTemplateWithCustomSuffix(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        $path = $tempDir . '/custom.sugar.tpl';
+        file_put_contents($path, '<div>Custom</div>');
+
+        $config = (new SugarConfig())->withFileSuffix('.sugar.tpl');
+        $loader = new FileTemplateLoader($config, [$tempDir]);
+
+        $content = $loader->load('custom');
+
+        $this->assertSame('<div>Custom</div>', $content);
+
+        unlink($path);
+    }
+
     public function testPrefersExactPathOverExtensionAddition(): void
     {
         // Create a file without extension

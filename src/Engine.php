@@ -116,7 +116,10 @@ final class Engine implements EngineInterface
         );
 
         // Build metadata from tracker
-        $metadata = $tracker->getMetadata($template, $this->debug);
+        $metadata = $tracker->getMetadata(
+            $this->loader->resolveToFilePath($template),
+            $this->debug,
+        );
 
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);

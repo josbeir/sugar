@@ -125,7 +125,7 @@ final class Compiler implements CompilerInterface
         $templateContent = $this->templateLoader->loadComponent($componentName);
         $componentPath = $this->templateLoader->getComponentPath($componentName);
 
-        $tracker?->addComponent($componentName);
+        $tracker?->addComponent($this->templateLoader->getComponentFilePath($componentName));
 
         $context = new CompilationContext(
             $componentPath,

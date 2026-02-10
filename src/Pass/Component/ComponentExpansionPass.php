@@ -145,7 +145,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $templateContent = $this->loader->loadComponent($component->name);
 
         // Track component as dependency
-        $context?->tracker?->addComponent($component->name);
+        $context?->tracker?->addComponent($this->loader->getComponentFilePath($component->name));
 
         // Cache parsed component ASTs to avoid re-parsing same components
         if (!isset($this->componentAstCache[$component->name])) {

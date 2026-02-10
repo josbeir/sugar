@@ -26,11 +26,13 @@ final readonly class SugarConfig
      *
      * @param string $directivePrefix Prefix for directives (e.g., 's' for s:if, 'x' for x:if)
      * @param string $elementPrefix Prefix for custom elements (e.g., 's-' for s-template, s-button)
+     * @param string $fileSuffix Template filename suffix (e.g., '.sugar.php')
      * @param array<string> $selfClosingTags List of HTML void/self-closing tags
      */
     public function __construct(
         public string $directivePrefix = 's',
         public string $elementPrefix = 's-',
+        public string $fileSuffix = '.sugar.php',
         public array $selfClosingTags = self::DEFAULT_SELF_CLOSING_TAGS,
     ) {
     }
@@ -56,7 +58,21 @@ final readonly class SugarConfig
         return new self(
             directivePrefix: $this->directivePrefix,
             elementPrefix: $this->elementPrefix,
+            fileSuffix: $this->fileSuffix,
             selfClosingTags: $selfClosingTags,
+        );
+    }
+
+    /**
+     * Create a copy of the config with a custom file suffix.
+     */
+    public function withFileSuffix(string $fileSuffix): self
+    {
+        return new self(
+            directivePrefix: $this->directivePrefix,
+            elementPrefix: $this->elementPrefix,
+            fileSuffix: $fileSuffix,
+            selfClosingTags: $this->selfClosingTags,
         );
     }
 
@@ -74,6 +90,7 @@ final readonly class SugarConfig
         return new self(
             directivePrefix: $prefix,
             elementPrefix: $prefix . '-',
+            fileSuffix: '.sugar.php',
             selfClosingTags: $selfClosingTags ?? self::DEFAULT_SELF_CLOSING_TAGS,
         );
     }

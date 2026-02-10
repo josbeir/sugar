@@ -14,6 +14,7 @@ final class SugarConfigTest extends TestCase
 
         $this->assertSame('s', $config->directivePrefix);
         $this->assertSame('s-', $config->elementPrefix);
+        $this->assertSame('.sugar.php', $config->fileSuffix);
         $this->assertSame('s-template', $config->getFragmentElement());
     }
 
@@ -23,6 +24,7 @@ final class SugarConfigTest extends TestCase
 
         $this->assertSame('x', $config->directivePrefix);
         $this->assertSame('x-', $config->elementPrefix);
+        $this->assertSame('.sugar.php', $config->fileSuffix);
         $this->assertSame('x-template', $config->getFragmentElement());
     }
 
@@ -44,6 +46,7 @@ final class SugarConfigTest extends TestCase
 
         $this->assertSame('tw', $config->directivePrefix);
         $this->assertSame('tw-', $config->elementPrefix);
+        $this->assertSame('.sugar.php', $config->fileSuffix);
         $this->assertSame('tw-template', $config->getFragmentElement());
     }
 
@@ -72,7 +75,20 @@ final class SugarConfigTest extends TestCase
 
         $this->assertSame('x', $updated->directivePrefix);
         $this->assertSame('x-', $updated->elementPrefix);
+        $this->assertSame('.sugar.php', $updated->fileSuffix);
         $this->assertSame(['meta', 'custom'], $updated->selfClosingTags);
         $this->assertSame(SugarConfig::DEFAULT_SELF_CLOSING_TAGS, $config->selfClosingTags);
+    }
+
+    public function testWithFileSuffixReturnsNewConfig(): void
+    {
+        $config = new SugarConfig(directivePrefix: 'x', elementPrefix: 'x-');
+        $updated = $config->withFileSuffix('.sugar.tpl');
+
+        $this->assertSame('x', $updated->directivePrefix);
+        $this->assertSame('x-', $updated->elementPrefix);
+        $this->assertSame('.sugar.tpl', $updated->fileSuffix);
+        $this->assertSame($config->selfClosingTags, $updated->selfClosingTags);
+        $this->assertSame('.sugar.php', $config->fileSuffix);
     }
 }

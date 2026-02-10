@@ -208,10 +208,10 @@ final class ComponentRendererTest extends TestCase
         $loader = $this->templateLoader;
         $this->assertInstanceOf(FileTemplateLoader::class, $loader);
 
-        $componentPath = $loader->getComponentPath('alert');
+        $componentPath = $loader->getComponentFilePath('alert');
         $metadata = $tracker->getMetadata($componentPath);
 
-        $this->assertContains('alert', $metadata->components);
+        $this->assertContains($componentPath, $metadata->components);
     }
 
     private function createRenderer(
