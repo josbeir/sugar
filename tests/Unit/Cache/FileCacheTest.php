@@ -379,6 +379,70 @@ final class FileCacheTest extends TestCase
         unlink($sourcePath);
     }
 
+    public function testDebugModeTreatsMissingComponentFilesAsStale(): void
+    {
+        $sourcePath = sys_get_temp_dir() . '/sugar_missing_component_' . uniqid() . '.php';
+        $componentPath = sys_get_temp_dir() . '/sugar_component_missing_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        file_put_contents($componentPath, '<?php echo "component";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        $sharedCacheDir = $this->createTempDir('sugar_shared_component_cache_');
+        $cache1 = new FileCache($sharedCacheDir);
+
+        $metadata = new CacheMetadata(
+            components: [$componentPath],
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
+        $cache1->put($sourcePath, '<?php echo "cached";', $metadata);
+
+        $cached = $cache1->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($componentPath);
+        clearstatcache();
+
+        $cache2 = new FileCache($sharedCacheDir);
+        $cached = $cache2->get($sourcePath, debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
+    }
+
+    public function testDebugModeDetectsChangedComponentTimestamp(): void
+    {
+        $sourcePath = sys_get_temp_dir() . '/sugar_component_source_' . uniqid() . '.php';
+        $componentPath = sys_get_temp_dir() . '/sugar_component_change_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        file_put_contents($componentPath, '<?php echo "component";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        $sharedCacheDir = $this->createTempDir('sugar_shared_component_change_');
+        $cache1 = new FileCache($sharedCacheDir);
+
+        $metadata = new CacheMetadata(
+            components: [$componentPath],
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
+        $cache1->put($sourcePath, '<?php echo "cached";', $metadata);
+
+        $cached = $cache1->get($sourcePath, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        $this->bumpFileMtime($componentPath);
+
+        $cache2 = new FileCache($sharedCacheDir);
+        $cached = $cache2->get($sourcePath, debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
+        unlink($componentPath);
+    }
+
     public function testProductionModeSkipsTimestampChecks(): void
     {
         // Create temporary source file

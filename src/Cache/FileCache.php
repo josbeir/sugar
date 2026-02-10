@@ -12,7 +12,7 @@ namespace Sugar\Cache;
 final class FileCache implements TemplateCacheInterface
 {
     /**
-     * @var array<string, int> Request-level stat cache
+     * @var array<string, int|null> Request-level stat cache
      */
     private array $mtimeCache = [];
 
@@ -485,40 +485,20 @@ final class FileCache implements TemplateCacheInterface
             return false;
         }
 
-        if (!file_exists($metadata->sourcePath)) {
+        $sourceTime = $this->getModTime($metadata->sourcePath);
+        if ($sourceTime === null) {
             return false; // Source removed
         }
 
-        $sourceTime = $this->getModTime($metadata->sourcePath);
         if ($sourceTime > $metadata->sourceTimestamp) {
             return false; // Source changed
         }
 
-        // Check all dependencies
-        foreach ($metadata->dependencies as $dependency) {
-            if (!file_exists($dependency)) {
-                return false; // Dependency removed
-            }
-
-            $depTime = $this->getModTime($dependency);
-            if ($depTime > $metadata->compiledTimestamp) {
-                return false; // Dependency changed
-            }
+        if (!$this->areFilesFresh($metadata->dependencies, $metadata->compiledTimestamp)) {
+            return false;
         }
 
-        // Check all components
-        foreach ($metadata->components as $component) {
-            if (!file_exists($component)) {
-                return false; // Component removed
-            }
-
-            $compTime = $this->getModTime($component);
-            if ($compTime > $metadata->compiledTimestamp) {
-                return false; // Component changed
-            }
-        }
-
-        return true; // All fresh
+        return $this->areFilesFresh($metadata->components, $metadata->compiledTimestamp); // All fresh
     }
 
     /**
@@ -527,13 +507,37 @@ final class FileCache implements TemplateCacheInterface
      * @param string $path File path
      * @return int Modification timestamp
      */
-    private function getModTime(string $path): int
+    private function getModTime(string $path): ?int
     {
         if (!isset($this->mtimeCache[$path])) {
-            $this->mtimeCache[$path] = file_exists($path) ? (filemtime($path) ?: 0) : 0;
+            if (!is_file($path)) {
+                $this->mtimeCache[$path] = null;
+            } else {
+                $mtime = filemtime($path);
+                $this->mtimeCache[$path] = $mtime === false ? null : $mtime;
+            }
         }
 
         return $this->mtimeCache[$path];
+    }
+
+    /**
+     * @param array<string> $paths
+     */
+    private function areFilesFresh(array $paths, int $compiledTimestamp): bool
+    {
+        foreach ($paths as $path) {
+            $modTime = $this->getModTime($path);
+            if ($modTime === null) {
+                return false;
+            }
+
+            if ($modTime > $compiledTimestamp) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
