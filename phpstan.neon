@@ -1,5 +1,5 @@
 parameters:
-    level: 9
+    level: 10
     treatPhpDocTypesAsCertain: false
     tmpDir: 'tmp/cache/phpstan'
     bootstrapFiles:

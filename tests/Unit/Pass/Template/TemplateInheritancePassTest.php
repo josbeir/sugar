@@ -74,7 +74,10 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         // Find title element in result - search recursively
         $titleFound = false;
-        $findTitle = function ($nodes) use (&$findTitle, &$titleFound): void {
+        /**
+         * @param array<\Sugar\Ast\Node> $nodes
+         */
+        $findTitle = function (array $nodes) use (&$findTitle, &$titleFound): void {
             foreach ($nodes as $child) {
                 if ($child instanceof ElementNode && $child->tag === 'title') {
                     $titleFound = true;
@@ -286,7 +289,10 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->assertGreaterThan(0, count($result->children));
 
         $titleFound = false;
-        $findTitle = function ($nodes) use (&$findTitle, &$titleFound): void {
+        /**
+         * @param array<\Sugar\Ast\Node> $nodes
+         */
+        $findTitle = function (array $nodes) use (&$findTitle, &$titleFound): void {
             foreach ($nodes as $child) {
                 if ($child instanceof ElementNode && $child->tag === 'title') {
                     $titleFound = true;

@@ -219,7 +219,11 @@ final class ComponentExpansionPass implements AstPassInterface
      */
     private function expandNodes(array $nodes, ?CompilationContext $context = null): array
     {
-        return NodeTraverser::walk($nodes, function (Node $node, callable $recurse) use ($context) {
+        /**
+         * @return \Sugar\Ast\Node|array<\Sugar\Ast\Node>
+         */
+        $visitor = function (Node $node, callable $recurse) use ($context): Node|array {
+            /** @var callable(\Sugar\Ast\Node): \Sugar\Ast\Node $recurse */
             if ($node instanceof ComponentNode) {
                 return $this->expandComponent($node, $context);
             }
@@ -236,7 +240,9 @@ final class ComponentExpansionPass implements AstPassInterface
             }
 
             return $recurse($node);
-        });
+        };
+
+        return NodeTraverser::walk($nodes, $visitor);
     }
 
     /**

@@ -29,13 +29,28 @@ trait ExecuteTemplateTrait
                 $closure = $closure->bindTo($context, $context);
             }
 
-            return $closure($variables);
+            $result = $closure($variables);
+
+            if (is_string($result)) {
+                return $result;
+            }
+
+            if (is_scalar($result) || (is_object($result) && method_exists($result, '__toString'))) {
+                return (string)$result;
+            }
+
+            return '';
         }
 
-        // Legacy: If template doesn't return closure, output was already buffered
-        assert(is_scalar($closure) || (is_object($closure) && method_exists($closure, '__toString')));
+        if (is_string($closure)) {
+            return $closure;
+        }
 
-        return (string)$closure;
+        if (is_scalar($closure) || (is_object($closure) && method_exists($closure, '__toString'))) {
+            return (string)$closure;
+        }
+
+        return '';
     }
 
     /**

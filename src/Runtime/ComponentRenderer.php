@@ -199,7 +199,17 @@ final class ComponentRenderer
                 $fn = $fn->bindTo($this->templateContext);
             }
 
-            return $fn($data);
+            $result = $fn($data);
+
+            if (is_string($result)) {
+                return $result;
+            }
+
+            if (is_scalar($result) || (is_object($result) && method_exists($result, '__toString'))) {
+                return (string)$result;
+            }
+
+            return '';
         }
 
         return '';

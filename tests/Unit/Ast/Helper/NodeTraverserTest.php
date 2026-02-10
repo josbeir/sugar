@@ -25,13 +25,19 @@ final class NodeTraverserTest extends TestCase
             $this->text('World', 1, 1),
         ];
 
-        $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
+        /**
+         * @return \Sugar\Ast\Node
+         */
+        $visitor = function (Node $node, callable $recurse): Node {
+            /** @var callable(\Sugar\Ast\Node): \Sugar\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return new TextNode(strtoupper($node->content), $node->line, $node->column);
             }
 
             return $recurse($node);
-        });
+        };
+
+        $result = NodeTraverser::walk($nodes, $visitor);
 
         $this->assertCount(3, $result);
         $this->assertInstanceOf(TextNode::class, $result[0]);
@@ -51,7 +57,11 @@ final class NodeTraverserTest extends TestCase
             $this->text('Split', 1, 1),
         ];
 
-        $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
+        /**
+         * @return \Sugar\Ast\Node|array<\Sugar\Ast\Node>
+         */
+        $visitor = function (Node $node, callable $recurse): Node|array {
+            /** @var callable(\Sugar\Ast\Node): \Sugar\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return [
                     new TextNode('First', 1, 1),
@@ -60,7 +70,9 @@ final class NodeTraverserTest extends TestCase
             }
 
             return $recurse($node);
-        });
+        };
+
+        $result = NodeTraverser::walk($nodes, $visitor);
 
         $this->assertCount(2, $result);
         $this->assertInstanceOf(TextNode::class, $result[0]);
@@ -81,13 +93,19 @@ final class NodeTraverserTest extends TestCase
                 ->build(),
         ];
 
-        $result = NodeTraverser::walk($nodes, function (Node $node, callable $recurse) {
+        /**
+         * @return \Sugar\Ast\Node
+         */
+        $visitor = function (Node $node, callable $recurse): Node {
+            /** @var callable(\Sugar\Ast\Node): \Sugar\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return new TextNode('Transformed', $node->line, $node->column);
             }
 
             return $recurse($node);
-        });
+        };
+
+        $result = NodeTraverser::walk($nodes, $visitor);
 
         $this->assertCount(1, $result);
         $this->assertInstanceOf(ElementNode::class, $result[0]);
@@ -282,9 +300,15 @@ final class NodeTraverserTest extends TestCase
 
     public function testWalkHandlesEmptyArray(): void
     {
-        $result = NodeTraverser::walk([], function (Node $node, callable $recurse) {
+        /**
+         * @return \Sugar\Ast\Node
+         */
+        $visitor = function (Node $node, callable $recurse): Node {
+            /** @var callable(\Sugar\Ast\Node): \Sugar\Ast\Node $recurse */
             return $recurse($node);
-        });
+        };
+
+        $result = NodeTraverser::walk([], $visitor);
 
         $this->assertSame([], $result);
     }

@@ -35,7 +35,7 @@ final class NodeTraverser
      * ```
      *
      * @param array<\Sugar\Ast\Node> $nodes Nodes to traverse
-     * @param callable(\Sugar\Ast\Node, callable): (\Sugar\Ast\Node|array<\Sugar\Ast\Node>) $visitor Visitor function
+     * @param callable(\Sugar\Ast\Node, callable(\Sugar\Ast\Node): \Sugar\Ast\Node): (\Sugar\Ast\Node|array<\Sugar\Ast\Node>) $visitor Visitor function
      * @return array<\Sugar\Ast\Node> Transformed nodes
      */
     public static function walk(array $nodes, callable $visitor): array

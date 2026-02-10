@@ -272,21 +272,46 @@ final class FileCache implements TemplateCacheInterface
         }
 
         $dependencies = $data['dependencies'] ?? [];
-        assert(is_array($dependencies));
-        /** @var array<string> $dependencies */
+        if (!is_array($dependencies)) {
+            $dependencies = [];
+        }
+
+        $dependencies = array_values(array_filter($dependencies, static fn($value): bool => is_string($value)));
+
+        $components = $data['components'] ?? [];
+        if (!is_array($components)) {
+            $components = [];
+        }
+
+        $components = array_values(array_filter($components, static fn($value): bool => is_string($value)));
 
         $sourcePath = $data['sourcePath'] ?? '';
         if (!is_string($sourcePath)) {
             $sourcePath = '';
         }
 
+        $sourceTimestamp = $data['sourceTimestamp'] ?? 0;
+        if (!is_int($sourceTimestamp)) {
+            $sourceTimestamp = 0;
+        }
+
+        $compiledTimestamp = $data['compiledTimestamp'] ?? 0;
+        if (!is_int($compiledTimestamp)) {
+            $compiledTimestamp = 0;
+        }
+
+        $debug = $data['debug'] ?? false;
+        if (!is_bool($debug)) {
+            $debug = false;
+        }
+
         return new CacheMetadata(
             dependencies: $dependencies,
-            components: $data['components'] ?? [],
+            components: $components,
             sourcePath: $sourcePath,
-            sourceTimestamp: $data['sourceTimestamp'] ?? 0,
-            compiledTimestamp: $data['compiledTimestamp'] ?? 0,
-            debug: $data['debug'] ?? false,
+            sourceTimestamp: $sourceTimestamp,
+            compiledTimestamp: $compiledTimestamp,
+            debug: $debug,
         );
     }
 
