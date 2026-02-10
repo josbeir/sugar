@@ -58,6 +58,7 @@ final class DependencyTracker
         return new CacheMetadata(
             dependencies: array_keys($this->dependencies),
             components: array_keys($this->components),
+            sourcePath: $sourcePath,
             sourceTimestamp: $sourceTimestamp,
             compiledTimestamp: time(),
             debug: $debug,

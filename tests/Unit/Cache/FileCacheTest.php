@@ -62,6 +62,7 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
         $this->assertSame(0, $cached->metadata->compiledTimestamp);
         $this->assertSame(0, $cached->metadata->sourceTimestamp);
+        $this->assertSame('', $cached->metadata->sourcePath);
         $this->assertSame([], $cached->metadata->dependencies);
     }
 
@@ -79,6 +80,7 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
         $this->assertSame(0, $cached->metadata->compiledTimestamp);
         $this->assertSame(0, $cached->metadata->sourceTimestamp);
+        $this->assertSame('', $cached->metadata->sourcePath);
     }
 
     public function testGetReturnsNullWhenCacheNotFound(): void
@@ -91,7 +93,10 @@ final class FileCacheTest extends TestCase
     public function testDebugModeMismatchSkipsCache(): void
     {
         $compiled = '<?php echo "Debug";';
-        $metadata = new CacheMetadata(debug: true);
+        $metadata = new CacheMetadata(
+            sourcePath: '/templates/debug-only.sugar.php',
+            debug: true,
+        );
 
         $this->cache->put('/templates/debug-only.sugar.php', $compiled, $metadata);
 
@@ -212,7 +217,11 @@ final class FileCacheTest extends TestCase
         $sourceTime = (int)filemtime($sourcePath);
 
         // Cache with correct timestamp
-        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime, debug: true);
+        $metadata = new CacheMetadata(
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
         $this->cache->put($sourcePath, '<?php echo "cached v1";', $metadata);
 
         // Debug mode with fresh cache should return cached
@@ -245,7 +254,11 @@ final class FileCacheTest extends TestCase
         file_put_contents($sourcePath, '<?php echo "v1";');
         $sourceTime = (int)filemtime($sourcePath);
 
-        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime, debug: true);
+        $metadata = new CacheMetadata(
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
         $cacheKey = $sourcePath . '::blocks:' . Hash::make('sidebar');
 
         $this->cache->put($cacheKey, '<?php echo "cached v1";', $metadata);
@@ -268,6 +281,37 @@ final class FileCacheTest extends TestCase
         $this->removeTempDir($cacheDir);
     }
 
+    public function testDebugModeChecksAbsoluteSourcePathWithRelativeKey(): void
+    {
+        $sourcePath = sys_get_temp_dir() . '/sugar_source_abs_' . uniqid() . '.php';
+        file_put_contents($sourcePath, '<?php echo "v1";');
+        $sourceTime = (int)filemtime($sourcePath);
+
+        $cacheKey = 'pages/home.sugar.php';
+        $metadata = new CacheMetadata(
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
+
+        $sharedCacheDir = $this->createTempDir('sugar_cache_abs_');
+        $cache1 = new FileCache($sharedCacheDir);
+        $cache1->put($cacheKey, '<?php echo "cached v1";', $metadata);
+
+        $cached = $cache1->get($cacheKey, debug: true);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+
+        file_put_contents($sourcePath, '<?php echo "v2";');
+        $this->bumpFileMtime($sourcePath);
+        clearstatcache();
+
+        $cache2 = new FileCache($sharedCacheDir);
+        $cached = $cache2->get($cacheKey, debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        unlink($sourcePath);
+    }
+
     public function testDebugModeChecksDependencyTimestamps(): void
     {
         // Create temporary files
@@ -283,6 +327,7 @@ final class FileCacheTest extends TestCase
 
         $metadata = new CacheMetadata(
             dependencies: [$layoutPath],
+            sourcePath: $pagePath,
             sourceTimestamp: $pageTime,
             debug: true,
         );
@@ -316,6 +361,7 @@ final class FileCacheTest extends TestCase
 
         $metadata = new CacheMetadata(
             dependencies: [$sourcePath . '.missing'],
+            sourcePath: $sourcePath,
             sourceTimestamp: $sourceTime,
             debug: true,
         );
@@ -597,7 +643,11 @@ final class FileCacheTest extends TestCase
         $sourceTime = (int)filemtime($sourcePath);
 
         // Cache with correct timestamp
-        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime, debug: true);
+        $metadata = new CacheMetadata(
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
         $this->cache->put($sourcePath, '<?php echo "cached";', $metadata);
 
         // First debug check - should use filesystem
@@ -637,6 +687,7 @@ final class FileCacheTest extends TestCase
         // Cache with multiple dependencies
         $metadata = new CacheMetadata(
             dependencies: [$dep1Path, $dep2Path, $dep3Path],
+            sourcePath: $templatePath,
             sourceTimestamp: $templateTime,
             debug: true,
         );
@@ -667,7 +718,11 @@ final class FileCacheTest extends TestCase
         $sourceTime = (int)filemtime($sourcePath);
 
         // Cache with correct timestamp
-        $metadata = new CacheMetadata(sourceTimestamp: $sourceTime, debug: true);
+        $metadata = new CacheMetadata(
+            sourcePath: $sourcePath,
+            sourceTimestamp: $sourceTime,
+            debug: true,
+        );
         $this->cache->put($sourcePath, '<?php echo "cached v1";', $metadata);
 
         // First check - should be fresh

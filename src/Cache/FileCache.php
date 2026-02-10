@@ -86,7 +86,7 @@ final class FileCache implements TemplateCacheInterface
         }
 
         // Debug mode: check freshness
-        if ($debug && !$this->isFresh($this->normalizeSourceKey($key), $metadata)) {
+        if ($debug && !$this->isFresh($metadata)) {
             return null;
         }
 
@@ -115,6 +115,7 @@ final class FileCache implements TemplateCacheInterface
         $metadata = new CacheMetadata(
             dependencies: $metadata->dependencies,
             components: $metadata->components,
+            sourcePath: $metadata->sourcePath,
             sourceTimestamp: $metadata->sourceTimestamp,
             compiledTimestamp: time(),
             debug: $metadata->debug,
@@ -274,9 +275,15 @@ final class FileCache implements TemplateCacheInterface
         assert(is_array($dependencies));
         /** @var array<string> $dependencies */
 
+        $sourcePath = $data['sourcePath'] ?? '';
+        if (!is_string($sourcePath)) {
+            $sourcePath = '';
+        }
+
         return new CacheMetadata(
             dependencies: $dependencies,
             components: $data['components'] ?? [],
+            sourcePath: $sourcePath,
             sourceTimestamp: $data['sourceTimestamp'] ?? 0,
             compiledTimestamp: $data['compiledTimestamp'] ?? 0,
             debug: $data['debug'] ?? false,
@@ -294,6 +301,7 @@ final class FileCache implements TemplateCacheInterface
         $data = [
             'dependencies' => $metadata->dependencies,
             'components' => $metadata->components,
+            'sourcePath' => $metadata->sourcePath,
             'sourceTimestamp' => $metadata->sourceTimestamp,
             'compiledTimestamp' => $metadata->compiledTimestamp,
             'debug' => $metadata->debug,
@@ -461,11 +469,10 @@ final class FileCache implements TemplateCacheInterface
     /**
      * Check if cached template is fresh
      *
-     * @param string $sourceKey Source template key
      * @param \Sugar\Cache\CacheMetadata $metadata Cache metadata
      * @return bool True if fresh, false if stale
      */
-    private function isFresh(string $sourceKey, CacheMetadata $metadata): bool
+    private function isFresh(CacheMetadata $metadata): bool
     {
         // Clear stat cache only once per instance (request) to reduce filesystem overhead
         if (!$this->statCacheCleared) {
@@ -474,7 +481,11 @@ final class FileCache implements TemplateCacheInterface
         }
 
         // Check source timestamp
-        $sourceTime = $this->getModTime($sourceKey);
+        if ($metadata->sourcePath === '') {
+            return false;
+        }
+
+        $sourceTime = $this->getModTime($metadata->sourcePath);
         if ($sourceTime > $metadata->sourceTimestamp) {
             return false; // Source changed
         }
@@ -496,19 +507,6 @@ final class FileCache implements TemplateCacheInterface
         }
 
         return true; // All fresh
-    }
-
-    /**
-     * Strip cache key suffixes to recover the template path for freshness checks.
-     */
-    private function normalizeSourceKey(string $key): string
-    {
-        $pos = strpos($key, '::blocks:');
-        if ($pos === false) {
-            return $key;
-        }
-
-        return substr($key, 0, $pos);
     }
 
     /**

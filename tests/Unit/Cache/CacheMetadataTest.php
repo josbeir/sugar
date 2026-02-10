@@ -16,6 +16,7 @@ final class CacheMetadataTest extends TestCase
         $metadata = new CacheMetadata(
             dependencies: ['/templates/layout.sugar.php', '/templates/header.sugar.php'],
             components: ['/components/s-button.sugar.php'],
+            sourcePath: '/templates/page.sugar.php',
             sourceTimestamp: 1738765432,
             compiledTimestamp: 1738765433,
             debug: true,
@@ -23,6 +24,7 @@ final class CacheMetadataTest extends TestCase
 
         $this->assertSame(['/templates/layout.sugar.php', '/templates/header.sugar.php'], $metadata->dependencies);
         $this->assertSame(['/components/s-button.sugar.php'], $metadata->components);
+        $this->assertSame('/templates/page.sugar.php', $metadata->sourcePath);
         $this->assertSame(1738765432, $metadata->sourceTimestamp);
         $this->assertSame(1738765433, $metadata->compiledTimestamp);
         $this->assertTrue($metadata->debug);
@@ -34,6 +36,7 @@ final class CacheMetadataTest extends TestCase
 
         $this->assertSame([], $metadata->dependencies);
         $this->assertSame([], $metadata->components);
+        $this->assertSame('', $metadata->sourcePath);
         $this->assertSame(0, $metadata->sourceTimestamp);
         $this->assertSame(0, $metadata->compiledTimestamp);
         $this->assertFalse($metadata->debug);

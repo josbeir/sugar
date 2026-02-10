@@ -24,6 +24,7 @@ final class DependencyTrackerTest extends TestCase
             ['/templates/layout.sugar.php', '/templates/header.sugar.php'],
             $metadata->dependencies,
         );
+        $this->assertSame('/templates/page.sugar.php', $metadata->sourcePath);
         $this->assertTrue($metadata->debug);
     }
 
@@ -53,6 +54,7 @@ final class DependencyTrackerTest extends TestCase
 
         $metadata = $tracker->getMetadata($tempFile);
 
+        $this->assertSame($tempFile, $metadata->sourcePath);
         $this->assertSame($expectedTime, $metadata->sourceTimestamp);
 
         unlink($tempFile);
@@ -65,6 +67,7 @@ final class DependencyTrackerTest extends TestCase
 
         $metadata = $tracker->getMetadata('/templates/page.sugar.php');
 
+        $this->assertSame('/templates/page.sugar.php', $metadata->sourcePath);
         $this->assertGreaterThanOrEqual($before, $metadata->compiledTimestamp);
         $this->assertLessThanOrEqual(time(), $metadata->compiledTimestamp);
     }

@@ -14,6 +14,7 @@ final readonly class CacheMetadata
     /**
      * @param array<string> $dependencies Template paths extended/included
      * @param array<string> $components Component paths used
+     * @param string $sourcePath Source template path used for freshness checks
      * @param int $sourceTimestamp Source template modification time
      * @param int $compiledTimestamp Compiled cache creation time
      * @param bool $debug Debug mode used to compile this template
@@ -21,6 +22,7 @@ final readonly class CacheMetadata
     public function __construct(
         public array $dependencies = [],
         public array $components = [],
+        public string $sourcePath = '',
         public int $sourceTimestamp = 0,
         public int $compiledTimestamp = 0,
         public bool $debug = false,
