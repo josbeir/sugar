@@ -12,7 +12,12 @@ use Sugar\Enum\OutputContext;
 use Sugar\Runtime\HtmlAttributeHelper;
 
 /**
- * Applies runtime attribute overrides to a component root element
+ * Applies runtime attribute overrides to a component root element.
+ *
+ * Merges runtime attributes into the first root element by:
+ * - Combining classes via `HtmlAttributeHelper::classNames()`
+ * - Falling back to existing attribute values when overrides are missing
+ * - Spreading leftover runtime attributes onto the root element
  */
 final class ComponentAttributeOverrideHelper
 {

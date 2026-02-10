@@ -8,7 +8,13 @@ use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
 /**
- * Groups component attributes into control flow, directives, bindings, and merges.
+ * Classifies component attributes for expansion.
+ *
+ * Splits attributes into:
+ * - Control flow directives (wrap or conditionally render the component)
+ * - Attribute directives (applied to the component root element)
+ * - Component bindings (`s:bind` props)
+ * - Plain HTML attributes to merge into the root element
  */
 final class ComponentAttributeCategorizer
 {

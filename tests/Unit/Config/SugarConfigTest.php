@@ -69,7 +69,9 @@ final class SugarConfigTest extends TestCase
 
     public function testWithFragmentElementPersistsAcrossCopies(): void
     {
-        $config = new SugarConfig(elementPrefix: 's-')->withFragmentElement('s-fragment');
+        $config = new SugarConfig(elementPrefix: 's-');
+        $config = $config->withFragmentElement('s-fragment');
+
         $updated = $config->withFileSuffix('.sugar.tpl');
 
         $this->assertSame('s-fragment', $updated->getFragmentElement());

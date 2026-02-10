@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Context;
 
+use Sugar\Ast\AttributeNode;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Enum\OutputContext;
@@ -38,105 +40,140 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
     public function testDetectsJavascriptContext(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<script>'),
-                $this->outputNode('$data', true, OutputContext::HTML, 1, 9),
-                $this->text('</script>', 1, 15),
-            ])
+            ->withChild(
+                $this->element('script')
+                    ->withChild($this->outputNode('$data', true, OutputContext::HTML, 1, 9))
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
+        $script = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $script);
+        $output = $script->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::JAVASCRIPT, $output->context);
     }
 
     public function testDetectsCssContext(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<style>'),
-                $this->outputNode('$css', true, OutputContext::HTML, 1, 8),
-                $this->text('</style>', 1, 13),
-            ])
+            ->withChild(
+                $this->element('style')
+                    ->withChild($this->outputNode('$css', true, OutputContext::HTML, 1, 8))
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::CSS, $result->children[1]->context);
+        $style = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $style);
+        $output = $style->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::CSS, $output->context);
     }
 
     public function testHandlesNestedTags(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<div><script>'),
-                $this->outputNode('$code', true, OutputContext::HTML, 1, 14),
-                $this->text('</script></div>', 1, 20),
-            ])
+            ->withChild(
+                $this->element('div')
+                    ->withChild(
+                        $this->element('script')
+                            ->withChild($this->outputNode('$code', true, OutputContext::HTML, 1, 14))
+                            ->build(),
+                    )
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
+        $div = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $div);
+        $script = $div->children[0];
+        $this->assertInstanceOf(ElementNode::class, $script);
+        $output = $script->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::JAVASCRIPT, $output->context);
     }
 
     public function testResetsContextAfterClosingTag(): void
     {
         $ast = $this->document()
             ->withChildren([
-                $this->text('<script>'),
-                $this->outputNode('$js', true, OutputContext::HTML, 1, 9),
-                $this->text('</script>', 1, 13),
+                $this->element('script')
+                    ->withChild($this->outputNode('$js', true, OutputContext::HTML, 1, 9))
+                    ->build(),
                 $this->outputNode('$html', true, OutputContext::HTML, 1, 22),
             ])
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
-        $this->assertInstanceOf(OutputNode::class, $result->children[3]);
-        $this->assertSame(OutputContext::HTML, $result->children[3]->context);
+        $script = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $script);
+        $scriptOutput = $script->children[0];
+        $this->assertInstanceOf(OutputNode::class, $scriptOutput);
+        $this->assertSame(OutputContext::JAVASCRIPT, $scriptOutput->context);
+        $output = $result->children[1];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::HTML, $output->context);
     }
 
     public function testHandlesMultipleTagsInSingleTextNode(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<div><script>'),
-                $this->outputNode('$data', true, OutputContext::HTML, 1, 14),
-                $this->text('</script><style>', 1, 20),
-                $this->outputNode('$css', true, OutputContext::HTML, 1, 36),
-                $this->text('</style></div>', 1, 41),
-            ])
+            ->withChild(
+                $this->element('div')
+                    ->withChildren([
+                        $this->element('script')
+                            ->withChild($this->outputNode('$data', true, OutputContext::HTML, 1, 14))
+                            ->build(),
+                        $this->element('style')
+                            ->withChild($this->outputNode('$css', true, OutputContext::HTML, 1, 36))
+                            ->build(),
+                    ])
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::JAVASCRIPT, $result->children[1]->context);
-        $this->assertInstanceOf(OutputNode::class, $result->children[3]);
-        $this->assertSame(OutputContext::CSS, $result->children[3]->context);
+        $div = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $div);
+        $script = $div->children[0];
+        $style = $div->children[1];
+        $this->assertInstanceOf(ElementNode::class, $script);
+        $this->assertInstanceOf(ElementNode::class, $style);
+        $scriptOutput = $script->children[0];
+        $styleOutput = $style->children[0];
+        $this->assertInstanceOf(OutputNode::class, $scriptOutput);
+        $this->assertInstanceOf(OutputNode::class, $styleOutput);
+        $this->assertSame(OutputContext::JAVASCRIPT, $scriptOutput->context);
+        $this->assertSame(OutputContext::CSS, $styleOutput->context);
     }
 
     public function testIgnoresRawOutputNodes(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<script>'),
-                $this->outputNode('$raw', false, OutputContext::RAW, 1, 9),
-                $this->text('</script>', 1, 14),
-            ])
+            ->withChild(
+                $this->element('script')
+                    ->withChild($this->outputNode('$raw', false, OutputContext::RAW, 1, 9))
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
         // Raw output should not be modified
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::RAW, $result->children[1]->context);
+        $script = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $script);
+        $output = $script->children[0];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::RAW, $output->context);
     }
 
     public function testPreservesJsonContext(): void
@@ -157,53 +194,78 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
     public function testHandlesSelfClosingTags(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<img src="'),
-                $this->outputNode('$url', true, OutputContext::HTML, 1, 11),
-                $this->text('" />', 1, 16),
-            ])
+            ->withChild(
+                $this->element('img')
+                    ->attributeNode($this->attributeNode(
+                        'src',
+                        $this->outputNode('$url', true, OutputContext::HTML, 1, 11),
+                    ))
+                    ->selfClosing()
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
         // Should detect attribute context
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
+        $img = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $img);
+        $attr = $img->attributes[0];
+        $this->assertInstanceOf(AttributeNode::class, $attr);
+        $value = $attr->value;
+        $this->assertInstanceOf(OutputNode::class, $value);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
     }
 
     public function testDetectsAttributeContext(): void
     {
         $ast = $this->document()
-            ->withChildren([
-                $this->text('<a href="'),
-                $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
-                $this->text('">', 1, 15),
-            ])
+            ->withChild(
+                $this->element('a')
+                    ->attributeNode($this->attributeNode(
+                        'href',
+                        $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
+                    ))
+                    ->build(),
+            )
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
+        $link = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $link);
+        $attr = $link->attributes[0];
+        $this->assertInstanceOf(AttributeNode::class, $attr);
+        $value = $attr->value;
+        $this->assertInstanceOf(OutputNode::class, $value);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
     }
 
     public function testAttributeContextEndsAtQuote(): void
     {
         $ast = $this->document()
             ->withChildren([
-                $this->text('<a href="'),
-                $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
-                $this->text('">', 1, 15),
+                $this->element('a')
+                    ->attributeNode($this->attributeNode(
+                        'href',
+                        $this->outputNode('$url', true, OutputContext::HTML, 1, 10),
+                    ))
+                    ->build(),
                 $this->outputNode('$text', true, OutputContext::HTML, 1, 17),
-                $this->text('</a>', 1, 23),
             ])
             ->build();
 
         $result = $this->execute($ast, $this->createTestContext());
 
-        $this->assertInstanceOf(OutputNode::class, $result->children[1]);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $result->children[1]->context);
-        $this->assertInstanceOf(OutputNode::class, $result->children[3]);
-        $this->assertSame(OutputContext::HTML, $result->children[3]->context);
+        $link = $result->children[0];
+        $this->assertInstanceOf(ElementNode::class, $link);
+        $attr = $link->attributes[0];
+        $this->assertInstanceOf(AttributeNode::class, $attr);
+        $value = $attr->value;
+        $this->assertInstanceOf(OutputNode::class, $value);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
+        $output = $result->children[1];
+        $this->assertInstanceOf(OutputNode::class, $output);
+        $this->assertSame(OutputContext::HTML, $output->context);
     }
 }

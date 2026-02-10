@@ -15,8 +15,10 @@ use Sugar\Context\AnalysisContext;
 use Sugar\Enum\OutputContext;
 
 /**
- * Analyzes AST and assigns proper OutputContext to OutputNodes
- * based on their position in HTML structure
+ * Analyzes the AST and assigns OutputContext to OutputNodes.
+ *
+ * Uses element nesting for script/style context and inspects
+ * attribute values to mark HTML attribute output.
  */
 final class ContextAnalysisPass implements AstPassInterface
 {
@@ -27,8 +29,6 @@ final class ContextAnalysisPass implements AstPassInterface
      */
     private array $contextStack = [];
 
-    private bool $inAttribute = false;
-
     /**
      * @inheritDoc
      */
@@ -37,12 +37,12 @@ final class ContextAnalysisPass implements AstPassInterface
         if ($node instanceof DocumentNode) {
             $this->analysisContext = new AnalysisContext();
             $this->contextStack = [];
-            $this->inAttribute = false;
 
             return NodeAction::none();
         }
 
         if ($node instanceof ElementNode) {
+            $this->updateAttributeContexts($node, $this->analysisContext);
             $this->contextStack[] = $this->analysisContext;
             $this->analysisContext = $this->analysisContext->push($node->tag);
 
@@ -50,17 +50,11 @@ final class ContextAnalysisPass implements AstPassInterface
         }
 
         if ($node instanceof TextNode) {
-            [$this->analysisContext, $this->inAttribute] = $this->processTextNode(
-                $node,
-                $this->analysisContext,
-                $this->inAttribute,
-            );
-
             return NodeAction::none();
         }
 
         if ($node instanceof OutputNode) {
-            return NodeAction::replace($this->updateOutputNode($node, $this->analysisContext, $this->inAttribute));
+            return NodeAction::replace($this->updateOutputNode($node, $this->analysisContext, false));
         }
 
         return NodeAction::none();
@@ -82,75 +76,34 @@ final class ContextAnalysisPass implements AstPassInterface
     }
 
     /**
-     * Process text node to extract HTML tags and update context
-     *
-     * @param \Sugar\Ast\TextNode $node Text node
-     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
-     * @param bool $inAttribute Whether currently in attribute
-     * @return array{\Sugar\Context\AnalysisContext, bool} Updated context and attribute flag
+     * Update OutputNode contexts for element attribute values.
      */
-    private function processTextNode(
-        TextNode $node,
-        AnalysisContext $analysisContext,
-        bool $inAttribute,
-    ): array {
-        $text = $node->content;
+    private function updateAttributeContexts(ElementNode $node, AnalysisContext $analysisContext): void
+    {
+        foreach ($node->attributes as $attribute) {
+            if ($attribute->value instanceof OutputNode) {
+                $attribute->value = $this->updateOutputNode(
+                    $attribute->value,
+                    $analysisContext,
+                    true,
+                );
+                continue;
+            }
 
-        // Simple state machine: track if we end with an unclosed attribute
-        $inTag = false;
-        $quoteCount = 0;
-        $length = strlen($text);
-
-        for ($i = 0; $i < $length; $i++) {
-            $char = $text[$i];
-            $next = $text[$i + 1] ?? '';
-
-            if ($char === '<') {
-                $inTag = true;
-                $quoteCount = 0;
-
-                // Check if closing tag
-                if ($next === '/') {
-                    // Extract tag name
-                    if (preg_match('/<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>/i', substr($text, $i), $matches)) {
-                        $tagName = strtolower($matches[1]);
-                        $analysisContext = $analysisContext->pop($tagName);
+            if (is_array($attribute->value)) {
+                foreach ($attribute->value as $index => $part) {
+                    if (!$part instanceof OutputNode) {
+                        continue;
                     }
-                } elseif (preg_match('/<([a-zA-Z][a-zA-Z0-9-]*)/i', substr($text, $i), $matches)) {
-                    // Opening tag - extract tag name
-                    $tagName = strtolower($matches[1]);
-                    // Check if self-closing by looking ahead for />
-                    $remaining = substr($text, $i);
-                    $closePos = strpos($remaining, '>');
-                    if ($closePos !== false) {
-                        $tagPart = substr($remaining, 0, $closePos);
-                        if (!str_ends_with(trim($tagPart), '/')) {
-                            $analysisContext = $analysisContext->push($tagName);
-                        }
-                    }
+
+                    $attribute->value[$index] = $this->updateOutputNode(
+                        $part,
+                        $analysisContext,
+                        true,
+                    );
                 }
-            } elseif ($char === '>') {
-                $inTag = false;
-                $quoteCount = 0;
-                $inAttribute = false;
-            } elseif ($inTag && $char === '"') {
-                $quoteCount++;
-                // If we have odd number of quotes, we're in an attribute
-                $inAttribute = ($quoteCount % 2 === 1);
-            } elseif ($inAttribute && $char === '"') {
-                $inAttribute = false;
             }
         }
-
-        // Check if text ends inside an attribute (ends with =" but no closing quote)
-        if (str_ends_with($text, '="')) {
-            $inAttribute = true;
-        } elseif (preg_match('/="[^"]*$/i', $text)) {
-            // Ends with =" followed by non-quote characters
-            $inAttribute = true;
-        }
-
-        return [$analysisContext, $inAttribute];
     }
 
     /**

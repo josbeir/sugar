@@ -5,6 +5,8 @@ namespace Sugar\Pass\Component\Helper;
 
 /**
  * Value object for component slot content.
+ *
+ * Holds named slots keyed by slot name and the default slot content.
  */
 final readonly class ComponentSlots
 {

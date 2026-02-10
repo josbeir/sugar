@@ -6,7 +6,10 @@ namespace Sugar\Pass\Component\Helper;
 use Sugar\Ast\AttributeNode;
 
 /**
- * Typed container for categorized component attributes.
+ * Value object for component attribute buckets.
+ *
+ * Separates attributes into control-flow directives, attribute directives,
+ * component bindings (`s:bind`), and regular HTML attributes to merge.
  */
 final readonly class ComponentAttributeCategories
 {

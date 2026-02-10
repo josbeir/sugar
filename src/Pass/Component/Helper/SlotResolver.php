@@ -12,7 +12,11 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\TextNode;
 
 /**
- * Extracts slots and builds slot-related expressions for component rendering.
+ * Resolves component slots and builds slot expressions for rendering.
+ *
+ * Extracts named and default slots from a component invocation, then builds
+ * PHP expressions used to render slot content at runtime. Also disables
+ * escaping for slot variables to avoid double-escaping rendered HTML.
  */
 final class SlotResolver
 {
