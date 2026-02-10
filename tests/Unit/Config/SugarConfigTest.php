@@ -58,6 +58,24 @@ final class SugarConfigTest extends TestCase
         $this->assertSame('htmx-template', $config->getFragmentElement());
     }
 
+    public function testWithFragmentElementOverridesDefault(): void
+    {
+        $config = new SugarConfig(elementPrefix: 's-');
+        $updated = $config->withFragmentElement('s-fragment');
+
+        $this->assertSame('s-fragment', $updated->getFragmentElement());
+        $this->assertSame('s-template', $config->getFragmentElement());
+    }
+
+    public function testWithFragmentElementPersistsAcrossCopies(): void
+    {
+        $config = new SugarConfig(elementPrefix: 's-')->withFragmentElement('s-fragment');
+        $updated = $config->withFileSuffix('.sugar.tpl');
+
+        $this->assertSame('s-fragment', $updated->getFragmentElement());
+        $this->assertSame('.sugar.tpl', $updated->fileSuffix);
+    }
+
     public function testConfigIsReadonly(): void
     {
         $config = new SugarConfig(directivePrefix: 'x');

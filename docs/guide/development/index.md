@@ -95,6 +95,23 @@ $config = (new SugarConfig())
 Use the same `SugarConfig` instance for loaders and the engine so template lookups and component discovery stay consistent.
 :::
 
+### Custom Fragment Element
+
+Override the fragment tag name when you need a different wrapperless element in templates:
+
+```php
+use Sugar\Config\SugarConfig;
+
+$config = (new SugarConfig())
+    ->withFragmentElement('s-fragment');
+```
+
+```html
+<s-fragment s:if="$hasCoffee">
+    <p>Debug mode is powered by caffeine and hope.</p>
+</s-fragment>
+```
+
 ## Template Context
 
 Template context lets you expose helper methods to every template via `$this`.

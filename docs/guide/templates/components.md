@@ -48,7 +48,7 @@ Examples:
 - `x-alert.sugar.php` -> `<x-alert>` when the prefix is `x-`
 
 ::: info
-The fragment element filename (`s-template.sugar.php` or `x-template.sugar.php`) is reserved and not treated as a component.
+The fragment element filename (for example, `s-template.sugar.php`, `x-template.sugar.php`, or your configured fragment name) is reserved and not treated as a component.
 :::
 
 ## Components in the Templates Tree

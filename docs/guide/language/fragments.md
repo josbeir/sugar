@@ -17,3 +17,20 @@ Restrictions:
 - `<s-template>` can only have `s:` directive attributes.
 - Regular HTML attributes are not allowed.
 - Attribute directives like `s:class` and `s:spread` are not allowed.
+
+## Custom Fragment Element
+
+You can override the fragment element name when you need a different tag.
+
+```php
+use Sugar\Config\SugarConfig;
+
+$config = (new SugarConfig())
+    ->withFragmentElement('s-fragment');
+```
+
+```html
+<s-fragment s:if="$hasSnacks">
+    <p>Powered by snacks and mild ambition.</p>
+</s-fragment>
+```

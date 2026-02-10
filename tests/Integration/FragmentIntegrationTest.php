@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
@@ -155,5 +156,20 @@ final class FragmentIntegrationTest extends TestCase
         // Text should be escaped
         $this->assertStringContainsString('&lt;John&gt;', $output);
         $this->assertStringContainsString('Jane', $output);
+    }
+
+    public function testCustomFragmentElementOverride(): void
+    {
+        $config = (new SugarConfig())->withFragmentElement('s-fragment');
+        $this->setUpCompiler(config: $config);
+
+        $template = '<s-fragment s:foreach="$items as $item"><li><?= $item ?></li></s-fragment>';
+        $compiled = $this->compiler->compile($template);
+
+        $output = $this->executeTemplate($compiled, ['items' => [1, 2]]);
+
+        $this->assertStringContainsString('<li>1</li>', $output);
+        $this->assertStringContainsString('<li>2</li>', $output);
+        $this->assertStringNotContainsString('s-fragment', $output);
     }
 }

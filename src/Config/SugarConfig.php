@@ -27,12 +27,14 @@ final readonly class SugarConfig
      * @param string $directivePrefix Prefix for directives (e.g., 's' for s:if, 'x' for x:if)
      * @param string $elementPrefix Prefix for custom elements (e.g., 's-' for s-template, s-button)
      * @param string $fileSuffix Template filename suffix (e.g., '.sugar.php')
+     * @param string|null $fragmentElement Custom fragment element tag (optional)
      * @param array<string> $selfClosingTags List of HTML void/self-closing tags
      */
     public function __construct(
         public string $directivePrefix = 's',
         public string $elementPrefix = 's-',
         public string $fileSuffix = '.sugar.php',
+        public ?string $fragmentElement = null,
         public array $selfClosingTags = self::DEFAULT_SELF_CLOSING_TAGS,
     ) {
     }
@@ -44,7 +46,21 @@ final readonly class SugarConfig
      */
     public function getFragmentElement(): string
     {
-        return $this->elementPrefix . 'template';
+        return $this->fragmentElement ?? $this->elementPrefix . 'template';
+    }
+
+    /**
+     * Create a copy of the config with a custom fragment element name.
+     */
+    public function withFragmentElement(string $fragmentElement): self
+    {
+        return new self(
+            directivePrefix: $this->directivePrefix,
+            elementPrefix: $this->elementPrefix,
+            fileSuffix: $this->fileSuffix,
+            fragmentElement: $fragmentElement,
+            selfClosingTags: $this->selfClosingTags,
+        );
     }
 
     /**
@@ -59,6 +75,7 @@ final readonly class SugarConfig
             directivePrefix: $this->directivePrefix,
             elementPrefix: $this->elementPrefix,
             fileSuffix: $this->fileSuffix,
+            fragmentElement: $this->fragmentElement,
             selfClosingTags: $selfClosingTags,
         );
     }
@@ -72,6 +89,7 @@ final readonly class SugarConfig
             directivePrefix: $this->directivePrefix,
             elementPrefix: $this->elementPrefix,
             fileSuffix: $fileSuffix,
+            fragmentElement: $this->fragmentElement,
             selfClosingTags: $this->selfClosingTags,
         );
     }
@@ -91,6 +109,7 @@ final readonly class SugarConfig
             directivePrefix: $prefix,
             elementPrefix: $prefix . '-',
             fileSuffix: '.sugar.php',
+            fragmentElement: null,
             selfClosingTags: $selfClosingTags ?? self::DEFAULT_SELF_CLOSING_TAGS,
         );
     }
