@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Pass\Directive\Helper;
 
-use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Extension\DirectiveRegistryInterface;
@@ -15,7 +15,7 @@ final readonly class DirectiveClassifier
 {
     /**
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry
-     * @param \Sugar\Ast\Helper\DirectivePrefixHelper $prefixHelper Directive prefix helper
+     * @param \Sugar\Config\Helper\DirectivePrefixHelper $prefixHelper Directive prefix helper
      */
     public function __construct(
         private DirectiveRegistryInterface $registry,

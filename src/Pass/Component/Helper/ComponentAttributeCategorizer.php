@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Pass\Component\Helper;
 
-use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
@@ -16,7 +16,7 @@ final class ComponentAttributeCategorizer
 
     /**
      * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry
-     * @param \Sugar\Ast\Helper\DirectivePrefixHelper $prefixHelper Directive prefix helper
+     * @param \Sugar\Config\Helper\DirectivePrefixHelper $prefixHelper Directive prefix helper
      */
     public function __construct(
         DirectiveRegistryInterface $registry,

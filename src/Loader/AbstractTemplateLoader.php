@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Loader;
 
-use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 

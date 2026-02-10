@@ -8,9 +8,9 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 
 /**
- * Helpers for parsing and continuing mixed attribute values.
+ * Attribute continuation utilities for mixed attribute values.
  */
-final class AttributeContinuationHelper
+final class AttributeContinuation
 {
     /**
      * Detect if the HTML fragment ends with an open attribute quote.
@@ -69,10 +69,14 @@ final class AttributeContinuationHelper
      *
      * @param string $html HTML fragment
      * @param array{element: \Sugar\Ast\ElementNode, attrIndex: int, quote: string|null} $pendingAttribute
+     * @param \Sugar\Parser\Helper\NodeFactory $nodeFactory Node factory
      * @return array{0: string, 1: array{element: \Sugar\Ast\ElementNode, attrIndex: int, quote: string|null}|null}
      */
-    public static function consumeAttributeContinuation(string $html, array $pendingAttribute): array
-    {
+    public static function consumeAttributeContinuation(
+        string $html,
+        array $pendingAttribute,
+        NodeFactory $nodeFactory,
+    ): array {
         $element = $pendingAttribute['element'];
         $attrIndex = $pendingAttribute['attrIndex'];
         $quote = $pendingAttribute['quote'];
@@ -89,7 +93,11 @@ final class AttributeContinuationHelper
 
             self::normalizeAttributeValue($attribute);
 
-            [$remaining, $pending] = self::applyAttributeContinuation(substr($html, $endPos), $element);
+            [$remaining, $pending] = self::applyAttributeContinuation(
+                substr($html, $endPos),
+                $element,
+                $nodeFactory,
+            );
 
             return [$remaining, $pending];
         }
@@ -106,7 +114,11 @@ final class AttributeContinuationHelper
 
         self::normalizeAttributeValue($attribute);
 
-        [$remaining, $pending] = self::applyAttributeContinuation(substr($html, $quotePos + 1), $element);
+        [$remaining, $pending] = self::applyAttributeContinuation(
+            substr($html, $quotePos + 1),
+            $element,
+            $nodeFactory,
+        );
 
         return [$remaining, $pending];
     }
@@ -152,8 +164,11 @@ final class AttributeContinuationHelper
      *
      * @return array{0: string, 1: array{element: \Sugar\Ast\ElementNode, attrIndex: int, quote: string|null}|null}
      */
-    private static function applyAttributeContinuation(string $html, ElementNode $element): array
-    {
+    private static function applyAttributeContinuation(
+        string $html,
+        ElementNode $element,
+        NodeFactory $nodeFactory,
+    ): array {
         $pos = 0;
         $len = strlen($html);
         $pendingAttribute = null;
@@ -249,7 +264,7 @@ final class AttributeContinuationHelper
                 }
             }
 
-            $element->attributes[] = new AttributeNode($name, $value, $element->line, $element->column);
+            $element->attributes[] = $nodeFactory->attribute($name, $value, $element->line, $element->column);
 
             if ($pendingAttribute !== null) {
                 break;

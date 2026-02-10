@@ -5,7 +5,7 @@ namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
-use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;

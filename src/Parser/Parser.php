@@ -3,27 +3,30 @@ declare(strict_types=1);
 
 namespace Sugar\Parser;
 
-use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
-use Sugar\Ast\Helper\DirectivePrefixHelper;
-use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
-use Sugar\Parser\Helper\AttributeContinuationHelper;
+use Sugar\Parser\Helper\AttributeContinuation;
 use Sugar\Parser\Helper\ClosingTagMarker;
+use Sugar\Parser\Helper\HtmlParser;
+use Sugar\Parser\Helper\NodeFactory;
+use Sugar\Parser\Helper\ParserState;
 use Sugar\Parser\Helper\PipeParser;
-use Sugar\Runtime\HtmlTagHelper;
+use Sugar\Parser\Helper\TokenStream;
 
 final readonly class Parser
 {
     private SugarConfig $config;
 
     private DirectivePrefixHelper $prefixHelper;
+
+    private HtmlParser $htmlParser;
+
+    private NodeFactory $nodeFactory;
 
     /**
      * Constructor
@@ -34,6 +37,8 @@ final readonly class Parser
     {
         $this->config = $config ?? new SugarConfig();
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
+        $this->nodeFactory = new NodeFactory();
+        $this->htmlParser = new HtmlParser($this->config, $this->prefixHelper, $this->nodeFactory);
     }
 
     /**
@@ -45,7 +50,9 @@ final readonly class Parser
     public function parse(string $source): DocumentNode
     {
         $tokens = Token::tokenize($source);
-        $nodes = $this->parseTokens($tokens, $source);
+        $stream = new TokenStream($tokens);
+        $state = new ParserState($stream, $source);
+        $nodes = $this->parseTokens($state);
 
         return new DocumentNode($nodes);
     }
@@ -53,24 +60,23 @@ final readonly class Parser
     /**
      * Parse tokens into AST nodes
      *
-     * @param array<\Sugar\Parser\Token> $tokens Token stream
-     * @param string $source Template source code
+     * @param \Sugar\Parser\Helper\ParserState $state Parser state
      * @return array<\Sugar\Ast\Node> AST nodes
      */
-    private function parseTokens(array $tokens, string $source): array
+    private function parseTokens(ParserState $state): array
     {
-        $nodes = [];
-        $i = 0;
-        $count = count($tokens);
-        $pendingAttribute = null;
+        $stream = $state->stream;
 
-        while ($i < $count) {
-            $token = $tokens[$i];
+        while (!$stream->isEnd()) {
+            $token = $stream->next();
+            if (!$token instanceof Token) {
+                break;
+            }
 
             if ($token->isOutput()) {
-                $column = $this->columnFromOffset($source, $token->pos);
-                [$expression, $nextIndex] = $this->extractExpression($tokens, $i + 1);
-                $expression = $this->normalizeOutputExpression($expression);
+                $column = $state->columnFromOffset($token->pos);
+                $expression = $state->consumeExpression();
+                $expression = $state->normalizeOutputExpression($expression);
 
                 // Parse pipe syntax if present
                 $pipes = PipeParser::parse($expression);
@@ -80,16 +86,16 @@ final readonly class Parser
                 if ($pipes['raw']) {
                     $outputContext = OutputContext::RAW;
                 } elseif ($pipes['json']) {
-                    $outputContext = is_array($pendingAttribute)
+                    $outputContext = $state->hasPendingAttribute()
                         ? OutputContext::JSON_ATTRIBUTE
                         : OutputContext::JSON;
                 } else {
-                    $outputContext = is_array($pendingAttribute)
+                    $outputContext = $state->hasPendingAttribute()
                         ? OutputContext::HTML_ATTRIBUTE
                         : OutputContext::HTML;
                 }
 
-                $outputNode = new OutputNode(
+                $outputNode = $this->nodeFactory->output(
                     expression: $finalExpression,
                     escape: $shouldEscape,
                     context: $outputContext,
@@ -98,415 +104,74 @@ final readonly class Parser
                     pipes: $pipeChain,
                 );
 
-                if (is_array($pendingAttribute)) {
+                if ($state->hasPendingAttribute()) {
+                    $pendingAttribute = $state->pendingAttribute();
+                    if ($pendingAttribute === null) {
+                        continue;
+                    }
+
                     $element = $pendingAttribute['element'];
                     $attrIndex = $pendingAttribute['attrIndex'];
-                    AttributeContinuationHelper::appendAttributeValuePart(
+                    AttributeContinuation::appendAttributeValuePart(
                         $element->attributes[$attrIndex],
                         $outputNode,
                     );
-                    $i = $nextIndex;
                     continue;
                 }
 
-                $nodes[] = $outputNode;
-                $i = $nextIndex;
+                $state->addNode($outputNode);
                 continue;
             }
 
             if ($token->isOpenTag()) {
-                $column = $this->columnFromOffset($source, $token->pos);
-                [$code, $nextIndex] = $this->extractPhpBlock($tokens, $i + 1);
-                $nodes[] = new RawPhpNode($code, $token->line, $column);
-                $i = $nextIndex;
+                $column = $state->columnFromOffset($token->pos);
+                $code = $state->consumePhpBlock();
+                $state->addNode($this->nodeFactory->rawPhp($code, $token->line, $column));
                 continue;
             }
 
             if ($token->canIgnore()) {
-                $i++;
                 continue;
             }
 
             if ($token->isHtml()) {
-                $column = $this->columnFromOffset($source, $token->pos);
+                $column = $state->columnFromOffset($token->pos);
                 $html = $token->content();
-                if (is_array($pendingAttribute)) {
-                    [$html, $pendingAttribute] = AttributeContinuationHelper::consumeAttributeContinuation(
+                if ($state->hasPendingAttribute()) {
+                    $pendingAttribute = $state->pendingAttribute();
+                    if ($pendingAttribute === null) {
+                        $state->setPendingAttribute(null);
+                        continue;
+                    }
+
+                    [$html, $pendingAttribute] = AttributeContinuation::consumeAttributeContinuation(
                         $html,
                         $pendingAttribute,
+                        $this->nodeFactory,
                     );
+                    $state->setPendingAttribute($pendingAttribute);
                     if ($html === '') {
-                        $i++;
                         continue;
                     }
                 }
 
                 if (str_contains($html, '<') || str_contains($html, '>')) {
-                    $htmlNodes = $this->parseHtml($html, $token->line, $column);
-                    $nodes = array_merge($nodes, $htmlNodes);
-                    if ($pendingAttribute === null) {
-                        $pendingAttribute = AttributeContinuationHelper::detectOpenAttribute($html, $htmlNodes);
+                    $htmlNodes = $this->htmlParser->parse($html, $token->line, $column);
+                    $state->addNodes($htmlNodes);
+                    if (!$state->hasPendingAttribute()) {
+                        $state->setPendingAttribute(
+                            AttributeContinuation::detectOpenAttribute($html, $htmlNodes),
+                        );
                     }
                 } else {
-                    $nodes[] = new TextNode($html, $token->line, $column);
+                    $state->addNode($this->nodeFactory->text($html, $token->line, $column));
                 }
 
-                $i++;
                 continue;
             }
-
-            $i++;
         }
 
-        return $this->buildTree($nodes);
-    }
-
-    /**
-     * Extract a PHP expression until close tag
-     *
-     * @param array<\Sugar\Parser\Token> $tokens Token stream
-     * @param int $start Starting index
-     * @return array{0: string, 1: int} Expression and next index
-     */
-    private function extractExpression(array $tokens, int $start): array
-    {
-        $expression = '';
-        $i = $start;
-        $count = count($tokens);
-
-        while ($i < $count) {
-            $token = $tokens[$i];
-
-            if ($token->isCloseTag()) {
-                $i++;
-                break;
-            }
-
-            $expression .= $token->content();
-            $i++;
-        }
-
-        return [trim($expression), $i];
-    }
-
-    /**
-     * Normalize output expression to support trailing semicolons.
-     */
-    private function normalizeOutputExpression(string $expression): string
-    {
-        $expression = trim($expression);
-        if ($expression !== '' && str_ends_with($expression, ';')) {
-            return rtrim($expression, " \t\n\r\0\x0B;");
-        }
-
-        return $expression;
-    }
-
-    /**
-     * Convert an absolute offset into a 1-based column index.
-     */
-    private function columnFromOffset(string $source, int $offset): int
-    {
-        if ($offset <= 0) {
-            return 1;
-        }
-
-        $before = substr($source, 0, $offset);
-        $lastNewline = strrpos($before, "\n");
-        if ($lastNewline === false) {
-            return $offset + 1;
-        }
-
-        return $offset - $lastNewline;
-    }
-
-    /**
-     * Extract a PHP code block until close tag
-     *
-     * @param array<\Sugar\Parser\Token> $tokens Token stream
-     * @param int $start Starting index
-     * @return array{0: string, 1: int} Code block and next index
-     */
-    private function extractPhpBlock(array $tokens, int $start): array
-    {
-        $code = '';
-        $i = $start;
-        $count = count($tokens);
-
-        while ($i < $count) {
-            $token = $tokens[$i];
-
-            if ($token->isCloseTag()) {
-                $i++;
-                break;
-            }
-
-            $code .= $token->content();
-            $i++;
-        }
-
-        return [trim($code), $i];
-    }
-
-    /**
-     * Parse HTML string into flat list of nodes and markers
-     *
-     * @param string $html HTML content
-     * @param int $line Line number
-     * @param int $column Column number
-     * @return array<\Sugar\Ast\Node|\Sugar\Parser\Helper\ClosingTagMarker> Flat node list
-     */
-    private function parseHtml(string $html, int $line, int $column): array
-    {
-        $nodes = [];
-        $pos = 0;
-        $len = strlen($html);
-
-        while ($pos < $len) {
-            $tagStart = strpos($html, '<', $pos);
-
-            if ($tagStart === false) {
-                // Rest is text
-                if ($pos < $len) {
-                    $nodes[] = new TextNode(substr($html, $pos), $line, $column);
-                }
-
-                break;
-            }
-
-            // Text before tag
-            if ($tagStart > $pos) {
-                $nodes[] = new TextNode(substr($html, $pos, $tagStart - $pos), $line, $column);
-            }
-
-            // Check for closing tag
-            if (isset($html[$tagStart + 1]) && $html[$tagStart + 1] === '/') {
-                [$tagName, $endPos] = $this->extractClosingTag($html, $tagStart);
-                $nodes[] = new ClosingTagMarker($tagName);
-                $pos = $endPos;
-            } elseif (isset($html[$tagStart + 1]) && $html[$tagStart + 1] === '!') {
-                // Special cases: <!DOCTYPE>, <!-->, <![CDATA[> - treat as text
-                $endPos = strpos($html, '>', $tagStart);
-                if ($endPos === false) {
-                    $endPos = $len;
-                } else {
-                    $endPos++;
-                }
-
-                $nodes[] = new TextNode(substr($html, $tagStart, $endPos - $tagStart), $line, $column);
-                $pos = $endPos;
-            } else {
-                // Opening or self-closing tag
-                [$element, $endPos] = $this->extractOpeningTag($html, $tagStart, $line, $column);
-                $nodes[] = $element;
-                $pos = $endPos;
-            }
-        }
-
-        return $nodes;
-    }
-
-    /**
-     * Extract opening or self-closing HTML tag
-     *
-     * @param string $html HTML source
-     * @param int $start Position of <
-     * @param int $line Line number
-     * @param int $column Column number
-     * @return array{0: \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode|\Sugar\Ast\ComponentNode, 1: int} Element, Fragment, or Component and position after tag
-     */
-    private function extractOpeningTag(string $html, int $start, int $line, int $column): array
-    {
-        $pos = $start + 1;
-        $len = strlen($html);
-        $tagName = '';
-
-        // Extract tag name (alphanumeric + hyphens for custom elements like s-template)
-        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
-            $tagName .= $html[$pos++];
-        }
-
-        // Skip whitespace
-        while ($pos < $len && ctype_space($html[$pos])) {
-            $pos++;
-        }
-
-        // Parse attributes
-        $attributes = [];
-        $selfClosing = false;
-        $elementColumn = $column + $start;
-
-        while ($pos < $len) {
-            $char = $html[$pos];
-
-            if ($char === '>') {
-                $pos++;
-                break;
-            }
-
-            if ($char === '/' && isset($html[$pos + 1]) && $html[$pos + 1] === '>') {
-                $selfClosing = true;
-                $pos += 2;
-                break;
-            }
-
-            if (ctype_space($char)) {
-                $pos++;
-                continue;
-            }
-
-            // Parse attribute
-            $attrStart = $pos;
-            [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            $attrColumn = $column + $attrStart;
-            $attributes[] = new AttributeNode($attrName, $attrValue, $line, $attrColumn);
-        }
-
-        $isFragment = $tagName === $this->config->getFragmentElement();
-        $isComponent = $this->prefixHelper->hasElementPrefix($tagName) && !$isFragment;
-
-        if (
-            !$selfClosing
-            && !$isFragment
-            && !$isComponent
-            && HtmlTagHelper::isSelfClosing($tagName, $this->config->selfClosingTags)
-        ) {
-            $selfClosing = true;
-        }
-
-        $element = new ElementNode(
-            tag: $tagName,
-            attributes: $attributes,
-            children: [],
-            selfClosing: $selfClosing,
-            line: $line,
-            column: $elementColumn,
-        );
-
-        // Handle fragment element (e.g., <s-template>, <x-template>)
-        if ($isFragment) {
-            $element = new FragmentNode(
-                attributes: $attributes,
-                children: [],
-                line: $line,
-                column: $elementColumn,
-                selfClosing: $selfClosing,
-            );
-        }
-
-        // Handle component elements (e.g., <s-button>, <x-alert>)
-        // Components start with elementPrefix but are NOT the fragment element
-        if ($isComponent) {
-            $componentName = $this->prefixHelper->stripElementPrefix($tagName);
-            $element = new ComponentNode(
-                name: $componentName,
-                attributes: $attributes,
-                children: [],
-                line: $line,
-                column: $elementColumn,
-            );
-        }
-
-        return [$element, $pos];
-    }
-
-    /**
-     * Extract closing HTML tag
-     *
-     * @param string $html HTML source
-     * @param int $start Position of <
-     * @return array{0: string, 1: int} Tag name and position after tag
-     */
-    private function extractClosingTag(string $html, int $start): array
-    {
-        $pos = $start + 2; // Skip </
-        $len = strlen($html);
-        $tagName = '';
-
-        // Extract tag name (alphanumeric + hyphens for custom elements)
-        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
-            $tagName .= $html[$pos++];
-        }
-
-        // Skip to >
-        while ($pos < $len && $html[$pos] !== '>') {
-            $pos++;
-        }
-
-        if ($pos < $len) {
-            $pos++; // Skip >
-        }
-
-        return [$tagName, $pos];
-    }
-
-    /**
-     * Extract attribute name and value
-     *
-     * @param string $html HTML source
-     * @param int $start Starting position
-     * @return array{0: string, 1: string|null, 2: int} Name, value, position
-     */
-    private function extractAttribute(string $html, int $start): array
-    {
-        $pos = $start;
-        $len = strlen($html);
-        $name = '';
-
-        // Extract attribute name (including : and - for s:if, data-attr)
-        while ($pos < $len && !in_array($html[$pos], ['=', '>', '/', ' ', "\t", "\n", "\r"], true)) {
-            $name .= $html[$pos++];
-        }
-
-        // Skip whitespace
-        while ($pos < $len && ctype_space($html[$pos])) {
-            $pos++;
-        }
-
-        // No value (boolean attribute)
-        if ($pos >= $len || $html[$pos] !== '=') {
-            return [$name, null, $pos];
-        }
-
-        $pos++; // Skip =
-
-        // Skip whitespace after =
-        while ($pos < $len && ctype_space($html[$pos])) {
-            $pos++;
-        }
-
-        if ($pos >= $len) {
-            return [$name, '', $pos];
-        }
-
-        // Extract value
-        $quote = $html[$pos];
-        if ($quote === '"' || $quote === "'") {
-            $pos++; // Skip opening quote
-            $value = '';
-            while ($pos < $len && $html[$pos] !== $quote) {
-                if ($html[$pos] === '\\' && isset($html[$pos + 1]) && $html[$pos + 1] === $quote) {
-                    $value .= $quote;
-                    $pos += 2;
-                } else {
-                    $value .= $html[$pos++];
-                }
-            }
-
-            if ($pos < $len) {
-                $pos++; // Skip closing quote
-            }
-
-            return [$name, $value, $pos];
-        }
-
-        // Unquoted value
-        $value = '';
-        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
-            $value .= $html[$pos++];
-        }
-
-        return [$name, $value, $pos];
+        return $this->buildTree($state->nodes());
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Ast\Helper;
+namespace Sugar\Config\Helper;
 
 /**
  * Directive prefix utilities

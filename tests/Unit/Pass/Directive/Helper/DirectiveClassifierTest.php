@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Directive\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\Helper\DirectivePrefixHelper;
+use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 
