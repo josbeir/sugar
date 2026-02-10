@@ -13,7 +13,6 @@ use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Exception\TemplateNotFoundException;
 use Sugar\Loader\FileTemplateLoader;
@@ -171,7 +170,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
                     $this->element('div')
                         ->attribute('s:extends', '../layouts/temp-append-directive.sugar.php')
                         ->build(),
-                    new FragmentNode(
+                    $this->fragment(
                         attributes: [
                             $this->attribute('s:append', 'content'),
                             $this->attribute('s:if', '$show'),
@@ -233,9 +232,14 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     {
         $document = $this->document()
             ->withChildren([
-                new FragmentNode([
-                    $this->attribute('s:extends', '../base.sugar.php'),
-                ], [], 1, 1),
+                $this->fragment(
+                    attributes: [
+                        $this->attribute('s:extends', '../base.sugar.php'),
+                    ],
+                    children: [],
+                    line: 1,
+                    column: 1,
+                ),
                 $this->element('title')
                     ->attribute('s:block', 'title')
                     ->withChild($this->createText('Child Title'))
@@ -404,11 +408,8 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             ])
             ->build();
 
-        $context = new CompilationContext(
+        $context = $this->createTestContext(
             templatePath: 'pages/home.sugar.php',
-            source: '',
-            debug: false,
-            tracker: null,
             blocks: ['content', 'sidebar'],
         );
 
@@ -710,7 +711,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
                     $this->element('div')
                         ->attribute('s:extends', 'temp-fragment-layout.sugar.php')
                         ->build(),
-                    new FragmentNode(
+                    $this->fragment(
                         attributes: [
                             $this->attribute('s:block', 'content'),
                             $this->attribute('s:if', '$show'),
@@ -756,7 +757,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
                     $this->element('div')
                         ->attribute('s:extends', 'temp-fragment-root.sugar.php')
                         ->build(),
-                    new FragmentNode(
+                    $this->fragment(
                         attributes: [
                             $this->attribute('s:block', 'content'),
                             $this->attribute('s:if', '$show'),

@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
@@ -52,11 +51,11 @@ final class NodeClonerTest extends TestCase
 
     public function testFragmentWithChildren(): void
     {
-        $node = new FragmentNode(
-            [$this->attribute('s:if', '$show', 1, 1)],
-            [$this->text('old', 1, 1)],
-            1,
-            1,
+        $node = $this->fragment(
+            attributes: [$this->attribute('s:if', '$show', 1, 1)],
+            children: [$this->text('old', 1, 1)],
+            line: 1,
+            column: 1,
         );
 
         $newChildren = [$this->text('new', 1, 1)];
@@ -71,11 +70,11 @@ final class NodeClonerTest extends TestCase
 
     public function testFragmentWithAttributes(): void
     {
-        $node = new FragmentNode(
-            [$this->attribute('s:if', 'old', 1, 1)],
-            [$this->text('content', 1, 1)],
-            1,
-            1,
+        $node = $this->fragment(
+            attributes: [$this->attribute('s:if', 'old', 1, 1)],
+            children: [$this->text('content', 1, 1)],
+            line: 1,
+            column: 1,
         );
 
         $newAttributes = [$this->attribute('s:if', 'new', 1, 1)];

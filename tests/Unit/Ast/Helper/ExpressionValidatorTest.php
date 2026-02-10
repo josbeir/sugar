@@ -7,11 +7,13 @@ use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\Helper\ExpressionValidator;
-use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ExpressionValidatorTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     /**
      * Test that valid array expressions pass validation
      *
@@ -185,9 +187,9 @@ final class ExpressionValidatorTest extends TestCase
     public function testThrowsContextAwareExceptionWithSnippet(): void
     {
         $template = '<s-button s:bind="\'not an array\'">Click</s-button>';
-        $context = new CompilationContext(
-            templatePath: 'test.sugar.php',
+        $context = $this->createContext(
             source: $template,
+            templatePath: 'test.sugar.php',
             debug: true,
         );
 

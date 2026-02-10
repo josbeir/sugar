@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
+use Sugar\Cache\DependencyTracker;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Context\CompilationContext;
@@ -92,13 +93,17 @@ abstract class MiddlewarePassTestCase extends TestCase
 
     /**
      * Create a compilation context
+     *
+     * @param array<string>|null $blocks
      */
     protected function createTestContext(
         string $templatePath = 'test.sugar.php',
         string $source = '',
         bool $debug = false,
+        ?DependencyTracker $tracker = null,
+        ?array $blocks = null,
     ): CompilationContext {
-        return new CompilationContext($templatePath, $source, $debug);
+        return new CompilationContext($templatePath, $source, $debug, $tracker, $blocks);
     }
 
     /**

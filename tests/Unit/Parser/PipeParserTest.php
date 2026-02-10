@@ -31,4 +31,22 @@ final class PipeParserTest extends TestCase
         $this->assertSame('$value', $result['expression']);
         $this->assertSame(['trim(...)', 'strtolower(...)'], $result['pipes']);
     }
+
+    public function testParseFiltersRawPipeAndSetsRawFlag(): void
+    {
+        $result = PipeParser::parse('$name |> raw() |> strtoupper(...)');
+
+        $this->assertSame('$name', $result['expression']);
+        $this->assertSame(['strtoupper(...)'], $result['pipes']);
+        $this->assertTrue($result['raw']);
+    }
+
+    public function testParseRawOnlyReturnsNullPipesWithRawFlag(): void
+    {
+        $result = PipeParser::parse('$name |> raw()');
+
+        $this->assertSame('$name', $result['expression']);
+        $this->assertNull($result['pipes']);
+        $this->assertTrue($result['raw']);
+    }
 }

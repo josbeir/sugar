@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\FragmentNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Component\Helper\SlotResolver;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -24,7 +23,7 @@ final class SlotResolverTest extends TestCase
             ->withChild($this->text('Header', 1, 1))
             ->build();
 
-        $footer = new FragmentNode(
+        $footer = $this->fragment(
             attributes: [$this->attribute('s:slot', 'footer')],
             children: [$this->text('Footer', 1, 1)],
             line: 1,

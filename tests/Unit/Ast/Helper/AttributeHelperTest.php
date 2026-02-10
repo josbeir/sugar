@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
-use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -56,13 +55,13 @@ final class AttributeHelperTest extends TestCase
 
     public function testHasAttributeWithPrefixOnFragmentNode(): void
     {
-        $node = new FragmentNode(
-            [
+        $node = $this->fragment(
+            attributes: [
                 $this->attribute('s:if', '$show', 1, 1),
             ],
-            [],
-            1,
-            1,
+            children: [],
+            line: 1,
+            column: 1,
         );
 
         $this->assertTrue(AttributeHelper::hasAttributeWithPrefix($node, 's:'));

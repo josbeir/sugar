@@ -6,12 +6,14 @@ namespace Sugar\Tests\Unit\Directive;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\PassThroughDirective;
 use Sugar\Enum\DirectiveType;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class PassThroughDirectiveTest extends TestCase
 {
+    use TemplateTestHelperTrait;
+
     public function testGetTypeReturnsPassThrough(): void
     {
         $compiler = new PassThroughDirective();
@@ -22,7 +24,7 @@ final class PassThroughDirectiveTest extends TestCase
     public function testCompileThrowsLogicException(): void
     {
         $compiler = new PassThroughDirective();
-        $context = new CompilationContext('test.sugar.php', '<div></div>', false);
+        $context = $this->createContext('<div></div>');
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Pass-through directives should not be compiled');

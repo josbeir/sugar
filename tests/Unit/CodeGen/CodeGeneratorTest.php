@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RuntimeCallNode;
@@ -446,14 +445,14 @@ final class CodeGeneratorTest extends TestCase
     {
         $ast = $this->document()
             ->withChild(
-                new FragmentNode(
-                    [],
-                    [
+                $this->fragment(
+                    attributes: [],
+                    children: [
                         $this->text('First', 1, 1),
                         $this->text('Second', 1, 1),
                     ],
-                    1,
-                    1,
+                    line: 1,
+                    column: 1,
                 ),
             )
             ->build();

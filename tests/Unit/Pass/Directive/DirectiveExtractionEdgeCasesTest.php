@@ -6,7 +6,6 @@ namespace Sugar\Tests\Unit\Pass\Directive;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Config\SugarConfig;
@@ -44,19 +43,19 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Directive attributes cannot contain dynamic output expressions');
 
-        $fragment = new FragmentNode(
-            attributes: [
-                $this->attributeNode(
-                    's:foreach',
-                    $this->outputNode('$items', true, OutputContext::HTML, 1, 5),
-                    1,
-                    5,
-                ),
-            ],
-            children: [$this->text('Content', 1, 20)],
-            line: 1,
-            column: 0,
-        );
+            $fragment = $this->fragment(
+                attributes: [
+                    $this->attributeNode(
+                        's:foreach',
+                        $this->outputNode('$items', true, OutputContext::HTML, 1, 5),
+                        1,
+                        5,
+                    ),
+                ],
+                children: [$this->text('Content', 1, 20)],
+                line: 1,
+                column: 0,
+            );
 
         $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
@@ -67,15 +66,15 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('<s-template> cannot have regular HTML attributes');
 
-        $fragment = new FragmentNode(
-            attributes: [
-                $this->attribute('s:if', '$show', 1, 5),
-                $this->attribute('class', 'container', 1, 15),
-            ],
-            children: [$this->text('Content', 1, 20)],
-            line: 1,
-            column: 0,
-        );
+            $fragment = $this->fragment(
+                attributes: [
+                    $this->attribute('s:if', '$show', 1, 5),
+                    $this->attribute('class', 'container', 1, 15),
+                ],
+                children: [$this->text('Content', 1, 20)],
+                line: 1,
+                column: 0,
+            );
 
         $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
@@ -86,14 +85,14 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('<s-template> cannot have attribute directives like s:class');
 
-        $fragment = new FragmentNode(
-            attributes: [
-                $this->attribute('s:class', "['active' => true]", 1, 5),
-            ],
-            children: [$this->text('Content', 1, 20)],
-            line: 1,
-            column: 0,
-        );
+            $fragment = $this->fragment(
+                attributes: [
+                    $this->attribute('s:class', "['active' => true]", 1, 5),
+                ],
+                children: [$this->text('Content', 1, 20)],
+                line: 1,
+                column: 0,
+            );
 
         $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());
@@ -101,7 +100,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
     public function testFragmentWithContentDirective(): void
     {
-        $fragment = new FragmentNode(
+        $fragment = $this->fragment(
             attributes: [
                 $this->attribute('s:text', '$message', 1, 5),
             ],
@@ -121,7 +120,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
     public function testFragmentWithControlFlowAndContentDirective(): void
     {
-        $fragment = new FragmentNode(
+        $fragment = $this->fragment(
             attributes: [
                 $this->attribute('s:if', '$show', 1, 5),
                 $this->attribute('s:html', '$content', 1, 15),
@@ -264,14 +263,14 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('can only be used on elements');
 
-        $fragment = new FragmentNode(
-            attributes: [
-                $this->attributeNode('s:nowrap', null, 1, 5),
-            ],
-            children: [$this->text('Content', 1, 10)],
-            line: 1,
-            column: 0,
-        );
+            $fragment = $this->fragment(
+                attributes: [
+                    $this->attributeNode('s:nowrap', null, 1, 5),
+                ],
+                children: [$this->text('Content', 1, 10)],
+                line: 1,
+                column: 0,
+            );
 
         $ast = $this->document()->withChild($fragment)->build();
         $this->execute($ast, $this->createTestContext());

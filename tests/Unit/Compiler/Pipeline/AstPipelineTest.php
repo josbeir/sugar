@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Compiler\Pipeline;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
@@ -14,12 +13,13 @@ use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Context\CompilationContext;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
+use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class AstPipelineTest extends TestCase
 {
     use NodeBuildersTrait;
+    use TemplateTestHelperTrait;
 
     public function testCallsBeforeAndAfterInDepthFirstOrder(): void
     {
@@ -63,7 +63,7 @@ final class AstPipelineTest extends TestCase
             ->build();
 
         $pipeline = new AstPipeline([$pass]);
-        $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $pipeline->execute($ast, $this->createContext());
 
         $this->assertSame([
             'before:' . DocumentNode::class,
@@ -105,7 +105,7 @@ final class AstPipelineTest extends TestCase
             ->build();
 
         $pipeline = new AstPipeline([$pass]);
-        $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $result = $pipeline->execute($ast, $this->createContext());
 
         $this->assertCount(2, $result->children);
         $this->assertInstanceOf(TextNode::class, $result->children[0]);
@@ -170,7 +170,7 @@ final class AstPipelineTest extends TestCase
             ->build();
 
         $pipeline = new AstPipeline([$skipPass, $recordPass]);
-        $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $pipeline->execute($ast, $this->createContext());
 
         $this->assertSame([], $recordPass->events);
     }
@@ -209,7 +209,7 @@ final class AstPipelineTest extends TestCase
             ->build();
 
         $pipeline = new AstPipeline([$pass]);
-        $result = $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $result = $pipeline->execute($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $this->assertInstanceOf(TextNode::class, $result->children[0]);
@@ -250,7 +250,7 @@ final class AstPipelineTest extends TestCase
 
         $ast = $this->document()
             ->withChildren([
-                new ComponentNode(
+                $this->component(
                     name: 'button',
                     attributes: [],
                     children: [$this->text('component', 1, 1)],
@@ -266,7 +266,7 @@ final class AstPipelineTest extends TestCase
             ->build();
 
         $pipeline = new AstPipeline([$pass]);
-        $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $pipeline->execute($ast, $this->createContext());
 
         $this->assertSame(['component', 'directive'], $pass->events);
     }
@@ -302,6 +302,6 @@ final class AstPipelineTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Pipeline must return a single DocumentNode.');
 
-        $pipeline->execute($ast, new CompilationContext('test.sugar.php', '', false));
+        $pipeline->execute($ast, $this->createContext());
     }
 }

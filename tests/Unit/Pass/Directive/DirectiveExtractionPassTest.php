@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Directive;
 
+use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
@@ -229,7 +230,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsComponentControlFlowDirective(): void
     {
-        $component = new ComponentNode(
+        $component = $this->component(
             name: 'button',
             attributes: [$this->attribute('s:if', '$show')],
             children: [$this->text('Click', 1, 1)],
@@ -251,7 +252,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testExtractsComponentAttributeDirectiveToClassAttribute(): void
     {
-        $component = new ComponentNode(
+        $component = $this->component(
             name: 'button',
             attributes: [$this->attribute('s:class', "['active' => true]")],
             children: [],
@@ -312,7 +313,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testKeepsFragmentWithInheritanceAttributeOnly(): void
     {
-        $fragment = new FragmentNode(
+        $fragment = $this->fragment(
             attributes: [$this->attribute('s:block', 'content')],
             children: [$this->text('Content', 1, 1)],
             line: 1,
@@ -329,7 +330,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
     public function testKeepsFragmentWithPassThroughDirectiveOnly(): void
     {
-        $fragment = new FragmentNode(
+        $fragment = $this->fragment(
             attributes: [$this->attribute('s:slot', 'header')],
             children: [$this->text('Content', 1, 1)],
             line: 1,
@@ -354,10 +355,12 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
                 array $remainingAttrs,
             ): FragmentNode {
                 return new FragmentNode(
-                    attributes: [],
+                    attributes: [
+                        new AttributeNode('s:if', '$item', 1, 5),
+                    ],
                     children: [new RawPhpNode('prefix', 1, 1)],
                     line: 1,
-                    column: 1,
+                    column: 0,
                 );
             }
 
@@ -373,6 +376,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         };
 
         $registry = DirectiveRegistry::empty();
+        $registry->register('if', IfDirective::class);
         $registry->register('custom', $compiler);
 
         $pass = new DirectiveExtractionPass($registry, new SugarConfig());

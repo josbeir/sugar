@@ -168,4 +168,34 @@ PHP;
         $this->assertStringContainsString(' 5 | line 5', $snippet);
         $this->assertStringNotContainsString(' 6 | line 6', $snippet);
     }
+
+    public function testReturnsEmptySnippetForEmptySource(): void
+    {
+        $this->assertSame('', SnippetGenerator::generate('', line: 1, column: 1));
+        $this->assertSame('', SnippetGenerator::generate("\n\n", line: 1, column: 1));
+    }
+
+    public function testReturnsEmptySnippetForOutOfRangeLine(): void
+    {
+        $source = "line 1\nline 2";
+
+        $this->assertSame('', SnippetGenerator::generate($source, line: 3, column: 1));
+    }
+
+    public function testReturnsEmptySnippetForEmptyLine(): void
+    {
+        $source = "line 1\n\nline 3";
+
+        $this->assertSame('', SnippetGenerator::generate($source, line: 2, column: 1));
+    }
+
+    public function testDoesNotRenderPointerWhenColumnIsZero(): void
+    {
+        $source = "line 1\nline 2";
+
+        $snippet = SnippetGenerator::generate($source, line: 2, column: 0, contextLines: 0);
+
+        $this->assertStringContainsString(' 2 | line 2', $snippet);
+        $this->assertStringNotContainsString('^', $snippet);
+    }
 }

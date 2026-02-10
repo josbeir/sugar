@@ -65,7 +65,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $ast = $this->document()
             ->withChild(
-                new ComponentNode(
+                $this->component(
                     name: 'button',
                     children: [$this->text('Click me', 1, 0)],
                     line: 1,
@@ -128,7 +128,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $ast = $this->document()
             ->withChild(
-                new ComponentNode(
+                $this->component(
                     name: 'button',
                     attributes: [
                         $this->attributeNode(
@@ -241,7 +241,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $ast = $this->document()
             ->withChild(
-                new ComponentNode(
+                $this->component(
                     name: 'button',
                     attributes: [
                         $this->attributeNode(
@@ -387,9 +387,9 @@ final class ComponentExpansionPassTest extends TestCase
         $result = $this->executePipeline($ast, $this->createContext());
 
         $code = $this->astToString($result);
-        $this->assertStringContainsString('<div class="panel">', $code);
-        $this->assertStringContainsString('<button class="btn">', $code);
-        $this->assertStringContainsString('Submit', $code);
+            $this->assertStringContainsString('<div class="panel">', $code);
+            $this->assertStringContainsString('<button class="btn">', $code);
+            $this->assertStringContainsString('Submit', $code);
 
         unlink($nestedComponentPath);
     }
@@ -398,7 +398,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $ast = $this->document()
             ->withChild(
-                new ComponentNode(
+                $this->component(
                     name: 'nonexistent',
                     children: [],
                     line: 1,
@@ -720,9 +720,9 @@ final class ComponentExpansionPassTest extends TestCase
         // Each button component will be loaded but should only be parsed once
         $ast = $this->document()
             ->withChildren([
-                new ComponentNode(name: 'button', children: [$this->text('First', 1, 0)], line: 1, column: 0),
-                new ComponentNode(name: 'button', children: [$this->text('Second', 2, 0)], line: 2, column: 0),
-                new ComponentNode(name: 'button', children: [$this->text('Third', 3, 0)], line: 3, column: 0),
+                 $this->component(name: 'button', children: [$this->text('First', 1, 0)], line: 1, column: 0),
+                 $this->component(name: 'button', children: [$this->text('Second', 2, 0)], line: 2, column: 0),
+                 $this->component(name: 'button', children: [$this->text('Third', 3, 0)], line: 3, column: 0),
             ])
             ->build();
 
@@ -739,7 +739,7 @@ final class ComponentExpansionPassTest extends TestCase
         // Verify caching by executing again with same component
         $ast2 = $this->document()
             ->withChild(
-                new ComponentNode(name: 'button', children: [$this->text('Fourth', 4, 0)], line: 4, column: 0),
+                $this->component(name: 'button', children: [$this->text('Fourth', 4, 0)], line: 4, column: 0),
             )
             ->build();
 
@@ -756,10 +756,10 @@ final class ComponentExpansionPassTest extends TestCase
         // Use different components multiple times each
         $ast = $this->document()
             ->withChildren([
-                new ComponentNode(name: 'button', children: [$this->text('Button 1', 1, 0)], line: 1, column: 0),
-                new ComponentNode(name: 'button', children: [$this->text('Button 2', 2, 0)], line: 2, column: 0),
-                new ComponentNode(name: 'alert', children: [$this->text('Alert 1', 3, 0)], line: 3, column: 0),
-                new ComponentNode(name: 'alert', children: [$this->text('Alert 2', 4, 0)], line: 4, column: 0),
+                $this->component(name: 'button', children: [$this->text('Button 1', 1, 0)], line: 1, column: 0),
+                $this->component(name: 'button', children: [$this->text('Button 2', 2, 0)], line: 2, column: 0),
+                $this->component(name: 'alert', children: [$this->text('Alert 1', 3, 0)], line: 3, column: 0),
+                $this->component(name: 'alert', children: [$this->text('Alert 2', 4, 0)], line: 4, column: 0),
             ])
             ->build();
 

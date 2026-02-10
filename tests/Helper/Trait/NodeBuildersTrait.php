@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\ComponentNode;
+use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
@@ -88,5 +90,37 @@ trait NodeBuildersTrait
         int $column = 0,
     ): AttributeNode {
         return new AttributeNode($name, $value, $line, $column);
+    }
+
+    /**
+     * Create a fragment node
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Ast\Node> $children
+     */
+    protected function fragment(
+        array $attributes = [],
+        array $children = [],
+        int $line = 1,
+        int $column = 0,
+        bool $selfClosing = false,
+    ): FragmentNode {
+        return new FragmentNode($attributes, $children, $line, $column, $selfClosing);
+    }
+
+    /**
+     * Create a component node
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Ast\Node> $children
+     */
+    protected function component(
+        string $name,
+        array $attributes = [],
+        array $children = [],
+        int $line = 1,
+        int $column = 0,
+    ): ComponentNode {
+        return new ComponentNode($name, $attributes, $children, $line, $column);
     }
 }
