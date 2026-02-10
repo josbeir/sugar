@@ -13,7 +13,7 @@ Keep layout files under a `layouts/` folder and partials under `partials/` to ma
 
 ## Folder Layout and Paths
 
-This structure keeps layout inheritance, includes, and components easy to discover.
+This suggested structure keeps layout inheritance, includes, and components easy to discover.
 
 ```text
 templates/
@@ -109,8 +109,76 @@ When a parent block is an element, that wrapper is preserved and the child's wra
 Notice how the parent's `<main>` wrapper is preserved and the child's `<div>` wrapper is dropped. If you want the child wrapper preserved on replace, define the parent block as a fragment (`<s-template s:block="...">`).
 :::
 
-::: warning
-Only one `s:extends` directive is allowed per template.
+## Limitations and Rules
+
+- Only one `s:extends` directive is allowed per template.
+- When a template uses `s:extends`, only `s:block`, `s:append`, and `s:prepend` content is kept. Any top-level markup or raw PHP outside those blocks is discarded, so variable assignments must live inside a block (or be passed via `s:with`) unless you render specific blocks via `Engine::render()` with the blocks option (see [Render Only Specific Blocks](#render-only-specific-blocks)).
+- `s:block`, `s:append`, and `s:prepend` are mutually exclusive on the same element.
+- `s:with` only scopes values to the immediate `s:include` and does not leak to parent scope.
+- `s:include` and `s:extends` paths resolve relative to the current template unless `absolutePathsOnly` is enabled.
+
+The example below focuses on the `s:extends` rule about top-level content being discarded.
+
+::: code-group
+```html [Do]
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+
+<s-template s:block="content">
+    <?php $var = 'I AM A VARIABLE'; ?>
+    <h1>Home</h1>
+    <s-template s:include="partials/card" s:with="['var' => $var]" />
+</s-template>
+```
+
+```html [Don't]
+<?php $var = 'I AM A VARIABLE'; ?>
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+
+<s-template s:block="content">
+    <h1>Home</h1>
+</s-template>
+```
+:::
+
+The example below shows the mutual exclusivity of block directives on a single element.
+
+::: code-group
+```html [Do]
+<section s:block="content">
+    <p>Block content</p>
+</section>
+```
+
+```html [Don't]
+<section s:block="content" s:append="content">
+    <p>Not allowed</p>
+</section>
+```
+:::
+
+The example below shows that `s:with` only scopes variables inside the included template, not the parent template.
+
+::: code-group
+```html [Do]
+<s-template s:include="partials/card" s:with="['title' => 'Card']" />
+```
+
+```html [Don't]
+<!-- $title is not available outside the include -->
+<h2><?= $title ?></h2>
+```
+:::
+
+The example below shows relative vs absolute-only paths.
+
+::: code-group
+```html [Relative]
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+```
+
+```html [Absolute-only]
+<s-template s:extends="layouts/base.sugar.php"></s-template>
+```
 :::
 
 ## Template Inheritance Directives
@@ -281,7 +349,11 @@ You can render one or more blocks directly by passing a list of block names as t
 This skips layout inheritance and outputs the matching blocks in template order, preserving their wrapper elements. Includes still run before block extraction. It is especially handy when you need to return partials for AJAX responses or other incremental updates.
 
 ```php
-echo $engine->render('pages/home', ['user' => $user], ['sidebar', 'content']);
+echo $engine->render(
+    template: 'pages/home',
+    data: ['user' => $user],
+    blocks: ['sidebar', 'content'],
+);
 ```
 
 ```html
