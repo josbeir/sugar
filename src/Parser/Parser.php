@@ -15,6 +15,7 @@ use Sugar\Ast\TextNode;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
 use Sugar\Parser\Helper\AttributeContinuationHelper;
+use Sugar\Parser\Helper\ClosingTagMarker;
 use Sugar\Parser\Helper\PipeParser;
 use Sugar\Runtime\HtmlTagHelper;
 
@@ -43,7 +44,7 @@ final readonly class Parser
      */
     public function parse(string $source): DocumentNode
     {
-        $tokens = SugarToken::tokenize($source);
+        $tokens = Token::tokenize($source);
         $nodes = $this->parseTokens($tokens, $source);
 
         return new DocumentNode($nodes);
@@ -52,7 +53,7 @@ final readonly class Parser
     /**
      * Parse tokens into AST nodes
      *
-     * @param array<\Sugar\Parser\SugarToken> $tokens Token stream
+     * @param array<\Sugar\Parser\Token> $tokens Token stream
      * @param string $source Template source code
      * @return array<\Sugar\Ast\Node> AST nodes
      */
@@ -163,7 +164,7 @@ final readonly class Parser
     /**
      * Extract a PHP expression until close tag
      *
-     * @param array<\Sugar\Parser\SugarToken> $tokens Token stream
+     * @param array<\Sugar\Parser\Token> $tokens Token stream
      * @param int $start Starting index
      * @return array{0: string, 1: int} Expression and next index
      */
@@ -222,7 +223,7 @@ final readonly class Parser
     /**
      * Extract a PHP code block until close tag
      *
-     * @param array<\Sugar\Parser\SugarToken> $tokens Token stream
+     * @param array<\Sugar\Parser\Token> $tokens Token stream
      * @param int $start Starting index
      * @return array{0: string, 1: int} Code block and next index
      */
@@ -253,7 +254,7 @@ final readonly class Parser
      * @param string $html HTML content
      * @param int $line Line number
      * @param int $column Column number
-     * @return array<\Sugar\Ast\Node|\Sugar\Parser\ClosingTagMarker> Flat node list
+     * @return array<\Sugar\Ast\Node|\Sugar\Parser\Helper\ClosingTagMarker> Flat node list
      */
     private function parseHtml(string $html, int $line, int $column): array
     {
@@ -511,7 +512,7 @@ final readonly class Parser
     /**
      * Build tree structure from flat node list
      *
-     * @param array<\Sugar\Ast\Node|\Sugar\Parser\ClosingTagMarker> $flatNodes Flat list
+     * @param array<\Sugar\Ast\Node|\Sugar\Parser\Helper\ClosingTagMarker> $flatNodes Flat list
      * @return array<\Sugar\Ast\Node> Tree structure
      */
     private function buildTree(array $flatNodes): array

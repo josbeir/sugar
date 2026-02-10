@@ -16,7 +16,7 @@ final class AttributeContinuationHelper
      * Detect if the HTML fragment ends with an open attribute quote.
      *
      * @param string $html HTML fragment
-     * @param array<\Sugar\Ast\Node|\Sugar\Parser\ClosingTagMarker> $htmlNodes Parsed nodes
+     * @param array<\Sugar\Ast\Node|\Sugar\Parser\Helper\ClosingTagMarker> $htmlNodes Parsed nodes
      * @return array{element: \Sugar\Ast\ElementNode, attrIndex: int, quote: string|null}|null
      */
     public static function detectOpenAttribute(string $html, array $htmlNodes): ?array

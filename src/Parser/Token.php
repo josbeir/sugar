@@ -6,12 +6,12 @@ namespace Sugar\Parser;
 use PhpToken;
 
 /**
- * Extended PhpToken with Sugar-specific helper methods
+ * Extended PhpToken with helper methods for template parsing
  *
  * Provides convenience methods for identifying token types and extracting content
- * relevant to Sugar template parsing.
+ * relevant to template parsing.
  */
-final class SugarToken extends PhpToken
+final class Token extends PhpToken
 {
     /**
      * Check if this is an HTML/text token outside PHP tags
@@ -70,19 +70,19 @@ final class SugarToken extends PhpToken
     }
 
     /**
-     * Tokenize source into SugarToken instances
+     * Tokenize source into Token instances
      *
      * @param string $source Template source code
-     * @return array<\Sugar\Parser\SugarToken>
+     * @return array<\Sugar\Parser\Token>
      */
     public static function tokenize(string $source, int $flags = 0): array
     {
         /** @var array<\PhpToken> $tokens */
         $tokens = parent::tokenize($source, $flags);
 
-        // Convert PhpToken instances to SugarToken instances
+        // Convert PhpToken instances to Token instances
         return array_map(
-            fn(PhpToken $token): SugarToken => new self($token->id, $token->text, $token->line, $token->pos),
+            fn(PhpToken $token): Token => new self($token->id, $token->text, $token->line, $token->pos),
             $tokens,
         );
     }

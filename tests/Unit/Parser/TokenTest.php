@@ -4,38 +4,38 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Parser\SugarToken;
+use Sugar\Parser\Token;
 
-final class SugarTokenTest extends TestCase
+final class TokenTest extends TestCase
 {
     public function testTokenizeBasicTemplate(): void
     {
         $source = '<h1><?= $title ?></h1>';
-        $tokens = SugarToken::tokenize($source);
+        $tokens = Token::tokenize($source);
 
         $this->assertNotEmpty($tokens);
-        $this->assertContainsOnlyInstancesOf(SugarToken::class, $tokens);
+        $this->assertContainsOnlyInstancesOf(Token::class, $tokens);
     }
 
     public function testIsHtml(): void
     {
-        $tokens = SugarToken::tokenize('<div>text</div><?= $var ?>');
+        $tokens = Token::tokenize('<div>text</div><?= $var ?>');
 
-        $htmlTokens = array_filter($tokens, fn(SugarToken $t): bool => $t->isHtml());
+        $htmlTokens = array_filter($tokens, fn(Token $t): bool => $t->isHtml());
         $this->assertNotEmpty($htmlTokens);
     }
 
     public function testIsOutput(): void
     {
-        $tokens = SugarToken::tokenize('<?= $var ?>');
+        $tokens = Token::tokenize('<?= $var ?>');
 
-        $outputTokens = array_filter($tokens, fn(SugarToken $t): bool => $t->isOutput());
+        $outputTokens = array_filter($tokens, fn(Token $t): bool => $t->isOutput());
         $this->assertCount(1, $outputTokens);
     }
 
     public function testContainsHtml(): void
     {
-        $tokens = SugarToken::tokenize('<div>text</div>');
+        $tokens = Token::tokenize('<div>text</div>');
 
         $token = $tokens[0];
         $this->assertTrue($token->containsHtml());
@@ -58,16 +58,16 @@ final class SugarTokenTest extends TestCase
 </html>
 SUGAR;
 
-        $tokens = SugarToken::tokenize($source);
+        $tokens = Token::tokenize($source);
 
         $this->assertGreaterThan(5, count($tokens));
 
         // Should have HTML tokens
-        $htmlTokens = array_filter($tokens, fn(SugarToken $t): bool => $t->isHtml());
+        $htmlTokens = array_filter($tokens, fn(Token $t): bool => $t->isHtml());
         $this->assertNotEmpty($htmlTokens);
 
         // Should have output tokens
-        $outputTokens = array_filter($tokens, fn(SugarToken $t): bool => $t->isOutput());
+        $outputTokens = array_filter($tokens, fn(Token $t): bool => $t->isOutput());
         $this->assertGreaterThan(1, count($outputTokens));
     }
 }

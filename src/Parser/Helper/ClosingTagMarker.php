@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Parser;
+namespace Sugar\Parser\Helper;
 
 /**
  * Temporary marker for closing HTML tags during parsing

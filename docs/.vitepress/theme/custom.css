@@ -1,6 +1,48 @@
 .VPHomeHero {
 	overflow: hidden;
 }
+
+.badge-strip {
+  display: flex;
+  width: fit-content;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  margin: 2rem auto;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 22, 22, 0.08);
+  background: linear-gradient(135deg, rgba(255, 201, 92, 0.18), rgba(255, 132, 88, 0.12));
+  box-shadow: 0 10px 24px rgba(22, 22, 22, 0.08);
+}
+
+.badge-strip__link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.badge-strip__link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(22, 22, 22, 0.12);
+}
+
+.badge-strip__badge {
+  height: 20px;
+  border-radius: 999px;
+}
+
+html.dark .badge-strip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 183, 77, 0.18), rgba(255, 117, 92, 0.12));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .badge-strip__link:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
 .VPHomeHero .image {
   position: relative;
   isolation: isolate;
