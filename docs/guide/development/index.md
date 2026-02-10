@@ -38,7 +38,7 @@ $engine = Engine::builder($config)
 `withDebug(true)` enables file timestamp checks for development. Disable it in production for best performance.
 :::
 
-## Custom Directive Prefix
+### Custom Directive Prefix
 
 Swap the `s:` prefix if you need to avoid collisions with another templating system:
 
@@ -52,7 +52,7 @@ $config = SugarConfig::withPrefix('v');
 After changing the prefix, use it consistently in templates and component tags.
 :::
 
-## Custom Self-Closing Tags
+### Custom Self-Closing Tags
 
 Sugar treats HTML void elements as self-closing automatically. If you need to add or override the list (for custom tags, SVG-like tags, or HTML subsets), provide a custom list on the config:
 
@@ -80,7 +80,7 @@ $config = (new SugarConfig())
 ```
 :::
 
-## Custom Template Suffix
+### Custom Template Suffix
 
 Sugar defaults to `.sugar.php` for template filenames. If your project uses a different suffix, override it once on the config:
 
@@ -93,6 +93,65 @@ $config = (new SugarConfig())
 
 ::: tip
 Use the same `SugarConfig` instance for loaders and the engine so template lookups and component discovery stay consistent.
+:::
+
+## Template Context
+
+Template context lets you expose helper methods to every template via `$this`.
+
+::: tip
+Treat the context as a lightweight helper object. Keep it stateless when possible.
+:::
+
+```php
+use Sugar\Engine;
+
+$viewContext = new class {
+    public function url(string $path): string
+    {
+        return '/app' . $path;
+    }
+};
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withTemplateContext($viewContext)
+    ->build();
+```
+
+In templates:
+```html
+<a href="<?= $this->url('/profile') ?>">Profile</a>
+```
+
+### Common Patterns
+
+::: code-group
+```php [Helpers]
+$viewContext = new class {
+    public function url(string $path): string
+    {
+        return '/app' . $path;
+    }
+
+    public function asset(string $path): string
+    {
+        return '/assets/' . ltrim($path, '/');
+    }
+};
+```
+
+```html [Template]
+<link rel="stylesheet" href="<?= $this->asset('app.css') ?>">
+```
+:::
+
+::: details
+When to use template context
+
+- Shared helpers like URL or asset builders
+- Formatting helpers (dates, numbers) reused across templates
+- Framework integration points that should not be global functions
 :::
 
 ## Custom Directive Registry
@@ -314,63 +373,4 @@ With debug mode enabled, compiled templates include source location comments tha
 
 ::: warning
 Disable debug mode in production to avoid extra filesystem checks and template metadata in output.
-:::
-
-## Template Context
-
-Template context lets you expose helper methods to every template via `$this`.
-
-::: tip
-Treat the context as a lightweight helper object. Keep it stateless when possible.
-:::
-
-```php
-use Sugar\Engine;
-
-$viewContext = new class {
-    public function url(string $path): string
-    {
-        return '/app' . $path;
-    }
-};
-
-$engine = Engine::builder()
-    ->withTemplateLoader($loader)
-    ->withTemplateContext($viewContext)
-    ->build();
-```
-
-In templates:
-```html
-<a href="<?= $this->url('/profile') ?>">Profile</a>
-```
-
-### Common Patterns
-
-::: code-group
-```php [Helpers]
-$viewContext = new class {
-    public function url(string $path): string
-    {
-        return '/app' . $path;
-    }
-
-    public function asset(string $path): string
-    {
-        return '/assets/' . ltrim($path, '/');
-    }
-};
-```
-
-```html [Template]
-<link rel="stylesheet" href="<?= $this->asset('app.css') ?>">
-```
-:::
-
-::: details
-When to use template context
-
-- Shared helpers like URL or asset builders
-- Formatting helpers (dates, numbers) reused across templates
-- Framework integration points that should not be global functions
 :::

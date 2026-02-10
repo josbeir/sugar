@@ -321,13 +321,16 @@ final class CodeGenerator
             return '';
         }
 
-        $location = sprintf('L%d:C%d', $node->line, $node->column);
+        $templatePath = $this->context->templatePath !== ''
+            ? $this->context->templatePath
+            : 'inline-template';
+        $location = sprintf('%s:%d:%d', $templatePath, $node->line, $node->column);
 
         if ($context !== '') {
-            return sprintf(' /* %s %s */', $location, $context);
+            return sprintf(' /* sugar: %s %s */', $location, $context);
         }
 
-        return sprintf(' /* %s */', $location);
+        return sprintf(' /* sugar: %s */', $location);
     }
 
     /**

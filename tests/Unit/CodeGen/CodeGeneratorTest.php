@@ -227,8 +227,8 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('/* L2:C4 */', $code);
-        $this->assertStringContainsString('<?php if ($user): /* L2:C4 */ ?>', $code);
+        $this->assertStringContainsString('/* sugar: test.sugar.php:2:4 */', $code);
+        $this->assertStringContainsString('<?php if ($user): /* sugar: test.sugar.php:2:4 */ ?>', $code);
     }
 
     public function testDebugCommentOnOutputNode(): void
@@ -239,7 +239,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('/* L3:C8 s:text */', $code);
+        $this->assertStringContainsString('/* sugar: test.sugar.php:3:8 s:text */', $code);
     }
 
     public function testDebugCommentOnRawOutputNode(): void
@@ -250,7 +250,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('/* L4:C10 s:html */', $code);
+        $this->assertStringContainsString('/* sugar: test.sugar.php:4:10 s:html */', $code);
     }
 
     public function testGenerateRuntimeCallNode(): void
@@ -276,7 +276,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('/* L2:C3 runtime */', $code);
+        $this->assertStringContainsString('/* sugar: test.sugar.php:2:3 runtime */', $code);
     }
 
     public function testNoDebugCommentsWhenDisabled(): void
