@@ -82,11 +82,11 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
             $attributes = '';
             foreach ($element->attributes as $attr) {
                 if (!$this->isIfContentAttribute($attr->name)) {
-                    if ($attr->value === null) {
+                    if ($attr->value->isBoolean()) {
                         $attributes .= ' ' . $attr->name;
-                    } elseif (is_string($attr->value)) {
+                    } elseif ($attr->value->isStatic()) {
                         // Static string value
-                        $attributes .= sprintf(' %s="%s"', $attr->name, $attr->value);
+                        $attributes .= sprintf(' %s="%s"', $attr->name, $attr->value->static ?? '');
                     }
 
                     // Note: Dynamic attributes (OutputNode) are not supported in s:ifcontent context

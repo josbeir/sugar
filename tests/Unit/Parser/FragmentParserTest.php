@@ -55,7 +55,8 @@ final class FragmentParserTest extends TestCase
         $fragment = $doc->children[0];
         $this->assertCount(1, $fragment->attributes);
         $this->assertSame('s:if', $fragment->attributes[0]->name);
-        $this->assertSame('$show', $fragment->attributes[0]->value);
+        $this->assertTrue($fragment->attributes[0]->value->isStatic());
+        $this->assertSame('$show', $fragment->attributes[0]->value->static);
     }
 
     public function testParsesFragmentWithMultipleChildren(): void

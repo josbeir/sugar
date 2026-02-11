@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Parser\Helper;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
@@ -59,11 +60,17 @@ final class NodeFactory
     /**
      * Create an attribute node.
      *
-     * @param \Sugar\Ast\OutputNode|array<int, string|\Sugar\Ast\OutputNode>|string|null $value
+     * @param \Sugar\Ast\AttributeValue|\Sugar\Ast\OutputNode|array<int, string|\Sugar\Ast\OutputNode>|string|null $value
      */
-    public function attribute(string $name, string|OutputNode|array|null $value, int $line, int $column): AttributeNode
-    {
-        return new AttributeNode($name, $value, $line, $column);
+    public function attribute(
+        string $name,
+        AttributeValue|OutputNode|array|string|null $value,
+        int $line,
+        int $column,
+    ): AttributeNode {
+        $attributeValue = $value instanceof AttributeValue ? $value : AttributeValue::from($value);
+
+        return new AttributeNode($name, $attributeValue, $line, $column);
     }
 
     /**

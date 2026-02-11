@@ -212,7 +212,8 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
         $this->assertInstanceOf(ElementNode::class, $img);
         $attr = $img->attributes[0];
         $this->assertInstanceOf(AttributeNode::class, $attr);
-        $value = $attr->value;
+        $this->assertTrue($attr->value->isOutput());
+        $value = $attr->value->output;
         $this->assertInstanceOf(OutputNode::class, $value);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
     }
@@ -236,7 +237,8 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
         $this->assertInstanceOf(ElementNode::class, $link);
         $attr = $link->attributes[0];
         $this->assertInstanceOf(AttributeNode::class, $attr);
-        $value = $attr->value;
+        $this->assertTrue($attr->value->isOutput());
+        $value = $attr->value->output;
         $this->assertInstanceOf(OutputNode::class, $value);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
     }
@@ -261,7 +263,8 @@ final class ContextAnalysisPassTest extends MiddlewarePassTestCase
         $this->assertInstanceOf(ElementNode::class, $link);
         $attr = $link->attributes[0];
         $this->assertInstanceOf(AttributeNode::class, $attr);
-        $value = $attr->value;
+        $this->assertTrue($attr->value->isOutput());
+        $value = $attr->value->output;
         $this->assertInstanceOf(OutputNode::class, $value);
         $this->assertSame(OutputContext::HTML_ATTRIBUTE, $value->context);
         $output = $result->children[1];

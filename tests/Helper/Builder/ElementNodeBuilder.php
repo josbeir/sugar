@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Builder;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 
@@ -54,7 +55,7 @@ final class ElementNodeBuilder
      */
     public function attribute(string $name, string $value): self
     {
-        $this->attributes[] = new AttributeNode($name, $value, $this->line, 0);
+        $this->attributes[] = new AttributeNode($name, AttributeValue::static($value), $this->line, 0);
 
         return $this;
     }

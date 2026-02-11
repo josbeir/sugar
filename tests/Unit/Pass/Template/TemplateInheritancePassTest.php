@@ -1156,8 +1156,8 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             $output = '<' . $node->tag;
             foreach ($node->attributes as $attr) {
                 $output .= ' ' . $attr->name;
-                if ($attr->value !== null && is_string($attr->value)) {
-                    $output .= '="' . $attr->value . '"';
+                if ($attr->value->isStatic()) {
+                    $output .= '="' . ($attr->value->static ?? '') . '"';
                 }
             }
 

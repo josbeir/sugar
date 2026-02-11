@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Ast;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
@@ -19,7 +20,7 @@ final class ElementNodeTest extends TestCase
     public function testElementNodeCreation(): void
     {
         $attributes = [
-            new AttributeNode('class', 'container', 1, 5),
+            new AttributeNode('class', AttributeValue::static('container'), 1, 5),
         ];
         $children = [
             new TextNode('Hello World', 1, 20),
@@ -45,9 +46,9 @@ final class ElementNodeTest extends TestCase
     public function testElementNodeWithMultipleAttributes(): void
     {
         $attributes = [
-            new AttributeNode('class', 'btn', 1, 5),
-            new AttributeNode('id', 'submit-btn', 1, 15),
-            new AttributeNode('type', 'submit', 1, 30),
+            new AttributeNode('class', AttributeValue::static('btn'), 1, 5),
+            new AttributeNode('id', AttributeValue::static('submit-btn'), 1, 15),
+            new AttributeNode('type', AttributeValue::static('submit'), 1, 30),
         ];
 
         $node = new ElementNode(
@@ -70,7 +71,7 @@ final class ElementNodeTest extends TestCase
     {
         $outputNode = new OutputNode('$url', true, OutputContext::HTML_ATTRIBUTE, 1, 15);
         $attributes = [
-            new AttributeNode('href', $outputNode, 1, 10),
+            new AttributeNode('href', AttributeValue::output($outputNode), 1, 10),
         ];
 
         $node = new ElementNode(
@@ -82,14 +83,15 @@ final class ElementNodeTest extends TestCase
             column: 1,
         );
 
-        $this->assertInstanceOf(OutputNode::class, $node->attributes[0]->value);
+        $this->assertTrue($node->attributes[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $node->attributes[0]->value->output);
     }
 
     public function testElementNodeSelfClosing(): void
     {
         $attributes = [
-            new AttributeNode('src', 'image.jpg', 1, 5),
-            new AttributeNode('alt', 'Description', 1, 20),
+            new AttributeNode('src', AttributeValue::static('image.jpg'), 1, 5),
+            new AttributeNode('alt', AttributeValue::static('Description'), 1, 20),
         ];
 
         $node = new ElementNode(

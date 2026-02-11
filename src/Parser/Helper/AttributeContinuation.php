@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Parser\Helper;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 
@@ -132,19 +133,14 @@ final class AttributeContinuation
             return;
         }
 
-        if ($attribute->value === null || $attribute->value === '') {
-            $attribute->value = [$part];
-
-            return;
+        if ($attribute->value->isBoolean() || ($attribute->value->isStatic() && $attribute->value->static === '')) {
+            $parts = [];
+        } else {
+            $parts = $attribute->value->toParts() ?? [];
         }
 
-        if (is_array($attribute->value)) {
-            $attribute->value[] = $part;
-
-            return;
-        }
-
-        $attribute->value = [$attribute->value, $part];
+        $parts[] = $part;
+        $attribute->value = AttributeValue::parts($parts);
     }
 
     /**
@@ -152,11 +148,15 @@ final class AttributeContinuation
      */
     public static function normalizeAttributeValue(AttributeNode $attribute): void
     {
-        if (!is_array($attribute->value) || count($attribute->value) !== 1) {
+        $parts = $attribute->value->toParts();
+        if ($parts === null || count($parts) !== 1) {
             return;
         }
 
-        $attribute->value = $attribute->value[0];
+        $part = $parts[0];
+        $attribute->value = $part instanceof OutputNode
+            ? AttributeValue::output($part)
+            : AttributeValue::static($part);
     }
 
     /**

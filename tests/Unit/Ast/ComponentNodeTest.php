@@ -5,6 +5,7 @@ namespace Sugar\Test\Unit\Ast;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
@@ -21,8 +22,8 @@ final class ComponentNodeTest extends TestCase
     public function testComponentNodeStoresAttributes(): void
     {
         $attributes = [
-            new AttributeNode('type', 'primary', 1, 0),
-            new AttributeNode('class', 'btn-large', 1, 15),
+            new AttributeNode('type', AttributeValue::static('primary'), 1, 0),
+            new AttributeNode('class', AttributeValue::static('btn-large'), 1, 15),
         ];
 
         $node = new ComponentNode(name: 'button', attributes: $attributes);

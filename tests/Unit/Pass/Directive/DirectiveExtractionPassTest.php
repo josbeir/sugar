@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
@@ -257,7 +258,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
     {
         $attribute = new AttributeNode(
             name: 's:if',
-            value: new OutputNode('$show', true, OutputContext::HTML, 1, 5),
+            value: AttributeValue::output(new OutputNode('$show', true, OutputContext::HTML, 1, 5)),
             line: 1,
             column: 5,
         );
@@ -424,8 +425,9 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $attrs = $result->children[0]->attributes;
         $this->assertCount(1, $attrs);
         $this->assertSame('class', $attrs[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value);
-        $this->assertStringContainsString('classNames', $attrs[0]->value->expression);
+        $this->assertTrue($attrs[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value->output);
+        $this->assertStringContainsString('classNames', $attrs[0]->value->output->expression);
     }
 
     public function testExtractsCustomExtractionDirectiveToFragment(): void
@@ -462,8 +464,9 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $attrs = $result->children[0]->attributes;
         $this->assertCount(1, $attrs);
         $this->assertSame('', $attrs[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value);
-        $this->assertStringContainsString('spreadAttrs', $attrs[0]->value->expression);
+        $this->assertTrue($attrs[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value->output);
+        $this->assertStringContainsString('spreadAttrs', $attrs[0]->value->output->expression);
     }
 
     public function testKeepsFragmentWithInheritanceAttributeOnly(): void
@@ -511,7 +514,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
             ): FragmentNode {
                 return new FragmentNode(
                     attributes: [
-                        new AttributeNode('s:if', '$item', 1, 5),
+                        new AttributeNode('s:if', AttributeValue::static('$item'), 1, 5),
                     ],
                     children: [new RawPhpNode('prefix', 1, 1)],
                     line: 1,

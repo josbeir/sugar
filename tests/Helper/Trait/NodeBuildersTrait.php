@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
@@ -77,7 +78,7 @@ trait NodeBuildersTrait
      */
     protected function attribute(string $name, string $value, int $line = 1, int $column = 0): AttributeNode
     {
-        return new AttributeNode($name, $value, $line, $column);
+        return new AttributeNode($name, AttributeValue::static($value), $line, $column);
     }
 
     /**
@@ -85,11 +86,13 @@ trait NodeBuildersTrait
      */
     protected function attributeNode(
         string $name,
-        string|OutputNode|null $value,
+        AttributeValue|OutputNode|string|null $value,
         int $line = 1,
         int $column = 0,
     ): AttributeNode {
-        return new AttributeNode($name, $value, $line, $column);
+        $attributeValue = $value instanceof AttributeValue ? $value : AttributeValue::from($value);
+
+        return new AttributeNode($name, $attributeValue, $line, $column);
     }
 
     /**

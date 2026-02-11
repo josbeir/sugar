@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Ast\Helper;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 
@@ -83,11 +84,14 @@ final class AttributeHelper
      *
      * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $node Node to get attribute from
      * @param string $name Attribute name
-     * @param mixed $default Default value if attribute not found
-     * @return mixed Attribute value or default
+     * @param \Sugar\Ast\AttributeValue|null $default Default value if attribute not found
+     * @return \Sugar\Ast\AttributeValue|null Attribute value or default
      */
-    public static function getAttributeValue(ElementNode|FragmentNode $node, string $name, mixed $default = null): mixed
-    {
+    public static function getAttributeValue(
+        ElementNode|FragmentNode $node,
+        string $name,
+        ?AttributeValue $default = null,
+    ): ?AttributeValue {
         $attr = self::findAttribute($node->attributes, $name);
 
         return $attr instanceof AttributeNode ? $attr->value : $default;
@@ -105,9 +109,12 @@ final class AttributeHelper
         string $name,
         string $default = '',
     ): string {
-        $value = self::getAttributeValue($node, $name, $default);
+        $value = self::getAttributeValue($node, $name);
+        if (!$value instanceof AttributeValue) {
+            return $default;
+        }
 
-        return is_string($value) ? $value : $default;
+        return $value->isStatic() ? ($value->static ?? $default) : $default;
     }
 
     /**

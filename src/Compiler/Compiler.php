@@ -6,7 +6,6 @@ namespace Sugar\Compiler;
 use Sugar\Ast\DocumentNode;
 use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
-use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
@@ -152,9 +151,9 @@ final class Compiler implements CompilerInterface
         bool $enableInheritance,
         ?ComponentVariantAdjustmentPass $variantAdjustments = null,
     ): string {
-        $pipeline = $this->buildPipeline(
-            $enableInheritance,
-            $variantAdjustments,
+        $pipeline = $this->pipelineFactory->buildCompilerPipeline(
+            enableInheritance: $enableInheritance,
+            variantAdjustments: $variantAdjustments,
         );
         $analyzedAst = $pipeline->execute($ast, $context);
 
@@ -162,18 +161,5 @@ final class Compiler implements CompilerInterface
         $generator = new CodeGenerator($this->escaper, $context);
 
         return $generator->generate($analyzedAst);
-    }
-
-    /**
-     * Build the middleware pipeline for compilation.
-     */
-    private function buildPipeline(
-        bool $enableInheritance,
-        ?ComponentVariantAdjustmentPass $variantAdjustments = null,
-    ): AstPipeline {
-        return $this->pipelineFactory->buildCompilerPipeline(
-            enableInheritance: $enableInheritance,
-            variantAdjustments: $variantAdjustments,
-        );
     }
 }

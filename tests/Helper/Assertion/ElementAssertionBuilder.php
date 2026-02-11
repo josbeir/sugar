@@ -30,7 +30,7 @@ final class ElementAssertionBuilder
                 continue;
             }
 
-            if ($value !== null && $attr->value !== $value) {
+            if ($value !== null && (!$attr->value->isStatic() || $attr->value->static !== $value)) {
                 continue;
             }
 

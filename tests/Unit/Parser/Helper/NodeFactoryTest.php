@@ -60,7 +60,8 @@ final class NodeFactoryTest extends TestCase
 
         $this->assertInstanceOf(AttributeNode::class, $node);
         $this->assertSame('class', $node->name);
-        $this->assertSame('btn', $node->value);
+        $this->assertTrue($node->value->isStatic());
+        $this->assertSame('btn', $node->value->static);
     }
 
     public function testCreatesElementNode(): void

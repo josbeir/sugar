@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Ast;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
@@ -18,13 +19,14 @@ final class AttributeNodeTest extends TestCase
     {
         $node = new AttributeNode(
             name: 'class',
-            value: 'btn btn-primary',
+            value: AttributeValue::static('btn btn-primary'),
             line: 1,
             column: 5,
         );
 
         $this->assertSame('class', $node->name);
-        $this->assertSame('btn btn-primary', $node->value);
+        $this->assertTrue($node->value->isStatic());
+        $this->assertSame('btn btn-primary', $node->value->static);
         $this->assertSame(1, $node->line);
         $this->assertSame(5, $node->column);
     }
@@ -35,34 +37,34 @@ final class AttributeNodeTest extends TestCase
 
         $node = new AttributeNode(
             name: 'data-user-id',
-            value: $outputNode,
+            value: AttributeValue::output($outputNode),
             line: 1,
             column: 5,
         );
 
         $this->assertSame('data-user-id', $node->name);
-        $this->assertInstanceOf(OutputNode::class, $node->value);
-        $this->assertSame($outputNode, $node->value);
+        $this->assertTrue($node->value->isOutput());
+        $this->assertSame($outputNode, $node->value->output);
     }
 
     public function testAttributeNodeWithNullValue(): void
     {
         $node = new AttributeNode(
             name: 'disabled',
-            value: null,
+            value: AttributeValue::boolean(),
             line: 1,
             column: 5,
         );
 
         $this->assertSame('disabled', $node->name);
-        $this->assertNull($node->value);
+        $this->assertTrue($node->value->isBoolean());
     }
 
     public function testAttributeNodeExtendsNode(): void
     {
         $node = new AttributeNode(
             name: 'id',
-            value: 'test-id',
+            value: AttributeValue::static('test-id'),
             line: 1,
             column: 1,
         );
@@ -74,20 +76,20 @@ final class AttributeNodeTest extends TestCase
     {
         $node = new AttributeNode(
             name: 'required',
-            value: null,
+            value: AttributeValue::boolean(),
             line: 2,
             column: 15,
         );
 
         $this->assertSame('required', $node->name);
-        $this->assertNull($node->value);
+        $this->assertTrue($node->value->isBoolean());
     }
 
     public function testAttributeNodePreservesLineColumn(): void
     {
         $node = new AttributeNode(
             name: 'href',
-            value: '/path/to/page',
+            value: AttributeValue::static('/path/to/page'),
             line: 42,
             column: 20,
         );

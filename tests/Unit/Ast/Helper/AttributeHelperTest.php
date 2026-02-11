@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -75,16 +76,20 @@ final class AttributeHelperTest extends TestCase
             ->at(1, 1)
             ->build();
 
-        $this->assertSame('main', AttributeHelper::getAttributeValue($node, 'id'));
-        $this->assertSame('container', AttributeHelper::getAttributeValue($node, 'class'));
+        $idValue = AttributeHelper::getAttributeValue($node, 'id');
+        $classValue = AttributeHelper::getAttributeValue($node, 'class');
+
+        $this->assertInstanceOf(AttributeValue::class, $idValue);
+        $this->assertInstanceOf(AttributeValue::class, $classValue);
+        $this->assertSame('main', $idValue->static);
+        $this->assertSame('container', $classValue->static);
     }
 
     public function testGetAttributeValueReturnsDefault(): void
     {
         $node = $this->element('div')->build();
 
-        $this->assertNull(AttributeHelper::getAttributeValue($node, 'missing'));
-        $this->assertSame('default', AttributeHelper::getAttributeValue($node, 'missing', 'default'));
+        $this->assertNotInstanceOf(AttributeValue::class, AttributeHelper::getAttributeValue($node, 'missing'));
     }
 
     public function testGetStringAttributeValueReturnsDefaultForNonString(): void

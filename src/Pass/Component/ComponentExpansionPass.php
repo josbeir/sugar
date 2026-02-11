@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass\Component;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -245,9 +246,9 @@ final class ComponentExpansionPass implements AstPassInterface
         }
 
         [$attr, $index] = $result;
-        $value = $attr->value;
+        $value = $attr->value->isStatic() ? $attr->value->static : null;
 
-        if (!is_string($value) || $value === '') {
+        if ($value === null || $value === '') {
             $message = 'Component name must be a non-empty string.';
             if ($context instanceof CompilationContext) {
                 throw $context->createException(SyntaxException::class, $message, $attr->line, $attr->column);
@@ -324,7 +325,7 @@ final class ComponentExpansionPass implements AstPassInterface
             $bindAttribute = $categorized->componentBindings;
             $bindingsValue = $bindAttribute->value;
 
-            if ($bindingsValue === null) {
+            if ($bindingsValue->isBoolean()) {
                 $message = sprintf(
                     '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
                     $this->prefixHelper->buildName('bind'),
@@ -342,7 +343,7 @@ final class ComponentExpansionPass implements AstPassInterface
                 throw new SyntaxException($message);
             }
 
-            if (is_array($bindingsValue)) {
+            if ($bindingsValue->isParts()) {
                 $message = sprintf(
                     '%s attribute cannot contain mixed output expressions',
                     $this->prefixHelper->buildName('bind'),
@@ -359,9 +360,12 @@ final class ComponentExpansionPass implements AstPassInterface
                 throw new SyntaxException($message);
             }
 
-            $bindingsExpression = $bindingsValue instanceof OutputNode
-                ? $bindingsValue->expression
-                : $bindingsValue;
+            if ($bindingsValue->isOutput()) {
+                $output = $bindingsValue->output;
+                $bindingsExpression = $output instanceof OutputNode ? $output->expression : '[]';
+            } else {
+                $bindingsExpression = $bindingsValue->static ?? '[]';
+            }
 
             ExpressionValidator::validateArrayExpression(
                 $bindingsExpression,
@@ -402,24 +406,31 @@ final class ComponentExpansionPass implements AstPassInterface
         foreach ($attributes as $attr) {
             $key = var_export($attr->name, true);
 
-            if ($attr->value instanceof OutputNode) {
-                $value = $attr->value->expression;
-            } elseif ($attr->value === null) {
+            if ($attr->value->isOutput()) {
+                $output = $attr->value->output;
+                $value = $output instanceof OutputNode ? $output->expression : 'null';
+            } elseif ($attr->value->isBoolean()) {
                 $value = 'null';
-            } elseif (is_array($attr->value)) {
-                $parts = [];
-                foreach ($attr->value as $part) {
-                    if ($part instanceof OutputNode) {
-                        $parts[] = '(' . $part->expression . ')';
-                        continue;
+            } else {
+                $parts = $attr->value->toParts() ?? [];
+                if (count($parts) > 1) {
+                    $expressionParts = [];
+                    foreach ($parts as $part) {
+                        if ($part instanceof OutputNode) {
+                            $expressionParts[] = '(' . $part->expression . ')';
+                            continue;
+                        }
+
+                        $expressionParts[] = var_export($part, true);
                     }
 
-                    $parts[] = var_export($part, true);
+                    $value = implode(' . ', $expressionParts);
+                } else {
+                    $part = $parts[0] ?? '';
+                    $value = $part instanceof OutputNode
+                        ? '(' . $part->expression . ')'
+                        : var_export($part, true);
                 }
-
-                $value = $parts === [] ? 'null' : implode(' . ', $parts);
-            } else {
-                $value = var_export($attr->value, true);
             }
 
             $items[] = $key . ' => ' . $value;
@@ -454,10 +465,12 @@ final class ComponentExpansionPass implements AstPassInterface
                 $newClass = $attr->value;
 
                 // Both values must be strings for concatenation
-                if (is_string($existingClass) && is_string($newClass)) {
+                if ($existingClass->isStatic() && $newClass->isStatic()) {
+                    $existingValue = $existingClass->static ?? '';
+                    $newValue = $newClass->static ?? '';
                     $existingAttrs['class'] = new AttributeNode(
                         'class',
-                        trim($existingClass . ' ' . $newClass),
+                        AttributeValue::static(trim($existingValue . ' ' . $newValue)),
                         $attr->line,
                         $attr->column,
                     );
@@ -504,7 +517,7 @@ final class ComponentExpansionPass implements AstPassInterface
             $bindingsExpression = $bindAttribute->value;
 
             // s:bind attribute must have a value
-            if ($bindingsExpression === null) {
+            if ($bindingsExpression->isBoolean()) {
                 $message = sprintf(
                     '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
                     $this->prefixHelper->buildName('bind'),
@@ -522,7 +535,7 @@ final class ComponentExpansionPass implements AstPassInterface
                 throw new SyntaxException($message);
             }
 
-            if (is_array($bindingsExpression)) {
+            if ($bindingsExpression->isParts()) {
                 $message = sprintf(
                     '%s attribute cannot contain mixed output expressions',
                     $this->prefixHelper->buildName('bind'),
@@ -539,9 +552,12 @@ final class ComponentExpansionPass implements AstPassInterface
                 throw new SyntaxException($message);
             }
 
-            $expression = $bindingsExpression instanceof OutputNode
-                ? $bindingsExpression->expression
-                : $bindingsExpression;
+            if ($bindingsExpression->isOutput()) {
+                $output = $bindingsExpression->output;
+                $expression = $output instanceof OutputNode ? $output->expression : '[]';
+            } else {
+                $expression = $bindingsExpression->static ?? '[]';
+            }
 
             // Validate that expression could be an array at compile time
             ExpressionValidator::validateArrayExpression(

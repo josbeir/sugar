@@ -30,19 +30,22 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $classAttr = $element->attributes[0];
         $this->assertSame('class', $classAttr->name);
-        $this->assertInstanceOf(OutputNode::class, $classAttr->value);
-        $this->assertStringContainsString(HtmlAttributeHelper::class . '::classNames', $classAttr->value->expression);
-        $this->assertStringContainsString('$__sugar_attrs[\'class\']', $classAttr->value->expression);
+        $this->assertTrue($classAttr->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $classAttr->value->output);
+        $this->assertStringContainsString(HtmlAttributeHelper::class . '::classNames', $classAttr->value->output->expression);
+        $this->assertStringContainsString('$__sugar_attrs[\'class\']', $classAttr->value->output->expression);
 
         $dataAttr = $element->attributes[1];
         $this->assertSame('data-id', $dataAttr->name);
-        $this->assertInstanceOf(OutputNode::class, $dataAttr->value);
-        $this->assertStringContainsString('$__sugar_attrs[\'data-id\']', $dataAttr->value->expression);
+        $this->assertTrue($dataAttr->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $dataAttr->value->output);
+        $this->assertStringContainsString('$__sugar_attrs[\'data-id\']', $dataAttr->value->output->expression);
 
         $spreadAttr = $element->attributes[2];
         $this->assertSame('', $spreadAttr->name);
-        $this->assertInstanceOf(OutputNode::class, $spreadAttr->value);
-        $this->assertStringContainsString(HtmlAttributeHelper::class . '::spreadAttrs', $spreadAttr->value->expression);
+        $this->assertTrue($spreadAttr->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $spreadAttr->value->output);
+        $this->assertStringContainsString(HtmlAttributeHelper::class . '::spreadAttrs', $spreadAttr->value->output->expression);
     }
 
     public function testNoRootElementLeavesDocumentUnchanged(): void
@@ -70,7 +73,8 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $this->assertCount(2, $first->attributes);
         $this->assertSame('', $first->attributes[1]->name);
-        $this->assertSame('second', $second->attributes[0]->value);
+        $this->assertTrue($second->attributes[0]->value->isStatic());
+        $this->assertSame('second', $second->attributes[0]->value->static);
         $this->assertCount(1, $second->attributes);
     }
 }

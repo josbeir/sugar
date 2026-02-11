@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Parser\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
@@ -15,71 +16,72 @@ final class AttributeContinuationTest extends TestCase
 {
     public function testAppendAttributeValuePartCreatesArray(): void
     {
-        $attr = new AttributeNode('x-data', '', 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::static(''), 1, 1);
 
         AttributeContinuation::appendAttributeValuePart($attr, 'test');
 
-        $this->assertSame(['test'], $attr->value);
+        $this->assertSame(['test'], $attr->value->toParts());
     }
 
     public function testAppendAttributeValuePartAppendsToArray(): void
     {
-        $attr = new AttributeNode('x-data', ['test'], 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::parts(['test']), 1, 1);
 
         AttributeContinuation::appendAttributeValuePart($attr, 'test');
 
-        $this->assertSame(['test', 'test'], $attr->value);
+        $this->assertSame(['test', 'test'], $attr->value->toParts());
     }
 
     public function testAppendAttributeValuePartSkipsEmpty(): void
     {
-        $attr = new AttributeNode('x-data', ['test'], 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::parts(['test']), 1, 1);
 
         AttributeContinuation::appendAttributeValuePart($attr, '');
 
-        $this->assertSame(['test'], $attr->value);
+        $this->assertSame(['test'], $attr->value->toParts());
     }
 
     public function testAppendAttributeValuePartCreatesArrayFromString(): void
     {
-        $attr = new AttributeNode('x-data', 'test', 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::static('test'), 1, 1);
 
         AttributeContinuation::appendAttributeValuePart($attr, 'more');
 
-        $this->assertSame(['test', 'more'], $attr->value);
+        $this->assertSame(['test', 'more'], $attr->value->toParts());
     }
 
     public function testAppendAttributeValuePartAppendsOutputNode(): void
     {
-        $attr = new AttributeNode('x-data', 'test', 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::static('test'), 1, 1);
         $outputNode = new OutputNode('$value', true, OutputContext::HTML, 1, 1);
 
         AttributeContinuation::appendAttributeValuePart($attr, $outputNode);
 
-        $this->assertSame(['test', $outputNode], $attr->value);
+        $this->assertSame(['test', $outputNode], $attr->value->toParts());
     }
 
     public function testNormalizeAttributeValueCollapsesSingleItem(): void
     {
-        $attr = new AttributeNode('x-data', ['test'], 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::parts(['test']), 1, 1);
 
         AttributeContinuation::normalizeAttributeValue($attr);
 
-        $this->assertSame('test', $attr->value);
+        $this->assertTrue($attr->value->isStatic());
+        $this->assertSame('test', $attr->value->static);
     }
 
     public function testNormalizeAttributeValueLeavesMultipleItems(): void
     {
-        $attr = new AttributeNode('x-data', ['test', 'more'], 1, 1);
+        $attr = new AttributeNode('x-data', AttributeValue::parts(['test', 'more']), 1, 1);
 
         AttributeContinuation::normalizeAttributeValue($attr);
 
-        $this->assertSame(['test', 'more'], $attr->value);
+        $this->assertSame(['test', 'more'], $attr->value->toParts());
     }
 
     public function testDetectOpenAttributeWithEquals(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $result = AttributeContinuation::detectOpenAttribute('x-data=', [$element]);
 
         $this->assertNotNull($result);
@@ -88,7 +90,7 @@ final class AttributeContinuationTest extends TestCase
 
     public function testDetectOpenAttributeWithQuote(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $result = AttributeContinuation::detectOpenAttribute('x-data="', [$element]);
 
         $this->assertNotNull($result);
@@ -97,7 +99,7 @@ final class AttributeContinuationTest extends TestCase
 
     public function testDetectOpenAttributeWithSingleQuote(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('data-test', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('data-test', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $result = AttributeContinuation::detectOpenAttribute("data-test='", [$element]);
 
         $this->assertNotNull($result);
@@ -108,7 +110,10 @@ final class AttributeContinuationTest extends TestCase
     {
         $element = new ElementNode(
             'div',
-            [new AttributeNode('x-data', '', 1, 1), new AttributeNode('x-other', '', 1, 1)],
+            [
+                new AttributeNode('x-data', AttributeValue::static(''), 1, 1),
+                new AttributeNode('x-other', AttributeValue::static(''), 1, 1),
+            ],
             [],
             false,
             1,
@@ -122,7 +127,7 @@ final class AttributeContinuationTest extends TestCase
 
     public function testDetectOpenAttributeReturnsNullWhenClosed(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $result = AttributeContinuation::detectOpenAttribute('x-data="value"', [$element]);
 
         $this->assertNull($result);
@@ -145,7 +150,7 @@ final class AttributeContinuationTest extends TestCase
 
     public function testConsumeAttributeContinuationUnquotedValue(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
 
         [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
@@ -154,14 +159,15 @@ final class AttributeContinuationTest extends TestCase
             $this->factory(),
         );
 
-        $this->assertSame('value', $element->attributes[0]->value);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('value', $element->attributes[0]->value->static);
         $this->assertSame('', $html);
         $this->assertNull($pendingAttr);
     }
 
     public function testConsumeAttributeContinuationQuotedValue(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => '"'];
 
         [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
@@ -170,14 +176,15 @@ final class AttributeContinuationTest extends TestCase
             $this->factory(),
         );
 
-        $this->assertSame('value', $element->attributes[0]->value);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('value', $element->attributes[0]->value->static);
         $this->assertSame('', $html);
         $this->assertNull($pendingAttr);
     }
 
     public function testConsumeAttributeContinuationNoCloseQuote(): void
     {
-        $element = new ElementNode('div', [new AttributeNode('x-data', '', 1, 1)], [], false, 1, 1);
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
         $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => '"'];
 
         [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
@@ -186,7 +193,7 @@ final class AttributeContinuationTest extends TestCase
             $this->factory(),
         );
 
-        $this->assertSame(['no close'], $element->attributes[0]->value);
+        $this->assertSame(['no close'], $element->attributes[0]->value->toParts());
         $this->assertSame('', $html);
         $this->assertSame($pending, $pendingAttr);
     }

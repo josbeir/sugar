@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass\Component\Helper;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeTraverser;
@@ -62,13 +63,13 @@ final class ComponentAttributeOverrideHelper
 
                 $updatedAttributes[] = new AttributeNode(
                     name: 'class',
-                    value: new OutputNode(
+                    value: AttributeValue::output(new OutputNode(
                         expression: $expression,
                         escape: true,
                         context: OutputContext::HTML_ATTRIBUTE,
                         line: $attr->line,
                         column: $attr->column,
-                    ),
+                    )),
                     line: $attr->line,
                     column: $attr->column,
                 );
@@ -86,13 +87,13 @@ final class ComponentAttributeOverrideHelper
 
             $updatedAttributes[] = new AttributeNode(
                 name: $attr->name,
-                value: new OutputNode(
+                value: AttributeValue::output(new OutputNode(
                     expression: $expression,
                     escape: true,
                     context: OutputContext::HTML_ATTRIBUTE,
                     line: $attr->line,
                     column: $attr->column,
-                ),
+                )),
                 line: $attr->line,
                 column: $attr->column,
             );
@@ -108,13 +109,13 @@ final class ComponentAttributeOverrideHelper
 
         $updatedAttributes[] = new AttributeNode(
             name: '',
-            value: new OutputNode(
+            value: AttributeValue::output(new OutputNode(
                 expression: $spreadExpression,
                 escape: false,
                 context: OutputContext::HTML_ATTRIBUTE,
                 line: $rootElement->line,
                 column: $rootElement->column,
-            ),
+            )),
             line: $rootElement->line,
             column: $rootElement->column,
         );
@@ -127,29 +128,38 @@ final class ComponentAttributeOverrideHelper
      */
     private static function attributeValueExpression(AttributeNode $attr): string
     {
-        if ($attr->value instanceof OutputNode) {
-            return '(' . $attr->value->expression . ')';
+        if ($attr->value->isOutput()) {
+            $output = $attr->value->output;
+            if ($output instanceof OutputNode) {
+                return '(' . $output->expression . ')';
+            }
         }
 
-        if ($attr->value === null) {
+        if ($attr->value->isBoolean()) {
             return 'null';
         }
 
-        if (is_array($attr->value)) {
-            $parts = [];
-            foreach ($attr->value as $part) {
+        $parts = $attr->value->toParts() ?? [];
+        if (count($parts) > 1) {
+            $expressionParts = [];
+            foreach ($parts as $part) {
                 if ($part instanceof OutputNode) {
-                    $parts[] = '(' . $part->expression . ')';
+                    $expressionParts[] = '(' . $part->expression . ')';
                     continue;
                 }
 
-                $parts[] = var_export($part, true);
+                $expressionParts[] = var_export($part, true);
             }
 
-            return $parts === [] ? 'null' : implode(' . ', $parts);
+            return implode(' . ', $expressionParts);
         }
 
-        return var_export($attr->value, true);
+        $part = $parts[0] ?? '';
+        if ($part instanceof OutputNode) {
+            return '(' . $part->expression . ')';
+        }
+
+        return var_export($part, true);
     }
 
     /**

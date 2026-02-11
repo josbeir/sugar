@@ -229,20 +229,25 @@ final class CodeGenerator
     {
         // Special case: empty name means this is a spread directive output
         // Output it directly without name= wrapper (e.g., <php echo spreadAttrs($attrs) >)
-        if ($attribute->name === '' && $attribute->value instanceof OutputNode) {
-            $expression = $attribute->value->expression;
-            if ($attribute->value->pipes !== null) {
-                $expression = $this->compilePipes($expression, $attribute->value->pipes);
+        if ($attribute->name === '' && $attribute->value->isOutput()) {
+            $output = $attribute->value->output;
+            if (!$output instanceof OutputNode) {
+                return;
             }
 
-            if ($attribute->value->escape) {
-                $expression = $this->escaper->generateEscapeCode($expression, $attribute->value->context);
+            $expression = $output->expression;
+            if ($output->pipes !== null) {
+                $expression = $this->compilePipes($expression, $output->pipes);
+            }
+
+            if ($output->escape) {
+                $expression = $this->escaper->generateEscapeCode($expression, $output->context);
             }
 
             $buffer->write(sprintf(
                 '<?php $__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr;%s } ?>',
                 $expression,
-                $this->debugComment($attribute->value, 'attr'),
+                $this->debugComment($output, 'attr'),
             ));
 
             return;
@@ -250,11 +255,12 @@ final class CodeGenerator
 
         $buffer->write(' ' . $attribute->name);
 
-        if ($attribute->value !== null) {
+        if (!$attribute->value->isBoolean()) {
             $buffer->write('="');
 
-            if (is_array($attribute->value)) {
-                foreach ($attribute->value as $part) {
+            $parts = $attribute->value->toParts() ?? [];
+            if (count($parts) > 1) {
+                foreach ($parts as $part) {
                     if ($part instanceof OutputNode) {
                         $this->generateOutput($part, $buffer);
                         continue;
@@ -262,12 +268,13 @@ final class CodeGenerator
 
                     $buffer->write($part);
                 }
-            } elseif ($attribute->value instanceof OutputNode) {
-                // Dynamic attribute value
-                $this->generateOutput($attribute->value, $buffer);
             } else {
-                // Static attribute value
-                $buffer->write(htmlspecialchars($attribute->value, ENT_QUOTES, 'UTF-8'));
+                $part = $parts[0] ?? '';
+                if ($part instanceof OutputNode) {
+                    $this->generateOutput($part, $buffer);
+                } else {
+                    $buffer->write(htmlspecialchars($part, ENT_QUOTES, 'UTF-8'));
+                }
             }
 
             $buffer->write('"');

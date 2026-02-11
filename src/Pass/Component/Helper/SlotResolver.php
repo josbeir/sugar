@@ -45,13 +45,23 @@ final class SlotResolver
 
         if ($node instanceof ElementNode) {
             foreach ($node->attributes as $attr) {
-                if ($attr->value instanceof OutputNode) {
-                    self::disableEscaping($attr->value, $slotVars);
-                } elseif (is_array($attr->value)) {
-                    foreach ($attr->value as $part) {
-                        if ($part instanceof OutputNode) {
-                            self::disableEscaping($part, $slotVars);
-                        }
+                if ($attr->value->isOutput()) {
+                    $output = $attr->value->output;
+                    if ($output instanceof OutputNode) {
+                        self::disableEscaping($output, $slotVars);
+                    }
+
+                    continue;
+                }
+
+                $parts = $attr->value->toParts();
+                if ($parts === null) {
+                    continue;
+                }
+
+                foreach ($parts as $part) {
+                    if ($part instanceof OutputNode) {
+                        self::disableEscaping($part, $slotVars);
                     }
                 }
             }
@@ -180,8 +190,8 @@ final class SlotResolver
 
         if ($result !== null) {
             [$attr, $index] = $result;
-            if (is_string($attr->value)) {
-                return [$attr->value, $index];
+            if ($attr->value->isStatic()) {
+                return [$attr->value->static ?? '', $index];
             }
         }
 
@@ -234,12 +244,11 @@ final class SlotResolver
             $html = '<' . $node->tag;
             foreach ($node->attributes as $attr) {
                 $html .= ' ' . $attr->name;
-                if ($attr->value !== null) {
-                    if ($attr->value instanceof OutputNode) {
-                        $html .= '="<?= ' . $attr->value->expression . ' ?>"';
-                    } elseif (is_array($attr->value)) {
+                if (!$attr->value->isBoolean()) {
+                    $parts = $attr->value->toParts() ?? [];
+                    if (count($parts) > 1) {
                         $html .= '="';
-                        foreach ($attr->value as $part) {
+                        foreach ($parts as $part) {
                             if ($part instanceof OutputNode) {
                                 $html .= '<?= ' . $part->expression . ' ?>';
                                 continue;
@@ -250,7 +259,12 @@ final class SlotResolver
 
                         $html .= '"';
                     } else {
-                        $html .= '="' . $attr->value . '"';
+                        $part = $parts[0] ?? '';
+                        if ($part instanceof OutputNode) {
+                            $html .= '="<?= ' . $part->expression . ' ?>"';
+                        } else {
+                            $html .= '="' . $part . '"';
+                        }
                     }
                 }
             }

@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\CodeGen;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
@@ -356,7 +357,7 @@ final class CodeGeneratorTest extends TestCase
                     [
                         new AttributeNode(
                             'title',
-                            new OutputNode('$title', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                            AttributeValue::output(new OutputNode('$title', true, OutputContext::HTML_ATTRIBUTE, 1, 1)),
                             1,
                             1,
                         ),
@@ -404,7 +405,7 @@ final class CodeGeneratorTest extends TestCase
             ->withChild(
                 new ElementNode(
                     tag: 'div',
-                    attributes: [new AttributeNode('', $spreadOutput, 1, 1)],
+                    attributes: [new AttributeNode('', AttributeValue::output($spreadOutput), 1, 1)],
                     children: [],
                     selfClosing: false,
                     line: 1,
@@ -427,7 +428,7 @@ final class CodeGeneratorTest extends TestCase
             ->withChild(
                 new ElementNode(
                     'input',
-                    [new AttributeNode('disabled', null, 1, 1)],
+                    [new AttributeNode('disabled', AttributeValue::boolean(), 1, 1)],
                     [],
                     true,
                     1,

@@ -703,12 +703,11 @@ final class ComponentExpansionPassTest extends TestCase
             $html = '<' . $node->tag;
             foreach ($node->attributes as $attr) {
                 $html .= ' ' . $attr->name;
-                if ($attr->value !== null) {
-                    if ($attr->value instanceof OutputNode) {
-                        $html .= '="<?= ' . $attr->value->expression . ' ?>"';
-                    } elseif (is_array($attr->value)) {
+                if (!$attr->value->isBoolean()) {
+                    $parts = $attr->value->toParts() ?? [];
+                    if (count($parts) > 1) {
                         $html .= '="';
-                        foreach ($attr->value as $part) {
+                        foreach ($parts as $part) {
                             if ($part instanceof OutputNode) {
                                 $html .= '<?= ' . $part->expression . ' ?>';
                                 continue;
@@ -719,7 +718,12 @@ final class ComponentExpansionPassTest extends TestCase
 
                         $html .= '"';
                     } else {
-                        $html .= '="' . $attr->value . '"';
+                        $part = $parts[0] ?? '';
+                        if ($part instanceof OutputNode) {
+                            $html .= '="<?= ' . $part->expression . ' ?>"';
+                        } else {
+                            $html .= '="' . $part . '"';
+                        }
                     }
                 }
             }

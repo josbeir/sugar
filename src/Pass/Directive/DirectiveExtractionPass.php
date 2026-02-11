@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Pass\Directive;
 
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -244,8 +245,8 @@ final class DirectiveExtractionPass implements AstPassInterface
             if ($this->prefixHelper->isDirective($attr->name)) {
                 $name = $this->prefixHelper->stripPrefix($attr->name);
 
-                // Directive expressions must be strings, not OutputNodes
-                if ($attr->value instanceof OutputNode || is_array($attr->value)) {
+                // Directive expressions must be static strings
+                if (!$attr->value->isStatic() && !$attr->value->isBoolean()) {
                     throw $this->context->createException(
                         SyntaxException::class,
                         'Directive attributes cannot contain dynamic output expressions',
@@ -254,7 +255,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                     );
                 }
 
-                $expression = $attr->value ?? 'true';
+                $expression = $attr->value->isBoolean() ? 'true' : ($attr->value->static ?? '');
 
                 try {
                     // Get directive type
@@ -587,8 +588,8 @@ final class DirectiveExtractionPass implements AstPassInterface
                     continue;
                 }
 
-                // Directive expressions must be strings, not OutputNodes
-                if ($attr->value instanceof OutputNode || is_array($attr->value)) {
+                // Directive expressions must be static strings
+                if (!$attr->value->isStatic() && !$attr->value->isBoolean()) {
                     throw $this->context->createException(
                         SyntaxException::class,
                         'Directive attributes cannot contain dynamic output expressions',
@@ -597,7 +598,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                     );
                 }
 
-                $expression = $attr->value ?? 'true';
+                $expression = $attr->value->isBoolean() ? 'true' : ($attr->value->static ?? '');
                 try {
                     // Get directive type
                     $compiler = $this->registry->get($name);
@@ -796,13 +797,13 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $attrValue = $matches[2];
                 $remainingAttrs[] = new AttributeNode(
                     name: $attrName,
-                    value: new OutputNode(
+                    value: AttributeValue::output(new OutputNode(
                         expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $attrValue)),
                         escape: false, // Already handled by the directive compiler
                         context: OutputContext::HTML_ATTRIBUTE,
                         line: $line,
                         column: $column,
-                    ),
+                    )),
                     line: $line,
                     column: $column,
                 );
@@ -811,13 +812,13 @@ final class DirectiveExtractionPass implements AstPassInterface
                 // Empty name signals to code generator to output directly
                 $remainingAttrs[] = new AttributeNode(
                     name: '',
-                    value: new OutputNode(
+                    value: AttributeValue::output(new OutputNode(
                         expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $node->code)),
                         escape: false,
                         context: OutputContext::HTML_ATTRIBUTE,
                         line: $line,
                         column: $column,
-                    ),
+                    )),
                     line: $line,
                     column: $column,
                 );

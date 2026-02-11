@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\TextNode;
@@ -55,7 +56,12 @@ final class CompilerCustomPassTest extends TestCase
             public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof ElementNode) {
-                    $node->attributes['data-processed'] = new AttributeNode('data-processed', 'true', 0, 0);
+                    $node->attributes['data-processed'] = new AttributeNode(
+                        'data-processed',
+                        AttributeValue::static('true'),
+                        0,
+                        0,
+                    );
                 }
 
                 return NodeAction::none();

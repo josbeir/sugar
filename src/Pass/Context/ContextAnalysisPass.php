@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Pass\Context;
 
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
@@ -81,27 +82,40 @@ final class ContextAnalysisPass implements AstPassInterface
     private function updateAttributeContexts(ElementNode $node, AnalysisContext $analysisContext): void
     {
         foreach ($node->attributes as $attribute) {
-            if ($attribute->value instanceof OutputNode) {
-                $attribute->value = $this->updateOutputNode(
-                    $attribute->value,
-                    $analysisContext,
-                    true,
-                );
+            if ($attribute->value->isOutput()) {
+                $output = $attribute->value->output;
+                if ($output instanceof OutputNode) {
+                    $attribute->value = AttributeValue::output($this->updateOutputNode(
+                        $output,
+                        $analysisContext,
+                        true,
+                    ));
+                }
+
                 continue;
             }
 
-            if (is_array($attribute->value)) {
-                foreach ($attribute->value as $index => $part) {
-                    if (!$part instanceof OutputNode) {
-                        continue;
-                    }
+            $parts = $attribute->value->toParts();
+            if ($parts === null) {
+                continue;
+            }
 
-                    $attribute->value[$index] = $this->updateOutputNode(
-                        $part,
-                        $analysisContext,
-                        true,
-                    );
+            $hasOutput = false;
+            foreach ($parts as $index => $part) {
+                if (!$part instanceof OutputNode) {
+                    continue;
                 }
+
+                $hasOutput = true;
+                $parts[$index] = $this->updateOutputNode(
+                    $part,
+                    $analysisContext,
+                    true,
+                );
+            }
+
+            if ($hasOutput) {
+                $attribute->value = AttributeValue::parts($parts);
             }
         }
     }

@@ -109,7 +109,8 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('class', $element->attributes[0]->name);
-        $this->assertSame('test', $element->attributes[0]->value);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('test', $element->attributes[0]->value->static);
     }
 
     public function testParseAttributeWithInlineOutput(): void
@@ -121,9 +122,10 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('href', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$url', $element->attributes[0]->value->expression);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $element->attributes[0]->value->context);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value->output);
+        $this->assertSame('$url', $element->attributes[0]->value->output->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $element->attributes[0]->value->output->context);
         $this->assertCount(1, $element->children);
         $this->assertInstanceOf(TextNode::class, $element->children[0]);
         $this->assertSame('Link', $element->children[0]->content);
@@ -138,9 +140,10 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('href', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$url', $element->attributes[0]->value->expression);
-        $this->assertFalse($element->attributes[0]->value->escape);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value->output);
+        $this->assertSame('$url', $element->attributes[0]->value->output->expression);
+        $this->assertFalse($element->attributes[0]->value->output->escape);
         $this->assertCount(1, $element->children);
         $this->assertInstanceOf(TextNode::class, $element->children[0]);
         $this->assertSame('Link', $element->children[0]->content);
@@ -155,9 +158,10 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('data-config', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$config', $element->attributes[0]->value->expression);
-        $this->assertSame(OutputContext::JSON_ATTRIBUTE, $element->attributes[0]->value->context);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value->output);
+        $this->assertSame('$config', $element->attributes[0]->value->output->expression);
+        $this->assertSame(OutputContext::JSON_ATTRIBUTE, $element->attributes[0]->value->output->context);
     }
 
     public function testParseAttributeWithMixedOutputs(): void
@@ -171,18 +175,19 @@ final class ParserTest extends TestCase
 
         $attribute = $element->attributes[0];
         $this->assertSame('x-data', $attribute->name);
-        $this->assertIsArray($attribute->value);
-        $this->assertCount(5, $attribute->value);
+        $this->assertTrue($attribute->value->isParts());
+        $parts = $attribute->value->toParts() ?? [];
+        $this->assertCount(5, $parts);
 
-        $this->assertSame('{ data: ', $attribute->value[0]);
-        $this->assertInstanceOf(OutputNode::class, $attribute->value[1]);
-        $this->assertSame('$var', $attribute->value[1]->expression);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $attribute->value[1]->context);
-        $this->assertSame(", other: '", $attribute->value[2]);
-        $this->assertInstanceOf(OutputNode::class, $attribute->value[3]);
-        $this->assertSame('$name', $attribute->value[3]->expression);
-        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $attribute->value[3]->context);
-        $this->assertSame("' }", $attribute->value[4]);
+        $this->assertSame('{ data: ', $parts[0]);
+        $this->assertInstanceOf(OutputNode::class, $parts[1]);
+        $this->assertSame('$var', $parts[1]->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $parts[1]->context);
+        $this->assertSame(", other: '", $parts[2]);
+        $this->assertInstanceOf(OutputNode::class, $parts[3]);
+        $this->assertSame('$name', $parts[3]->expression);
+        $this->assertSame(OutputContext::HTML_ATTRIBUTE, $parts[3]->context);
+        $this->assertSame("' }", $parts[4]);
     }
 
     public function testParseAttributeContinuationAfterInlineOutput(): void
@@ -195,12 +200,14 @@ final class ParserTest extends TestCase
         $this->assertTrue($element->selfClosing);
         $this->assertCount(3, $element->attributes);
         $this->assertSame('src', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $srcOutput = $element->attributes[0]->value->output;
+        $this->assertInstanceOf(OutputNode::class, $srcOutput);
+        $this->assertSame('$url', $srcOutput->expression);
         $this->assertSame('alt', $element->attributes[1]->name);
-        $this->assertSame('Logo', $element->attributes[1]->value);
+        $this->assertSame('Logo', $element->attributes[1]->value->static);
         $this->assertSame('data-id', $element->attributes[2]->name);
-        $this->assertSame('1', $element->attributes[2]->value);
+        $this->assertSame('1', $element->attributes[2]->value->static);
     }
 
     public function testParseAttributeContinuationWithOutputAttribute(): void
@@ -212,11 +219,15 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(2, $element->attributes);
         $this->assertSame('data-id', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$id', $element->attributes[0]->value->expression);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $dataIdOutput = $element->attributes[0]->value->output;
+        $this->assertInstanceOf(OutputNode::class, $dataIdOutput);
+        $this->assertSame('$id', $dataIdOutput->expression);
         $this->assertSame('other', $element->attributes[1]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[1]->value);
-        $this->assertSame('$other', $element->attributes[1]->value->expression);
+        $this->assertTrue($element->attributes[1]->value->isOutput());
+        $otherOutput = $element->attributes[1]->value->output;
+        $this->assertInstanceOf(OutputNode::class, $otherOutput);
+        $this->assertSame('$other', $otherOutput->expression);
     }
 
     public function testParseAttributeContinuationWithSingleQuotes(): void
@@ -228,10 +239,12 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(2, $element->attributes);
         $this->assertSame('href', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$url', $element->attributes[0]->value->expression);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $hrefOutput = $element->attributes[0]->value->output;
+        $this->assertInstanceOf(OutputNode::class, $hrefOutput);
+        $this->assertSame('$url', $hrefOutput->expression);
         $this->assertSame('class', $element->attributes[1]->name);
-        $this->assertSame('btn', $element->attributes[1]->value);
+        $this->assertSame('btn', $element->attributes[1]->value->static);
     }
 
     public function testParseAttributeContinuationWithoutQuotes(): void
@@ -243,10 +256,12 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(2, $element->attributes);
         $this->assertSame('data-id', $element->attributes[0]->name);
-        $this->assertInstanceOf(OutputNode::class, $element->attributes[0]->value);
-        $this->assertSame('$id', $element->attributes[0]->value->expression);
+        $this->assertTrue($element->attributes[0]->value->isOutput());
+        $dataIdOutput = $element->attributes[0]->value->output;
+        $this->assertInstanceOf(OutputNode::class, $dataIdOutput);
+        $this->assertSame('$id', $dataIdOutput->expression);
         $this->assertSame('class', $element->attributes[1]->name);
-        $this->assertSame('box', $element->attributes[1]->value);
+        $this->assertSame('box', $element->attributes[1]->value->static);
     }
 
     public function testParseNestedElements(): void
@@ -333,7 +348,8 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('s:if', $element->attributes[0]->name);
-        $this->assertSame('$condition', $element->attributes[0]->value);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('$condition', $element->attributes[0]->value->static);
     }
 
     public function testParseElementWithPhpOutput(): void
@@ -452,13 +468,13 @@ final class ParserTest extends TestCase
         $this->assertCount(4, $input->attributes);
 
         $this->assertSame('type', $input->attributes[0]->name);
-        $this->assertSame('text', $input->attributes[0]->value);
+        $this->assertSame('text', $input->attributes[0]->value->static);
         $this->assertSame('name', $input->attributes[1]->name);
-        $this->assertSame('username', $input->attributes[1]->value);
+        $this->assertSame('username', $input->attributes[1]->value->static);
         $this->assertSame('class', $input->attributes[2]->name);
-        $this->assertSame('form-control', $input->attributes[2]->value);
+        $this->assertSame('form-control', $input->attributes[2]->value->static);
         $this->assertSame('required', $input->attributes[3]->name);
-        $this->assertNull($input->attributes[3]->value); // Boolean attribute
+        $this->assertTrue($input->attributes[3]->value->isBoolean());
     }
 
     public function testParseUnquotedAttributeValue(): void
@@ -469,7 +485,7 @@ final class ParserTest extends TestCase
         $element = $doc->children[0];
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertSame('data-id', $element->attributes[0]->name);
-        $this->assertSame('123', $element->attributes[0]->value);
+        $this->assertSame('123', $element->attributes[0]->value->static);
     }
 
     public function testParseQuotedAttributeWithEscapedQuote(): void
@@ -480,7 +496,7 @@ final class ParserTest extends TestCase
         $element = $doc->children[0];
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertSame('title', $element->attributes[0]->name);
-        $this->assertSame('He said "hi"', $element->attributes[0]->value);
+        $this->assertSame('He said "hi"', $element->attributes[0]->value->static);
     }
 
     public function testParseAttributeWithEqualsButNoValue(): void
@@ -492,7 +508,8 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('data-empty', $element->attributes[0]->name);
-        $this->assertSame('', $element->attributes[0]->value);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('', $element->attributes[0]->value->static);
     }
 
     public function testParseDoctypeAsTextNode(): void
