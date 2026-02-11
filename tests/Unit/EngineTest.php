@@ -9,7 +9,6 @@ use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
-use Sugar\Exception\Renderer\LoaderSourceProvider;
 use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -131,7 +130,7 @@ final class EngineTest extends TestCase
             'b.sugar.php' => '<s-template s:extends="a.sugar.php"></s-template>',
         ]);
 
-        $renderer = new HtmlTemplateExceptionRenderer(new LoaderSourceProvider($loader));
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
         $engine = Engine::builder($config)
             ->withTemplateLoader($loader)
             ->withDebug(true)

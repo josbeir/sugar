@@ -8,7 +8,7 @@ use Sugar\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
- * Integration test: Verify CompilationContext creates exceptions with automatic snippets
+ * Integration test: Verify CompilationContext creates exceptions with template metadata
  */
 final class CompilationContextIntegrationTest extends TestCase
 {
@@ -19,7 +19,7 @@ final class CompilationContextIntegrationTest extends TestCase
         $this->setUpCompiler();
     }
 
-    public function testExceptionIncludesSnippetOnSyntaxError(): void
+    public function testExceptionIncludesLocationOnSyntaxError(): void
     {
         $template = '<s-template s:class="\'invalid\'">Fragment with directive</s-template>';
 
@@ -29,10 +29,9 @@ final class CompilationContextIntegrationTest extends TestCase
         try {
             $this->compiler->compile($template, 'test.sugar.php');
         } catch (SyntaxException $syntaxException) {
-            // Assert exception includes snippet
+            // Assert exception includes location metadata
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('s-template s:class', $exceptionString);
-            $this->assertStringContainsString(' 1 |', $exceptionString); // Snippet line number format
+            $this->assertStringContainsString('template: test.sugar.php', $exceptionString);
 
             throw $syntaxException; // Re-throw for expectException
         }
@@ -50,7 +49,6 @@ final class CompilationContextIntegrationTest extends TestCase
             // Assert template path is in the exception message
             $exceptionString = (string)$syntaxException;
             $this->assertStringContainsString('layouts/sidebar.sugar.php', $exceptionString);
-            $this->assertStringContainsString(' 1 |', $exceptionString); // Snippet line number format
 
             throw $syntaxException; // Re-throw for expectException
         }

@@ -19,7 +19,6 @@ final class SugarExceptionTest extends TestCase
         $this->assertNull($exception->templatePath);
         $this->assertNull($exception->templateLine);
         $this->assertNull($exception->templateColumn);
-        $this->assertNull($exception->snippet);
     }
 
     public function testExceptionWithTemplatePathAndLine(): void
@@ -58,31 +57,6 @@ final class SugarExceptionTest extends TestCase
         $this->assertStringContainsString('template: components/button.sugar.php line:15 column:8', $message);
     }
 
-    public function testExceptionWithSnippet(): void
-    {
-        $snippet = <<<'SNIPPET'
- 12 | <div s:if="$user">
- 13 |     <p s:forech="$items">
-    |        ^
- 14 |         <?= $item ?>
-SNIPPET;
-
-        $exception = new TestSugarException(
-            message: 'Unknown directive',
-            templatePath: 'test.sugar.php',
-            templateLine: 13,
-            templateColumn: 8,
-            snippet: $snippet,
-        );
-
-        $this->assertSame($snippet, $exception->snippet);
-
-        // Message should include snippet
-        $message = $exception->getMessage();
-        $this->assertStringContainsString($snippet, $message);
-        $this->assertStringContainsString('Unknown directive', $message);
-    }
-
     public function testExceptionWithPreviousException(): void
     {
         $previous = new RuntimeException('Original error');
@@ -101,14 +75,13 @@ SNIPPET;
             templatePath: 'test.sugar.php',
             templateLine: 10,
             templateColumn: 5,
-            snippet: ' 10 | test line',
         );
 
         $message = $exception->getMessage();
 
-        // Should have format: Message (template: path Line:x Column:y)\n\nSnippet
+        // Should have format: Message (template: path line:x column:y)
         $this->assertMatchesRegularExpression(
-            '/Test error \(template: test\.sugar\.php line:10 column:5\)\s+10 \| test line/',
+            '/Test error \(template: test\.sugar\.php line:10 column:5\)/',
             $message,
         );
     }

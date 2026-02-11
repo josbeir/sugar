@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Exception;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Exception\DidYouMean;
+use Sugar\Exception\Helper\DidYouMean;
 
 /**
  * Test DidYouMean suggestion system using Levenshtein distance

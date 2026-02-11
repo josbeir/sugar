@@ -12,7 +12,7 @@ use Sugar\Context\CompilationContext;
 final readonly class PipelineContext
 {
     /**
-     * @param \Sugar\Context\CompilationContext $compilation Compilation context for errors and snippets
+     * @param \Sugar\Context\CompilationContext $compilation Compilation context for errors
      * @param \Sugar\Ast\Node|null $parent Parent node in the AST
      * @param int $indexInParent Index within the parent's children array
      */

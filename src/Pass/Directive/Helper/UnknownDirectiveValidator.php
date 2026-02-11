@@ -9,7 +9,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Context\CompilationContext;
-use Sugar\Exception\DidYouMean;
+use Sugar\Exception\Helper\DidYouMean;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 

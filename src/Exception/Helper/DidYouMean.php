@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Exception;
+namespace Sugar\Exception\Helper;
 
 /**
  * Suggest correct directive names using Levenshtein distance

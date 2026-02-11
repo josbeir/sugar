@@ -151,7 +151,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->execute($ast, $this->createTestContext());
     }
 
-    public function testUnknownDirectiveShowsSnippetAndSuggestion(): void
+    public function testUnknownDirectiveShowsSuggestion(): void
     {
         $element = $this->element('p')
             ->attributeNode($this->attributeNode('s:blik', 'true', 2, 8))
@@ -171,8 +171,6 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         } catch (SyntaxException $syntaxException) {
             $this->assertStringContainsString('Unknown directive "blik"', $syntaxException->getMessage());
             $this->assertStringContainsString('Did you mean "block"', $syntaxException->getMessage());
-            $this->assertNotNull($syntaxException->snippet);
-            $this->assertStringContainsString('s:blik', $syntaxException->snippet);
         }
     }
 

@@ -182,9 +182,9 @@ final class ExpressionValidatorTest extends TestCase
     }
 
     /**
-     * Test that context-aware exceptions include snippets
+     * Test that context-aware exceptions include location metadata
      */
-    public function testThrowsContextAwareExceptionWithSnippet(): void
+    public function testThrowsContextAwareExceptionWithLocation(): void
     {
         $template = '<s-button s:bind="\'not an array\'">Click</s-button>';
         $context = $this->createContext(

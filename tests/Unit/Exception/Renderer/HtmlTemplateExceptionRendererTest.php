@@ -6,26 +6,46 @@ namespace Sugar\Tests\Unit\Exception\Renderer;
 use PHPUnit\Framework\TestCase;
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
-use Sugar\Exception\Renderer\SourceProviderInterface;
-use Sugar\Exception\SugarException;
 use Sugar\Exception\TemplateRuntimeException;
+use Sugar\Loader\TemplateLoaderInterface;
 
 final class HtmlTemplateExceptionRendererTest extends TestCase
 {
     public function testRendersFullTemplateHtml(): void
     {
-        $provider = new class implements SourceProviderInterface {
-            public function getSource(SugarException $exception): ?string
+        $loader = new class implements TemplateLoaderInterface {
+            public function load(string $path): string
             {
-                if ($exception->templatePath === null) {
-                    return null;
-                }
-
                 return "line one\nline two\nline three";
+            }
+
+            public function resolve(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function loadComponent(string $name): string
+            {
+                return '';
+            }
+
+            public function getComponentPath(string $name): string
+            {
+                return $name;
+            }
+
+            public function getComponentFilePath(string $name): string
+            {
+                return $name;
             }
         };
 
-        $renderer = new HtmlTemplateExceptionRenderer($provider);
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
         $exception = new CompilationException(
             message: 'Compile failed',
             templatePath: 'Pages/home.sugar.php',
@@ -44,18 +64,39 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
     public function testNonCompilationExceptionFallsBackToMessage(): void
     {
-        $provider = new class implements SourceProviderInterface {
-            public function getSource(SugarException $exception): ?string
+        $loader = new class implements TemplateLoaderInterface {
+            public function load(string $path): string
             {
-                if ($exception->templatePath === null) {
-                    return null;
-                }
-
                 return 'line one';
+            }
+
+            public function resolve(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function loadComponent(string $name): string
+            {
+                return '';
+            }
+
+            public function getComponentPath(string $name): string
+            {
+                return $name;
+            }
+
+            public function getComponentFilePath(string $name): string
+            {
+                return $name;
             }
         };
 
-        $renderer = new HtmlTemplateExceptionRenderer($provider);
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
         $exception = new TemplateRuntimeException('Runtime failed');
 
         $html = $renderer->render($exception);

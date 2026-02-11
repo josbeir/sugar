@@ -5,6 +5,8 @@ namespace Sugar\Exception\Renderer;
 
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\SugarException;
+use Sugar\Loader\TemplateLoaderInterface;
+use Throwable;
 
 /**
  * Renders compilation exceptions with full template context as HTML.
@@ -12,11 +14,11 @@ use Sugar\Exception\SugarException;
 final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererInterface
 {
     /**
-     * @param \Sugar\Exception\Renderer\SourceProviderInterface $sourceProvider Template source provider
+     * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Exception\Renderer\TemplateHighlightFormatter $formatter Highlight formatter
      */
     public function __construct(
-        private readonly SourceProviderInterface $sourceProvider,
+        private readonly TemplateLoaderInterface $loader,
         private readonly TemplateHighlightFormatter $formatter = new TemplateHighlightFormatter(),
     ) {
     }
@@ -30,7 +32,7 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             return htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
-        $source = $this->sourceProvider->getSource($exception);
+        $source = $this->loadSource($exception);
         if ($source === null || $source === '') {
             return htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
@@ -43,8 +45,7 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             return htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
-        $message = $this->stripSnippetFromMessage($exception);
-        $messageHtml = htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $messageHtml = htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $locationHtml = $this->formatLocation($exception);
 
         $linesHtml = [];
@@ -78,24 +79,6 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
     }
 
     /**
-     * Remove the snippet text from formatted exception messages.
-     */
-    private function stripSnippetFromMessage(SugarException $exception): string
-    {
-        $message = $exception->getMessage();
-        if ($exception->snippet === null) {
-            return $message;
-        }
-
-        $needle = "\n\n" . $exception->snippet;
-        if (str_contains($message, $needle)) {
-            return trim(str_replace($needle, '', $message));
-        }
-
-        return $message;
-    }
-
-    /**
      * Format a template location string for display.
      */
     private function formatLocation(SugarException $exception): string
@@ -114,5 +97,21 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
         }
 
         return htmlspecialchars($location, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * Load template source for the provided exception.
+     */
+    private function loadSource(SugarException $exception): ?string
+    {
+        if ($exception->templatePath === null) {
+            return null;
+        }
+
+        try {
+            return $this->loader->load($exception->templatePath);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

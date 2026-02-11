@@ -16,7 +16,6 @@ class UnknownDirectiveException extends CompilationException
      * @param string|null $templatePath Path to template file
      * @param int|null $templateLine Line number in template
      * @param int|null $templateColumn Column number in template
-     * @param string|null $snippet Code snippet showing error context
      */
     public function __construct(
         string $directiveName,
@@ -24,7 +23,6 @@ class UnknownDirectiveException extends CompilationException
         ?string $templatePath = null,
         ?int $templateLine = null,
         ?int $templateColumn = null,
-        ?string $snippet = null,
     ) {
         $message = sprintf('Unknown directive "%s"', $directiveName);
 
@@ -37,7 +35,6 @@ class UnknownDirectiveException extends CompilationException
             templatePath: $templatePath,
             templateLine: $templateLine,
             templateColumn: $templateColumn,
-            snippet: $snippet,
         );
     }
 }
