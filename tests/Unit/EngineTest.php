@@ -6,7 +6,11 @@ namespace Sugar\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\FileCache;
+use Sugar\Config\SugarConfig;
 use Sugar\Engine;
+use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
+use Sugar\Exception\Renderer\LoaderSourceProvider;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
@@ -117,5 +121,26 @@ final class EngineTest extends TestCase
         $result = $engine->render('child.sugar.php', [], ['content', 'sidebar']);
 
         $this->assertSame('<div><p>Side</p></div><div><p>Main</p></div>', trim($result));
+    }
+
+    public function testRenderCompilationExceptionUsesRenderer(): void
+    {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader($config, [
+            'a.sugar.php' => '<s-template s:extends="b.sugar.php"></s-template>',
+            'b.sugar.php' => '<s-template s:extends="a.sugar.php"></s-template>',
+        ]);
+
+        $renderer = new HtmlTemplateExceptionRenderer(new LoaderSourceProvider($loader));
+        $engine = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withExceptionRenderer($renderer)
+            ->build();
+
+        $result = $engine->render('a.sugar.php');
+
+        $this->assertStringContainsString('sugar-exception-template', $result);
+        $this->assertStringContainsString('sugar-exception', $result);
     }
 }
