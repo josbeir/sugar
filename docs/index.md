@@ -35,41 +35,48 @@ Don't worry: This **Sugar** is **safe** for diabetics. :drum:
 
 ## A Taste of the Syntax
 
-::: code-group
-```php [Control Flow]
-<ul s:forelse="$items as $item">
-    <li><?= $item ?></li>
+```html [Sugar Template]
+<ul s:forelse="$orders as $order">
+  <li s:class="['paid' => $order->isPaid, 'unpaid' => !$order->isPaid]">
+    #<?= $order->number ?>
+    <span><?= $order->customerName ?></span>
+    <a href="/orders/<?= $order->id ?>">View</a>
+  </li>
 </ul>
-<div s:empty>No items found</div>
+<p s:empty>No orders yet</p>
 ```
 
-```html [Components]
-<!-- components/card.sugar.php -->
-<article class="card">
-  <header><?= $header ?? '' ?></header>
-  <section><?= $slot ?></section>
-</article>
-
-<!-- usage -->
-<s-card s:bind="$cardProps">
-    <div s:slot="header">Welcome back</div>
-    <p>Hello, <?= $user->name ?></p>
-</s-card>
-```
-
-```php [Pipes]
-<!-- template -->
-<h1><?= $title |> strtoupper(...) |> substr(..., 0, 50) ?></h1>
-
-<!-- compiled -->
-<h1><?= \Sugar\Escape\Escaper::html(substr(strtoupper($title), 0, 50)) ?></h1>
-```
-
-```php [Mixed PHP]
-<?php if ($user->isAdmin()): ?>
-  <strong>Admin</strong>
+::: code-group
+```php [Vanilla PHP]
+<?php if (!empty($orders)): ?>
+  <ul>
+    <?php foreach ($orders as $order): ?>
+      <li class="<?= $order->isPaid ? 'paid' : 'unpaid' ?>">
+        #<?= htmlspecialchars($order->number, ENT_QUOTES, 'UTF-8') ?>
+        <span><?= htmlspecialchars($order->customerName, ENT_QUOTES, 'UTF-8') ?></span>
+        <a href="/orders/<?= urlencode($order->id) ?>">View</a>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+<?php else: ?>
+  <p>No orders yet</p>
 <?php endif; ?>
-<span s:text="$user->name"></span>
+```
+
+```php [Compiled Template]
+<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($orders)): ?>
+  <ul>
+    <?php foreach ($orders as $order): ?>
+      <li class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['paid' => $order->isPaid, 'unpaid' => !$order->isPaid]) ?>">
+        #<?= \Sugar\Escape\Escaper::html($order->number) ?>
+        <span><?= \Sugar\Escape\Escaper::html($order->customerName) ?></span>
+        <a href="/orders/<?= \Sugar\Escape\Escaper::url($order->id) ?>">View</a>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+<?php else: ?>
+  <p>No orders yet</p>
+<?php endif; ?>
 ```
 :::
 
