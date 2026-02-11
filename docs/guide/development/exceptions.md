@@ -1,11 +1,11 @@
 ---
 title: Exceptions
-description: How Sugar reports template errors with helpful snippets.
+description: How Sugar reports template errors with location metadata and optional HTML rendering.
 ---
 
 # Exceptions
 
-Sugar throws focused exceptions that include contextual snippets so you can identify where a template failed. These exceptions are designed to be actionable during development and safe to log in production.
+Sugar throws focused exceptions that include location metadata so you can identify where a template failed. These exceptions are designed to be actionable during development and safe to log in production.
 
 ::: tip
 Most template errors are `SugarException` subclasses. Catch `SugarException` to handle template failures in one place.
@@ -19,19 +19,9 @@ Most template errors are `SugarException` subclasses. Catch `SugarException` to 
 - `UnknownDirectiveException` - An unregistered directive was encountered.
 - `TemplateRuntimeException` - Rendering failed due to a runtime error.
 
-## Snippet Output
+## Exception Rendering
 
-Sugar exceptions include a short snippet to help you locate the issue:
-
-```text
-Template: pages/home.sugar.php
-Line: 12
-
-10 | <div s:if="$user">
-11 |     <span><?= $user->name ?></span>
-12 |     <s-template s:include="partials/unknown"></s-template>
-13 | </div>
-```
+<!-- @include: ./_partials/exception-renderer-preview.md -->
 
 ## Handling Exceptions
 
