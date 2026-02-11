@@ -20,6 +20,11 @@ abstract class SugarException extends Exception
     protected string $defaultMessage = '';
 
     /**
+     * Unformatted error message without location metadata.
+     */
+    private string $rawMessage = '';
+
+    /**
      * Constructor
      *
      * @param string $message Error message (uses defaultMessage if empty)
@@ -40,8 +45,17 @@ abstract class SugarException extends Exception
             $message = $this->defaultMessage;
         }
 
+        $this->rawMessage = $message;
         $formattedMessage = $this->formatMessage($message);
         parent::__construct($formattedMessage, 0, $previous);
+    }
+
+    /**
+     * Return the raw error message without location metadata.
+     */
+    public function getRawMessage(): string
+    {
+        return $this->rawMessage;
     }
 
     /**

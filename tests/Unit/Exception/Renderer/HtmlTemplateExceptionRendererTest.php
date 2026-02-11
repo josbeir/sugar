@@ -56,10 +56,14 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $html = $renderer->render($exception);
 
         $this->assertStringContainsString('<pre class="sugar-exception-template">', $html);
+        $this->assertStringContainsString('<div class="sugar-exception-title">Sugar</div>', $html);
         $this->assertStringContainsString('2 | line two', $html);
-        $this->assertStringContainsString('0 |', $html);
+        $this->assertStringContainsString('  |', $html);
         $this->assertStringContainsString('^', $html);
         $this->assertStringContainsString('template: Pages/home.sugar.php line:2 column:2', $html);
+        $this->assertStringContainsString('<details class="sugar-exception-trace">', $html);
+        $this->assertStringContainsString('<summary>Sugar stack trace</summary>', $html);
+        $this->assertStringContainsString('<style>', $html);
     }
 
     public function testNonCompilationExceptionFallsBackToMessage(): void

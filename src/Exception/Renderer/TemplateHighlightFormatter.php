@@ -26,7 +26,7 @@ final class TemplateHighlightFormatter
 
         foreach ($lines as $index => $content) {
             $lineNumber = $index + 1;
-            $prefix = str_pad((string)$lineNumber, $padding, '0', STR_PAD_LEFT) . ' | ';
+            $prefix = str_pad((string)$lineNumber, $padding, ' ', STR_PAD_LEFT) . ' | ';
             $formatted[] = new TemplateHighlightLine(
                 $prefix . $content,
                 $lineNumber === $line,
@@ -34,7 +34,7 @@ final class TemplateHighlightFormatter
             );
 
             if ($lineNumber === $line && $column > 0) {
-                $caretPrefix = str_repeat('0', $padding) . ' | ';
+                $caretPrefix = str_repeat(' ', $padding) . ' | ';
                 $caret = $caretPrefix . str_repeat(' ', max(0, $column - 1)) . '^';
                 $formatted[] = new TemplateHighlightLine($caret, false, true);
             }

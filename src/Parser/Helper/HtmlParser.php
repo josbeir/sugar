@@ -6,6 +6,7 @@ namespace Sugar\Parser\Helper;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Runtime\HtmlTagHelper;
+use Sugar\Util\Hash;
 
 /**
  * Parse HTML fragments into flat node lists for the template parser.
@@ -288,18 +289,48 @@ final readonly class HtmlParser
             return [$line, $column];
         }
 
-        $before = substr($html, 0, $offset);
-        $newlineCount = substr_count($before, "\n");
+        $length = strlen($html);
+        if ($length === 0) {
+            return [$line, $column];
+        }
 
-        if ($newlineCount === 0) {
+        if ($offset > $length) {
+            $offset = $length;
+        }
+
+        /** @var array<string, array<int, int>> $lineStartCache */
+        static $lineStartCache = [];
+        $cacheKey = Hash::make($html);
+
+        if (!isset($lineStartCache[$cacheKey])) {
+            $starts = [0];
+            $pos = -1;
+            while (($pos = strpos($html, "\n", $pos + 1)) !== false) {
+                $starts[] = $pos + 1;
+            }
+
+            $lineStartCache[$cacheKey] = $starts;
+        }
+
+        $lineStarts = $lineStartCache[$cacheKey];
+        $low = 0;
+        $high = count($lineStarts) - 1;
+        $lineIndex = 0;
+
+        while ($low <= $high) {
+            $mid = intdiv($low + $high, 2);
+            if ($lineStarts[$mid] <= $offset) {
+                $lineIndex = $mid;
+                $low = $mid + 1;
+            } else {
+                $high = $mid - 1;
+            }
+        }
+
+        if ($lineIndex === 0) {
             return [$line, $column + $offset];
         }
 
-        $lastNewline = strrpos($before, "\n");
-        if ($lastNewline === false) {
-            return [$line, $column + $offset];
-        }
-
-        return [$line + $newlineCount, $offset - $lastNewline];
+        return [$line + $lineIndex, $offset - $lineStarts[$lineIndex] + 1];
     }
 }

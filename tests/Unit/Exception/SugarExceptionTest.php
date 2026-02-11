@@ -16,6 +16,7 @@ final class SugarExceptionTest extends TestCase
         $exception = new TestSugarException('Something went wrong');
 
         $this->assertSame('Something went wrong', $exception->getMessage());
+        $this->assertSame('Something went wrong', $exception->getRawMessage());
         $this->assertNull($exception->templatePath);
         $this->assertNull($exception->templateLine);
         $this->assertNull($exception->templateColumn);
@@ -32,6 +33,7 @@ final class SugarExceptionTest extends TestCase
         $this->assertSame('views/profile.sugar.php', $exception->templatePath);
         $this->assertSame(42, $exception->templateLine);
         $this->assertNull($exception->templateColumn);
+        $this->assertSame('Syntax error', $exception->getRawMessage());
 
         // Message should be formatted with location
         $message = $exception->getMessage();

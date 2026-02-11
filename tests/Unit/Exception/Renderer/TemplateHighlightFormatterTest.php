@@ -16,7 +16,7 @@ final class TemplateHighlightFormatterTest extends TestCase
         $this->assertCount(4, $result->lines);
         $this->assertSame('1 | first', $result->lines[0]->text);
         $this->assertSame('2 | second', $result->lines[1]->text);
-        $this->assertSame('0 |   ^', $result->lines[2]->text);
+        $this->assertSame('  |   ^', $result->lines[2]->text);
         $this->assertSame('3 | third', $result->lines[3]->text);
         $this->assertTrue($result->lines[1]->isErrorLine);
         $this->assertTrue($result->lines[2]->isCaretLine);
