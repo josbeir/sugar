@@ -19,7 +19,7 @@ final class ExpressionValidator
      *
      * @param string $expression PHP expression to validate
      * @param string $context Context for error message (e.g., 's:bind attribute', 's:spread value')
-     * @param \Sugar\Context\CompilationContext|null $compilationContext Compilation context for error snippets
+     * @param \Sugar\Context\CompilationContext|null $compilationContext Compilation context for error location
      * @param int|null $line Line number for error reporting
      * @param int|null $column Column number for error reporting
      * @throws \Sugar\Exception\SyntaxException If expression is obviously not an array

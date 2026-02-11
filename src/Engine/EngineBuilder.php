@@ -10,6 +10,7 @@ use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Escape\Escaper;
+use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Extension\ExtensionInterface;
@@ -36,6 +37,8 @@ final class EngineBuilder
     private bool $debug = false;
 
     private ?object $templateContext = null;
+
+    private ?TemplateExceptionRendererInterface $exceptionRenderer = null;
 
     /**
      * @var array<\Sugar\Extension\ExtensionInterface>
@@ -121,6 +124,19 @@ final class EngineBuilder
     }
 
     /**
+     * Set a template exception renderer
+     *
+     * @param \Sugar\Exception\Renderer\TemplateExceptionRendererInterface $renderer Exception renderer
+     * @return $this
+     */
+    public function withExceptionRenderer(TemplateExceptionRendererInterface $renderer)
+    {
+        $this->exceptionRenderer = $renderer;
+
+        return $this;
+    }
+
+    /**
      * Register an extension
      *
      * Extensions can provide custom directives and compiler passes.
@@ -191,6 +207,7 @@ final class EngineBuilder
             cache: $this->cache,
             debug: $this->debug,
             templateContext: $this->templateContext,
+            exceptionRenderer: $this->exceptionRenderer,
         );
     }
 }

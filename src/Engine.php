@@ -11,6 +11,8 @@ use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine\CompiledTemplateResult;
 use Sugar\Engine\EngineBuilder;
+use Sugar\Exception\CompilationException;
+use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -31,6 +33,7 @@ final class Engine implements EngineInterface
      * @param \Sugar\Cache\TemplateCacheInterface $cache Template cache
      * @param bool $debug Debug mode (enables freshness checking)
      * @param object|null $templateContext Optional context object to bind to templates (for $this access)
+     * @param \Sugar\Exception\Renderer\TemplateExceptionRendererInterface|null $exceptionRenderer Exception renderer
      */
     public function __construct(
         private readonly Compiler $compiler,
@@ -38,6 +41,7 @@ final class Engine implements EngineInterface
         private readonly TemplateCacheInterface $cache,
         private readonly bool $debug = false,
         private readonly ?object $templateContext = null,
+        private readonly ?TemplateExceptionRendererInterface $exceptionRenderer = null,
     ) {
     }
 
@@ -59,11 +63,19 @@ final class Engine implements EngineInterface
     {
         $blocks = ArrayHelper::normalizeStringList($blocks);
 
-        // Get compiled PHP code
-        $compiled = $this->getCompiledTemplate($template, $blocks);
+        try {
+            // Get compiled PHP code
+            $compiled = $this->getCompiledTemplate($template, $blocks);
 
-        // Execute the compiled template
-        return $this->execute($compiled->path, $data, $compiled->tracker);
+            // Execute the compiled template
+            return $this->execute($compiled->path, $data, $compiled->tracker);
+        } catch (CompilationException $compilationException) {
+            if ($this->debug && $this->exceptionRenderer instanceof TemplateExceptionRendererInterface) {
+                return $this->exceptionRenderer->render($compilationException);
+            }
+
+            throw $compilationException;
+        }
     }
 
     /**

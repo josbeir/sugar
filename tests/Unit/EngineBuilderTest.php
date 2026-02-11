@@ -9,6 +9,8 @@ use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Engine\EngineBuilder;
+use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
+use Sugar\Exception\SugarException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\ExtensionInterface;
 use Sugar\Extension\RegistrationContext;
@@ -133,6 +135,25 @@ final class EngineBuilderTest extends TestCase
 
         $engine = $builder->build();
         $this->assertInstanceOf(Engine::class, $engine);
+    }
+
+    public function testWithExceptionRenderer(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+        $renderer = new class implements TemplateExceptionRendererInterface {
+            public function render(SugarException $exception): string
+            {
+                return $exception->getMessage();
+            }
+        };
+
+        $builder = new EngineBuilder();
+        $result = $builder
+            ->withTemplateLoader($loader)
+            ->withExceptionRenderer($renderer);
+
+        $this->assertSame($builder, $result);
+        $this->assertInstanceOf(Engine::class, $builder->build());
     }
 
     public function testFluentApiChaining(): void

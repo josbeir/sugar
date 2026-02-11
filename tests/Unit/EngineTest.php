@@ -5,8 +5,12 @@ namespace Sugar\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
+use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
+use Sugar\Config\SugarConfig;
 use Sugar\Engine;
+use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
+use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
@@ -117,5 +121,96 @@ final class EngineTest extends TestCase
         $result = $engine->render('child.sugar.php', [], ['content', 'sidebar']);
 
         $this->assertSame('<div><p>Side</p></div><div><p>Main</p></div>', trim($result));
+    }
+
+    public function testRenderCompilationExceptionUsesRenderer(): void
+    {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader($config, [
+            'a.sugar.php' => '<s-template s:extends="b.sugar.php"></s-template>',
+            'b.sugar.php' => '<s-template s:extends="a.sugar.php"></s-template>',
+        ]);
+
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
+        $engine = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withExceptionRenderer($renderer)
+            ->build();
+
+        $result = $engine->render('a.sugar.php');
+
+        $this->assertStringContainsString('sugar-exception-template', $result);
+        $this->assertStringContainsString('sugar-exception', $result);
+    }
+
+    public function testExecuteCastsScalarReturnValue(): void
+    {
+        $engine = $this->createStringEngine([
+            'scalar.sugar.php' => '<p>ignored</p>',
+        ]);
+
+        $compiledPath = $this->cacheDir . '/scalar.php';
+        file_put_contents(
+            $compiledPath,
+            <<<'PHP'
+<?php
+return function (array $data): int {
+    return 123;
+};
+PHP
+            ,
+        );
+
+        $invokeExecute = static function (
+            Engine $engine,
+            string $path,
+            array $data,
+            ?DependencyTracker $tracker,
+        ): string {
+            /** @phpstan-ignore-next-line */
+            return $engine->execute($path, $data, $tracker);
+        };
+        $boundExecute = $invokeExecute->bindTo(null, Engine::class);
+
+        /** @var array<string, mixed> $data */
+        $data = [];
+        $result = $boundExecute($engine, $compiledPath, $data, null);
+
+        $this->assertSame('123', $result);
+    }
+
+    public function testExecuteReturnsEmptyWhenNotClosure(): void
+    {
+        $engine = $this->createStringEngine([
+            'noop.sugar.php' => '<p>ignored</p>',
+        ]);
+
+        $compiledPath = $this->cacheDir . '/not-closure.php';
+        file_put_contents(
+            $compiledPath,
+            <<<'PHP'
+    <?php
+    return 'not a closure';
+    PHP
+            ,
+        );
+
+        $invokeExecute = static function (
+            Engine $engine,
+            string $path,
+            array $data,
+            ?DependencyTracker $tracker,
+        ): string {
+            /** @phpstan-ignore-next-line */
+            return $engine->execute($path, $data, $tracker);
+        };
+        $boundExecute = $invokeExecute->bindTo(null, Engine::class);
+
+        /** @var array<string, mixed> $data */
+        $data = [];
+        $result = $boundExecute($engine, $compiledPath, $data, null);
+
+        $this->assertSame('', $result);
     }
 }

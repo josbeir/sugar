@@ -9,7 +9,7 @@ use Throwable;
 /**
  * Base exception for all Sugar template errors
  *
- * Provides location tracking and formatted error messages with template context
+ * Provides location tracking and formatted error messages
  */
 abstract class SugarException extends Exception
 {
@@ -20,13 +20,17 @@ abstract class SugarException extends Exception
     protected string $defaultMessage = '';
 
     /**
+     * Unformatted error message without location metadata.
+     */
+    private string $rawMessage = '';
+
+    /**
      * Constructor
      *
      * @param string $message Error message (uses defaultMessage if empty)
      * @param string|null $templatePath Path to template file
      * @param int|null $templateLine Line number in template
      * @param int|null $templateColumn Column number in template
-     * @param string|null $snippet Code snippet showing error context
      * @param \Throwable|null $previous Previous exception for chaining
      */
     public function __construct(
@@ -34,7 +38,6 @@ abstract class SugarException extends Exception
         public readonly ?string $templatePath = null,
         public readonly ?int $templateLine = null,
         public readonly ?int $templateColumn = null,
-        public readonly ?string $snippet = null,
         ?Throwable $previous = null,
     ) {
         // Use default message if no message provided
@@ -42,14 +45,21 @@ abstract class SugarException extends Exception
             $message = $this->defaultMessage;
         }
 
+        $this->rawMessage = $message;
         $formattedMessage = $this->formatMessage($message);
         parent::__construct($formattedMessage, 0, $previous);
     }
 
     /**
-     * Format error message with location and snippet
-     *
-     * Protected to allow child classes to customize message formatting
+     * Return the raw error message without location metadata.
+     */
+    public function getRawMessage(): string
+    {
+        return $this->rawMessage;
+    }
+
+    /**
+     * Format error message with location metadata.
      */
     protected function formatMessage(string $message): string
     {
@@ -66,10 +76,6 @@ abstract class SugarException extends Exception
             }
 
             $formattedMessage .= sprintf(' (%s)', $location);
-        }
-
-        if ($this->snippet !== null) {
-            return $formattedMessage . "\n\n" . $this->snippet;
         }
 
         return $formattedMessage;

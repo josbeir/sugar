@@ -35,7 +35,7 @@ final class CompilationContextTest extends TestCase
         $this->assertFalse($context->debug);
     }
 
-    public function testCreateExceptionWithSnippet(): void
+    public function testCreateExceptionWithLocationMetadata(): void
     {
         $source = <<<'PHP'
 <div s:if="$user">
@@ -58,14 +58,7 @@ PHP;
         $this->assertSame('test.sugar.php', $exception->templatePath);
         $this->assertSame(2, $exception->templateLine);
         $this->assertSame(8, $exception->templateColumn);
-        $this->assertNotNull($exception->snippet);
-
-        // Verify snippet shows context
-        $message = $this->normalizeSnippet($exception->getMessage());
-        $this->assertStringContainsString(' 1 | <div s:if="$user">', $message);
-        $this->assertStringContainsString(' 2 |     <p s:forech="$items">', $message);
-        $this->assertStringContainsString('^', $message); // Error pointer
-        $this->assertStringContainsString(' 3 |         <?= $item ?>', $message);
+        $this->assertStringContainsString('template: test.sugar.php', $exception->getMessage());
     }
 
     public function testCreateExceptionWithoutLineOrColumn(): void
@@ -81,7 +74,6 @@ PHP;
         $this->assertSame('test.sugar.php', $exception->templatePath);
         $this->assertNull($exception->templateLine);
         $this->assertNull($exception->templateColumn);
-        $this->assertNull($exception->snippet);
     }
 
     public function testCreateExceptionWithLineButNoColumn(): void
@@ -94,8 +86,7 @@ PHP;
             'Error on line',
             line: 1,
         );
-
-        $this->assertNull($exception->snippet); // No snippet without column
+        $this->assertInstanceOf(SyntaxException::class, $exception);
     }
 
     public function testCreateExceptionWithDifferentExceptionTypes(): void
@@ -111,54 +102,6 @@ PHP;
         );
         $this->assertInstanceOf(SyntaxException::class, $syntax);
         $this->assertStringContainsString('Syntax error', $syntax->getMessage());
-    }
-
-    public function testGenerateSnippet(): void
-    {
-        $source = <<<'PHP'
-line 1
-line 2 error here
-line 3
-line 4
-PHP;
-
-        $context = new CompilationContext('test.sugar.php', $source);
-
-        $snippet = $context->generateSnippet(line: 2, column: 8);
-
-        $snippet = $this->normalizeSnippet($snippet);
-        $this->assertStringContainsString(' 1 | line 1', $snippet);
-        $this->assertStringContainsString(' 2 | line 2 error here', $snippet);
-        $this->assertStringContainsString('^', $snippet);
-        $this->assertStringContainsString(' 3 | line 3', $snippet);
-        $this->assertStringContainsString(' 4 | line 4', $snippet);
-    }
-
-    public function testGenerateSnippetWithCustomContextLines(): void
-    {
-        $source = implode("\n", [
-            'line 1',
-            'line 2',
-            'line 3',
-            'line 4 error',
-            'line 5',
-            'line 6',
-            'line 7',
-        ]);
-
-        $context = new CompilationContext('test.sugar.php', $source);
-
-        $snippet = $context->generateSnippet(line: 4, column: 8, contextLines: 1);
-
-        // Should show only 1 line before and after
-        $snippet = $this->normalizeSnippet($snippet);
-        $this->assertStringContainsString(' 3 | line 3', $snippet);
-        $this->assertStringContainsString(' 4 | line 4 error', $snippet);
-        $this->assertStringContainsString(' 5 | line 5', $snippet);
-
-        // Should NOT show lines 2 and 6
-        $this->assertStringNotContainsString(' 2 | line 2', $snippet);
-        $this->assertStringNotContainsString(' 6 | line 6', $snippet);
     }
 
     public function testCreateExceptionPreservesExceptionMessage(): void
@@ -201,10 +144,5 @@ PHP;
         // But different column positions
         $this->assertSame(5, $exception1->templateColumn);
         $this->assertSame(10, $exception2->templateColumn);
-    }
-
-    private function normalizeSnippet(string $snippet): string
-    {
-        return str_replace("\u{00A0}", ' ', $snippet);
     }
 }

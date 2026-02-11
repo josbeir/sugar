@@ -107,6 +107,8 @@ Sugar caches by a template path hash and writes a compiled PHP file plus a metad
 
 Sugar keeps line/column data through all passes so errors can point back to the original template, even after component expansion.
 
+When you enable debug mode, the engine can render compilation errors as HTML with highlighted source using the `HtmlTemplateExceptionRenderer`.
+
 ::: details Typical error sources
 - Unknown directives or invalid placement during extraction.
 - Invalid component names or missing templates during expansion.

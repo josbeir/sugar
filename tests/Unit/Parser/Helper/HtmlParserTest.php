@@ -66,6 +66,54 @@ final class HtmlParserTest extends TestCase
         $this->assertSame('s-card', $nodes[1]->tagName);
     }
 
+    public function testTracksAttributeLineAndColumnAcrossNewlines(): void
+    {
+        $parser = $this->createParser();
+        $nodes = $parser->parse(
+            "<div\n    class=\"card\"\n    s:blik=\"true\"></div>",
+            1,
+            1,
+        );
+
+        $this->assertCount(2, $nodes);
+        $this->assertInstanceOf(ElementNode::class, $nodes[0]);
+
+        $element = $nodes[0];
+        $this->assertSame(1, $element->line);
+        $this->assertSame(1, $element->column);
+        $this->assertCount(2, $element->attributes);
+
+        $this->assertSame(2, $element->attributes[0]->line);
+        $this->assertSame(5, $element->attributes[0]->column);
+        $this->assertSame('class', $element->attributes[0]->name);
+
+        $this->assertSame(3, $element->attributes[1]->line);
+        $this->assertSame(5, $element->attributes[1]->column);
+        $this->assertSame('s:blik', $element->attributes[1]->name);
+    }
+
+    public function testResolvePositionHandlesEmptySourceAndLargeOffset(): void
+    {
+        $parser = $this->createParser();
+        $resolvePosition = static function (
+            HtmlParser $parser,
+            string $html,
+            int $offset,
+            int $line,
+            int $column,
+        ): array {
+            /** @phpstan-ignore-next-line */
+            return $parser->resolvePosition($html, $offset, $line, $column);
+        };
+        $boundResolve = $resolvePosition->bindTo(null, HtmlParser::class);
+
+        $emptyResult = $boundResolve($parser, '', 10, 3, 4);
+        $this->assertSame([3, 4], $emptyResult);
+
+        $clampedResult = $boundResolve($parser, 'abc', 10, 1, 1);
+        $this->assertSame([1, 4], $clampedResult);
+    }
+
     private function createParser(): HtmlParser
     {
         $config = new SugarConfig();

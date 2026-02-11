@@ -26,7 +26,7 @@ use Sugar\Directive\UnlessDirective;
 use Sugar\Directive\WhileDirective;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Exception\DidYouMean;
+use Sugar\Exception\Helper\DidYouMean;
 use Sugar\Exception\UnknownDirectiveException;
 
 /**

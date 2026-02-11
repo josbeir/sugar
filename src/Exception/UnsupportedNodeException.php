@@ -20,21 +20,18 @@ final class UnsupportedNodeException extends CompilationException
      * @param string|null $templatePath Path to template file
      * @param int|null $templateLine Line number in template
      * @param int|null $templateColumn Column number in template
-     * @param string|null $snippet Code snippet showing error context
      */
     public static function forNodeType(
         string $nodeClass,
         ?string $templatePath = null,
         ?int $templateLine = null,
         ?int $templateColumn = null,
-        ?string $snippet = null,
     ): self {
         return new self(
             message: sprintf('Unsupported node type: %s', $nodeClass),
             templatePath: $templatePath,
             templateLine: $templateLine,
             templateColumn: $templateColumn,
-            snippet: $snippet,
         );
     }
 }
