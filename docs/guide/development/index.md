@@ -38,6 +38,35 @@ $engine = Engine::builder($config)
 `withDebug(true)` enables file timestamp checks for development. Disable it in production for best performance.
 :::
 
+### Exception Rendering
+
+Sugar ships with a custom HTML exception renderer that turns compilation errors into a highlighted template view. It surfaces the exact line and column, shows surrounding context, and keeps the original error message and template path in view, which makes diagnosing directive placement and template inheritance issues much faster.
+
+The renderer uses the template loader to fetch the source, so pass the same loader you use for compilation.
+
+```php
+use Sugar\Engine;
+use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
+use Sugar\Loader\FileTemplateLoader;
+use Sugar\Config\SugarConfig;
+
+$config = new SugarConfig();
+$loader = new FileTemplateLoader(
+    config: $config,
+    templatePaths: [__DIR__ . '/templates'],
+);
+
+$engine = Engine::builder($config)
+    ->withTemplateLoader($loader)
+    ->withExceptionRenderer(new HtmlTemplateExceptionRenderer($loader))
+    ->withDebug(true)
+    ->build();
+```
+
+::: tip
+Exception rendering only applies when debug mode is enabled and a `CompilationException` is thrown during rendering. In production, disable debug mode and handle exceptions with standard error pages.
+:::
+
 ### Custom Directive Prefix
 
 Swap the `s:` prefix if you need to avoid collisions with another templating system:
