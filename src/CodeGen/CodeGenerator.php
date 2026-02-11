@@ -137,10 +137,18 @@ final class CodeGenerator
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
             $escapedCode = $this->escaper->generateEscapeCode($expression, $node->context);
-            $buffer->write(sprintf('<?php echo %s;%s ?>', $escapedCode, $this->debugComment($node, 's:text')));
+            $buffer->write(sprintf(
+                '<?php %secho %s; ?>',
+                $this->debugComment($node, 's:text', true, true),
+                $escapedCode,
+            ));
         } else {
             // Raw output
-            $buffer->write(sprintf('<?php echo %s;%s ?>', $expression, $this->debugComment($node, 's:html')));
+            $buffer->write(sprintf(
+                '<?php %secho %s; ?>',
+                $this->debugComment($node, 's:html', true, true),
+                $expression,
+            ));
         }
     }
 
@@ -157,7 +165,11 @@ final class CodeGenerator
 
         if ($this->context->debug) {
             // Add debug comment before closing tag
-            $buffer->write(sprintf('<?php %s%s ?>', $trimmedCode, $this->debugComment($node)));
+            $buffer->write(sprintf(
+                '<?php %s%s ?>',
+                $this->debugComment($node, '', true, true),
+                $trimmedCode,
+            ));
         } else {
             $buffer->write(sprintf('<?php %s ?>', $trimmedCode));
         }
@@ -245,9 +257,9 @@ final class CodeGenerator
             }
 
             $buffer->write(sprintf(
-                '<?php $__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr;%s } ?>',
+                '<?php %s$__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr; } ?>',
+                $this->debugComment($output, 'attr', true, true),
                 $expression,
-                $this->debugComment($output, 'attr'),
             ));
 
             return;
@@ -305,10 +317,10 @@ final class CodeGenerator
     {
         $arguments = implode(', ', $node->arguments);
         $buffer->write(sprintf(
-            '<?php echo %s(%s);%s ?>',
+            '<?php %secho %s(%s); ?>',
+            $this->debugComment($node, 'runtime', true, true),
             $node->callableExpression,
             $arguments,
-            $this->debugComment($node, 'runtime'),
         ));
     }
 
@@ -331,7 +343,7 @@ final class CodeGenerator
      * @param string $context Optional context info (e.g., 's:if', 's:text')
      * @return string Debug comment or empty string if debug disabled
      */
-    private function debugComment(Node $node, string $context = ''): string
+    private function debugComment(Node $node, string $context = '', bool $inline = false, bool $prefix = false): string
     {
         if (!$this->context->debug) {
             return '';
@@ -341,6 +353,17 @@ final class CodeGenerator
             ? $this->context->templatePath
             : 'inline-template';
         $location = sprintf('%s:%d:%d', $templatePath, $node->line, $node->column);
+
+        if ($inline) {
+            $separator = $prefix ? '' : ' ';
+            $suffix = $prefix ? ' ' : '';
+
+            if ($context !== '') {
+                return sprintf('%s/* sugar: %s %s */%s', $separator, $location, $context, $suffix);
+            }
+
+            return sprintf('%s/* sugar: %s */%s', $separator, $location, $suffix);
+        }
 
         if ($context !== '') {
             return sprintf("\n/* sugar: %s %s */", $location, $context);

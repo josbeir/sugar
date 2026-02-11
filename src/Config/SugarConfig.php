@@ -6,7 +6,7 @@ namespace Sugar\Config;
 /**
  * Configuration for Sugar template engine
  *
- * Allows customizing directive prefixes and element prefix.
+ * Allows customizing directive prefixes, element prefix, and compile-time validation.
  * All properties are readonly for immutability.
  */
 final readonly class SugarConfig

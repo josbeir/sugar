@@ -32,7 +32,7 @@ final class CompilationContextIntegrationTest extends TestCase
             // Assert exception includes snippet
             $exceptionString = (string)$syntaxException;
             $this->assertStringContainsString('s-template s:class', $exceptionString);
-            $this->assertStringContainsString(' 1 |', $exceptionString); // Snippet line number format
+            $this->assertStringContainsString('1 |', $exceptionString); // Snippet line number format
 
             throw $syntaxException; // Re-throw for expectException
         }
@@ -50,7 +50,7 @@ final class CompilationContextIntegrationTest extends TestCase
             // Assert template path is in the exception message
             $exceptionString = (string)$syntaxException;
             $this->assertStringContainsString('layouts/sidebar.sugar.php', $exceptionString);
-            $this->assertStringContainsString(' 1 |', $exceptionString); // Snippet line number format
+            $this->assertStringContainsString('1 |', $exceptionString); // Snippet line number format
 
             throw $syntaxException; // Re-throw for expectException
         }

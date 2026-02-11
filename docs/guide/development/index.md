@@ -392,6 +392,36 @@ With debug mode enabled, compiled templates include source location comments tha
 Disable debug mode in production to avoid extra filesystem checks and template metadata in output.
 :::
 
+## Compiled PHP Validation
+
+When debug mode is enabled, Sugar validates compiled PHP to catch syntax errors before execution. This uses `nikic/php-parser` when installed.
+
+```php
+use Sugar\Engine;
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDebug(true)
+    ->build();
+```
+
+Example error output when validation fails:
+
+```text
+Compiler: Syntax error, unexpected T_ENCAPSED_AND_WHITESPACE on line 49 (template: Pages/home.sugar.php line:9 column:9)
+
+07 | ?>
+08 | <div>
+09 | <?= 'bla; ?>
+00 | ________^
+10 | </div>
+11 | </s-template> Sugar\Exception\SyntaxException
+```
+
+::: info
+If `nikic/php-parser` is not installed, validation will throw a compilation exception. Use debug mode for more accurate template line mapping.
+:::
+
 ## AST Reference
 
 Learn how Sugar represents templates internally and what each node type means.

@@ -24,10 +24,10 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 2, column: 8, contextLines: 1);
 
         $expected = implode("\n", [
-            ' 1 | <div>',
-            ' 2 |     <p s:forech="$items">',
-            '   | .......^',
-            ' 3 |         <?= $item ?>',
+            '1 | <div>',
+            '2 |     <p s:forech="$items">',
+            '0 | _______^',
+            '3 |         <?= $item ?>',
         ]);
 
         $this->assertSame($expected, $snippet);
@@ -51,12 +51,12 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 6, column: 12, contextLines: 2);
 
         // Should show 2 lines before and 2 lines after
-        $this->assertStringContainsString(' 4 | </head>', $snippet);
-        $this->assertStringContainsString(' 5 | <body>', $snippet);
-        $this->assertStringContainsString(' 6 |     <div s:if="$invalid">', $snippet);
-        $this->assertStringContainsString('  | ...........^', $snippet); // Error pointer
-        $this->assertStringContainsString(' 7 |         Content', $snippet);
-        $this->assertStringContainsString(' 8 |     </div>', $snippet);
+        $this->assertStringContainsString('4 | </head>', $snippet);
+        $this->assertStringContainsString('5 | <body>', $snippet);
+        $this->assertStringContainsString('6 |     <div s:if="$invalid">', $snippet);
+        $this->assertStringContainsString('0 | ___________^', $snippet); // Error pointer
+        $this->assertStringContainsString('7 |         Content', $snippet);
+        $this->assertStringContainsString('8 |     </div>', $snippet);
     }
 
     public function testHandlesFirstLine(): void
@@ -70,9 +70,9 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 1, column: 5);
 
         // Should not show lines before line 1
-        $this->assertStringContainsString(' 1 | <div s:unknown="value">', $snippet);
-        $this->assertStringContainsString('  | ....^', $snippet);
-        $this->assertStringContainsString(' 2 |     Content', $snippet);
+        $this->assertStringContainsString('1 | <div s:unknown="value">', $snippet);
+        $this->assertStringContainsString('0 | ____^', $snippet);
+        $this->assertStringContainsString('2 |     Content', $snippet);
         $this->assertStringNotContainsString(' 0 |', $snippet);
     }
 
@@ -87,9 +87,9 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 3, column: 5);
 
         // Should not show lines after last line
-        $this->assertStringContainsString(' 2 |     Content', $snippet);
-        $this->assertStringContainsString(' 3 | </div invalid>', $snippet);
-        $this->assertStringContainsString('  | ....^', $snippet);
+        $this->assertStringContainsString('2 |     Content', $snippet);
+        $this->assertStringContainsString('3 | </div invalid>', $snippet);
+        $this->assertStringContainsString('0 | ____^', $snippet);
         $this->assertStringNotContainsString(' 4 |', $snippet);
     }
 
@@ -100,8 +100,8 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 1, column: 5, contextLines: 2);
 
         // Should work with single line file
-        $this->assertStringContainsString(' 1 | <div s:error="value">', $snippet);
-        $this->assertStringContainsString('  | ....^', $snippet);
+        $this->assertStringContainsString('1 | <div s:error="value">', $snippet);
+        $this->assertStringContainsString('0 | ____^', $snippet);
     }
 
     public function testLineNumberPadding(): void
@@ -111,9 +111,9 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 99, column: 1, contextLines: 2);
 
         // Should pad line numbers correctly for 3-digit numbers
-        $this->assertStringContainsString(' 97 | line', $snippet);
-        $this->assertStringContainsString(' 98 | line', $snippet);
-        $this->assertStringContainsString(' 99 | line', $snippet);
+        $this->assertStringContainsString('097 | line', $snippet);
+        $this->assertStringContainsString('098 | line', $snippet);
+        $this->assertStringContainsString('099 | line', $snippet);
         $this->assertStringContainsString('100 | line', $snippet);
         $this->assertStringContainsString('101 | line', $snippet);
     }
@@ -132,8 +132,8 @@ PHP;
         $pointerLine = array_values($pointerLine)[0];
         $pointerPosition = strpos($pointerLine, '^');
 
-        // Calculate expected position: " 1 | " = 5 chars + column 20 - 1 = 24
-        $this->assertSame(24, $pointerPosition);
+        // Calculate expected position: "1 | " = 4 chars + column 20 - 1 = 23
+        $this->assertSame(23, $pointerPosition);
     }
 
     public function testHandlesTabCharacters(): void
@@ -143,7 +143,7 @@ PHP;
         $snippet = SnippetGenerator::generate($source, line: 1, column: 7);
 
         // Tabs should be preserved or converted consistently
-        $this->assertStringContainsString(' 1 |', $snippet);
+        $this->assertStringContainsString('1 |', $snippet);
         $this->assertStringContainsString('<div', $snippet);
     }
 
@@ -161,12 +161,12 @@ PHP;
         // Default should be 2 context lines
         $snippet = SnippetGenerator::generate($source, line: 3, column: 8);
 
-        $this->assertStringContainsString(' 1 | line 1', $snippet);
-        $this->assertStringContainsString(' 2 | line 2', $snippet);
-        $this->assertStringContainsString(' 3 | line 3 error', $snippet);
-        $this->assertStringContainsString(' 4 | line 4', $snippet);
-        $this->assertStringContainsString(' 5 | line 5', $snippet);
-        $this->assertStringNotContainsString(' 6 | line 6', $snippet);
+        $this->assertStringContainsString('1 | line 1', $snippet);
+        $this->assertStringContainsString('2 | line 2', $snippet);
+        $this->assertStringContainsString('3 | line 3 error', $snippet);
+        $this->assertStringContainsString('4 | line 4', $snippet);
+        $this->assertStringContainsString('5 | line 5', $snippet);
+        $this->assertStringNotContainsString('6 | line 6', $snippet);
     }
 
     public function testReturnsEmptySnippetForEmptySource(): void
@@ -195,7 +195,7 @@ PHP;
 
         $snippet = SnippetGenerator::generate($source, line: 2, column: 0, contextLines: 0);
 
-        $this->assertStringContainsString(' 2 | line 2', $snippet);
+        $this->assertStringContainsString('2 | line 2', $snippet);
         $this->assertStringNotContainsString('^', $snippet);
     }
 }

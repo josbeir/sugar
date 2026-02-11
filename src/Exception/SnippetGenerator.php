@@ -43,21 +43,21 @@ final class SnippetGenerator
         $startLine = max(1, $line - $contextLines);
         $endLine = min($totalLines, $line + $contextLines);
 
-        // Calculate padding for line numbers (minimum 2 for consistent double-space)
+        // Calculate padding for line numbers based on the largest line number
         $maxLineNumber = $endLine;
-        $padding = max(2, strlen((string)$maxLineNumber));
+        $padding = strlen((string)$maxLineNumber);
 
         $snippetLines = [];
 
         for ($i = $startLine; $i <= $endLine; $i++) {
-            $lineNumber = str_pad((string)$i, $padding, ' ', STR_PAD_LEFT);
+            $lineNumber = str_pad((string)$i, $padding, '0', STR_PAD_LEFT);
             $lineContent = $lines[$i - 1]; // Arrays are 0-indexed
             $snippetLines[] = sprintf('%s | %s', $lineNumber, $lineContent);
 
             // Add error pointer after the error line (only if column > 0)
             if ($i === $line && $column > 0) {
-                $pointerPrefix = str_repeat(' ', $padding) . ' | ';
-                $pointer = $pointerPrefix . str_repeat('.', $column - 1) . '^';
+                $pointerPrefix = str_repeat('0', $padding) . ' | ';
+                $pointer = $pointerPrefix . str_repeat('_', $column - 1) . '^';
                 $snippetLines[] = $pointer;
             }
         }

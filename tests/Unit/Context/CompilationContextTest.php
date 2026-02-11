@@ -62,10 +62,10 @@ PHP;
 
         // Verify snippet shows context
         $message = $this->normalizeSnippet($exception->getMessage());
-        $this->assertStringContainsString(' 1 | <div s:if="$user">', $message);
-        $this->assertStringContainsString(' 2 |     <p s:forech="$items">', $message);
+        $this->assertStringContainsString('1 | <div s:if="$user">', $message);
+        $this->assertStringContainsString('2 |     <p s:forech="$items">', $message);
         $this->assertStringContainsString('^', $message); // Error pointer
-        $this->assertStringContainsString(' 3 |         <?= $item ?>', $message);
+        $this->assertStringContainsString('3 |         <?= $item ?>', $message);
     }
 
     public function testCreateExceptionWithoutLineOrColumn(): void
@@ -127,11 +127,11 @@ PHP;
         $snippet = $context->generateSnippet(line: 2, column: 8);
 
         $snippet = $this->normalizeSnippet($snippet);
-        $this->assertStringContainsString(' 1 | line 1', $snippet);
-        $this->assertStringContainsString(' 2 | line 2 error here', $snippet);
+        $this->assertStringContainsString('1 | line 1', $snippet);
+        $this->assertStringContainsString('2 | line 2 error here', $snippet);
         $this->assertStringContainsString('^', $snippet);
-        $this->assertStringContainsString(' 3 | line 3', $snippet);
-        $this->assertStringContainsString(' 4 | line 4', $snippet);
+        $this->assertStringContainsString('3 | line 3', $snippet);
+        $this->assertStringContainsString('4 | line 4', $snippet);
     }
 
     public function testGenerateSnippetWithCustomContextLines(): void
@@ -152,13 +152,13 @@ PHP;
 
         // Should show only 1 line before and after
         $snippet = $this->normalizeSnippet($snippet);
-        $this->assertStringContainsString(' 3 | line 3', $snippet);
-        $this->assertStringContainsString(' 4 | line 4 error', $snippet);
-        $this->assertStringContainsString(' 5 | line 5', $snippet);
+        $this->assertStringContainsString('3 | line 3', $snippet);
+        $this->assertStringContainsString('4 | line 4 error', $snippet);
+        $this->assertStringContainsString('5 | line 5', $snippet);
 
         // Should NOT show lines 2 and 6
-        $this->assertStringNotContainsString(' 2 | line 2', $snippet);
-        $this->assertStringNotContainsString(' 6 | line 6', $snippet);
+        $this->assertStringNotContainsString('2 | line 2', $snippet);
+        $this->assertStringNotContainsString('6 | line 6', $snippet);
     }
 
     public function testCreateExceptionPreservesExceptionMessage(): void

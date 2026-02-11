@@ -49,6 +49,7 @@ final class Compiler implements CompilerInterface
         array $customPasses = [],
     ) {
         $config = $config ?? new SugarConfig();
+
         $this->escaper = $escaper;
         $this->registry = $registry;
         $this->templateLoader = $templateLoader;
@@ -159,7 +160,13 @@ final class Compiler implements CompilerInterface
 
         // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
+        $compiled = $generator->generate($analyzedAst);
 
-        return $generator->generate($analyzedAst);
+        if ($context->debug) {
+            $validator = new CompiledTemplateValidator();
+            $validator->validate($compiled, $context);
+        }
+
+        return $compiled;
     }
 }
