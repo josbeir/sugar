@@ -47,18 +47,25 @@ final class CodeGenerator
         // Prelude
         $buffer->writeln('<?php');
         $buffer->writeln('declare(strict_types=1);');
-        $buffer->writeln('// Compiled Sugar template');
+        $buffer->writeln('// phpcs:ignoreFile');
+        $buffer->writeln('');
+        $buffer->writeln('/**');
+        $buffer->writeln(' * Compiled Sugar template');
+        $buffer->writeln(' *');
+        $buffer->writeln(' * @link https://github.com/josbeir/sugar');
 
         $hasRealPath = $this->context->templatePath !== ''
             && $this->context->templatePath !== 'inline-template';
 
         if ($this->context->debug && $hasRealPath) {
-            $buffer->writeln('// Source: ' . $this->context->templatePath);
-            $buffer->writeln('// Compiled: ' . date('Y-m-d H:i:s'));
-            $buffer->writeln('// Debug mode: enabled');
+            $buffer->writeln(' * Source: ' . $this->context->templatePath);
+            $buffer->writeln(' * Compiled: ' . date('Y-m-d H:i:s'));
+            $buffer->writeln(' * Debug mode: enabled');
         } else {
-            $buffer->writeln('// DO NOT EDIT - auto-generated');
+            $buffer->writeln(' * DO NOT EDIT - auto-generated');
         }
+
+        $buffer->writeln(' */');
 
         $buffer->writeln('');
         $buffer->writeln('return function(array|object $__data = []): string {');
@@ -137,10 +144,10 @@ final class CodeGenerator
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
             $escapedCode = $this->escaper->generateEscapeCode($expression, $node->context);
-            $buffer->write(sprintf('<?php echo %s;%s ?>', $escapedCode, $this->debugComment($node, 's:text')));
+            $buffer->write(sprintf('<?php echo %s; ?>', $escapedCode));
         } else {
             // Raw output
-            $buffer->write(sprintf('<?php echo %s;%s ?>', $expression, $this->debugComment($node, 's:html')));
+            $buffer->write(sprintf('<?php echo %s; ?>', $expression));
         }
     }
 
@@ -155,12 +162,7 @@ final class CodeGenerator
         // Pass through trimmed code (removes excess whitespace from token parsing)
         $trimmedCode = trim($node->code);
 
-        if ($this->context->debug) {
-            // Add debug comment before closing tag
-            $buffer->write(sprintf('<?php %s%s ?>', $trimmedCode, $this->debugComment($node)));
-        } else {
-            $buffer->write(sprintf('<?php %s ?>', $trimmedCode));
-        }
+        $buffer->write(sprintf('<?php %s ?>', $trimmedCode));
     }
 
     /**
@@ -245,9 +247,8 @@ final class CodeGenerator
             }
 
             $buffer->write(sprintf(
-                '<?php $__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr;%s } ?>',
+                '<?php $__attr = %s; if ($__attr !== \'\') { echo \' \' . $__attr; } ?>',
                 $expression,
-                $this->debugComment($output, 'attr'),
             ));
 
             return;
@@ -304,12 +305,7 @@ final class CodeGenerator
     private function generateRuntimeCall(RuntimeCallNode $node, OutputBuffer $buffer): void
     {
         $arguments = implode(', ', $node->arguments);
-        $buffer->write(sprintf(
-            '<?php echo %s(%s);%s ?>',
-            $node->callableExpression,
-            $arguments,
-            $this->debugComment($node, 'runtime'),
-        ));
+        $buffer->write(sprintf('<?php echo %s(%s); ?>', $node->callableExpression, $arguments));
     }
 
     /**
@@ -322,31 +318,6 @@ final class CodeGenerator
     {
         // For now, output as comment - full directive support comes in next phase
         $buffer->write('<!-- Directive: ' . $node->name . ' = ' . Escaper::html($node->expression) . ' -->');
-    }
-
-    /**
-     * Generate debug comment for a node
-     *
-     * @param \Sugar\Ast\Node $node AST node
-     * @param string $context Optional context info (e.g., 's:if', 's:text')
-     * @return string Debug comment or empty string if debug disabled
-     */
-    private function debugComment(Node $node, string $context = ''): string
-    {
-        if (!$this->context->debug) {
-            return '';
-        }
-
-        $templatePath = $this->context->templatePath !== ''
-            ? $this->context->templatePath
-            : 'inline-template';
-        $location = sprintf('%s:%d:%d', $templatePath, $node->line, $node->column);
-
-        if ($context !== '') {
-            return sprintf("\n/* sugar: %s %s */", $location, $context);
-        }
-
-        return sprintf("\n/* sugar: %s */", $location);
     }
 
     /**

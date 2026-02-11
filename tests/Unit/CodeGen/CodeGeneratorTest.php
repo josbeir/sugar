@@ -202,9 +202,11 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->debugGenerator->generate($ast);
 
-        $this->assertStringContainsString('// Source: test.sugar.php', $code);
-        $this->assertStringContainsString('// Debug mode: enabled', $code);
-        $this->assertStringContainsString('// Compiled: ', $code);
+        $this->assertStringContainsString('* Compiled Sugar template', $code);
+        $this->assertStringContainsString('* @link https://github.com/josbeir/sugar', $code);
+        $this->assertStringContainsString('* Source: test.sugar.php', $code);
+        $this->assertStringContainsString('* Debug mode: enabled', $code);
+        $this->assertStringContainsString('* Compiled: ', $code);
     }
 
     public function testDebugModeDisabledShowsDefaultHeader(): void
@@ -215,43 +217,11 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString('// DO NOT EDIT - auto-generated', $code);
-        $this->assertStringNotContainsString('// Source:', $code);
-        $this->assertStringNotContainsString('// Debug mode:', $code);
-    }
-
-    public function testDebugCommentOnRawPhpNode(): void
-    {
-        $ast = $this->document()
-            ->withChild($this->rawPhp('if ($user):', 2, 4))
-            ->build();
-
-        $code = $this->debugGenerator->generate($ast);
-
-        $this->assertStringContainsString('/* sugar: test.sugar.php:2:4 */', $code);
-        $this->assertStringContainsString("<?php if (\$user):\n/* sugar: test.sugar.php:2:4 */ ?>", $code);
-    }
-
-    public function testDebugCommentOnOutputNode(): void
-    {
-        $ast = $this->document()
-            ->withChild($this->outputNode('$user->name', true, OutputContext::HTML, 3, 8))
-            ->build();
-
-        $code = $this->debugGenerator->generate($ast);
-
-        $this->assertStringContainsString('/* sugar: test.sugar.php:3:8 s:text */', $code);
-    }
-
-    public function testDebugCommentOnRawOutputNode(): void
-    {
-        $ast = $this->document()
-            ->withChild($this->outputNode('$html', false, OutputContext::RAW, 4, 10))
-            ->build();
-
-        $code = $this->debugGenerator->generate($ast);
-
-        $this->assertStringContainsString('/* sugar: test.sugar.php:4:10 s:html */', $code);
+        $this->assertStringContainsString('* Compiled Sugar template', $code);
+        $this->assertStringContainsString('* @link https://github.com/josbeir/sugar', $code);
+        $this->assertStringContainsString('* DO NOT EDIT - auto-generated', $code);
+        $this->assertStringNotContainsString('* Source:', $code);
+        $this->assertStringNotContainsString('* Debug mode:', $code);
     }
 
     public function testGenerateRuntimeCallNode(): void
@@ -269,17 +239,6 @@ final class CodeGeneratorTest extends TestCase
         $this->assertSame('4', $output);
     }
 
-    public function testGenerateRuntimeCallInDebugMode(): void
-    {
-        $ast = $this->document()
-            ->withChild(new RuntimeCallNode('strlen', ["'test'"], 2, 3))
-            ->build();
-
-        $code = $this->debugGenerator->generate($ast);
-
-        $this->assertStringContainsString('/* sugar: test.sugar.php:2:3 runtime */', $code);
-    }
-
     public function testNoDebugCommentsWhenDisabled(): void
     {
         $ast = $this->document()
@@ -290,10 +249,10 @@ final class CodeGeneratorTest extends TestCase
             ->build();
 
         $code = $this->generator->generate($ast);
+        $debugCode = $this->debugGenerator->generate($ast);
 
-        $this->assertStringNotContainsString('/* L', $code);
-        $this->assertStringNotContainsString('s:text', $code);
-        $this->assertStringNotContainsString('<!-- L', $code);
+        $this->assertStringNotContainsString('/* sugar:', $code);
+        $this->assertStringNotContainsString('/* sugar:', $debugCode);
     }
 
     public function testDebugModeWithoutSourceFile(): void
@@ -306,9 +265,11 @@ final class CodeGeneratorTest extends TestCase
         $code = $generator->generate($ast);
 
         // Should not include source file info when sourceFile is null
-        $this->assertStringContainsString('// DO NOT EDIT - auto-generated', $code);
-        $this->assertStringNotContainsString('// Source:', $code);
-        $this->assertStringNotContainsString('// Debug mode:', $code);
+        $this->assertStringContainsString('* Compiled Sugar template', $code);
+        $this->assertStringContainsString('* @link https://github.com/josbeir/sugar', $code);
+        $this->assertStringContainsString('* DO NOT EDIT - auto-generated', $code);
+        $this->assertStringNotContainsString('* Source:', $code);
+        $this->assertStringNotContainsString('* Debug mode:', $code);
     }
 
     public function testGenerateElementWithAttributes(): void
