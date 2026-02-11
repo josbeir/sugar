@@ -18,8 +18,10 @@ use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\BlockMergeMode;
 use Sugar\Exception\SyntaxException;
+use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
+use Sugar\Pass\Directive\Helper\UnknownDirectiveValidator;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 final class TemplateInheritancePass implements AstPassInterface
@@ -27,6 +29,8 @@ final class TemplateInheritancePass implements AstPassInterface
     use ScopeIsolationTrait;
 
     private DirectivePrefixHelper $prefixHelper;
+
+    private UnknownDirectiveValidator $unknownDirectiveValidator;
 
     /**
      * Stack of loaded templates for circular detection
@@ -48,14 +52,17 @@ final class TemplateInheritancePass implements AstPassInterface
      *
      * @param \Sugar\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Parser\Parser $parser Template parser
+     * @param \Sugar\Extension\DirectiveRegistryInterface $registry Directive registry
      * @param \Sugar\Config\SugarConfig $config Sugar configuration
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
         private readonly Parser $parser,
+        private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $this->unknownDirectiveValidator = new UnknownDirectiveValidator($this->registry, $this->prefixHelper);
     }
 
     /**
@@ -97,6 +104,8 @@ final class TemplateInheritancePass implements AstPassInterface
         CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
+        $this->unknownDirectiveValidator->validateUnknownDirectivesInNodes($document->children, $context, false);
+
         if ($context->blocks !== null) {
             $document = $this->processIncludes($document, $context, $loadedTemplates);
             $document = $this->extractBlocks($document, $context->blocks, $context);

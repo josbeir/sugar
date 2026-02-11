@@ -44,7 +44,8 @@ final readonly class HtmlParser
             if ($tagStart === false) {
                 // Rest is text
                 if ($pos < $len) {
-                    $nodes[] = $this->nodeFactory->text(substr($html, $pos), $line, $column);
+                    [$textLine, $textColumn] = $this->resolvePosition($html, $pos, $line, $column);
+                    $nodes[] = $this->nodeFactory->text(substr($html, $pos), $textLine, $textColumn);
                 }
 
                 break;
@@ -52,7 +53,12 @@ final readonly class HtmlParser
 
             // Text before tag
             if ($tagStart > $pos) {
-                $nodes[] = $this->nodeFactory->text(substr($html, $pos, $tagStart - $pos), $line, $column);
+                [$textLine, $textColumn] = $this->resolvePosition($html, $pos, $line, $column);
+                $nodes[] = $this->nodeFactory->text(
+                    substr($html, $pos, $tagStart - $pos),
+                    $textLine,
+                    $textColumn,
+                );
             }
 
             // Check for closing tag
@@ -69,7 +75,12 @@ final readonly class HtmlParser
                     $endPos++;
                 }
 
-                $nodes[] = $this->nodeFactory->text(substr($html, $tagStart, $endPos - $tagStart), $line, $column);
+                [$textLine, $textColumn] = $this->resolvePosition($html, $tagStart, $line, $column);
+                $nodes[] = $this->nodeFactory->text(
+                    substr($html, $tagStart, $endPos - $tagStart),
+                    $textLine,
+                    $textColumn,
+                );
                 $pos = $endPos;
             } else {
                 // Opening or self-closing tag
@@ -110,7 +121,7 @@ final readonly class HtmlParser
         // Parse attributes
         $attributes = [];
         $selfClosing = false;
-        $elementColumn = $column + $start;
+        [$elementLine, $elementColumn] = $this->resolvePosition($html, $start, $line, $column);
 
         while ($pos < $len) {
             $char = $html[$pos];
@@ -134,8 +145,8 @@ final readonly class HtmlParser
             // Parse attribute
             $attrStart = $pos;
             [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            $attrColumn = $column + $attrStart;
-            $attributes[] = $this->nodeFactory->attribute($attrName, $attrValue, $line, $attrColumn);
+            [$attrLine, $attrColumn] = $this->resolvePosition($html, $attrStart, $line, $column);
+            $attributes[] = $this->nodeFactory->attribute($attrName, $attrValue, $attrLine, $attrColumn);
         }
 
         $isFragment = $tagName === $this->config->getFragmentElement();
@@ -150,18 +161,18 @@ final readonly class HtmlParser
             $selfClosing = true;
         }
 
-        $element = $this->nodeFactory->element($tagName, $attributes, $selfClosing, $line, $elementColumn);
+        $element = $this->nodeFactory->element($tagName, $attributes, $selfClosing, $elementLine, $elementColumn);
 
         // Handle fragment element (e.g., <s-template>, <x-template>)
         if ($isFragment) {
-            $element = $this->nodeFactory->fragment($attributes, $selfClosing, $line, $elementColumn);
+            $element = $this->nodeFactory->fragment($attributes, $selfClosing, $elementLine, $elementColumn);
         }
 
         // Handle component elements (e.g., <s-button>, <x-alert>)
         // Components start with elementPrefix but are NOT the fragment element
         if ($isComponent) {
             $componentName = $this->prefixHelper->stripElementPrefix($tagName);
-            $element = $this->nodeFactory->component($componentName, $attributes, $line, $elementColumn);
+            $element = $this->nodeFactory->component($componentName, $attributes, $elementLine, $elementColumn);
         }
 
         return [$element, $pos];
@@ -264,5 +275,31 @@ final readonly class HtmlParser
         }
 
         return [$name, $value, $pos];
+    }
+
+    /**
+     * Resolve a 1-based line and column for an offset within the HTML fragment.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function resolvePosition(string $html, int $offset, int $line, int $column): array
+    {
+        if ($offset <= 0) {
+            return [$line, $column];
+        }
+
+        $before = substr($html, 0, $offset);
+        $newlineCount = substr_count($before, "\n");
+
+        if ($newlineCount === 0) {
+            return [$line, $column + $offset];
+        }
+
+        $lastNewline = strrpos($before, "\n");
+        if ($lastNewline === false) {
+            return [$line, $column + $offset];
+        }
+
+        return [$line + $newlineCount, $offset - $lastNewline];
     }
 }

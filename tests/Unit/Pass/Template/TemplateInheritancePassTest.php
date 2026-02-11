@@ -30,7 +30,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);
         $parser = new Parser(new SugarConfig());
 
-        return new TemplateInheritancePass($loader, $parser, new SugarConfig());
+        return new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
     }
 
     public function testProcessesTemplateWithoutInheritance(): void
@@ -201,6 +201,39 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         } finally {
             unlink($layoutPath);
         }
+    }
+
+    public function testExtendsRejectsUnknownDirectiveOnFragment(): void
+    {
+        $document = $this->document()
+            ->withChildren([
+                $this->element('s-template')
+                    ->attribute('s:extends', '../base.sugar.php')
+                    ->build(),
+                $this->fragment(
+                    attributes: [$this->attribute('s:bloc', 'content')],
+                    children: [
+                        $this->element('div')
+                            ->withChild($this->createText('Main'))
+                            ->build(),
+                    ],
+                    line: 2,
+                    column: 1,
+                ),
+            ])
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Unknown directive "bloc"');
+        $this->expectExceptionMessage('Did you mean "block"');
+
+        $this->execute(
+            $document,
+            $this->createTestContext(
+                templatePath: 'pages/home.sugar.php',
+                source: "<s-template s:extends=\"../base.sugar.php\" />\n<s-template s:bloc=\"content\">Main</s-template>",
+            ),
+        );
     }
 
     public function testExtendsReplacesElementBlockWithPlainFragment(): void
@@ -556,7 +589,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
         $parser = new Parser(new SugarConfig());
-        $pass = new TemplateInheritancePass($loader, $parser, new SugarConfig());
+        $pass = new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
         $pipeline = new AstPipeline([$pass]);
 
         try {

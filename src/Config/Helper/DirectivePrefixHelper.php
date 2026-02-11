@@ -130,6 +130,16 @@ final readonly class DirectivePrefixHelper
     {
         $stripped = $this->stripPrefix($name);
 
-        return in_array($stripped, ['block', 'append', 'prepend', 'extends', 'include', 'with'], true);
+        return in_array($stripped, $this->inheritanceDirectiveNames(), true);
+    }
+
+    /**
+     * Return template inheritance directive names without prefix.
+     *
+     * @return array<string>
+     */
+    public function inheritanceDirectiveNames(): array
+    {
+        return ['block', 'append', 'prepend', 'extends', 'include', 'with'];
     }
 }

@@ -130,7 +130,12 @@ final class CompilerPipelineFactory
             return $this->inheritancePass;
         }
 
-        $this->inheritancePass = new TemplateInheritancePass($this->loader, $this->parser, $this->config);
+        $this->inheritancePass = new TemplateInheritancePass(
+            $this->loader,
+            $this->parser,
+            $this->registry,
+            $this->config,
+        );
 
         return $this->inheritancePass;
     }
