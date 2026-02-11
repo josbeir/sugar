@@ -391,3 +391,15 @@ With debug mode enabled, compiled templates include source location comments tha
 ::: warning
 Disable debug mode in production to avoid extra filesystem checks and template metadata in output.
 :::
+
+## AST Reference
+
+Learn how Sugar represents templates internally and what each node type means.
+
+[AST Overview](/guide/development/ast)
+
+## Helper Reference
+
+A quick tour of helper utilities you can use in custom passes.
+
+[Helper Reference](/guide/development/helpers)
