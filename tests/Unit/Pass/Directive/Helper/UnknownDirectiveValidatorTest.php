@@ -8,6 +8,7 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Context\CompilationContext;
+use Sugar\Directive\IfDirective;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Pass\Directive\Helper\UnknownDirectiveValidator;
@@ -48,5 +49,20 @@ final class UnknownDirectiveValidatorTest extends TestCase
 
         $this->validator->validateDirectiveAttribute($attr, $this->context, false);
         $this->addToAssertionCount(1);
+    }
+
+    public function testValidateDirectiveAttributePrefersInheritanceSuggestion(): void
+    {
+        $registry = new DirectiveRegistry();
+        $registry->register('bloke', IfDirective::class);
+
+        $validator = new UnknownDirectiveValidator($registry, new DirectivePrefixHelper('s'));
+
+        $attr = new AttributeNode('s:blok', AttributeValue::static('content'), 1, 6);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Did you mean "block"');
+
+        $validator->validateDirectiveAttribute($attr, $this->context, true);
     }
 }

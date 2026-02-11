@@ -92,6 +92,28 @@ final class HtmlParserTest extends TestCase
         $this->assertSame('s:blik', $element->attributes[1]->name);
     }
 
+    public function testResolvePositionHandlesEmptySourceAndLargeOffset(): void
+    {
+        $parser = $this->createParser();
+        $resolvePosition = static function (
+            HtmlParser $parser,
+            string $html,
+            int $offset,
+            int $line,
+            int $column,
+        ): array {
+            /** @phpstan-ignore-next-line */
+            return $parser->resolvePosition($html, $offset, $line, $column);
+        };
+        $boundResolve = $resolvePosition->bindTo(null, HtmlParser::class);
+
+        $emptyResult = $boundResolve($parser, '', 10, 3, 4);
+        $this->assertSame([3, 4], $emptyResult);
+
+        $clampedResult = $boundResolve($parser, 'abc', 10, 1, 1);
+        $this->assertSame([1, 4], $clampedResult);
+    }
+
     private function createParser(): HtmlParser
     {
         $config = new SugarConfig();

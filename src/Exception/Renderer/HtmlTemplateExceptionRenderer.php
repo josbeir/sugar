@@ -117,7 +117,7 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
     /**
      * Format a stack trace for display.
      */
-    private function formatTrace(Throwable $exception): string
+    public function formatTrace(Throwable $exception): string
     {
         $trace = $exception->getTrace();
         if ($trace === []) {

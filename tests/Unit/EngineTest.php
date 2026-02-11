@@ -5,6 +5,7 @@ namespace Sugar\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
+use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
@@ -141,5 +142,75 @@ final class EngineTest extends TestCase
 
         $this->assertStringContainsString('sugar-exception-template', $result);
         $this->assertStringContainsString('sugar-exception', $result);
+    }
+
+    public function testExecuteCastsScalarReturnValue(): void
+    {
+        $engine = $this->createStringEngine([
+            'scalar.sugar.php' => '<p>ignored</p>',
+        ]);
+
+        $compiledPath = $this->cacheDir . '/scalar.php';
+        file_put_contents(
+            $compiledPath,
+            <<<'PHP'
+<?php
+return function (array $data): int {
+    return 123;
+};
+PHP
+            ,
+        );
+
+        $invokeExecute = static function (
+            Engine $engine,
+            string $path,
+            array $data,
+            ?DependencyTracker $tracker,
+        ): string {
+            /** @phpstan-ignore-next-line */
+            return $engine->execute($path, $data, $tracker);
+        };
+        $boundExecute = $invokeExecute->bindTo(null, Engine::class);
+
+        /** @var array<string, mixed> $data */
+        $data = [];
+        $result = $boundExecute($engine, $compiledPath, $data, null);
+
+        $this->assertSame('123', $result);
+    }
+
+    public function testExecuteReturnsEmptyWhenNotClosure(): void
+    {
+        $engine = $this->createStringEngine([
+            'noop.sugar.php' => '<p>ignored</p>',
+        ]);
+
+        $compiledPath = $this->cacheDir . '/not-closure.php';
+        file_put_contents(
+            $compiledPath,
+            <<<'PHP'
+    <?php
+    return 'not a closure';
+    PHP
+            ,
+        );
+
+        $invokeExecute = static function (
+            Engine $engine,
+            string $path,
+            array $data,
+            ?DependencyTracker $tracker,
+        ): string {
+            /** @phpstan-ignore-next-line */
+            return $engine->execute($path, $data, $tracker);
+        };
+        $boundExecute = $invokeExecute->bindTo(null, Engine::class);
+
+        /** @var array<string, mixed> $data */
+        $data = [];
+        $result = $boundExecute($engine, $compiledPath, $data, null);
+
+        $this->assertSame('', $result);
     }
 }

@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Exception\Renderer;
 
+use Exception;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Exception\TemplateRuntimeException;
@@ -106,5 +108,147 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $html = $renderer->render($exception);
 
         $this->assertSame('Runtime failed', $html);
+    }
+
+    public function testNonCompilationExceptionWrapsDocumentWithStyles(): void
+    {
+        $loader = new class implements TemplateLoaderInterface {
+            public function load(string $path): string
+            {
+                return 'line one';
+            }
+
+            public function resolve(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function loadComponent(string $name): string
+            {
+                return '';
+            }
+
+            public function getComponentPath(string $name): string
+            {
+                return $name;
+            }
+
+            public function getComponentFilePath(string $name): string
+            {
+                return $name;
+            }
+        };
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            includeStyles: true,
+            wrapDocument: true,
+        );
+        $exception = new TemplateRuntimeException('Runtime failed');
+
+        $html = $renderer->render($exception);
+
+        $this->assertStringContainsString('<!doctype html>', $html);
+        $this->assertStringContainsString('<style>', $html);
+    }
+
+    public function testCompilationExceptionWithoutSourceSkipsTemplateMarkup(): void
+    {
+        $loader = new class implements TemplateLoaderInterface {
+            public function load(string $path): string
+            {
+                throw new RuntimeException('Missing template');
+            }
+
+            public function resolve(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function loadComponent(string $name): string
+            {
+                return '';
+            }
+
+            public function getComponentPath(string $name): string
+            {
+                return $name;
+            }
+
+            public function getComponentFilePath(string $name): string
+            {
+                return $name;
+            }
+        };
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            includeStyles: false,
+            wrapDocument: true,
+        );
+        $exception = new CompilationException(
+            message: 'Compile failed',
+            templatePath: 'missing.sugar.php',
+            templateLine: 1,
+            templateColumn: 1,
+        );
+
+        $html = $renderer->render($exception);
+
+        $this->assertStringContainsString('<!doctype html>', $html);
+        $this->assertStringNotContainsString('<style>', $html);
+        $this->assertStringNotContainsString('sugar-exception-template', $html);
+    }
+
+    public function testFormatTraceReturnsHtmlForFrames(): void
+    {
+        $loader = new class implements TemplateLoaderInterface {
+            public function load(string $path): string
+            {
+                return 'line one';
+            }
+
+            public function resolve(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+            {
+                return $path;
+            }
+
+            public function loadComponent(string $name): string
+            {
+                return '';
+            }
+
+            public function getComponentPath(string $name): string
+            {
+                return $name;
+            }
+
+            public function getComponentFilePath(string $name): string
+            {
+                return $name;
+            }
+        };
+
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
+
+        $output = $renderer->formatTrace(new Exception('Has trace'));
+
+        $this->assertStringContainsString('sugar-exception-trace', $output);
+        $this->assertStringContainsString('Sugar stack trace', $output);
     }
 }

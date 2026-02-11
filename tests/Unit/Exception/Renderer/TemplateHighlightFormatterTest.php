@@ -21,4 +21,12 @@ final class TemplateHighlightFormatterTest extends TestCase
         $this->assertTrue($result->lines[1]->isErrorLine);
         $this->assertTrue($result->lines[2]->isCaretLine);
     }
+
+    public function testReturnsEmptyResultForEmptySource(): void
+    {
+        $formatter = new TemplateHighlightFormatter();
+        $result = $formatter->format('', 1, 1);
+
+        $this->assertSame([], $result->lines);
+    }
 }
