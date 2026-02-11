@@ -28,14 +28,14 @@
 
 ---
 
-A modern PHP templating engine that compiles to pure PHP. Write `s:if`, get auto-escaping. Zero magic, pure sweetness.
+A modern PHP (8.2+) templating engine that compiles to pure PHP. Sugar keeps native PHP and HTML intact while adding `s:` attributes for control flow, context-aware escaping, pipe syntax (`|>`) for helpers (a PHP 8.5 feature supported on 8.2+), and composable helpers. Write templates the way you already do, then let the compiler turn them into fast PHP that runs with zero runtime overhead.
 
 > [!WARNING]
 > Sugar is under active development. Core features are stable, but the API may change before 1.0.
 
-## Documentation
+## Documentation and more information
 
-Full documentation: https://josbeir.github.io/sugar/
+Read the [Documentation](https://josbeir.github.io/sugar/)
 
 ## License
 
