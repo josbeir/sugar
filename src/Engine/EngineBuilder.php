@@ -10,6 +10,7 @@ use Sugar\Compiler\Compiler;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Escape\Escaper;
+use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\DirectiveRegistryInterface;
@@ -134,6 +135,27 @@ final class EngineBuilder
         $this->exceptionRenderer = $renderer;
 
         return $this;
+    }
+
+    /**
+     * Configure the built-in HTML exception renderer using the current template loader.
+     *
+     * @param bool $includeStyles Include inline CSS output
+     * @param bool $wrapDocument Wrap output in a full HTML document
+     * @return $this
+     * @throws \RuntimeException If template loader was not configured yet
+     */
+    public function withHtmlExceptionRenderer(bool $includeStyles = true, bool $wrapDocument = false)
+    {
+        if (!$this->loader instanceof TemplateLoaderInterface) {
+            throw new RuntimeException('Template loader is required before configuring HTML exception renderer');
+        }
+
+        return $this->withExceptionRenderer(new HtmlTemplateExceptionRenderer(
+            loader: $this->loader,
+            includeStyles: $includeStyles,
+            wrapDocument: $wrapDocument,
+        ));
     }
 
     /**

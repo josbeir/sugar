@@ -1,8 +1,8 @@
-Sugar ships with a custom HTML exception renderer that produces a polished, themed error view. It is optional and only used when you register it via `withExceptionRenderer()`. It highlights the failing template lines, shows line/column context, and includes the message, location, and stack trace in a readable layout.
+Sugar ships with a custom HTML exception renderer that produces a polished, themed error view. It is optional and can be enabled with `withHtmlExceptionRenderer()` or by manually calling `withExceptionRenderer()`. It highlights the failing template lines, shows line/column context, and includes the message, location, and stack trace in a readable layout.
 
 ![Exception renderer preview](/exception_renderer.png)
 
-The renderer uses the template loader to fetch the source, so pass the same loader you use for compilation.
+The renderer uses the template loader to fetch the source.
 
 ```php
 use Sugar\Engine;
@@ -18,12 +18,17 @@ $loader = new FileTemplateLoader(
 
 $engine = Engine::builder($config)
 	->withTemplateLoader($loader)
-	->withExceptionRenderer(new HtmlTemplateExceptionRenderer($loader))
+	->withHtmlExceptionRenderer(includeStyles: true, wrapDocument: false)
 	->withDebug(true)
 	->build();
 ```
 
-You can also control how the renderer outputs its HTML:
+`withHtmlExceptionRenderer()` accepts the same rendering toggles as the renderer constructor:
+
+- `includeStyles`: Include inline CSS in the output.
+- `wrapDocument`: Wrap the output in a full HTML document.
+
+Use `withExceptionRenderer()` when you need custom renderer options:
 
 ```php
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;

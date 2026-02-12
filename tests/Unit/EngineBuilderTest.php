@@ -156,6 +156,53 @@ final class EngineBuilderTest extends TestCase
         $this->assertInstanceOf(Engine::class, $builder->build());
     }
 
+    public function testWithHtmlExceptionRendererRequiresLoader(): void
+    {
+        $builder = new EngineBuilder();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Template loader is required before configuring HTML exception renderer');
+
+        $builder->withHtmlExceptionRenderer();
+    }
+
+    public function testWithHtmlExceptionRendererUsesBuilderLoader(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader->addTemplate('broken.sugar.php', '<div s:unknown="true">Hello</div>');
+
+        $builder = new EngineBuilder();
+        $engine = $builder
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withHtmlExceptionRenderer()
+            ->build();
+
+        $output = $engine->render('broken.sugar.php');
+
+        $this->assertStringContainsString('sugar-exception', $output);
+        $this->assertStringContainsString('s:unknown=&quot;true&quot;', $output);
+    }
+
+    public function testWithHtmlExceptionRendererAcceptsRendererOptions(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader->addTemplate('broken-options.sugar.php', '<div s:unknown="true">Hello</div>');
+
+        $builder = new EngineBuilder();
+        $engine = $builder
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withHtmlExceptionRenderer(includeStyles: false, wrapDocument: true)
+            ->build();
+
+        $output = $engine->render('broken-options.sugar.php');
+
+        $this->assertStringContainsString('<!doctype html>', $output);
+        $this->assertStringNotContainsString('<style>', $output);
+        $this->assertStringContainsString('sugar-exception', $output);
+    }
+
     public function testFluentApiChaining(): void
     {
         $tempDir = $this->createTempDir();
