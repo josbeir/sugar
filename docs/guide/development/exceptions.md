@@ -14,6 +14,7 @@ Most template errors are `SugarException` subclasses. Catch `SugarException` to 
 ## Common Exception Types
 
 - `SyntaxException` - Malformed templates or invalid directives.
+- `CompilationException` - Generated PHP is invalid or compiled templates/components fail to load.
 - `TemplateNotFoundException` - A template path or include cannot be resolved.
 - `ComponentNotFoundException` - A component reference cannot be resolved.
 - `UnknownDirectiveException` - An unregistered directive was encountered.
@@ -46,7 +47,8 @@ Avoid exposing exception details in production responses. Log them instead.
 
 - Enable debug mode while developing to improve diagnostics and cache refresh behavior.
 - Install `nikic/php-parser` to opt in to compile-time PHP syntax validation for earlier diagnostics.
-- Use `Engine::builder()->withDebug(true)->withPhpSyntaxValidation(true)` to enable parser-based validation for a specific engine instance.
+- Use `Engine::builder()->withDebug(true)->withPhpSyntaxValidation(true)` to enable parser-based validation for a specific engine instance (see [Optional PHP Syntax Validation](./index.md#optional-php-syntax-validation)).
 - When enabled in debug mode, Sugar validates output expressions individually and validates generated PHP as a whole, providing earlier syntax diagnostics with template location metadata.
+- Without parser-based validation (or with debug disabled), invalid generated PHP is surfaced at include-time as a `CompilationException` with compiled path and parse line information.
 - Check includes and component paths when you see missing template exceptions.
 - Verify directive registration if you hit `UnknownDirectiveException`.
