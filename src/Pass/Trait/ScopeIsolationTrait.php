@@ -42,10 +42,21 @@ trait ScopeIsolationTrait
         $openingCode = 'echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);';
         $closingCode = 'return ob_get_clean(); })->bindTo($this ?? null)(' . $varsExpression . ');';
 
-        return new DocumentNode([
-            new RawPhpNode($openingCode, 0, 0),
+        $openingNode = new RawPhpNode($openingCode, 0, 0);
+        $closingNode = new RawPhpNode($closingCode, 0, 0);
+
+        if ($document->getTemplatePath() !== null) {
+            $openingNode->setTemplatePath($document->getTemplatePath());
+            $closingNode->setTemplatePath($document->getTemplatePath());
+        }
+
+        $wrapped = new DocumentNode([
+            $openingNode,
             ...$document->children,
-            new RawPhpNode($closingCode, 0, 0),
+            $closingNode,
         ]);
+        $wrapped->inheritTemplatePathFrom($document);
+
+        return $wrapped;
     }
 }

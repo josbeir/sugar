@@ -778,6 +778,41 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         unlink($this->inheritanceFixturesPath . '/partials/temp-header.sugar.php');
     }
 
+    public function testIncludeUnknownDirectiveUsesIncludedTemplatePath(): void
+    {
+        $includePath = $this->inheritanceFixturesPath . '/partials/temp-include-unknown.sugar.php';
+        file_put_contents($includePath, '<s-template s:cliss="[\'bli\']"></s-template>');
+
+        try {
+            $document = $this->document()
+                ->withChild(
+                    $this->element('div')
+                        ->attribute('s:include', 'partials/temp-include-unknown.sugar.php')
+                        ->build(),
+                )
+                ->build();
+
+            try {
+                $this->execute(
+                    $document,
+                    $this->createTestContext(
+                        templatePath: 'home.sugar.php',
+                        source: '<div s:include="partials/temp-include-unknown.sugar.php"></div>',
+                    ),
+                );
+                $this->fail('Expected SyntaxException for unknown directive in included template.');
+            } catch (SyntaxException $exception) {
+                $this->assertSame('partials/temp-include-unknown.sugar.php', $exception->templatePath);
+                $this->assertSame(1, $exception->templateLine);
+                $this->assertNotNull($exception->templateColumn);
+                $this->assertGreaterThan(0, $exception->templateColumn ?? 0);
+                $this->assertStringContainsString('Unknown directive "cliss"', $exception->getMessage());
+            }
+        } finally {
+            unlink($includePath);
+        }
+    }
+
     public function testNestedIncludeInsideFragmentChildren(): void
     {
         $includePath = $this->inheritanceFixturesPath . '/temp-nested-include.sugar.php';

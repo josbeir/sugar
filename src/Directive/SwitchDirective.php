@@ -10,7 +10,6 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
-use Sugar\Exception\SyntaxException;
 
 /**
  * Compiler for switch/case/default directives
@@ -58,11 +57,9 @@ readonly class SwitchDirective implements DirectiveInterface
             if ($child instanceof DirectiveNode) {
                 if ($child->name === 'case') {
                     if (trim($child->expression) === '') {
-                        throw $context->createException(
-                            SyntaxException::class,
+                        throw $context->createSyntaxExceptionForNode(
                             'Case directive requires a value expression',
-                            $child->line,
-                            $child->column,
+                            $child,
                         );
                     }
 
@@ -70,11 +67,9 @@ readonly class SwitchDirective implements DirectiveInterface
                     $hasValidCases = true;
                 } elseif ($child->name === 'default') {
                     if ($default instanceof DirectiveNode) {
-                        throw $context->createException(
-                            SyntaxException::class,
+                        throw $context->createSyntaxExceptionForNode(
                             'Switch directive can only have one default case',
-                            $child->line,
-                            $child->column,
+                            $child,
                         );
                     }
 
@@ -89,11 +84,9 @@ readonly class SwitchDirective implements DirectiveInterface
                     if ($grandchild instanceof DirectiveNode) {
                         if ($grandchild->name === 'case') {
                             if (trim($grandchild->expression) === '') {
-                                throw $context->createException(
-                                    SyntaxException::class,
+                                throw $context->createSyntaxExceptionForNode(
                                     'Case directive requires a value expression',
-                                    $grandchild->line,
-                                    $grandchild->column,
+                                    $grandchild,
                                 );
                             }
 
@@ -101,11 +94,9 @@ readonly class SwitchDirective implements DirectiveInterface
                             $hasValidCases = true;
                         } elseif ($grandchild->name === 'default') {
                             if ($default instanceof DirectiveNode) {
-                                throw $context->createException(
-                                    SyntaxException::class,
+                                throw $context->createSyntaxExceptionForNode(
                                     'Switch directive can only have one default case',
-                                    $grandchild->line,
-                                    $grandchild->column,
+                                    $grandchild,
                                 );
                             }
 
@@ -118,47 +109,55 @@ readonly class SwitchDirective implements DirectiveInterface
         }
 
         if (!$hasValidCases) {
-            throw $context->createException(
-                SyntaxException::class,
+            throw $context->createSyntaxExceptionForNode(
                 'Switch directive must contain at least one case or default',
-                $node->line,
-                $node->column,
+                $node,
             );
         }
 
         $parts = [];
 
         // Opening switch statement
-        $parts[] = new RawPhpNode(
+        $switchNode = new RawPhpNode(
             'switch (' . $node->expression . '):',
             $node->line,
             $node->column,
         );
+        $switchNode->inheritTemplatePathFrom($node);
+        $parts[] = $switchNode;
 
         // Compile each case
         foreach ($cases as $case) {
-            $parts[] = new RawPhpNode(
+            $caseNode = new RawPhpNode(
                 'case ' . $case->expression . ':',
                 $case->line,
                 $case->column,
             );
+            $caseNode->inheritTemplatePathFrom($case);
+            $parts[] = $caseNode;
 
             // Case content
             array_push($parts, ...$case->children);
 
             // Auto-inject break after each case
-            $parts[] = new RawPhpNode('break;', $case->line, $case->column);
+            $breakNode = new RawPhpNode('break;', $case->line, $case->column);
+            $breakNode->inheritTemplatePathFrom($case);
+            $parts[] = $breakNode;
         }
 
         // Compile default case if present
         if ($default instanceof DirectiveNode) {
-            $parts[] = new RawPhpNode('default:', $default->line, $default->column);
+            $defaultNode = new RawPhpNode('default:', $default->line, $default->column);
+            $defaultNode->inheritTemplatePathFrom($default);
+            $parts[] = $defaultNode;
             array_push($parts, ...$default->children);
             // No break needed after default (it's the last case)
         }
 
         // Closing switch statement
-        $parts[] = new RawPhpNode('endswitch;', $node->line, $node->column);
+        $endNode = new RawPhpNode('endswitch;', $node->line, $node->column);
+        $endNode->inheritTemplatePathFrom($node);
+        $parts[] = $endNode;
 
         return $parts;
     }

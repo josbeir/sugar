@@ -61,18 +61,23 @@ final class ComponentAttributeOverrideHelper
                     $attrsVar,
                 );
 
-                $updatedAttributes[] = new AttributeNode(
-                    name: 'class',
-                    value: AttributeValue::output(new OutputNode(
-                        expression: $expression,
-                        escape: true,
-                        context: OutputContext::HTML_ATTRIBUTE,
-                        line: $attr->line,
-                        column: $attr->column,
-                    )),
+                $outputNode = new OutputNode(
+                    expression: $expression,
+                    escape: true,
+                    context: OutputContext::HTML_ATTRIBUTE,
                     line: $attr->line,
                     column: $attr->column,
                 );
+                $outputNode->inheritTemplatePathFrom($attr);
+
+                $newAttr = new AttributeNode(
+                    name: 'class',
+                    value: AttributeValue::output($outputNode),
+                    line: $attr->line,
+                    column: $attr->column,
+                );
+                $newAttr->inheritTemplatePathFrom($attr);
+                $updatedAttributes[] = $newAttr;
 
                 continue;
             }
@@ -85,18 +90,23 @@ final class ComponentAttributeOverrideHelper
                 $existingExpr,
             );
 
-            $updatedAttributes[] = new AttributeNode(
-                name: $attr->name,
-                value: AttributeValue::output(new OutputNode(
-                    expression: $expression,
-                    escape: true,
-                    context: OutputContext::HTML_ATTRIBUTE,
-                    line: $attr->line,
-                    column: $attr->column,
-                )),
+            $outputNode = new OutputNode(
+                expression: $expression,
+                escape: true,
+                context: OutputContext::HTML_ATTRIBUTE,
                 line: $attr->line,
                 column: $attr->column,
             );
+            $outputNode->inheritTemplatePathFrom($attr);
+
+            $newAttr = new AttributeNode(
+                name: $attr->name,
+                value: AttributeValue::output($outputNode),
+                line: $attr->line,
+                column: $attr->column,
+            );
+            $newAttr->inheritTemplatePathFrom($attr);
+            $updatedAttributes[] = $newAttr;
         }
 
         $excludeExpression = self::buildExcludeExpression(array_keys($existingNames));
@@ -107,18 +117,23 @@ final class ComponentAttributeOverrideHelper
             $excludeExpression,
         );
 
-        $updatedAttributes[] = new AttributeNode(
-            name: '',
-            value: AttributeValue::output(new OutputNode(
-                expression: $spreadExpression,
-                escape: false,
-                context: OutputContext::HTML_ATTRIBUTE,
-                line: $rootElement->line,
-                column: $rootElement->column,
-            )),
+        $outputNode = new OutputNode(
+            expression: $spreadExpression,
+            escape: false,
+            context: OutputContext::HTML_ATTRIBUTE,
             line: $rootElement->line,
             column: $rootElement->column,
         );
+        $outputNode->inheritTemplatePathFrom($rootElement);
+
+        $newAttr = new AttributeNode(
+            name: '',
+            value: AttributeValue::output($outputNode),
+            line: $rootElement->line,
+            column: $rootElement->column,
+        );
+        $newAttr->inheritTemplatePathFrom($rootElement);
+        $updatedAttributes[] = $newAttr;
 
         $rootElement->attributes = $updatedAttributes;
     }

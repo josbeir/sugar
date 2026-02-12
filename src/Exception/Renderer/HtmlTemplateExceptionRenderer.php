@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Exception\Renderer;
 
+use ReflectionClass;
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\SugarException;
 use Sugar\Loader\TemplateLoaderInterface;
@@ -34,22 +35,27 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
     {
         if (!$exception instanceof CompilationException) {
             $content = htmlspecialchars($exception->getRawMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $typeHtml = $this->formatType($exception);
             $styleHtml = $this->includeStyles ? $this->styleBlock() : '';
+            $inlineStyleHtml = $this->wrapDocument ? '' : $styleHtml;
+
+            $output = $this->buildOutput($inlineStyleHtml, $content, '', null, '', $typeHtml);
 
             return $this->wrapDocument
-                ? $this->wrapOutput($content, $exception->getRawMessage(), $styleHtml)
-                : $content;
+                ? $this->wrapOutput($output, $exception->getRawMessage(), $styleHtml)
+                : $output;
         }
 
         $messageHtml = htmlspecialchars($exception->getRawMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $locationHtml = $this->formatLocation($exception);
+        $typeHtml = $this->formatType($exception);
         $traceHtml = $this->formatTrace($exception);
         $styleHtml = $this->includeStyles ? $this->styleBlock() : '';
         $inlineStyleHtml = $this->wrapDocument ? '' : $styleHtml;
 
         $source = $this->loadSource($exception);
         if ($source === null || $source === '') {
-            $content = $this->buildOutput($inlineStyleHtml, $messageHtml, $locationHtml, null, $traceHtml);
+            $content = $this->buildOutput($inlineStyleHtml, $messageHtml, $locationHtml, null, $traceHtml, $typeHtml);
 
             return $this->wrapDocument
                 ? $this->wrapOutput($content, $exception->getRawMessage(), $styleHtml)
@@ -61,7 +67,7 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
         $highlight = $this->formatter->format($source, $line, $column);
 
         if ($highlight->lines === []) {
-            $content = $this->buildOutput($inlineStyleHtml, $messageHtml, $locationHtml, null, $traceHtml);
+            $content = $this->buildOutput($inlineStyleHtml, $messageHtml, $locationHtml, null, $traceHtml, $typeHtml);
 
             return $this->wrapDocument
                 ? $this->wrapOutput($content, $exception->getMessage(), $styleHtml)
@@ -86,7 +92,14 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
 
         $templateHtml = implode("\n", $linesHtml);
 
-        $content = $this->buildOutput($inlineStyleHtml, $messageHtml, $locationHtml, $templateHtml, $traceHtml);
+        $content = $this->buildOutput(
+            $inlineStyleHtml,
+            $messageHtml,
+            $locationHtml,
+            $templateHtml,
+            $traceHtml,
+            $typeHtml,
+        );
 
         return $this->wrapDocument
             ? $this->wrapOutput($content, $exception->getRawMessage(), $styleHtml)
@@ -164,6 +177,7 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
         string $locationHtml,
         ?string $templateHtml,
         string $traceHtml,
+        string $typeHtml,
     ): string {
         $templateSection = $templateHtml !== null
             ? '<pre class="sugar-exception-template">' . $templateHtml . '</pre>'
@@ -178,17 +192,29 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             '<a class="sugar-exception-badge" href="https://josbeir.github.io/sugar/" ' .
             'target="_blank" rel="noopener noreferrer">Docs</a>' .
             '</div>' .
+            '<div class="sugar-exception-type">%s</div>' .
             '<div class="sugar-exception-message">%s</div>' .
             '<div class="sugar-exception-location">%s</div>' .
             '%s' .
             '%s' .
             '</div>',
             $styleHtml,
+            $typeHtml,
             $messageHtml,
             $locationHtml,
             $templateSection,
             $traceHtml,
         );
+    }
+
+    /**
+     * Format an exception type label for display.
+     */
+    private function formatType(Throwable $exception): string
+    {
+        $short = (new ReflectionClass($exception))->getShortName();
+
+        return htmlspecialchars($short, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -329,6 +355,22 @@ html, body {
         font-size: 0.8125rem;
         color: var(--sugar-muted);
         margin-bottom: 1.125rem;
+    }
+
+    .sugar-exception-type {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--sugar-mint);
+        border: 0.0625rem solid rgba(137, 211, 255, 0.35);
+        border-radius: 999px;
+        padding: 0.25rem 0.6rem;
+        margin-bottom: 0.75rem;
+        background: rgba(137, 211, 255, 0.08);
+        width: fit-content;
     }
 
     .sugar-exception-template {

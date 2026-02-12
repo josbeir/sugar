@@ -61,7 +61,7 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
         $parts = [];
 
         // Start output buffering
-        $parts[] = new RawPhpNode('ob_start();', $node->line, $node->column);
+        $parts[] = $this->rawNode('ob_start();', $node);
 
         // Add children nodes (the content to be buffered)
         array_push($parts, ...$node->children);
@@ -73,7 +73,7 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
             PHP_EOL,
             $varName,
         );
-        $parts[] = new RawPhpNode($captureCode, $node->line, $node->column);
+        $parts[] = $this->rawNode($captureCode, $node);
 
         // Get element metadata to recreate opening and closing tags
         $element = $node->getElementNode();
@@ -97,49 +97,45 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
             // Build opening tag
             if ($element->dynamicTag !== null) {
                 // Dynamic tag - output using variable
-                $parts[] = new RawPhpNode(
+                $parts[] = $this->rawNode(
                     sprintf("echo '<' . %s . %s . '>';", $element->dynamicTag, var_export($attributes, true)),
-                    $node->line,
-                    $node->column,
+                    $node,
                 );
             } else {
                 // Static tag
                 $openingTag = '<' . $element->tag . $attributes . '>';
-                $parts[] = new RawPhpNode(
+                $parts[] = $this->rawNode(
                     sprintf('echo %s;', var_export($openingTag, true)),
-                    $node->line,
-                    $node->column,
+                    $node,
                 );
             }
 
             // Output the captured content
-            $parts[] = new RawPhpNode('echo ' . $varName . ';', $node->line, $node->column);
+            $parts[] = $this->rawNode('echo ' . $varName . ';', $node);
 
             // Output closing tag (if not self-closing)
             if (!$element->selfClosing) {
                 if ($element->dynamicTag !== null) {
                     // Dynamic closing tag
-                    $parts[] = new RawPhpNode(
+                    $parts[] = $this->rawNode(
                         sprintf("echo '</' . %s . '>';", $element->dynamicTag),
-                        $node->line,
-                        $node->column,
+                        $node,
                     );
                 } else {
                     // Static closing tag
-                    $parts[] = new RawPhpNode(
+                    $parts[] = $this->rawNode(
                         sprintf('echo %s;', var_export('</' . $element->tag . '>', true)),
-                        $node->line,
-                        $node->column,
+                        $node,
                     );
                 }
             }
         } else {
             // Fallback: just output the captured content
-            $parts[] = new RawPhpNode('echo ' . $varName . ';', $node->line, $node->column);
+            $parts[] = $this->rawNode('echo ' . $varName . ';', $node);
         }
 
         // Close the if statement
-        $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
+        $parts[] = $this->rawNode('endif;', $node);
 
         return $parts;
     }
@@ -171,6 +167,7 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
             line: $element->line,
             column: $element->column,
         );
+        $directiveNode->inheritTemplatePathFrom($element);
 
         // Store element metadata (without s:ifcontent attribute) so compiler can recreate tags
         $elementForIfContent = NodeCloner::withAttributesAndChildren(
@@ -181,6 +178,17 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
         $directiveNode->setElementNode($elementForIfContent);
 
         return $directiveNode;
+    }
+
+    /**
+     * Build a RawPhpNode that inherits the directive's template path.
+     */
+    private function rawNode(string $code, Node $origin): RawPhpNode
+    {
+        $rawNode = new RawPhpNode($code, $origin->line, $origin->column);
+        $rawNode->inheritTemplatePathFrom($origin);
+
+        return $rawNode;
     }
 
     /**

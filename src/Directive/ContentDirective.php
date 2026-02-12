@@ -71,6 +71,7 @@ readonly class ContentDirective implements DirectiveInterface
             column: $node->column,
             pipes: $parsed['pipes'],
         );
+        $outputNode->inheritTemplatePathFrom($node);
 
         // Content directives are handled differently depending on presence of control flow:
         // 1. With control flow (s:if + s:text): children are element's children, inject output

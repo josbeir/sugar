@@ -147,7 +147,7 @@ final class ContextAnalysisPass implements AstPassInterface
             ? OutputContext::HTML_ATTRIBUTE
             : $analysisContext->determineContext();
 
-        return new OutputNode(
+        $updatedNode = new OutputNode(
             expression: $node->expression,
             escape: $node->escape,
             context: $newContext,
@@ -155,5 +155,9 @@ final class ContextAnalysisPass implements AstPassInterface
             column: $node->column,
             pipes: $node->pipes,
         );
+
+        $updatedNode->inheritTemplatePathFrom($node);
+
+        return $updatedNode;
     }
 }

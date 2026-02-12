@@ -4,6 +4,10 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Context;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\AttributeNode;
+use Sugar\Ast\AttributeValue;
+use Sugar\Ast\DocumentNode;
+use Sugar\Ast\ElementNode;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 
@@ -144,5 +148,91 @@ PHP;
         // But different column positions
         $this->assertSame(5, $exception1->templateColumn);
         $this->assertSame(10, $exception2->templateColumn);
+    }
+
+    public function testCreateSyntaxExceptionUsesDefaultTemplatePath(): void
+    {
+        $context = new CompilationContext('default.sugar.php', '<div>test</div>');
+
+        $exception = $context->createSyntaxException('Syntax failure', 3, 9);
+
+        $this->assertInstanceOf(SyntaxException::class, $exception);
+        $this->assertSame('default.sugar.php', $exception->templatePath);
+        $this->assertSame(3, $exception->templateLine);
+        $this->assertSame(9, $exception->templateColumn);
+    }
+
+    public function testCreateSyntaxExceptionForNodeUsesNodeTemplatePath(): void
+    {
+        $context = new CompilationContext('root.sugar.php', '<div>test</div>');
+        $node = new ElementNode('div', [], [], false, 4, 12);
+        $node->setTemplatePath('partials/card.sugar.php');
+
+        $exception = $context->createSyntaxExceptionForNode('Node error', $node);
+
+        $this->assertSame('partials/card.sugar.php', $exception->templatePath);
+        $this->assertSame(4, $exception->templateLine);
+        $this->assertSame(12, $exception->templateColumn);
+    }
+
+    public function testCreateExceptionForNodeUsesNodeTemplatePath(): void
+    {
+        $context = new CompilationContext('root.sugar.php', '<div>test</div>');
+        $node = new ElementNode('div', [], [], false, 2, 6);
+        $node->setTemplatePath('partials/footer.sugar.php');
+
+        $exception = $context->createExceptionForNode(
+            SyntaxException::class,
+            'Node error',
+            $node,
+        );
+
+        $this->assertSame('partials/footer.sugar.php', $exception->templatePath);
+        $this->assertSame(2, $exception->templateLine);
+        $this->assertSame(6, $exception->templateColumn);
+    }
+
+    public function testCreateSyntaxExceptionForAttributeUsesAttributeTemplatePath(): void
+    {
+        $context = new CompilationContext('root.sugar.php', '<div>test</div>');
+        $attribute = new AttributeNode('s:class', AttributeValue::static('test'), 7, 3);
+        $attribute->setTemplatePath('partials/button.sugar.php');
+
+        $exception = $context->createSyntaxExceptionForAttribute('Attribute error', $attribute);
+
+        $this->assertSame('partials/button.sugar.php', $exception->templatePath);
+        $this->assertSame(7, $exception->templateLine);
+        $this->assertSame(3, $exception->templateColumn);
+    }
+
+    public function testCreateExceptionForAttributeUsesAttributeTemplatePath(): void
+    {
+        $context = new CompilationContext('root.sugar.php', '<div>test</div>');
+        $attribute = new AttributeNode('s:if', AttributeValue::static('$ok'), 9, 2);
+        $attribute->setTemplatePath('partials/nav.sugar.php');
+
+        $exception = $context->createExceptionForAttribute(
+            SyntaxException::class,
+            'Attribute error',
+            $attribute,
+        );
+
+        $this->assertSame('partials/nav.sugar.php', $exception->templatePath);
+        $this->assertSame(9, $exception->templateLine);
+        $this->assertSame(2, $exception->templateColumn);
+    }
+
+    public function testStampTemplatePathAssignsNodeAndAttributePaths(): void
+    {
+        $attribute = new AttributeNode('class', AttributeValue::static('card'), 1, 5);
+        $element = new ElementNode('div', [$attribute], [], false, 1, 1);
+        $document = new DocumentNode([$element]);
+
+        $context = new CompilationContext('views/index.sugar.php', '<div class="card"></div>');
+        $context->stampTemplatePath($document);
+
+        $this->assertSame('views/index.sugar.php', $document->getTemplatePath());
+        $this->assertSame('views/index.sugar.php', $element->getTemplatePath());
+        $this->assertSame('views/index.sugar.php', $attribute->getTemplatePath());
     }
 }

@@ -77,11 +77,11 @@ readonly class WhileDirective implements DirectiveInterface
     {
         return [NodeCloner::withChildren($wrapper, [
             // Opening while
-            new RawPhpNode('while (' . $node->expression . '):', $node->line, $node->column),
+            $this->rawNode('while (' . $node->expression . '):', $node),
             // Wrapper's children (repeated content)
             ...$wrapper->children,
             // Closing endwhile
-            new RawPhpNode('endwhile;', $node->line, $node->column),
+            $this->rawNode('endwhile;', $node),
         ])];
     }
 
@@ -96,15 +96,26 @@ readonly class WhileDirective implements DirectiveInterface
         $parts = [];
 
         // Opening while
-        $parts[] = new RawPhpNode('while (' . $node->expression . '):', $node->line, $node->column);
+        $parts[] = $this->rawNode('while (' . $node->expression . '):', $node);
 
         // Children nodes (loop body)
         array_push($parts, ...$node->children);
 
         // Closing endwhile
-        $parts[] = new RawPhpNode('endwhile;', $node->line, $node->column);
+        $parts[] = $this->rawNode('endwhile;', $node);
 
         return $parts;
+    }
+
+    /**
+     * Build a RawPhpNode that inherits the directive's template path.
+     */
+    private function rawNode(string $code, Node $origin): RawPhpNode
+    {
+        $rawNode = new RawPhpNode($code, $origin->line, $origin->column);
+        $rawNode->inheritTemplatePathFrom($origin);
+
+        return $rawNode;
     }
 
     /**
