@@ -37,12 +37,13 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             $content = htmlspecialchars($exception->getRawMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $typeHtml = $this->formatType($exception);
             $styleHtml = $this->includeStyles ? $this->styleBlock() : '';
+            $inlineStyleHtml = $this->wrapDocument ? '' : $styleHtml;
 
-            $output = $this->buildOutput($styleHtml, $content, '', null, '', $typeHtml);
+            $output = $this->buildOutput($inlineStyleHtml, $content, '', null, '', $typeHtml);
 
             return $this->wrapDocument
                 ? $this->wrapOutput($output, $exception->getRawMessage(), $styleHtml)
-                : $content;
+                : $output;
         }
 
         $messageHtml = htmlspecialchars($exception->getRawMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

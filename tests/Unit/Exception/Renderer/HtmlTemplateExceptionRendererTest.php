@@ -5,47 +5,18 @@ namespace Sugar\Tests\Unit\Exception\Renderer;
 
 use Exception;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Exception\TemplateRuntimeException;
-use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Loader\StringTemplateLoader;
 
 final class HtmlTemplateExceptionRendererTest extends TestCase
 {
     public function testRendersFullTemplateHtml(): void
     {
-        $loader = new class implements TemplateLoaderInterface {
-            public function load(string $path): string
-            {
-                return "line one\nline two\nline three";
-            }
-
-            public function resolve(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function loadComponent(string $name): string
-            {
-                return '';
-            }
-
-            public function getComponentPath(string $name): string
-            {
-                return $name;
-            }
-
-            public function getComponentFilePath(string $name): string
-            {
-                return $name;
-            }
-        };
+        $loader = $this->createLoader([
+            'Pages/home.sugar.php' => "line one\nline two\nline three",
+        ]);
 
         $renderer = new HtmlTemplateExceptionRenderer($loader);
         $exception = new CompilationException(
@@ -59,6 +30,7 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
         $this->assertStringContainsString('<pre class="sugar-exception-template">', $html);
         $this->assertStringContainsString('<div class="sugar-exception-title">Sugar</div>', $html);
+        $this->assertStringContainsString('CompilationException', $html);
         $this->assertStringContainsString('2 | line two', $html);
         $this->assertStringContainsString('  |', $html);
         $this->assertStringContainsString('^', $html);
@@ -70,79 +42,21 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
     public function testNonCompilationExceptionFallsBackToMessage(): void
     {
-        $loader = new class implements TemplateLoaderInterface {
-            public function load(string $path): string
-            {
-                return 'line one';
-            }
-
-            public function resolve(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function loadComponent(string $name): string
-            {
-                return '';
-            }
-
-            public function getComponentPath(string $name): string
-            {
-                return $name;
-            }
-
-            public function getComponentFilePath(string $name): string
-            {
-                return $name;
-            }
-        };
+        $loader = $this->createLoader();
 
         $renderer = new HtmlTemplateExceptionRenderer($loader);
         $exception = new TemplateRuntimeException('Runtime failed');
 
         $html = $renderer->render($exception);
 
-        $this->assertSame('Runtime failed', $html);
+        $this->assertStringContainsString('Runtime failed', $html);
+        $this->assertStringContainsString('TemplateRuntimeException', $html);
+        $this->assertStringContainsString('sugar-exception', $html);
     }
 
     public function testNonCompilationExceptionWrapsDocumentWithStyles(): void
     {
-        $loader = new class implements TemplateLoaderInterface {
-            public function load(string $path): string
-            {
-                return 'line one';
-            }
-
-            public function resolve(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function loadComponent(string $name): string
-            {
-                return '';
-            }
-
-            public function getComponentPath(string $name): string
-            {
-                return $name;
-            }
-
-            public function getComponentFilePath(string $name): string
-            {
-                return $name;
-            }
-        };
+        $loader = $this->createLoader();
 
         $renderer = new HtmlTemplateExceptionRenderer(
             loader: $loader,
@@ -155,41 +69,48 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
         $this->assertStringContainsString('<!doctype html>', $html);
         $this->assertStringContainsString('<style>', $html);
+        $this->assertStringContainsString('TemplateRuntimeException', $html);
+    }
+
+    public function testNonCompilationExceptionWrapsDocumentWithoutStyles(): void
+    {
+        $loader = $this->createLoader();
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            includeStyles: false,
+            wrapDocument: true,
+        );
+        $exception = new TemplateRuntimeException('Runtime failed');
+
+        $html = $renderer->render($exception);
+
+        $this->assertStringContainsString('<!doctype html>', $html);
+        $this->assertStringNotContainsString('<style>', $html);
+        $this->assertStringContainsString('TemplateRuntimeException', $html);
+    }
+
+    public function testNonCompilationExceptionWithoutStylesDoesNotIncludeStyleBlock(): void
+    {
+        $loader = $this->createLoader();
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            includeStyles: false,
+            wrapDocument: false,
+        );
+        $exception = new TemplateRuntimeException('Runtime failed');
+
+        $html = $renderer->render($exception);
+
+        $this->assertStringContainsString('Runtime failed', $html);
+        $this->assertStringContainsString('TemplateRuntimeException', $html);
+        $this->assertStringNotContainsString('<style>', $html);
     }
 
     public function testCompilationExceptionWithoutSourceSkipsTemplateMarkup(): void
     {
-        $loader = new class implements TemplateLoaderInterface {
-            public function load(string $path): string
-            {
-                throw new RuntimeException('Missing template');
-            }
-
-            public function resolve(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function loadComponent(string $name): string
-            {
-                return '';
-            }
-
-            public function getComponentPath(string $name): string
-            {
-                return $name;
-            }
-
-            public function getComponentFilePath(string $name): string
-            {
-                return $name;
-            }
-        };
+        $loader = $this->createLoader();
 
         $renderer = new HtmlTemplateExceptionRenderer(
             loader: $loader,
@@ -210,39 +131,25 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $this->assertStringNotContainsString('sugar-exception-template', $html);
     }
 
+    public function testCompilationExceptionWithoutTemplatePathOmitsLocation(): void
+    {
+        $loader = $this->createLoader();
+
+        $renderer = new HtmlTemplateExceptionRenderer($loader);
+        $exception = new CompilationException(
+            message: 'Compile failed',
+        );
+
+        $html = $renderer->render($exception);
+
+        $this->assertStringContainsString('CompilationException', $html);
+        $this->assertStringNotContainsString('template:', $html);
+        $this->assertStringNotContainsString('<pre class="sugar-exception-template">', $html);
+    }
+
     public function testFormatTraceReturnsHtmlForFrames(): void
     {
-        $loader = new class implements TemplateLoaderInterface {
-            public function load(string $path): string
-            {
-                return 'line one';
-            }
-
-            public function resolve(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function resolveToFilePath(string $path, string $currentTemplate = ''): string
-            {
-                return $path;
-            }
-
-            public function loadComponent(string $name): string
-            {
-                return '';
-            }
-
-            public function getComponentPath(string $name): string
-            {
-                return $name;
-            }
-
-            public function getComponentFilePath(string $name): string
-            {
-                return $name;
-            }
-        };
+        $loader = $this->createLoader();
 
         $renderer = new HtmlTemplateExceptionRenderer($loader);
 
@@ -250,5 +157,13 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
         $this->assertStringContainsString('sugar-exception-trace', $output);
         $this->assertStringContainsString('Sugar stack trace', $output);
+    }
+
+    /**
+     * @param array<string, string> $templates
+     */
+    private function createLoader(array $templates = []): StringTemplateLoader
+    {
+        return new StringTemplateLoader(templates: $templates);
     }
 }

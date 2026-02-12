@@ -15,13 +15,13 @@ use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RuntimeCallNode;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
@@ -115,7 +115,7 @@ final class ComponentExpansionPass implements AstPassInterface
      * Expand a single component node
      *
      * @param \Sugar\Ast\ComponentNode $component Component to expand
-     * @param \Sugar\Context\CompilationContext|null $context Compilation context for dependency tracking
+     * @param \Sugar\Compiler\CompilationContext|null $context Compilation context for dependency tracking
      * @return array<\Sugar\Ast\Node> Expanded nodes
      */
     private function expandComponent(
@@ -201,7 +201,7 @@ final class ComponentExpansionPass implements AstPassInterface
      * Recursively expand components in a list of nodes
      *
      * @param array<\Sugar\Ast\Node> $nodes Nodes to process
-     * @param \Sugar\Context\CompilationContext|null $context Compilation context for dependency tracking
+     * @param \Sugar\Compiler\CompilationContext|null $context Compilation context for dependency tracking
      * @return array<\Sugar\Ast\Node> Processed nodes with expanded components
      */
     private function expandNodes(array $nodes, ?CompilationContext $context = null): array
@@ -236,7 +236,7 @@ final class ComponentExpansionPass implements AstPassInterface
      * Convert s:component directive on an element/fragment into a ComponentNode.
      *
      * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $node Node to inspect
-     * @param \Sugar\Context\CompilationContext|null $context Compilation context for errors
+     * @param \Sugar\Compiler\CompilationContext|null $context Compilation context for errors
      * @return \Sugar\Ast\ComponentNode|\Sugar\Ast\RuntimeCallNode|null Component node or null if not applicable
      */
     private function tryConvertComponentDirective(
@@ -510,7 +510,7 @@ final class ComponentExpansionPass implements AstPassInterface
      * @param \Sugar\Ast\DocumentNode $template Component template AST
      * @param \Sugar\Ast\AttributeNode|null $bindAttribute Optional s:bind attribute node
      * @param \Sugar\Pass\Component\Helper\ComponentSlots $slots Slot content
-     * @param \Sugar\Context\CompilationContext|null $context Compilation context for error reporting
+     * @param \Sugar\Compiler\CompilationContext|null $context Compilation context for error reporting
      * @return \Sugar\Ast\DocumentNode Wrapped template
      */
     private function wrapWithVariables(

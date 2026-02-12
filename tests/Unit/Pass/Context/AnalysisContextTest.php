@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Context;
+namespace Sugar\Tests\Unit\Pass\Context;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Context\AnalysisContext;
 use Sugar\Enum\OutputContext;
+use Sugar\Pass\Context\AnalysisContext;
 
 /**
  * Test context analysis helper
@@ -57,7 +57,7 @@ final class AnalysisContextTest extends TestCase
         $context = $context->push('div');
         $context = $context->push('script');
         $context = $context->push('span');
-         // Inside script - should still be JS
+        // Inside script - should still be JS
 
         $result = $context->determineContext();
 

@@ -8,7 +8,6 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;

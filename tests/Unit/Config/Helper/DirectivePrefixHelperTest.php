@@ -32,6 +32,14 @@ final class DirectivePrefixHelperTest extends TestCase
         $this->assertSame('s:while', $this->helper->buildName('while'));
     }
 
+    public function testGetDirectiveSeparator(): void
+    {
+        $this->assertSame('s:', $this->helper->getDirectiveSeparator());
+
+        $customHelper = new DirectivePrefixHelper('x');
+        $this->assertSame('x:', $customHelper->getDirectiveSeparator());
+    }
+
     public function testCustomPrefix(): void
     {
         $customHelper = new DirectivePrefixHelper('x');

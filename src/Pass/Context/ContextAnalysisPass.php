@@ -12,7 +12,6 @@ use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Context\AnalysisContext;
 use Sugar\Enum\OutputContext;
 
 /**
@@ -26,7 +25,7 @@ final class ContextAnalysisPass implements AstPassInterface
     private AnalysisContext $analysisContext;
 
     /**
-     * @var array<int, \Sugar\Context\AnalysisContext>
+     * @var array<int, \Sugar\Pass\Context\AnalysisContext>
      */
     private array $contextStack = [];
 
@@ -124,7 +123,7 @@ final class ContextAnalysisPass implements AstPassInterface
      * Update OutputNode with proper context
      *
      * @param \Sugar\Ast\OutputNode $node Output node
-     * @param \Sugar\Context\AnalysisContext $analysisContext Current context
+     * @param \Sugar\Pass\Context\AnalysisContext $analysisContext Current context
      * @param bool $inAttribute Whether in attribute
      * @return \Sugar\Ast\OutputNode New output node with updated context
      */

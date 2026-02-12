@@ -148,6 +148,14 @@ final class AttributeContinuationTest extends TestCase
         $this->assertNull($result);
     }
 
+    public function testDetectOpenAttributeReturnsNullWhenAttributeMissing(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('data-one', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $result = AttributeContinuation::detectOpenAttribute('data-two=', [$element]);
+
+        $this->assertNull($result);
+    }
+
     public function testConsumeAttributeContinuationUnquotedValue(): void
     {
         $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
@@ -196,6 +204,180 @@ final class AttributeContinuationTest extends TestCase
         $this->assertSame(['no close'], $element->attributes[0]->value->toParts());
         $this->assertSame('', $html);
         $this->assertSame($pending, $pendingAttr);
+    }
+
+    public function testConsumeAttributeContinuationParsesAdditionalAttributesAndSelfClosing(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value class="btn" disabled/>',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNull($pendingAttr);
+        $this->assertTrue($element->selfClosing);
+        $this->assertSame('value', $element->attributes[0]->value->static);
+        $this->assertSame('class', $element->attributes[1]->name);
+        $this->assertSame('btn', $element->attributes[1]->value->static);
+        $this->assertSame('disabled', $element->attributes[2]->name);
+        $this->assertTrue($element->attributes[2]->value->isBoolean());
+    }
+
+    public function testConsumeAttributeContinuationQuotedValueParsesTrailingAttributes(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => '"'];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value" data-id="5">',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNull($pendingAttr);
+        $this->assertSame('value', $element->attributes[0]->value->static);
+        $this->assertSame('data-id', $element->attributes[1]->name);
+        $this->assertSame('5', $element->attributes[1]->value->static);
+    }
+
+    public function testConsumeAttributeContinuationParsesEscapedQuotes(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value data-title="say \\"hi\\"">',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNull($pendingAttr);
+        $this->assertSame('data-title', $element->attributes[1]->name);
+        $this->assertSame('say "hi"', $element->attributes[1]->value->static);
+    }
+
+    /**
+     * Ensures continuation skips an extra opening quote before parsing attributes.
+     */
+    public function testConsumeAttributeContinuationSkipsLeadingQuoteInContinuation(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => '"'];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            '"" data-id="5">',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNull($pendingAttr);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('', $element->attributes[0]->value->static);
+        $this->assertSame('data-id', $element->attributes[1]->name);
+        $this->assertSame('5', $element->attributes[1]->value->static);
+    }
+
+    /**
+     * Ensures invalid attribute starts do not consume content.
+     */
+    public function testConsumeAttributeContinuationStopsOnInvalidAttributeStart(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value =oops',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('=oops', $html);
+        $this->assertNull($pendingAttr);
+        $this->assertSame('value', $element->attributes[0]->value->static);
+    }
+
+    /**
+     * Ensures whitespace around equals and unquoted values set pending attributes.
+     */
+    public function testConsumeAttributeContinuationUnquotedValueWithWhitespaceSetsPendingAttribute(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => '"'];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value" data-id  =   unclosed',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNotNull($pendingAttr);
+        $this->assertSame('value', $element->attributes[0]->value->static);
+        $this->assertSame('data-id', $element->attributes[1]->name);
+        $this->assertSame('unclosed', $element->attributes[1]->value->static);
+        $this->assertSame(1, $pendingAttr['attrIndex']);
+        $this->assertNull($pendingAttr['quote']);
+    }
+
+    public function testConsumeAttributeContinuationReturnsOriginalHtmlWhenAttributeMissing(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 3, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value >',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('value >', $html);
+        $this->assertNull($pendingAttr);
+    }
+
+    public function testConsumeAttributeContinuationSetsPendingAttributeWhenValueMissing(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value data-id=',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNotNull($pendingAttr);
+        $this->assertSame('data-id', $element->attributes[1]->name);
+        $this->assertTrue($element->attributes[1]->value->isStatic());
+        $this->assertSame('', $element->attributes[1]->value->static);
+        $this->assertSame(1, $pendingAttr['attrIndex']);
+        $this->assertNull($pendingAttr['quote']);
+    }
+
+    public function testConsumeAttributeContinuationSetsPendingAttributeForUnclosedQuote(): void
+    {
+        $element = new ElementNode('div', [new AttributeNode('x-data', AttributeValue::static(''), 1, 1)], [], false, 1, 1);
+        $pending = ['element' => $element, 'attrIndex' => 0, 'quote' => null];
+
+        [$html, $pendingAttr] = AttributeContinuation::consumeAttributeContinuation(
+            'value data-id="nope',
+            $pending,
+            $this->factory(),
+        );
+
+        $this->assertSame('', $html);
+        $this->assertNotNull($pendingAttr);
+        $this->assertSame('data-id', $element->attributes[1]->name);
+        $this->assertSame('nope', $element->attributes[1]->value->static);
+        $this->assertSame(1, $pendingAttr['attrIndex']);
+        $this->assertSame('"', $pendingAttr['quote']);
     }
 
     private function factory(): NodeFactory

@@ -10,12 +10,12 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Enum\BlockMergeMode;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
@@ -92,7 +92,7 @@ final class TemplateInheritancePass implements AstPassInterface
      * Process template inheritance (s:extends, s:block, s:include).
      *
      * @param \Sugar\Ast\DocumentNode $document Document to process
-     * @param \Sugar\Context\CompilationContext $context Compilation context
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Stack of loaded templates for circular detection
      * @return \Sugar\Ast\DocumentNode Processed document
      * @throws \Sugar\Exception\SyntaxException On circular inheritance
@@ -256,7 +256,7 @@ final class TemplateInheritancePass implements AstPassInterface
      *
      * @param \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode $extendsElement Element or fragment with s:extends
      * @param \Sugar\Ast\DocumentNode $childDocument Child document
-     * @param \Sugar\Context\CompilationContext $context Compilation context
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return \Sugar\Ast\DocumentNode Processed parent document
      */
@@ -308,7 +308,7 @@ final class TemplateInheritancePass implements AstPassInterface
      * Process s:include directives.
      *
      * @param \Sugar\Ast\DocumentNode $document Document to process
-     * @param \Sugar\Context\CompilationContext $context Compilation context
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return \Sugar\Ast\DocumentNode Processed document
      */
@@ -410,7 +410,7 @@ final class TemplateInheritancePass implements AstPassInterface
      * Process includes in children nodes.
      *
      * @param array<\Sugar\Ast\Node> $children Children to process
-     * @param \Sugar\Context\CompilationContext $context Compilation context
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
      * @return array<\Sugar\Ast\Node> Processed children
      */

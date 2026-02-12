@@ -6,7 +6,7 @@ namespace Sugar\Tests\Unit\Directive;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\TextNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Tests\Helper\Trait\AstAssertionsTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;

@@ -5,8 +5,10 @@ namespace Sugar\Tests\Unit\Runtime;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Cache\CachedTemplate;
+use Sugar\Cache\CacheMetadata;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
+use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Loader\StringTemplateLoader;
@@ -181,9 +183,76 @@ final class ComponentRendererTest extends TestCase
         $this->assertContains($componentPath, $metadata->components);
     }
 
+    public function testRenderComponentReturnsScalarFromCompiledClosure(): void
+    {
+        $renderer = $this->createRendererWithCachedTemplate(
+            <<<'PHP'
+<?php
+return function (array $data): int {
+    return 123;
+};
+PHP,
+        );
+
+        $output = $renderer->renderComponent(name: 'alert');
+
+        $this->assertSame('123', $output);
+    }
+
+    public function testRenderComponentReturnsStringFromStringableObject(): void
+    {
+        $renderer = $this->createRendererWithCachedTemplate(
+            <<<'PHP'
+<?php
+return function (array $data) {
+    return new class {
+        public function __toString(): string
+        {
+            return 'stringable';
+        }
+    };
+};
+PHP,
+        );
+
+        $output = $renderer->renderComponent(name: 'alert');
+
+        $this->assertSame('stringable', $output);
+    }
+
+    public function testRenderComponentReturnsEmptyStringForNonStringableResult(): void
+    {
+        $renderer = $this->createRendererWithCachedTemplate(
+            <<<'PHP'
+<?php
+return function (array $data): array {
+    return ['nope'];
+};
+PHP,
+        );
+
+        $output = $renderer->renderComponent(name: 'alert');
+
+        $this->assertSame('', $output);
+    }
+
+    public function testRenderComponentReturnsEmptyStringWhenCompiledFileIsNotClosure(): void
+    {
+        $renderer = $this->createRendererWithCachedTemplate(
+            <<<'PHP'
+<?php
+return 'not-a-closure';
+PHP,
+        );
+
+        $output = $renderer->renderComponent(name: 'alert');
+
+        $this->assertSame('', $output);
+    }
+
     private function createRenderer(
         ?object $context = null,
-        ?FileCache $cache = null,
+        ?TemplateCacheInterface $cache = null,
         ?DependencyTracker $tracker = null,
     ): ComponentRenderer {
         $cache = $cache ?? $this->createCache();
@@ -195,6 +264,60 @@ final class ComponentRendererTest extends TestCase
             tracker: $tracker,
             templateContext: $context,
         );
+    }
+
+    private function createRendererWithCachedTemplate(string $compiledPhp): ComponentRenderer
+    {
+        $compiledPath = $this->writeCompiledTemplate($compiledPhp);
+        $cacheKey = $this->templateLoader->getComponentPath('alert') . '::slots:slot';
+        $cached = new CachedTemplate($compiledPath, new CacheMetadata());
+
+        $cache = new class ($cacheKey, $cached) implements TemplateCacheInterface {
+            public function __construct(
+                private string $key,
+                private CachedTemplate $cached,
+            ) {
+            }
+
+            public function get(string $key, bool $debug = false): ?CachedTemplate
+            {
+                return $key === $this->key ? $this->cached : null;
+            }
+
+            public function put(string $key, string $compiled, CacheMetadata $metadata): string
+            {
+                return $this->cached->path;
+            }
+
+            public function invalidate(string $key): array
+            {
+                return [];
+            }
+
+            public function delete(string $key): bool
+            {
+                return false;
+            }
+
+            public function flush(): void
+            {
+            }
+        };
+
+        return new ComponentRenderer(
+            compiler: $this->compiler,
+            loader: $this->templateLoader,
+            cache: $cache,
+        );
+    }
+
+    private function writeCompiledTemplate(string $compiledPhp): string
+    {
+        $cacheDir = $this->createTempDir('sugar_compiled_');
+        $path = $cacheDir . '/compiled.php';
+        file_put_contents($path, $compiledPhp);
+
+        return $path;
     }
 
     private function createCache(): FileCache

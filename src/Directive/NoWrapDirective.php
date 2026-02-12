@@ -5,7 +5,7 @@ namespace Sugar\Directive;
 
 use LogicException;
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 

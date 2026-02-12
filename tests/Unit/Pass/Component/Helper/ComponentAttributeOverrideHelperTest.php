@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
@@ -76,5 +77,36 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
         $this->assertTrue($second->attributes[0]->value->isStatic());
         $this->assertSame('second', $second->attributes[0]->value->static);
         $this->assertCount(1, $second->attributes);
+    }
+
+    public function testAttributeValueExpressionHandlesBooleanAndParts(): void
+    {
+        $titleParts = AttributeValue::parts([
+            'Hello ',
+            $this->outputNode('$name', true, OutputContext::HTML_ATTRIBUTE, 1, 10),
+        ]);
+
+        $element = $this->element('div')
+            ->attributeNode($this->attributeNode('disabled', null, 1, 1))
+            ->attributeNode($this->attributeNode('title', $titleParts, 1, 5))
+            ->build();
+
+        $document = $this->document()->withChild($element)->build();
+
+        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+
+        $disabledAttr = $element->attributes[0];
+        $this->assertSame('disabled', $disabledAttr->name);
+        $this->assertTrue($disabledAttr->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $disabledAttr->value->output);
+        $this->assertStringContainsString('$__sugar_attrs[\'disabled\'] ?? null', $disabledAttr->value->output->expression);
+
+        $titleAttr = $element->attributes[1];
+        $this->assertSame('title', $titleAttr->name);
+        $this->assertTrue($titleAttr->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $titleAttr->value->output);
+        $this->assertStringContainsString('$__sugar_attrs[\'title\'] ??', $titleAttr->value->output->expression);
+        $this->assertStringContainsString("'Hello '", $titleAttr->value->output->expression);
+        $this->assertStringContainsString('$name', $titleAttr->value->output->expression);
     }
 }

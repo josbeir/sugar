@@ -7,7 +7,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;

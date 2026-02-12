@@ -13,7 +13,7 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Escape\Escaper;
 use Sugar\Exception\UnsupportedNodeException;
 
@@ -26,7 +26,7 @@ final class CodeGenerator
      * Constructor
      *
      * @param \Sugar\Escape\Escaper $escaper Escaper instance
-     * @param \Sugar\Context\CompilationContext $context Compilation context with debug info and template path
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context with debug info and template path
      */
     public function __construct(
         private readonly Escaper $escaper,
