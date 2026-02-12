@@ -3,14 +3,18 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit;
 
+use PhpParser\Error;
+use PhpParser\ParserFactory;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
 use Sugar\Engine\EngineBuilder;
+use Sugar\Exception\CompilationException;
 use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Exception\SugarException;
+use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\ExtensionInterface;
 use Sugar\Extension\RegistrationContext;
@@ -115,6 +119,115 @@ final class EngineBuilderTest extends TestCase
 
         $engine = $builder->build();
         $this->assertInstanceOf(Engine::class, $engine);
+    }
+
+    public function testWithPhpSyntaxValidationEnabledThrowsSyntaxException(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'invalid-expression.sugar.php' => '<div><?= $value + ?></div>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withPhpSyntaxValidation(true)
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Invalid PHP expression');
+
+        $engine->render('invalid-expression.sugar.php', ['value' => 1]);
+    }
+
+    public function testWithPhpSyntaxValidationEnabledButDebugDisabledUsesRuntimeParsePath(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'invalid-expression-no-debug.sugar.php' => '<div><?= $value + ?></div>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withDebug(false)
+            ->withPhpSyntaxValidation(true)
+            ->build();
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled template contains invalid PHP');
+
+        $engine->render('invalid-expression-no-debug.sugar.php', ['value' => 1]);
+    }
+
+    public function testWithPhpSyntaxValidationDisabledByDefault(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'invalid-expression-default.sugar.php' => '<div><?= $value + ?></div>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled template contains invalid PHP');
+
+        $engine->render('invalid-expression-default.sugar.php', ['value' => 1]);
+    }
+
+    public function testWithPhpSyntaxValidationThrowsWhenParserMissing(): void
+    {
+        $builder = new EngineBuilder();
+
+        if (class_exists(ParserFactory::class) && class_exists(Error::class)) {
+            $this->assertSame($builder, $builder->withPhpSyntaxValidation(true));
+
+            return;
+        }
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('nikic/php-parser is required to enable PHP syntax validation');
+
+        $builder->withPhpSyntaxValidation(true);
+    }
+
+    public function testWithPhpSyntaxValidationDisabledDefersToGeneratedPhpValidation(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'invalid-expression.sugar.php' => '<div><?= $value + ?></div>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withPhpSyntaxValidation(false)
+            ->build();
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled template contains invalid PHP');
+
+        $engine->render('invalid-expression.sugar.php', ['value' => 1]);
     }
 
     public function testWithTemplateContext(): void

@@ -192,6 +192,19 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $this->assertStringContainsString('secondTraceFrame', $output);
     }
 
+    public function testFormatTraceCollapsesRepeatedFrames(): void
+    {
+        $loader = $this->createLoader();
+        $exception = $this->createExceptionWithRepeatedTraceFrames(6);
+
+        $renderer = new HtmlTemplateExceptionRenderer(loader: $loader);
+
+        $output = $renderer->formatTrace($exception);
+
+        $this->assertStringContainsString('repeated', $output);
+        $this->assertStringContainsString('times', $output);
+    }
+
     /**
      * @param array<string, string> $templates
      */
@@ -228,5 +241,25 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $suffix = is_string($key) ? $key : '';
 
         throw new Exception($value . ':' . $suffix, previous: new Exception('previous'));
+    }
+
+    private function createExceptionWithRepeatedTraceFrames(int $depth): Exception
+    {
+        try {
+            $this->recursiveTraceFrame($depth);
+        } catch (Exception $exception) {
+            return $exception;
+        }
+
+        throw new Exception('Unable to generate repeated trace frames');
+    }
+
+    private function recursiveTraceFrame(int $depth): void
+    {
+        if ($depth <= 0) {
+            throw new Exception('Repeated trace frame test');
+        }
+
+        $this->recursiveTraceFrame($depth - 1);
     }
 }

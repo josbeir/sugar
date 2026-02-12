@@ -11,7 +11,7 @@ use Sugar\Config\SugarConfig;
 use Sugar\Escape\Escaper;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
-use Sugar\Parser\Parser;
+use Sugar\Parser\Parser as TemplateParser;
 use Sugar\Pass\Component\ComponentVariantAdjustmentPass;
 
 /**
@@ -29,6 +29,8 @@ final class Compiler implements CompilerInterface
 
     private readonly CompilerPipelineFactory $pipelineFactory;
 
+    private readonly PhpSyntaxValidator $phpSyntaxValidator;
+
     /**
      * Constructor
      *
@@ -38,19 +40,22 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Loader\TemplateLoaderInterface $templateLoader Template loader for inheritance
      * @param \Sugar\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      * @param array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses Custom compiler passes with priorities
+     * @param bool $phpSyntaxValidationEnabled Enable nikic/php-parser syntax validation when available
      */
     public function __construct(
-        private readonly Parser $parser,
+        private readonly TemplateParser $parser,
         Escaper $escaper,
         DirectiveRegistryInterface $registry,
         TemplateLoaderInterface $templateLoader,
         ?SugarConfig $config = null,
         array $customPasses = [],
+        bool $phpSyntaxValidationEnabled = true,
     ) {
         $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
         $this->registry = $registry;
         $this->templateLoader = $templateLoader;
+        $this->phpSyntaxValidator = new PhpSyntaxValidator($phpSyntaxValidationEnabled);
         $this->pipelineFactory = new CompilerPipelineFactory(
             $this->templateLoader,
             $this->parser,
@@ -81,6 +86,7 @@ final class Compiler implements CompilerInterface
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
         $context->stampTemplatePath($ast);
+        $this->phpSyntaxValidator->templateSegments($ast, $context);
 
         return $this->compileAst(
             $ast,
@@ -112,6 +118,7 @@ final class Compiler implements CompilerInterface
 
         $ast = $this->parser->parse($templateContent);
         $context->stampTemplatePath($ast);
+        $this->phpSyntaxValidator->templateSegments($ast, $context);
 
         $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
         $variantAdjustments = new ComponentVariantAdjustmentPass($slotVars);
@@ -160,7 +167,9 @@ final class Compiler implements CompilerInterface
 
         // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
+        $compiledCode = $generator->generate($analyzedAst);
+        $this->phpSyntaxValidator->generated($compiledCode, $context);
 
-        return $generator->generate($analyzedAst);
+        return $compiledCode;
     }
 }

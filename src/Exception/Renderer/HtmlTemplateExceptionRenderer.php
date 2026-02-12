@@ -158,25 +158,30 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             return '';
         }
 
+        $collapsedFrames = $this->collapseRepeatedFrames($frames);
+
         $truncated = false;
-        if ($this->traceMaxFrames > 0 && count($frames) > $this->traceMaxFrames) {
-            $frames = array_slice($frames, 0, $this->traceMaxFrames);
+        if ($this->traceMaxFrames > 0 && count($collapsedFrames) > $this->traceMaxFrames) {
+            $collapsedFrames = array_slice($collapsedFrames, 0, $this->traceMaxFrames);
             $truncated = true;
         }
 
         $items = [];
-        foreach ($frames as $index => $frame) {
-            $file = $frame['file'] ?? '[internal]';
-            if (isset($frame['line'])) {
-                $file .= ':' . $frame['line'];
+        foreach ($collapsedFrames as $index => $entry) {
+            $frame = $entry['frame'];
+            $file = $this->frameValueAsString($frame, 'file', '[internal]');
+            $line = $this->frameValueAsString($frame, 'line');
+            if ($line !== '') {
+                $file .= ':' . $line;
             }
 
             $call = '';
-            if (isset($frame['class'])) {
-                $call .= $frame['class'] . ($frame['type'] ?? '');
+            $class = $this->frameValueAsString($frame, 'class');
+            if ($class !== '') {
+                $call .= $class . $this->frameValueAsString($frame, 'type');
             }
 
-            $call .= $frame['function'] ?? 'unknown';
+            $call .= $this->frameValueAsString($frame, 'function', 'unknown');
             if ($this->traceIncludeArguments) {
                 if (array_key_exists('args', $frame) && is_array($frame['args'])) {
                     $call .= '(' . $this->formatArguments($frame['args']) . ')';
@@ -185,6 +190,10 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
                 }
             } else {
                 $call .= '()';
+            }
+
+            if ($entry['count'] > 1) {
+                $call .= sprintf(' (repeated %d times)', $entry['count']);
             }
 
             $items[] = sprintf(
@@ -207,6 +216,83 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             implode("\n", $items) .
             '</ol>' .
             '</details>';
+    }
+
+    /**
+     * Collapse consecutive identical trace frames to reduce visual noise.
+     *
+     * @param array<array<string, mixed>> $frames
+     * @return array<array{frame: array<string, mixed>, count: int}>
+     */
+    private function collapseRepeatedFrames(array $frames): array
+    {
+        /** @var array<array{signature: string, frame: array<string, mixed>, count: int}> $collapsed */
+        $collapsed = [];
+
+        foreach ($frames as $frame) {
+            $signature = $this->frameSignature($frame);
+            $lastIndex = count($collapsed) - 1;
+
+            if ($lastIndex >= 0 && $collapsed[$lastIndex]['signature'] === $signature) {
+                $collapsed[$lastIndex]['count']++;
+                continue;
+            }
+
+            $collapsed[] = [
+                'signature' => $signature,
+                'frame' => $frame,
+                'count' => 1,
+            ];
+        }
+
+        $result = [];
+        foreach ($collapsed as $entry) {
+            $result[] = [
+                'frame' => $entry['frame'],
+                'count' => $entry['count'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Build a stable signature for a stack frame.
+     *
+     * @param array<string, mixed> $frame
+     */
+    private function frameSignature(array $frame): string
+    {
+        return implode('|', [
+            $this->frameValueAsString($frame, 'file'),
+            $this->frameValueAsString($frame, 'line'),
+            $this->frameValueAsString($frame, 'class'),
+            $this->frameValueAsString($frame, 'type'),
+            $this->frameValueAsString($frame, 'function'),
+        ]);
+    }
+
+    /**
+     * Convert a trace frame value to string safely.
+     *
+     * @param array<string, mixed> $frame
+     */
+    private function frameValueAsString(array $frame, string $key, string $default = ''): string
+    {
+        if (!array_key_exists($key, $frame)) {
+            return $default;
+        }
+
+        $value = $frame[$key];
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            return (string)$value;
+        }
+
+        return $default;
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar;
 
 use Closure;
+use ParseError;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
@@ -162,7 +163,12 @@ final class Engine implements EngineInterface
 
         try {
             // Include the compiled file and execute the closure
-            $fn = include $compiledPath;
+            try {
+                $fn = include $compiledPath;
+            } catch (ParseError $parseError) {
+                throw $this->createCompiledTemplateParseException($compiledPath, $parseError);
+            }
+
             if ($fn instanceof Closure) {
                 // Bind to template context if provided (enables $this->helper() calls)
                 if ($this->templateContext !== null) {
@@ -186,5 +192,20 @@ final class Engine implements EngineInterface
         } finally {
             RuntimeEnvironment::clearRenderer();
         }
+    }
+
+    /**
+     * Create a compilation exception from a runtime parse error in compiled output.
+     */
+    private function createCompiledTemplateParseException(
+        string $compiledPath,
+        ParseError $parseError,
+    ): CompilationException {
+        return new CompilationException(
+            message: sprintf('Compiled template contains invalid PHP: %s', $parseError->getMessage()),
+            templatePath: $compiledPath,
+            templateLine: $parseError->getLine(),
+            previous: $parseError,
+        );
     }
 }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Engine;
 
+use PhpParser\Error;
+use PhpParser\ParserFactory;
 use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
@@ -36,6 +38,8 @@ final class EngineBuilder
     private SugarConfig $config;
 
     private bool $debug = false;
+
+    private bool $phpSyntaxValidation = false;
 
     private ?object $templateContext = null;
 
@@ -107,6 +111,27 @@ final class EngineBuilder
     public function withDebug(bool $debug)
     {
         $this->debug = $debug;
+
+        return $this;
+    }
+
+    /**
+     * Enable or disable optional PHP syntax validation during compilation.
+     *
+     * Validation only runs when debug mode is enabled and nikic/php-parser is installed.
+     * When disabled (or when debug mode is off), compilation skips parser-based validation
+     * and relies on runtime PHP errors.
+     *
+     * @param bool $enabled Syntax validation enabled
+     * @return $this
+     */
+    public function withPhpSyntaxValidation(bool $enabled = true)
+    {
+        if ($enabled && (!class_exists(ParserFactory::class) || !class_exists(Error::class))) {
+            throw new RuntimeException('nikic/php-parser is required to enable PHP syntax validation');
+        }
+
+        $this->phpSyntaxValidation = $enabled;
 
         return $this;
     }
@@ -221,6 +246,7 @@ final class EngineBuilder
             templateLoader: $this->loader,
             config: $this->config,
             customPasses: $customPasses,
+            phpSyntaxValidationEnabled: $this->phpSyntaxValidation,
         );
 
         return new Engine(

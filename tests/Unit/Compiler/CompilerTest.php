@@ -3,9 +3,14 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Compiler;
 
+use PhpParser\Error;
+use PhpParser\ParserFactory;
 use PHPUnit\Framework\TestCase;
+use Sugar\Compiler\CompilationContext;
+use Sugar\Compiler\PhpSyntaxValidator;
 use Sugar\Escape\Escaper;
 use Sugar\Exception\ComponentNotFoundException;
+use Sugar\Exception\SyntaxException;
 use Sugar\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -216,6 +221,58 @@ final class CompilerTest extends TestCase
 
         $this->assertStringContainsString('<?php', $result);
         $this->assertStringContainsString('declare(strict_types=1);', $result);
+    }
+
+    public function testValidateGeneratedPhpThrowsSyntaxExceptionWhenParserAvailable(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: 'inline-template',
+            source: '',
+            debug: true,
+        );
+
+        $validator = new PhpSyntaxValidator(enabled: true);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Generated PHP validation failed');
+
+        $validator->generated("<?php\nif (\n", $context);
+    }
+
+    public function testCompileThrowsSyntaxExceptionForInvalidOutputExpressionWithNodeLocation(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Invalid PHP expression');
+        $this->expectExceptionMessage('inline-template');
+        $this->expectExceptionMessage('line:1');
+
+        $this->compiler->compile('<div><?= $value + ?></div>', null, true);
+    }
+
+    public function testCompileThrowsSyntaxExceptionForInvalidRawPhpDuringGeneratedValidation(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Generated PHP validation failed');
+
+        $this->compiler->compile("\n<?php echo ; ?>", null, true);
     }
 
     public function testCompileComponentThrowsWhenComponentMissing(): void

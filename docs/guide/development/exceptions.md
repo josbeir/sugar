@@ -45,5 +45,8 @@ Avoid exposing exception details in production responses. Log them instead.
 ## Debug Tips
 
 - Enable debug mode while developing to improve diagnostics and cache refresh behavior.
+- Install `nikic/php-parser` to opt in to compile-time PHP syntax validation for earlier diagnostics.
+- Use `Engine::builder()->withDebug(true)->withPhpSyntaxValidation(true)` to enable parser-based validation for a specific engine instance.
+- When enabled in debug mode, Sugar validates output expressions individually and validates generated PHP as a whole, providing earlier syntax diagnostics with template location metadata.
 - Check includes and component paths when you see missing template exceptions.
 - Verify directive registration if you hit `UnknownDirectiveException`.

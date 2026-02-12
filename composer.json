@@ -37,6 +37,9 @@
     "require": {
         "php": ">=8.2"
     },
+    "suggest": {
+        "nikic/php-parser": "Optional: validates generated PHP during compilation and improves syntax diagnostics."
+    },
     "require-dev": {
         "phpunit/phpunit": "^11.1.3 || ^12.0 || ^13.0",
         "cakephp/cakephp-codesniffer": "^5.3",
