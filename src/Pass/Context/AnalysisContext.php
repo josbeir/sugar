@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Context;
+namespace Sugar\Pass\Context;
 
 use Sugar\Enum\OutputContext;
 

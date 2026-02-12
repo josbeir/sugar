@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -13,13 +14,13 @@ use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\WhileDirective;
@@ -208,6 +209,36 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('...($bindings)', $code);
     }
 
+    public function testComponentBindMixedOutputPartsThrows(): void
+    {
+        $ast = $this->document()
+            ->withChild(
+                $this->component(
+                    name: 'button',
+                    attributes: [
+                        $this->attributeNode(
+                            's:bind',
+                            AttributeValue::parts([
+                                '{',
+                                $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                            ]),
+                            1,
+                            1,
+                        ),
+                    ],
+                    children: [$this->text('Click', 1, 1)],
+                    line: 1,
+                    column: 1,
+                ),
+            )
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute cannot contain mixed output expressions');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
     public function testComponentWithNoRootElementSkipsMerge(): void
     {
         $this->loader->addComponent('plain', 'Plain <?= $slot ?>');
@@ -329,6 +360,31 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertSame('[]', $runtimeCall->arguments[3]);
     }
 
+    public function testRuntimeComponentBindMixedOutputPartsThrows(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attributeNode(
+                $this->attributeNode(
+                    's:bind',
+                    AttributeValue::parts([
+                        '{',
+                        $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                    ]),
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute cannot contain mixed output expressions');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
     public function testNestedTemplateWithDynamicComponentDirectiveCreatesRuntimeCall(): void
     {
         $this->loader->addComponent('dynamic-panel', '<div s:component="$componentName"></div>');
@@ -383,6 +439,34 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString("'class' => 'panel'", $call->arguments[3]);
         $this->assertStringContainsString("'disabled' => null", $call->arguments[3]);
         $this->assertStringContainsString('\'data-id\' => $id', $call->arguments[3]);
+    }
+
+    public function testRuntimeComponentAttributesConcatenateMixedParts(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attributeNode(
+                $this->attributeNode(
+                    'class',
+                    AttributeValue::parts([
+                        'btn-',
+                        $this->outputNode('$state', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                        '-lg',
+                    ]),
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $call = $result->children[0];
+        $this->assertStringContainsString("'class' => 'btn-' . (\$state) . '-lg'", $call->arguments[3]);
     }
 
     public function testThrowsWhenComponentNameIsNotString(): void

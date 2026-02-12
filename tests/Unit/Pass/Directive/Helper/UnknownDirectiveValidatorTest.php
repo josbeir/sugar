@@ -6,8 +6,8 @@ namespace Sugar\Tests\Unit\Pass\Directive\Helper;
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\IfDirective;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistry;
@@ -64,5 +64,17 @@ final class UnknownDirectiveValidatorTest extends TestCase
         $this->expectExceptionMessage('Did you mean "block"');
 
         $validator->validateDirectiveAttribute($attr, $this->context, true);
+    }
+
+    public function testValidateDirectiveAttributeOffsetsColumnForDirectiveName(): void
+    {
+        $attr = new AttributeNode('s:unknown', AttributeValue::static('value'), 1, 3);
+
+        try {
+            $this->validator->validateDirectiveAttribute($attr, $this->context, true);
+            $this->fail('Expected SyntaxException for unknown directive.');
+        } catch (SyntaxException $syntaxException) {
+            $this->assertSame(5, $syntaxException->templateColumn);
+        }
     }
 }

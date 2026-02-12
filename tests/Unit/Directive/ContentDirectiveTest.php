@@ -5,7 +5,9 @@ namespace Sugar\Tests\Unit\Directive;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\DirectiveNode;
+use Sugar\Ast\ElementNode;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\TextNode;
 use Sugar\Directive\ContentDirective;
 use Sugar\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -220,5 +222,91 @@ final class ContentDirectiveTest extends TestCase
         $this->assertInstanceOf(OutputNode::class, $result[0]);
         $this->assertSame(OutputContext::JAVASCRIPT, $result[0]->context);
         $this->assertTrue($result[0]->escape);
+    }
+
+    public function testCompileDisablesEscapingForRawPipe(): void
+    {
+        $compiler = new ContentDirective(escape: true);
+
+        $node = new DirectiveNode(
+            name: 'text',
+            expression: '$content |> raw()',
+            children: [],
+            line: 1,
+            column: 0,
+        );
+
+        $result = $compiler->compile($node, $this->createContext());
+
+        $this->assertInstanceOf(OutputNode::class, $result[0]);
+        $this->assertFalse($result[0]->escape);
+        $this->assertSame(OutputContext::RAW, $result[0]->context);
+    }
+
+    public function testCompileUsesJsonContextForJsonPipe(): void
+    {
+        $compiler = new ContentDirective(escape: true);
+
+        $node = new DirectiveNode(
+            name: 'text',
+            expression: '$content |> json()',
+            children: [],
+            line: 1,
+            column: 0,
+        );
+
+        $result = $compiler->compile($node, $this->createContext());
+
+        $this->assertInstanceOf(OutputNode::class, $result[0]);
+        $this->assertTrue($result[0]->escape);
+        $this->assertSame(OutputContext::JSON, $result[0]->context);
+    }
+
+    public function testCompileReplacesWrappedElementChildren(): void
+    {
+        $compiler = new ContentDirective(escape: true);
+
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [],
+            children: [new TextNode('Old', 1, 1)],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+        );
+
+        $node = new DirectiveNode(
+            name: 'text',
+            expression: '$content',
+            children: [$element],
+            line: 1,
+            column: 1,
+        );
+
+        $result = $compiler->compile($node, $this->createContext());
+
+        $this->assertCount(1, $result);
+        $this->assertInstanceOf(ElementNode::class, $result[0]);
+        $this->assertCount(1, $result[0]->children);
+        $this->assertInstanceOf(OutputNode::class, $result[0]->children[0]);
+    }
+
+    public function testCompileReturnsOutputAndChildrenForControlFlowCase(): void
+    {
+        $compiler = new ContentDirective(escape: true);
+
+        $node = new DirectiveNode(
+            name: 'text',
+            expression: '$content',
+            children: [new TextNode('Keep', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $result = $compiler->compile($node, $this->createContext());
+
+        $this->assertCount(2, $result);
+        $this->assertInstanceOf(OutputNode::class, $result[0]);
+        $this->assertInstanceOf(TextNode::class, $result[1]);
     }
 }

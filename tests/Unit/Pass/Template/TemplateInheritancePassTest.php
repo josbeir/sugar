@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Pass\Template;
 
+use ReflectionMethod;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
@@ -971,6 +972,27 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
             unlink($this->inheritanceFixturesPath . '/circular-a.sugar.php');
             unlink($this->inheritanceFixturesPath . '/circular-b.sugar.php');
         }
+    }
+
+    public function testThrowsOnCircularInheritanceWithoutExtendsElement(): void
+    {
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->withChild($this->createText('Content'))
+                    ->build(),
+            )
+            ->build();
+
+        $context = $this->createTestContext('home.sugar.php', '<div>Content</div>');
+        $loadedTemplates = ['home.sugar.php'];
+
+        $method = new ReflectionMethod(TemplateInheritancePass::class, 'process');
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Circular template inheritance detected');
+
+        $method->invokeArgs($this->pass, [$document, $context, &$loadedTemplates]);
     }
 
     public function testThrowsOnTemplateNotFound(): void

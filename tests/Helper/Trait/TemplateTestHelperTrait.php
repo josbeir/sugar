@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Trait;
 
 use RuntimeException;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Loader\FileTemplateLoader;
 
 /**

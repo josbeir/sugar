@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Trait\ForeachLoopTrait;
 use Sugar\Directive\Trait\WrapperModeTrait;

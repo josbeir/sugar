@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Context;
+namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Exception\SyntaxException;
 
 /**

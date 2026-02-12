@@ -7,8 +7,8 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
-use Sugar\Context\CompilationContext;
 use Sugar\Exception\Helper\DidYouMean;
 use Sugar\Extension\DirectiveRegistryInterface;
 

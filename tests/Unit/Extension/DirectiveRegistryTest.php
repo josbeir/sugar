@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Exception\UnknownDirectiveException;

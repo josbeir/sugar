@@ -5,7 +5,7 @@ namespace Sugar\Directive;
 
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\HtmlAttributeHelper;

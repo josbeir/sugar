@@ -10,7 +10,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 
 /**
  * Executes compiler passes in a single AST traversal.

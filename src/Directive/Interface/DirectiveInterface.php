@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Directive\Interface;
 
 use Sugar\Ast\Node;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Enum\DirectiveType;
 
 /**
@@ -22,7 +22,7 @@ interface DirectiveInterface
      * but accepts Node to maintain contravariance.
      *
      * @param \Sugar\Ast\DirectiveNode $node The directive node to compile
-     * @param \Sugar\Context\CompilationContext $context Compilation context for error reporting
+     * @param \Sugar\Compiler\CompilationContext $context Compilation context for error reporting
      * @return array<\Sugar\Ast\Node> The compiled AST nodes
      */
     public function compile(Node $node, CompilationContext $context): array;

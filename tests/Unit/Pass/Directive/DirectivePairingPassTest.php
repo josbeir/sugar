@@ -5,9 +5,9 @@ namespace Sugar\Tests\Unit\Pass\Directive;
 
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\Node;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ForelseDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\SwitchDirective;

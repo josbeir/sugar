@@ -13,10 +13,11 @@ use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\AstPipeline;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\SugarConfig;
-use Sugar\Context\CompilationContext;
 use Sugar\Directive\ClassDirective;
 use Sugar\Directive\ContentDirective;
 use Sugar\Directive\ForeachDirective;
@@ -81,6 +82,66 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
             ->containsDirective('if')
             ->withExpression('$user')
             ->hasChildCount(1);
+    }
+
+    public function testBeforeReplacesElementNodeWithDirective(): void
+    {
+        $context = $this->createTestContext();
+        $pipelineContext = new PipelineContext($context, null, 0);
+
+        $this->pass->before($this->document()->build(), $pipelineContext);
+
+        $element = $this->element('div')
+            ->attribute('s:if', '$show')
+            ->withChild($this->text('Content', 1, 1))
+            ->build();
+
+        $action = $this->pass->before($element, $pipelineContext);
+
+        $this->assertNotNull($action->replaceWith);
+        $this->assertInstanceOf(DirectiveNode::class, $action->replaceWith[0]);
+        $this->assertSame('if', $action->replaceWith[0]->name);
+    }
+
+    public function testBeforeReplacesComponentNodeWithDirective(): void
+    {
+        $context = $this->createTestContext();
+        $pipelineContext = new PipelineContext($context, null, 0);
+
+        $this->pass->before($this->document()->build(), $pipelineContext);
+
+        $component = $this->component(
+            'alert',
+            [$this->attribute('s:if', '$show')],
+            [$this->text('Content', 1, 1)],
+        );
+
+        $action = $this->pass->before($component, $pipelineContext);
+
+        $this->assertNotNull($action->replaceWith);
+        $this->assertInstanceOf(DirectiveNode::class, $action->replaceWith[0]);
+        $this->assertSame('if', $action->replaceWith[0]->name);
+    }
+
+    public function testBeforeReplacesFragmentNodeWithDirective(): void
+    {
+        $context = $this->createTestContext();
+        $pipelineContext = new PipelineContext($context, null, 0);
+
+        $this->pass->before($this->document()->build(), $pipelineContext);
+
+        $fragment = $this->fragment(
+            attributes: [$this->attribute('s:if', '$show')],
+            children: [$this->text('Content', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $action = $this->pass->before($fragment, $pipelineContext);
+
+        $this->assertNotNull($action->replaceWith);
+        $this->assertInstanceOf(DirectiveNode::class, $action->replaceWith[0]);
+        $this->assertSame('if', $action->replaceWith[0]->name);
     }
 
     public function testNoWrapRequiresContentDirective(): void
