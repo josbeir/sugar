@@ -44,6 +44,6 @@ Avoid exposing exception details in production responses. Log them instead.
 
 ## Debug Tips
 
-- Enable debug mode to add source location comments to compiled templates.
+- Enable debug mode while developing to improve diagnostics and cache refresh behavior.
 - Check includes and component paths when you see missing template exceptions.
 - Verify directive registration if you hit `UnknownDirectiveException`.

@@ -67,7 +67,7 @@ Here are two common shapes for `DirectiveInterface` directives.
 ```php [Content directive]
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 
@@ -94,7 +94,7 @@ final class BadgeDirective implements DirectiveInterface
 ```php [Attribute directive]
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
-use Sugar\Context\CompilationContext;
+use Sugar\Compiler\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
 

@@ -356,19 +356,19 @@ Disable debug mode in production to avoid repeated filesystem checks.
 
 ## Debug Mode
 
-Debug mode makes compiled output easier to trace back to the original template source. It is designed for development and should be disabled in production.
+Debug mode enables development-focused diagnostics and safe cache invalidation checks. It is designed for development and should be disabled in production.
 
 ::: tip
 Turn on debug mode when you are inspecting compiled templates or troubleshooting template output.
 :::
 
 ::: info
-When you toggle debug mode, Sugar recompiles templates so compiled output matches the selected mode (debug comments are not reused in production renders).
+When you toggle debug mode, Sugar recompiles templates so cache artifacts always match the selected mode.
 :::
 
 ### Enable Debug Mode
 
-Enable debug mode to add source location comments to compiled templates:
+Enable debug mode during local development:
 
 ```php
 $engine = Engine::builder()
@@ -379,21 +379,12 @@ $engine = Engine::builder()
 
 ### What You Get
 
-With debug mode enabled, compiled templates include source location comments that help you map back to the original file and line number.
-
-::: code-group
-```php [Compiled]
-<?php /* sugar: templates/pages/home.sugar.php:12 */ ?>
-<h1><?= \Sugar\Escape\Escaper::html($title) ?></h1>
-```
-
-```html [Template]
-<h1><?= $title ?></h1>
-```
-:::
+- Better error location metadata during compile/runtime failures.
+- Cleaner interaction with the HTML exception renderer when configured.
+- Cache behavior tuned for iterative template development.
 
 ::: warning
-Disable debug mode in production to avoid extra filesystem checks and template metadata in output.
+Disable debug mode in production to avoid extra filesystem checks.
 :::
 
 ## AST Reference
