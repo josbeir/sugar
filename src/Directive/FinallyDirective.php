@@ -7,7 +7,6 @@ use Sugar\Ast\Node;
 use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
-use Sugar\Exception\SyntaxException;
 
 /**
  * Compiler for s:finally directive
@@ -22,11 +21,9 @@ final class FinallyDirective implements DirectiveInterface
      */
     public function compile(Node $node, CompilationContext $context): array
     {
-        throw $context->createException(
-            SyntaxException::class,
+        throw $context->createSyntaxExceptionForNode(
             's:finally must follow s:try',
-            $node->line,
-            $node->column,
+            $node,
         );
     }
 

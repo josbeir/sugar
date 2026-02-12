@@ -10,7 +10,6 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Context\CompilationContext;
 use Sugar\Exception\Helper\DidYouMean;
-use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 
 /**
@@ -70,9 +69,9 @@ final readonly class UnknownDirectiveValidator
             return;
         }
 
-        throw $context->createException(
-            SyntaxException::class,
+        throw $context->createSyntaxExceptionForAttribute(
             $this->buildUnknownDirectiveMessage($name),
+            $attr,
             $attr->line,
             $this->directiveColumn($attr),
         );

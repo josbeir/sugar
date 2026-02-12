@@ -25,7 +25,6 @@ use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
-use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 use Sugar\Pass\Directive\Helper\UnknownDirectiveValidator;
@@ -249,11 +248,9 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 // Directive expressions must be static strings
                 if (!$attr->value->isStatic() && !$attr->value->isBoolean()) {
-                    throw $this->context->createException(
-                        SyntaxException::class,
+                    throw $this->context->createSyntaxExceptionForAttribute(
                         'Directive attributes cannot contain dynamic output expressions',
-                        $attr->line,
-                        $attr->column,
+                        $attr,
                     );
                 }
 
@@ -305,8 +302,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                         $compiler,
                         $name,
                         $expression,
-                        $attr->line,
-                        $attr->column,
+                        $attr,
                         $remainingAttrs,
                     ),
                 };
@@ -315,15 +311,13 @@ final class DirectiveExtractionPass implements AstPassInterface
                 if ($type === DirectiveType::CONTROL_FLOW) {
                     $controlFlowCount++;
                     if ($controlFlowCount > 1) {
-                        throw $this->context->createException(
-                            SyntaxException::class,
+                        throw $this->context->createSyntaxExceptionForAttribute(
                             'Only one control flow directive allowed per element. ' .
                             'Nest elements to combine directives. Example: ' .
                             '<div ' . $this->prefixHelper->getPrefix() . ':if="$condition">' .
                             '<div ' . $this->prefixHelper->getPrefix() . ':foreach="$items as $item">...</div>' .
                             '</div>',
-                            $attr->line,
-                            $attr->column,
+                            $attr,
                         );
                     }
                 }
@@ -331,13 +325,11 @@ final class DirectiveExtractionPass implements AstPassInterface
                 if ($type === DirectiveType::CONTENT) {
                     $contentCount++;
                     if ($contentCount > 1) {
-                        throw $this->context->createException(
-                            SyntaxException::class,
+                        throw $this->context->createSyntaxExceptionForAttribute(
                             'Only one content directive allowed per element. ' .
                             'Use either ' . $this->prefixHelper->getPrefix() . ':text or ' .
                             $this->prefixHelper->getPrefix() . ':html, not both.',
-                            $attr->line,
-                            $attr->column,
+                            $attr,
                         );
                     }
                 }
@@ -347,16 +339,28 @@ final class DirectiveExtractionPass implements AstPassInterface
         }
 
         if ($wrapContentElementDirective !== null && $contentDirective === null) {
-            throw $this->context->createException(
-                SyntaxException::class,
+            if ($wrapContentElementAttr instanceof AttributeNode) {
+                throw $this->context->createSyntaxExceptionForAttribute(
+                    sprintf(
+                        'The s:%s directive requires a content directive like %s:text or %s:html on the same element.',
+                        $wrapContentElementDirective,
+                        $this->prefixHelper->getPrefix(),
+                        $this->prefixHelper->getPrefix(),
+                    ),
+                    $wrapContentElementAttr,
+                    $wrapContentElementAttr->line,
+                    $wrapContentElementAttr->column,
+                );
+            }
+
+            throw $this->context->createSyntaxExceptionForNode(
                 sprintf(
                     'The s:%s directive requires a content directive like %s:text or %s:html on the same element.',
                     $wrapContentElementDirective,
                     $this->prefixHelper->getPrefix(),
                     $this->prefixHelper->getPrefix(),
                 ),
-                $wrapContentElementAttr->line ?? $node->line,
-                $wrapContentElementAttr->column ?? $node->column,
+                $node,
             );
         }
 
@@ -430,12 +434,16 @@ final class DirectiveExtractionPass implements AstPassInterface
 
             // Wrap in fragment if we have prefix nodes
             if ($prefixNodes !== []) {
-                return new FragmentNode(
+                $fragment = new FragmentNode(
                     attributes: [],
                     children: [...$prefixNodes, $currentNode],
                     line: $node->line,
                     column: $node->column,
                 );
+
+                $fragment->inheritTemplatePathFrom($node);
+
+                return $fragment;
             }
 
             return $currentNode;
@@ -449,11 +457,9 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If content directive requests no wrapper, return it without the element
         if ($directives['content'] !== null && $directives['wrapContentElement'] === false) {
             if ($directives['remaining'] !== []) {
-                throw $this->context->createException(
-                    SyntaxException::class,
+                throw $this->context->createSyntaxExceptionForNode(
                     'Content directives without a wrapper cannot include other attributes.',
-                    $node->line,
-                    $node->column,
+                    $node,
                 );
             }
 
@@ -465,17 +471,21 @@ final class DirectiveExtractionPass implements AstPassInterface
                 line: $node->line,
                 column: $node->column,
             );
+            $contentNode->inheritTemplatePathFrom($node);
 
             if ($directives['controlFlow'] !== null) {
                 $controlDir = $directives['controlFlow'];
-
-                return new DirectiveNode(
+                $controlNode = new DirectiveNode(
                     name: $controlDir['name'],
                     expression: $controlDir['expression'],
                     children: [$contentNode],
                     line: $node->line,
                     column: $node->column,
                 );
+
+                $controlNode->inheritTemplatePathFrom($node);
+
+                return $controlNode;
             }
 
             return $contentNode;
@@ -484,15 +494,15 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there's a content directive, wrap it as a DirectiveNode in children
         if ($directives['content'] !== null) {
             $contentDir = $directives['content'];
-            $transformedChildren = [
-                new DirectiveNode(
-                    name: $contentDir['name'],
-                    expression: $contentDir['expression'],
-                    children: $transformedChildren,
-                    line: $node->line,
-                    column: $node->column,
-                ),
-            ];
+            $contentWrapper = new DirectiveNode(
+                name: $contentDir['name'],
+                expression: $contentDir['expression'],
+                children: $transformedChildren,
+                line: $node->line,
+                column: $node->column,
+            );
+            $contentWrapper->inheritTemplatePathFrom($node);
+            $transformedChildren = [$contentWrapper];
         }
 
         // Create element without control flow directive but keep attribute directives
@@ -501,27 +511,34 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there's a control flow directive, wrap everything in it
         if ($directives['controlFlow'] !== null) {
             $controlDir = $directives['controlFlow'];
-
-            return new DirectiveNode(
+            $controlNode = new DirectiveNode(
                 name: $controlDir['name'],
                 expression: $controlDir['expression'],
                 children: [$wrappedElement],
                 line: $node->line,
                 column: $node->column,
             );
+
+            $controlNode->inheritTemplatePathFrom($node);
+
+            return $controlNode;
         }
 
         // Only content directive - return it directly
         // This is guaranteed non-null due to the check above
         assert($directives['content'] !== null);
 
-        return new DirectiveNode(
+        $contentNode = new DirectiveNode(
             name: $directives['content']['name'],
             expression: $directives['content']['expression'],
             children: [$wrappedElement],
             line: $node->line,
             column: $node->column,
         );
+
+        $contentNode->inheritTemplatePathFrom($node);
+
+        return $contentNode;
     }
 
     /**
@@ -554,13 +571,17 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there's a control flow directive, wrap everything in it
         $controlDir = $directives['controlFlow'];
 
-        return new DirectiveNode(
+        $controlNode = new DirectiveNode(
             name: $controlDir['name'],
             expression: $controlDir['expression'],
             children: [$wrappedComponent],
             line: $node->line,
             column: $node->column,
         );
+
+        $controlNode->inheritTemplatePathFrom($node);
+
+        return $controlNode;
     }
 
     /**
@@ -585,11 +606,9 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 // Directive expressions must be static strings
                 if (!$attr->value->isStatic() && !$attr->value->isBoolean()) {
-                    throw $this->context->createException(
-                        SyntaxException::class,
+                    throw $this->context->createSyntaxExceptionForAttribute(
                         'Directive attributes cannot contain dynamic output expressions',
-                        $attr->line,
-                        $attr->column,
+                        $attr,
                     );
                 }
 
@@ -600,16 +619,14 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $compiler = $this->registry->get($name);
 
                 if ($compiler instanceof ContentWrappingDirectiveInterface) {
-                    throw $this->context->createException(
-                        SyntaxException::class,
+                    throw $this->context->createSyntaxExceptionForAttribute(
                         sprintf(
                             'The s:%s directive can only be used on elements with %s:text or %s:html.',
                             $name,
                             $this->prefixHelper->getPrefix(),
                             $this->prefixHelper->getPrefix(),
                         ),
-                        $attr->line,
-                        $attr->column,
+                        $attr,
                     );
                 }
 
@@ -629,24 +646,20 @@ final class DirectiveExtractionPass implements AstPassInterface
                         'name' => $name,
                         'expression' => $expression,
                     ],
-                    DirectiveType::ATTRIBUTE => throw $this->context->createException(
-                        SyntaxException::class,
+                    DirectiveType::ATTRIBUTE => throw $this->context->createSyntaxExceptionForAttribute(
                         sprintf('<s-template> cannot have attribute directives like s:%s. ', $name) .
                             'Only control flow and content directives are allowed.',
-                        $attr->line,
-                        $attr->column,
+                        $attr,
                     ),
                 };
             } elseif (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
                 // These are processed by TemplateInheritancePass before DirectiveExtractionPass
-                throw $this->context->createException(
-                    SyntaxException::class,
+                throw $this->context->createSyntaxExceptionForAttribute(
                     sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
                         'Only s: directives and template inheritance attributes ' .
                         '(s:block, s:include, etc.) are allowed.',
-                    $attr->line,
-                    $attr->column,
+                    $attr,
                 );
             }
         }
@@ -657,42 +670,49 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there's a content directive, wrap it as a DirectiveNode in children
         if ($contentDirective !== null) {
             $contentDir = $contentDirective;
-            $transformedChildren = [
-                new DirectiveNode(
-                    name: $contentDir['name'],
-                    expression: $contentDir['expression'],
-                    children: $transformedChildren,
-                    line: $node->line,
-                    column: $node->column,
-                ),
-            ];
+            $contentWrapper = new DirectiveNode(
+                name: $contentDir['name'],
+                expression: $contentDir['expression'],
+                children: $transformedChildren,
+                line: $node->line,
+                column: $node->column,
+            );
+            $contentWrapper->inheritTemplatePathFrom($node);
+            $transformedChildren = [$contentWrapper];
         }
 
         // If there's a control flow directive, wrap children directly in it
         // Fragments don't need a wrapper element - their children render directly
         if ($controlFlowDirective !== null) {
             $controlDir = $controlFlowDirective;
-
-            return new DirectiveNode(
+            $controlNode = new DirectiveNode(
                 name: $controlDir['name'],
                 expression: $controlDir['expression'],
                 children: $transformedChildren,
                 line: $node->line,
                 column: $node->column,
             );
+
+            $controlNode->inheritTemplatePathFrom($node);
+
+            return $controlNode;
         }
 
         // Only content directive - return it directly
         // This is guaranteed non-null due to the check above
         assert($contentDirective !== null);
 
-        return new DirectiveNode(
+        $contentNode = new DirectiveNode(
             name: $contentDirective['name'],
             expression: $contentDirective['expression'],
             children: $transformedChildren,
             line: $node->line,
             column: $node->column,
         );
+
+        $contentNode->inheritTemplatePathFrom($node);
+
+        return $contentNode;
     }
 
     /**
@@ -704,16 +724,14 @@ final class DirectiveExtractionPass implements AstPassInterface
      * @param \Sugar\Directive\Interface\DirectiveInterface $compiler Directive compiler
      * @param string $name Directive name
      * @param string $expression Directive expression
-     * @param int $line Line number
-     * @param int $column Column number
+     * @param \Sugar\Ast\AttributeNode $attr Attribute node for origin metadata
      * @param array<\Sugar\Ast\AttributeNode> &$remainingAttrs Reference to remaining attributes array
      */
     private function compileAttributeDirective(
         DirectiveInterface $compiler,
         string $name,
         string $expression,
-        int $line,
-        int $column,
+        AttributeNode $attr,
         array &$remainingAttrs,
     ): void {
         // Create a temporary DirectiveNode for compilation
@@ -721,9 +739,10 @@ final class DirectiveExtractionPass implements AstPassInterface
             name: $name,
             expression: $expression,
             children: [],
-            line: $line,
-            column: $column,
+            line: $attr->line,
+            column: $attr->column,
         );
+        $directiveNode->inheritTemplatePathFrom($attr);
 
         // Compile the directive - attribute directives return nodes that represent attribute output
         $compiledNodes = $compiler->compile($directiveNode, $this->context);
@@ -743,33 +762,43 @@ final class DirectiveExtractionPass implements AstPassInterface
                 // Named attribute format - extract name and value
                 $attrName = $matches[1];
                 $attrValue = $matches[2];
-                $remainingAttrs[] = new AttributeNode(
-                    name: $attrName,
-                    value: AttributeValue::output(new OutputNode(
-                        expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $attrValue)),
-                        escape: false, // Already handled by the directive compiler
-                        context: OutputContext::HTML_ATTRIBUTE,
-                        line: $line,
-                        column: $column,
-                    )),
-                    line: $line,
-                    column: $column,
+                $outputNode = new OutputNode(
+                    expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $attrValue)),
+                    escape: false, // Already handled by the directive compiler
+                    context: OutputContext::HTML_ATTRIBUTE,
+                    line: $attr->line,
+                    column: $attr->column,
                 );
+                $outputNode->inheritTemplatePathFrom($attr);
+
+                $newAttr = new AttributeNode(
+                    name: $attrName,
+                    value: AttributeValue::output($outputNode),
+                    line: $attr->line,
+                    column: $attr->column,
+                );
+                $newAttr->inheritTemplatePathFrom($attr);
+                $remainingAttrs[] = $newAttr;
             } else {
                 // Spread format - raw output without name
                 // Empty name signals to code generator to output directly
-                $remainingAttrs[] = new AttributeNode(
-                    name: '',
-                    value: AttributeValue::output(new OutputNode(
-                        expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $node->code)),
-                        escape: false,
-                        context: OutputContext::HTML_ATTRIBUTE,
-                        line: $line,
-                        column: $column,
-                    )),
-                    line: $line,
-                    column: $column,
+                $outputNode = new OutputNode(
+                    expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $node->code)),
+                    escape: false,
+                    context: OutputContext::HTML_ATTRIBUTE,
+                    line: $attr->line,
+                    column: $attr->column,
                 );
+                $outputNode->inheritTemplatePathFrom($attr);
+
+                $newAttr = new AttributeNode(
+                    name: '',
+                    value: AttributeValue::output($outputNode),
+                    line: $attr->line,
+                    column: $attr->column,
+                );
+                $newAttr->inheritTemplatePathFrom($attr);
+                $remainingAttrs[] = $newAttr;
             }
         }
     }

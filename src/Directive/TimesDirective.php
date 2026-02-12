@@ -11,7 +11,6 @@ use Sugar\Context\CompilationContext;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Trait\WrapperModeTrait;
 use Sugar\Enum\DirectiveType;
-use Sugar\Exception\SyntaxException;
 use Sugar\Util\Hash;
 
 /**
@@ -97,11 +96,9 @@ readonly class TimesDirective implements DirectiveInterface
         if ($rawExpression === '') {
             $message = 'times directive requires a count expression.';
 
-            throw $context->createException(
-                SyntaxException::class,
+            throw $context->createSyntaxExceptionForNode(
                 $message,
-                $node->line,
-                $node->column,
+                $node,
             );
         }
 
@@ -111,11 +108,9 @@ readonly class TimesDirective implements DirectiveInterface
         if ($countExpression === '') {
             $message = 'times directive requires a count expression.';
 
-            throw $context->createException(
-                SyntaxException::class,
+            throw $context->createSyntaxExceptionForNode(
                 $message,
-                $node->line,
-                $node->column,
+                $node,
             );
         }
 
@@ -125,11 +120,9 @@ readonly class TimesDirective implements DirectiveInterface
             if (!preg_match('/^\$[a-zA-Z_]\w*$/', $indexVar)) {
                 $message = 'times directive index must be a valid variable name.';
 
-                throw $context->createException(
-                    SyntaxException::class,
+                throw $context->createSyntaxExceptionForNode(
                     $message,
-                    $node->line,
-                    $node->column,
+                    $node,
                 );
             }
 
@@ -146,11 +139,15 @@ readonly class TimesDirective implements DirectiveInterface
      */
     private function buildForOpening(Node $node, string $countExpression, string $indexVar): RawPhpNode
     {
-        return new RawPhpNode(
+        $rawNode = new RawPhpNode(
             sprintf('for (%s = 0; %s < (%s); %s++):', $indexVar, $indexVar, $countExpression, $indexVar),
             $node->line,
             $node->column,
         );
+
+        $rawNode->inheritTemplatePathFrom($node);
+
+        return $rawNode;
     }
 
     /**
@@ -158,6 +155,9 @@ readonly class TimesDirective implements DirectiveInterface
      */
     private function buildForClosing(Node $node): RawPhpNode
     {
-        return new RawPhpNode('endfor;', $node->line, $node->column);
+        $rawNode = new RawPhpNode('endfor;', $node->line, $node->column);
+        $rawNode->inheritTemplatePathFrom($node);
+
+        return $rawNode;
     }
 }

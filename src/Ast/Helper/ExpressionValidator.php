@@ -89,7 +89,7 @@ final class ExpressionValidator
         // Throw exception with context if available
         if ($message !== null) {
             if ($compilationContext instanceof CompilationContext && $line !== null && $column !== null) {
-                throw $compilationContext->createException(SyntaxException::class, $message, $line, $column);
+                throw $compilationContext->createSyntaxException($message, $line, $column);
             }
 
             throw new SyntaxException($message);

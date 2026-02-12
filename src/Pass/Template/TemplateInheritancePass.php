@@ -17,7 +17,6 @@ use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Context\CompilationContext;
 use Sugar\Enum\BlockMergeMode;
-use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -128,8 +127,25 @@ final class TemplateInheritancePass implements AstPassInterface
             $line = $extendsAttr instanceof AttributeNode ? $extendsAttr->line : $extendsElement?->line;
             $column = $extendsAttr instanceof AttributeNode ? $extendsAttr->column : $extendsElement?->column;
 
-            throw $context->createException(
-                SyntaxException::class,
+            if ($extendsAttr instanceof AttributeNode) {
+                throw $context->createSyntaxExceptionForAttribute(
+                    sprintf('Circular template inheritance detected: %s', implode(' -> ', $chain)),
+                    $extendsAttr,
+                    $line,
+                    $column,
+                );
+            }
+
+            if ($extendsElement instanceof ElementNode || $extendsElement instanceof FragmentNode) {
+                throw $context->createSyntaxExceptionForNode(
+                    sprintf('Circular template inheritance detected: %s', implode(' -> ', $chain)),
+                    $extendsElement,
+                    $line,
+                    $column,
+                );
+            }
+
+            throw $context->createSyntaxException(
                 sprintf('Circular template inheritance detected: %s', implode(' -> ', $chain)),
                 $line,
                 $column,
@@ -266,6 +282,15 @@ final class TemplateInheritancePass implements AstPassInterface
         $parentContent = $this->loader->load($resolvedPath);
         $parentDocument = $this->getOrParseTemplate($resolvedPath, $parentContent);
 
+        // Create new context for parent template
+        $parentContext = new CompilationContext(
+            templatePath: $resolvedPath,
+            source: $parentContent,
+            debug: $context->debug,
+            tracker: $context->tracker,
+        );
+        $parentContext->stampTemplatePath($parentDocument);
+
         // Resolve includes in child before merging so relative paths use the child template path
         $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates);
 
@@ -274,14 +299,6 @@ final class TemplateInheritancePass implements AstPassInterface
 
         // Replace blocks in parent
         $parentDocument = $this->replaceBlocks($parentDocument, $childBlocks);
-
-        // Create new context for parent template
-        $parentContext = new CompilationContext(
-            templatePath: $resolvedPath,
-            source: $parentContent,
-            debug: $context->debug,
-            tracker: $context->tracker,
-        );
 
         // Recursively process parent (for multi-level inheritance)
         return $this->process($parentDocument, $parentContext, $loadedTemplates);
@@ -330,6 +347,13 @@ final class TemplateInheritancePass implements AstPassInterface
                     source: $includeContent,
                     debug: $context->debug,
                     tracker: $context->tracker,
+                );
+                $includeContext->stampTemplatePath($includeDocument);
+
+                $this->unknownDirectiveValidator->validateUnknownDirectivesInNodes(
+                    $includeDocument->children,
+                    $includeContext,
+                    false,
                 );
 
                 // Process includes recursively
@@ -586,9 +610,18 @@ final class TemplateInheritancePass implements AstPassInterface
             $line = $attr instanceof AttributeNode ? $attr->line : $node->line;
             $column = $attr instanceof AttributeNode ? $attr->column : $node->column;
 
-            throw $context->createException(
-                SyntaxException::class,
+            if ($attr instanceof AttributeNode) {
+                throw $context->createSyntaxExceptionForAttribute(
+                    'Only one of s:block, s:append, or s:prepend is allowed on a single element.',
+                    $attr,
+                    $line,
+                    $column,
+                );
+            }
+
+            throw $context->createSyntaxExceptionForNode(
                 'Only one of s:block, s:append, or s:prepend is allowed on a single element.',
+                $node,
                 $line,
                 $column,
             );

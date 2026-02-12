@@ -81,6 +81,7 @@ final class Compiler implements CompilerInterface
 
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
+        $context->stampTemplatePath($ast);
 
         return $this->compileAst(
             $ast,
@@ -111,6 +112,7 @@ final class Compiler implements CompilerInterface
         );
 
         $ast = $this->parser->parse($templateContent);
+        $context->stampTemplatePath($ast);
 
         $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
         $variantAdjustments = new ComponentVariantAdjustmentPass($slotVars);

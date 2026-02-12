@@ -24,7 +24,7 @@ final class NodeCloner
      */
     public static function withChildren(ElementNode $node, array $newChildren): ElementNode
     {
-        return new ElementNode(
+        $cloned = new ElementNode(
             tag: $node->tag,
             attributes: $node->attributes,
             children: $newChildren,
@@ -33,6 +33,10 @@ final class NodeCloner
             column: $node->column,
             dynamicTag: $node->dynamicTag,
         );
+
+        $cloned->inheritTemplatePathFrom($node);
+
+        return $cloned;
     }
 
     /**
@@ -48,7 +52,7 @@ final class NodeCloner
         array $newAttributes,
         array $newChildren,
     ): ElementNode {
-        return new ElementNode(
+        $cloned = new ElementNode(
             tag: $node->tag,
             attributes: $newAttributes,
             children: $newChildren,
@@ -57,6 +61,10 @@ final class NodeCloner
             column: $node->column,
             dynamicTag: $node->dynamicTag,
         );
+
+        $cloned->inheritTemplatePathFrom($node);
+
+        return $cloned;
     }
 
     /**
@@ -68,13 +76,17 @@ final class NodeCloner
      */
     public static function fragmentWithChildren(FragmentNode $node, array $newChildren): FragmentNode
     {
-        return new FragmentNode(
+        $cloned = new FragmentNode(
             attributes: $node->attributes,
             children: $newChildren,
             line: $node->line,
             column: $node->column,
             selfClosing: $node->selfClosing,
         );
+
+        $cloned->inheritTemplatePathFrom($node);
+
+        return $cloned;
     }
 
     /**
@@ -86,12 +98,16 @@ final class NodeCloner
      */
     public static function fragmentWithAttributes(FragmentNode $node, array $newAttributes): FragmentNode
     {
-        return new FragmentNode(
+        $cloned = new FragmentNode(
             attributes: $newAttributes,
             children: $node->children,
             line: $node->line,
             column: $node->column,
             selfClosing: $node->selfClosing,
         );
+
+        $cloned->inheritTemplatePathFrom($node);
+
+        return $cloned;
     }
 }

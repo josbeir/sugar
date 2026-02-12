@@ -70,4 +70,48 @@ final class CompilationContextIntegrationTest extends TestCase
             throw $syntaxException; // Re-throw for expectException
         }
     }
+
+    public function testIncludeExceptionUsesIncludedTemplatePath(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'pages/home.sugar.php' => '<div s:include="../partials/bad.sugar.php"></div>',
+                'partials/bad.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
+            ],
+        );
+
+        $this->expectException(SyntaxException::class);
+
+        try {
+            $this->compiler->compile(
+                $this->templateLoader->load('pages/home.sugar.php'),
+                'pages/home.sugar.php',
+            );
+        } catch (SyntaxException $syntaxException) {
+            $exceptionString = (string)$syntaxException;
+            $this->assertStringContainsString('template: partials/bad.sugar.php', $exceptionString);
+
+            throw $syntaxException;
+        }
+    }
+
+    public function testComponentExceptionUsesComponentTemplatePath(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            components: [
+                'widget' => '<s-template s:class="\'oops\'"></s-template>',
+            ],
+        );
+
+        $this->expectException(SyntaxException::class);
+
+        try {
+            $this->compiler->compile('<s-widget></s-widget>', 'pages/home.sugar.php');
+        } catch (SyntaxException $syntaxException) {
+            $exceptionString = (string)$syntaxException;
+            $this->assertStringContainsString('template: components/widget.sugar.php', $exceptionString);
+
+            throw $syntaxException;
+        }
+    }
 }

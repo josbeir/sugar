@@ -8,7 +8,6 @@ use Sugar\Ast\Node;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Exception\SyntaxException;
 use Sugar\Exception\UnknownDirectiveException;
 use Sugar\Extension\DirectiveRegistryInterface;
 
@@ -58,11 +57,9 @@ final class DirectiveCompilationPass implements AstPassInterface
         try {
             $compiler = $this->registry->get($node->name);
         } catch (UnknownDirectiveException $unknownDirectiveException) {
-            throw $context->compilation->createException(
-                SyntaxException::class,
+            throw $context->compilation->createSyntaxExceptionForNode(
                 $unknownDirectiveException->getMessage(),
-                $node->line,
-                $node->column,
+                $node,
             );
         }
 

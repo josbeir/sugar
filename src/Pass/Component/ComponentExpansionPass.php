@@ -145,6 +145,7 @@ final class ComponentExpansionPass implements AstPassInterface
             $context->debug ?? false,
             $context?->tracker,
         );
+        $inheritanceContext->stampTemplatePath($templateAst);
         // Process template inheritance and directives in component template
         $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
 
@@ -181,12 +182,16 @@ final class ComponentExpansionPass implements AstPassInterface
 
         // If component has control flow directives, wrap in FragmentNode
         if ($categorized->controlFlow !== []) {
-            return [new FragmentNode(
+            $fragment = new FragmentNode(
                 attributes: $categorized->controlFlow,
                 children: $expandedContent,
                 line: $component->line,
                 column: $component->column,
-            )];
+            );
+
+            $fragment->inheritTemplatePathFrom($component);
+
+            return [$fragment];
         }
 
         return $expandedContent;
@@ -251,7 +256,7 @@ final class ComponentExpansionPass implements AstPassInterface
         if ($value === null || $value === '') {
             $message = 'Component name must be a non-empty string.';
             if ($context instanceof CompilationContext) {
-                throw $context->createException(SyntaxException::class, $message, $attr->line, $attr->column);
+                throw $context->createSyntaxExceptionForAttribute($message, $attr);
             }
 
             throw new SyntaxException($message);
@@ -262,16 +267,20 @@ final class ComponentExpansionPass implements AstPassInterface
 
         $literalName = $this->normalizeComponentName($value);
         if ($literalName !== null) {
-            return new ComponentNode(
+            $componentNode = new ComponentNode(
                 name: $literalName,
                 attributes: $attributes,
                 children: $node->children,
                 line: $node->line,
                 column: $node->column,
             );
+
+            $componentNode->inheritTemplatePathFrom($node);
+
+            return $componentNode;
         }
 
-        return $this->createRuntimeComponentCall(
+        $runtimeCall = $this->createRuntimeComponentCall(
             nameExpression: $value,
             attributes: $attributes,
             children: $node->children,
@@ -279,6 +288,10 @@ final class ComponentExpansionPass implements AstPassInterface
             column: $node->column,
             context: $context,
         );
+
+        $runtimeCall->inheritTemplatePathFrom($node);
+
+        return $runtimeCall;
     }
 
     /**
@@ -332,11 +345,9 @@ final class ComponentExpansionPass implements AstPassInterface
                     $this->prefixHelper->buildName('bind'),
                 );
                 if ($context instanceof CompilationContext) {
-                    throw $context->createException(
-                        SyntaxException::class,
+                    throw $context->createSyntaxExceptionForAttribute(
                         $message,
-                        $bindAttribute->line,
-                        $bindAttribute->column,
+                        $bindAttribute,
                     );
                 }
 
@@ -349,11 +360,9 @@ final class ComponentExpansionPass implements AstPassInterface
                     $this->prefixHelper->buildName('bind'),
                 );
                 if ($context instanceof CompilationContext) {
-                    throw $context->createException(
-                        SyntaxException::class,
+                    throw $context->createSyntaxExceptionForAttribute(
                         $message,
-                        $bindAttribute->line,
-                        $bindAttribute->column,
+                        $bindAttribute,
                     );
                 }
 
@@ -468,12 +477,14 @@ final class ComponentExpansionPass implements AstPassInterface
                 if ($existingClass->isStatic() && $newClass->isStatic()) {
                     $existingValue = $existingClass->static ?? '';
                     $newValue = $newClass->static ?? '';
-                    $existingAttrs['class'] = new AttributeNode(
+                    $mergedAttr = new AttributeNode(
                         'class',
                         AttributeValue::static(trim($existingValue . ' ' . $newValue)),
                         $attr->line,
                         $attr->column,
                     );
+                    $mergedAttr->inheritTemplatePathFrom($attr);
+                    $existingAttrs['class'] = $mergedAttr;
                 } else {
                     // If either is not a string (e.g., OutputNode), just override
                     $existingAttrs[$attr->name] = $attr;
@@ -524,11 +535,9 @@ final class ComponentExpansionPass implements AstPassInterface
                     $this->prefixHelper->buildName('bind'),
                 );
                 if ($context instanceof CompilationContext) {
-                    throw $context->createException(
-                        SyntaxException::class,
+                    throw $context->createSyntaxExceptionForAttribute(
                         $message,
-                        $bindAttribute->line,
-                        $bindAttribute->column,
+                        $bindAttribute,
                     );
                 }
 
@@ -541,11 +550,9 @@ final class ComponentExpansionPass implements AstPassInterface
                     $this->prefixHelper->buildName('bind'),
                 );
                 if ($context instanceof CompilationContext) {
-                    throw $context->createException(
-                        SyntaxException::class,
+                    throw $context->createSyntaxExceptionForAttribute(
                         $message,
-                        $bindAttribute->line,
-                        $bindAttribute->column,
+                        $bindAttribute,
                     );
                 }
 
