@@ -7,6 +7,7 @@ use PhpParser\Error;
 use PhpParser\ParserFactory;
 use PHPUnit\Framework\TestCase;
 use Sugar\Compiler\CompilationContext;
+use Sugar\Compiler\Compiler;
 use Sugar\Compiler\PhpSyntaxValidator;
 use Sugar\Escape\Escaper;
 use Sugar\Exception\ComponentNotFoundException;
@@ -237,7 +238,7 @@ final class CompilerTest extends TestCase
             debug: true,
         );
 
-        $validator = new PhpSyntaxValidator(enabled: true);
+        $validator = new PhpSyntaxValidator();
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Generated PHP validation failed');
@@ -253,12 +254,20 @@ final class CompilerTest extends TestCase
             return;
         }
 
+        $validationCompiler = new Compiler(
+            parser: $this->parser,
+            escaper: $this->escaper,
+            registry: $this->registry,
+            templateLoader: $this->templateLoader,
+            phpSyntaxValidationEnabled: true,
+        );
+
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Invalid PHP expression');
         $this->expectExceptionMessage('inline-template');
         $this->expectExceptionMessage('line:1');
 
-        $this->compiler->compile('<div><?= $value + ?></div>', null, true);
+        $validationCompiler->compile('<div><?= $value + ?></div>', null, true);
     }
 
     public function testCompileThrowsSyntaxExceptionForInvalidRawPhpDuringGeneratedValidation(): void
@@ -269,10 +278,18 @@ final class CompilerTest extends TestCase
             return;
         }
 
+        $validationCompiler = new Compiler(
+            parser: $this->parser,
+            escaper: $this->escaper,
+            registry: $this->registry,
+            templateLoader: $this->templateLoader,
+            phpSyntaxValidationEnabled: true,
+        );
+
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Generated PHP validation failed');
 
-        $this->compiler->compile("\n<?php echo ; ?>", null, true);
+        $validationCompiler->compile("\n<?php echo ; ?>", null, true);
     }
 
     public function testCompileComponentThrowsWhenComponentMissing(): void

@@ -263,13 +263,44 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
      */
     private function frameSignature(array $frame): string
     {
-        return implode('|', [
+        $parts = [
             $this->frameValueAsString($frame, 'file'),
             $this->frameValueAsString($frame, 'line'),
             $this->frameValueAsString($frame, 'class'),
             $this->frameValueAsString($frame, 'type'),
             $this->frameValueAsString($frame, 'function'),
-        ]);
+        ];
+
+        if ($this->traceIncludeArguments && array_key_exists('args', $frame)) {
+            $parts[] = $this->frameArgumentsSignature($frame['args']);
+        }
+
+        return implode('|', $parts);
+    }
+
+    /**
+     * Build a compact signature for frame arguments.
+     */
+    private function frameArgumentsSignature(mixed $args): string
+    {
+        if (!is_array($args)) {
+            return get_debug_type($args);
+        }
+
+        $parts = [];
+        foreach ($args as $index => $arg) {
+            $key = (string)$index;
+            $type = get_debug_type($arg);
+
+            if ($arg === null || is_scalar($arg)) {
+                $parts[] = $key . '=' . $type . ':' . $arg;
+                continue;
+            }
+
+            $parts[] = $key . '=' . $type;
+        }
+
+        return implode(',', $parts);
     }
 
     /**

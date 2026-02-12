@@ -31,6 +31,8 @@ final class Compiler implements CompilerInterface
 
     private readonly PhpSyntaxValidator $phpSyntaxValidator;
 
+    private readonly bool $phpSyntaxValidationEnabled;
+
     /**
      * Constructor
      *
@@ -49,13 +51,14 @@ final class Compiler implements CompilerInterface
         TemplateLoaderInterface $templateLoader,
         ?SugarConfig $config = null,
         array $customPasses = [],
-        bool $phpSyntaxValidationEnabled = true,
+        bool $phpSyntaxValidationEnabled = false,
     ) {
         $config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
         $this->registry = $registry;
         $this->templateLoader = $templateLoader;
-        $this->phpSyntaxValidator = new PhpSyntaxValidator($phpSyntaxValidationEnabled);
+        $this->phpSyntaxValidationEnabled = $phpSyntaxValidationEnabled;
+        $this->phpSyntaxValidator = new PhpSyntaxValidator();
         $this->pipelineFactory = new CompilerPipelineFactory(
             $this->templateLoader,
             $this->parser,
@@ -86,7 +89,9 @@ final class Compiler implements CompilerInterface
         // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
         $context->stampTemplatePath($ast);
-        $this->phpSyntaxValidator->templateSegments($ast, $context);
+        if ($this->phpSyntaxValidationEnabled) {
+            $this->phpSyntaxValidator->templateSegments($ast, $context);
+        }
 
         return $this->compileAst(
             $ast,
@@ -118,7 +123,9 @@ final class Compiler implements CompilerInterface
 
         $ast = $this->parser->parse($templateContent);
         $context->stampTemplatePath($ast);
-        $this->phpSyntaxValidator->templateSegments($ast, $context);
+        if ($this->phpSyntaxValidationEnabled) {
+            $this->phpSyntaxValidator->templateSegments($ast, $context);
+        }
 
         $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
         $variantAdjustments = new ComponentVariantAdjustmentPass($slotVars);
@@ -168,7 +175,9 @@ final class Compiler implements CompilerInterface
         // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
         $compiledCode = $generator->generate($analyzedAst);
-        $this->phpSyntaxValidator->generated($compiledCode, $context);
+        if ($this->phpSyntaxValidationEnabled) {
+            $this->phpSyntaxValidator->generated($compiledCode, $context);
+        }
 
         return $compiledCode;
     }
