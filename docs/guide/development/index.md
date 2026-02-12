@@ -38,6 +38,28 @@ $engine = Engine::builder($config)
 `withDebug(true)` enables file timestamp checks for development. Disable it in production for best performance.
 :::
 
+### Optional PHP Syntax Validation
+
+Sugar can run optional parser-based PHP syntax validation during compilation for earlier diagnostics.
+
+```php
+use Sugar\Engine;
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDebug(true)
+    ->withPhpSyntaxValidation(true)
+    ->build();
+```
+
+- Requires `nikic/php-parser` (optional dependency).
+- Validation runs only when debug mode is enabled.
+- When disabled (or when debug is off), Sugar relies on runtime PHP parse errors and wraps them as `CompilationException`.
+
+::: tip
+Use syntax validation in local development for faster feedback, then keep it off in production.
+:::
+
 ### Exception Rendering
 
 <!-- @include: ./_partials/exception-renderer-preview.md -->
@@ -380,6 +402,7 @@ $engine = Engine::builder()
 ### What You Get
 
 - Better error location metadata during compile/runtime failures.
+- Optional parser-based syntax diagnostics when `withPhpSyntaxValidation(true)` is enabled.
 - Cleaner interaction with the HTML exception renderer when configured.
 - Cache behavior tuned for iterative template development.
 

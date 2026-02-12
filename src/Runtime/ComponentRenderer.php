@@ -4,10 +4,12 @@ declare(strict_types=1);
 namespace Sugar\Runtime;
 
 use Closure;
+use ParseError;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Compiler\Compiler;
+use Sugar\Exception\CompilationException;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Loader\TemplateLoaderInterface;
 
@@ -193,7 +195,12 @@ final class ComponentRenderer
      */
     private function execute(string $compiledPath, array $data): string
     {
-        $fn = include $compiledPath;
+        try {
+            $fn = include $compiledPath;
+        } catch (ParseError $parseError) {
+            throw CompilationException::fromCompiledComponentParseError($compiledPath, $parseError);
+        }
+
         if ($fn instanceof Closure) {
             if ($this->templateContext !== null) {
                 $fn = $fn->bindTo($this->templateContext);

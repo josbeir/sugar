@@ -4,6 +4,8 @@ Sugar ships with a custom HTML exception renderer that produces a polished, them
 
 The renderer uses the template loader to fetch the source.
 
+Consecutive identical stack frames are automatically collapsed in the rendered trace to reduce recursion noise.
+
 ```php
 use Sugar\Engine;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;

@@ -9,6 +9,7 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
 use Sugar\Config\SugarConfig;
 use Sugar\Engine;
+use Sugar\Exception\CompilationException;
 use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
@@ -212,5 +213,42 @@ PHP
         $result = $boundExecute($engine, $compiledPath, $data, null);
 
         $this->assertSame('', $result);
+    }
+
+    public function testExecuteWrapsParseErrorAsCompilationException(): void
+    {
+        $engine = $this->createStringEngine([
+            'broken.sugar.php' => '<p>ignored</p>',
+        ]);
+
+        $compiledPath = $this->cacheDir . '/broken.php';
+        file_put_contents(
+            $compiledPath,
+            <<<'PHP'
+<?php
+return function (array $data): string {
+    if (
+};
+PHP
+            ,
+        );
+
+        $invokeExecute = static function (
+            Engine $engine,
+            string $path,
+            array $data,
+            ?DependencyTracker $tracker,
+        ): string {
+            /** @phpstan-ignore-next-line */
+            return $engine->execute($path, $data, $tracker);
+        };
+        $boundExecute = $invokeExecute->bindTo(null, Engine::class);
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled template contains invalid PHP');
+
+        /** @var array<string, mixed> $data */
+        $data = [];
+        $boundExecute($engine, $compiledPath, $data, null);
     }
 }

@@ -10,6 +10,7 @@ use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
 use Sugar\Config\SugarConfig;
+use Sugar\Exception\CompilationException;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Loader\StringTemplateLoader;
 use Sugar\Runtime\ComponentRenderer;
@@ -248,6 +249,23 @@ PHP,
         $output = $renderer->renderComponent(name: 'alert');
 
         $this->assertSame('', $output);
+    }
+
+    public function testRenderComponentWrapsParseErrorAsCompilationException(): void
+    {
+        $renderer = $this->createRendererWithCachedTemplate(
+            <<<'PHP'
+<?php
+return function (array $data): string {
+    if (
+};
+PHP,
+        );
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled component contains invalid PHP');
+
+        $renderer->renderComponent(name: 'alert');
     }
 
     private function createRenderer(

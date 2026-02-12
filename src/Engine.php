@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar;
 
 use Closure;
+use ParseError;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
@@ -162,7 +163,12 @@ final class Engine implements EngineInterface
 
         try {
             // Include the compiled file and execute the closure
-            $fn = include $compiledPath;
+            try {
+                $fn = include $compiledPath;
+            } catch (ParseError $parseError) {
+                throw CompilationException::fromCompiledTemplateParseError($compiledPath, $parseError);
+            }
+
             if ($fn instanceof Closure) {
                 // Bind to template context if provided (enables $this->helper() calls)
                 if ($this->templateContext !== null) {
