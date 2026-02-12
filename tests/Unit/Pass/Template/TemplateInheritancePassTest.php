@@ -1010,6 +1010,27 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $this->execute($document, $this->createTestContext('', 'home.sugar.php'));
     }
 
+    public function testThrowsWhenExtendsIsNestedInsideBlock(): void
+    {
+        $document = $this->document()
+            ->withChildren([
+                $this->element('main')
+                    ->attribute('s:block', 'content')
+                    ->withChild(
+                        $this->element('div')
+                            ->attribute('s:extends', '../layouts/base.sugar.php')
+                            ->build(),
+                    )
+                    ->build(),
+            ])
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:extends is only allowed on root-level template elements.');
+
+        $this->execute($document, $this->createTestContext('', 'pages/home.sugar.php'));
+    }
+
     public function testRelativePathResolution(): void
     {
         // Existing fixture at layouts/base.sugar.php

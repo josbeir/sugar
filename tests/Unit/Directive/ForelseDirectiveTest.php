@@ -8,6 +8,7 @@ use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ForelseDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Enum\DirectiveType;
+use Sugar\Exception\SyntaxException;
 use Sugar\Runtime\EmptyHelper;
 
 final class ForelseDirectiveTest extends DirectiveTestCase
@@ -149,5 +150,19 @@ final class ForelseDirectiveTest extends DirectiveTestCase
         $this->assertAst($result)
             ->hasPhpCode('LoopMetadata(range(1, 10)')
             ->hasPhpCode('foreach (range(1, 10) as $num):');
+    }
+
+    public function testCompileForelseThrowsForMissingIterationExpression(): void
+    {
+        $node = $this->directive('forelse')
+            ->expression('true')
+            ->withChild($this->text('Item'))
+            ->at(1, 1)
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:forelse requires an expression like "$items as $item".');
+
+        $this->directiveCompiler->compile($node, $this->createTestContext());
     }
 }

@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Directive;
 
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Exception\SyntaxException;
 
 final class ForeachDirectiveTest extends DirectiveTestCase
 {
@@ -50,5 +51,18 @@ final class ForeachDirectiveTest extends DirectiveTestCase
             ->hasCount(8)
             ->hasPhpCode('LoopMetadata($users')
             ->hasPhpCode('foreach ($users as $id => $user):');
+    }
+
+    public function testCompileForeachThrowsForMissingIterationExpression(): void
+    {
+        $node = $this->directive('foreach')
+            ->expression('true')
+            ->withChild($this->text('Item'))
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:foreach requires an expression like "$items as $item".');
+
+        $this->directiveCompiler->compile($node, $this->createTestContext());
     }
 }

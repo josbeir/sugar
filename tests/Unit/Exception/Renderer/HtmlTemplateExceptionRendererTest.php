@@ -159,11 +159,74 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $this->assertStringContainsString('Sugar stack trace', $output);
     }
 
+    public function testFormatTraceHonorsMaxFrames(): void
+    {
+        $loader = $this->createLoader();
+        $exception = $this->createExceptionWithTraceFrames();
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            traceMaxFrames: 1,
+        );
+
+        $output = $renderer->formatTrace($exception);
+
+        $this->assertSame(2, substr_count($output, '<li>'));
+        $this->assertStringContainsString('trace truncated', $output);
+    }
+
+    public function testFormatTraceCanIncludeArguments(): void
+    {
+        $loader = $this->createLoader();
+        $exception = $this->createExceptionWithTraceFrames();
+
+        $renderer = new HtmlTemplateExceptionRenderer(
+            loader: $loader,
+            traceIncludeArguments: true,
+            traceArgumentMaxLength: 5,
+        );
+
+        $output = $renderer->formatTrace($exception);
+
+        $this->assertStringContainsString('(...)', $output);
+        $this->assertStringContainsString('secondTraceFrame', $output);
+    }
+
     /**
      * @param array<string, string> $templates
      */
     private function createLoader(array $templates = []): StringTemplateLoader
     {
         return new StringTemplateLoader(templates: $templates);
+    }
+
+    private function createExceptionWithTraceFrames(): Exception
+    {
+        try {
+            $this->firstTraceFrame('abcdef', ['key' => 'value', 'other' => 1]);
+        } catch (Exception $exception) {
+            return $exception;
+        }
+
+        throw new Exception('Unable to generate trace frames');
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function firstTraceFrame(string $value, array $payload): void
+    {
+        $this->secondTraceFrame($value, $payload);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function secondTraceFrame(string $value, array $payload): void
+    {
+        $key = $payload['key'] ?? null;
+        $suffix = is_string($key) ? $key : '';
+
+        throw new Exception($value . ':' . $suffix, previous: new Exception('previous'));
     }
 }

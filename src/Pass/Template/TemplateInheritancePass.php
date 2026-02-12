@@ -104,6 +104,7 @@ final class TemplateInheritancePass implements AstPassInterface
         array &$loadedTemplates,
     ): DocumentNode {
         $this->unknownDirectiveValidator->validateUnknownDirectivesInNodes($document->children, $context, false);
+        $this->validateExtendsPlacement($document, $context);
 
         if ($context->blocks !== null) {
             $document = $this->processIncludes($document, $context, $loadedTemplates);
@@ -229,6 +230,58 @@ final class TemplateInheritancePass implements AstPassInterface
                 AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('extends'))
             ) {
                 return $child;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Ensure s:extends is only used on root-level elements/fragments.
+     */
+    private function validateExtendsPlacement(DocumentNode $document, CompilationContext $context): void
+    {
+        foreach ($document->children as $child) {
+            if (!($child instanceof ElementNode) && !($child instanceof FragmentNode)) {
+                continue;
+            }
+
+            $nested = $this->findNestedExtendsInChildren($child->children);
+            if (!($nested instanceof ElementNode) && !($nested instanceof FragmentNode)) {
+                continue;
+            }
+
+            $extendsAttr = AttributeHelper::findAttribute(
+                $nested->attributes,
+                $this->prefixHelper->buildName('extends'),
+            );
+
+            $message = 's:extends is only allowed on root-level template elements.';
+            if ($extendsAttr instanceof AttributeNode) {
+                throw $context->createSyntaxExceptionForAttribute($message, $extendsAttr);
+            }
+
+            throw $context->createSyntaxExceptionForNode($message, $nested);
+        }
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node> $children
+     */
+    private function findNestedExtendsInChildren(array $children): ElementNode|FragmentNode|null
+    {
+        foreach ($children as $child) {
+            if (!($child instanceof ElementNode) && !($child instanceof FragmentNode)) {
+                continue;
+            }
+
+            if (AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('extends'))) {
+                return $child;
+            }
+
+            $nested = $this->findNestedExtendsInChildren($child->children);
+            if ($nested instanceof ElementNode || $nested instanceof FragmentNode) {
+                return $nested;
             }
         }
 

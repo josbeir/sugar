@@ -73,6 +73,8 @@ class ForeachDirective implements DirectiveInterface
      */
     public function compile(Node $node, CompilationContext $context): array
     {
+        $this->validateExpression($node, $context);
+
         // Check if we should use wrapper mode (element as container)
         if ($this->shouldUseWrapperMode($node)) {
             $wrapper = $this->getWrapperElement($node);
@@ -90,5 +92,22 @@ class ForeachDirective implements DirectiveInterface
     public function getType(): DirectiveType
     {
         return DirectiveType::CONTROL_FLOW;
+    }
+
+    /**
+     * Ensure foreach-like directives have a valid iteration expression.
+     *
+     * @param \Sugar\Ast\DirectiveNode $node
+     */
+    protected function validateExpression(Node $node, CompilationContext $context): void
+    {
+        $expression = trim($node->expression);
+
+        if ($expression === '' || !preg_match('/^.+\s+as\s+.+$/i', $expression)) {
+            throw $context->createSyntaxExceptionForNode(
+                sprintf('s:%s requires an expression like "$items as $item".', $node->name),
+                $node,
+            );
+        }
     }
 }

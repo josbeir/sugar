@@ -37,11 +37,19 @@ $renderer = new HtmlTemplateExceptionRenderer(
 	loader: $loader,
 	includeStyles: true,
 	wrapDocument: false,
+	traceMaxFrames: 20,
+	traceIncludeArguments: false,
+	traceArgumentMaxLength: 80,
+	traceIncludeInternalFrames: false,
 );
 ```
 
 - `includeStyles`: Toggle the inline CSS theme. Set to `false` if you want to provide your own styles.
 - `wrapDocument`: Wrap the output in a full HTML document (`<!doctype html>`, `html`, `body`). Useful when you return the renderer output directly as a response body.
+- `traceMaxFrames`: Maximum number of stack frames shown (`0` means unlimited).
+- `traceIncludeArguments`: Include function arguments in each trace frame.
+- `traceArgumentMaxLength`: Max string length per rendered argument.
+- `traceIncludeInternalFrames`: Include frames without file/line metadata.
 
 ::: tip
 Exception rendering only applies when debug mode is enabled and a `CompilationException` is thrown during rendering. In production, disable debug mode and handle exceptions with standard error pages.

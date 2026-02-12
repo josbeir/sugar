@@ -22,6 +22,7 @@ use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
+use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
@@ -124,7 +125,16 @@ final class ComponentExpansionPass implements AstPassInterface
         bool $slotsExpanded = false,
     ): array {
         // Load component template
-        $templateContent = $this->loader->loadComponent($component->name);
+        try {
+            $templateContent = $this->loader->loadComponent($component->name);
+        } catch (ComponentNotFoundException $componentNotFoundException) {
+            $message = $componentNotFoundException->getRawMessage();
+            if ($context instanceof CompilationContext) {
+                throw $context->createSyntaxExceptionForNode($message, $component);
+            }
+
+            throw new SyntaxException($message);
+        }
 
         // Track component as dependency
         $context?->tracker?->addComponent($this->loader->getComponentFilePath($component->name));

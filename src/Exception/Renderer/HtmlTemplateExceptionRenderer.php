@@ -19,12 +19,20 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
      * @param \Sugar\Exception\Renderer\TemplateHighlightFormatter $formatter Highlight formatter
      * @param bool $includeStyles Include inline CSS output
      * @param bool $wrapDocument Wrap output in a full HTML document
+     * @param int $traceMaxFrames Maximum number of stack frames to render (0 = unlimited)
+     * @param bool $traceIncludeArguments Include function arguments in stack trace
+     * @param int $traceArgumentMaxLength Maximum string length per argument value
+     * @param bool $traceIncludeInternalFrames Include frames without file/line metadata
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
         private readonly TemplateHighlightFormatter $formatter = new TemplateHighlightFormatter(),
         private readonly bool $includeStyles = true,
         private readonly bool $wrapDocument = false,
+        private readonly int $traceMaxFrames = 20,
+        private readonly bool $traceIncludeArguments = false,
+        private readonly int $traceArgumentMaxLength = 80,
+        private readonly bool $traceIncludeInternalFrames = false,
     ) {
     }
 
@@ -137,8 +145,27 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             return '';
         }
 
-        $items = [];
+        $frames = [];
         foreach ($trace as $frame) {
+            if (!$this->traceIncludeInternalFrames && !isset($frame['file'])) {
+                continue;
+            }
+
+            $frames[] = $frame;
+        }
+
+        if ($frames === []) {
+            return '';
+        }
+
+        $truncated = false;
+        if ($this->traceMaxFrames > 0 && count($frames) > $this->traceMaxFrames) {
+            $frames = array_slice($frames, 0, $this->traceMaxFrames);
+            $truncated = true;
+        }
+
+        $items = [];
+        foreach ($frames as $index => $frame) {
             $file = $frame['file'] ?? '[internal]';
             if (isset($frame['line'])) {
                 $file .= ':' . $frame['line'];
@@ -150,14 +177,28 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             }
 
             $call .= $frame['function'] ?? 'unknown';
-            $call .= '()';
+            if ($this->traceIncludeArguments) {
+                if (array_key_exists('args', $frame) && is_array($frame['args'])) {
+                    $call .= '(' . $this->formatArguments($frame['args']) . ')';
+                } else {
+                    $call .= '(...)';
+                }
+            } else {
+                $call .= '()';
+            }
 
             $items[] = sprintf(
-                '<li><span class="sugar-exception-trace-file">%s</span> ' .
+                '<li><span class="sugar-exception-trace-index">#%d</span> ' .
+                '<span class="sugar-exception-trace-file">%s</span> ' .
                 '<span class="sugar-exception-trace-call">%s</span></li>',
+                $index,
                 htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
                 htmlspecialchars($call, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             );
+        }
+
+        if ($truncated) {
+            $items[] = '<li><span class="sugar-exception-trace-file">… trace truncated</span></li>';
         }
 
         return '<details class="sugar-exception-trace">' .
@@ -166,6 +207,76 @@ final class HtmlTemplateExceptionRenderer implements TemplateExceptionRendererIn
             implode("\n", $items) .
             '</ol>' .
             '</details>';
+    }
+
+    /**
+     * @param array<mixed> $args
+     */
+    private function formatArguments(array $args): string
+    {
+        if ($args === []) {
+            return '';
+        }
+
+        $formatted = [];
+        foreach ($args as $arg) {
+            $formatted[] = $this->formatArgument($arg);
+        }
+
+        return implode(', ', $formatted);
+    }
+
+    /**
+     * Format a single trace argument for display.
+     */
+    private function formatArgument(mixed $arg): string
+    {
+        if ($arg === null) {
+            return 'null';
+        }
+
+        if (is_bool($arg)) {
+            return $arg ? 'true' : 'false';
+        }
+
+        if (is_int($arg) || is_float($arg)) {
+            return (string)$arg;
+        }
+
+        if (is_string($arg)) {
+            return "'" . $this->truncate($arg, $this->traceArgumentMaxLength) . "'";
+        }
+
+        if (is_array($arg)) {
+            return 'array(' . count($arg) . ')';
+        }
+
+        if (is_object($arg)) {
+            return 'object(' . $arg::class . ')';
+        }
+
+        if (is_resource($arg)) {
+            return 'resource(' . get_resource_type($arg) . ')';
+        }
+
+        return get_debug_type($arg);
+    }
+
+    /**
+     * Truncate a string for safe stack trace argument rendering.
+     */
+    private function truncate(string $value, int $maxLength): string
+    {
+        $maxLength = max(1, $maxLength);
+        if (strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        if ($maxLength === 1) {
+            return '…';
+        }
+
+        return substr($value, 0, $maxLength - 1) . '…';
     }
 
     /**

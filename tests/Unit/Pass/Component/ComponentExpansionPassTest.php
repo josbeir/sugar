@@ -25,7 +25,6 @@ use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\WhileDirective;
 use Sugar\Enum\OutputContext;
-use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Exception\SyntaxException;
 use Sugar\Loader\StringTemplateLoader;
 use Sugar\Runtime\RuntimeEnvironment;
@@ -520,7 +519,7 @@ final class ComponentExpansionPassTest extends TestCase
             )
             ->build();
 
-        $this->expectException(ComponentNotFoundException::class);
+        $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Component "nonexistent" not found');
 
         $this->executePipeline($ast, $this->createContext());
