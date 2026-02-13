@@ -13,7 +13,7 @@ use PhpToken;
  */
 final class Token extends PhpToken
 {
-    public const int T_RAW_BODY = -10001;
+    public const T_RAW_BODY = -10001;
 
     /**
      * Check if this is an HTML/text token outside PHP tags
