@@ -431,15 +431,6 @@ final class PhpSyntaxValidatorTest extends TestCase
         $this->assertSame(2, $spyParser->parseCalls);
     }
 
-    public function testCreateLegacyParserReturnsNullWhenPreferPhp7IsUnavailable(): void
-    {
-        $validator = new PhpSyntaxValidator();
-        $method = new ReflectionMethod($validator, 'createLegacyParser');
-        $result = $method->invoke($validator, new ParserFactory());
-
-        $this->assertNull($result);
-    }
-
     /**
      * @param \PhpParser\Parser|null $parser Parser instance to inject
      */

@@ -6,7 +6,6 @@ namespace Sugar\Compiler;
 use PhpParser\Error;
 use PhpParser\Parser as PhpAstParser;
 use PhpParser\ParserFactory;
-use ReflectionMethod;
 use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
@@ -89,41 +88,19 @@ final class PhpSyntaxValidator
 
         $parserFactory = new ParserFactory();
 
-        $candidates = ['createForHostVersion', 'createForNewestSupportedVersion', 'create'];
+        $candidates = ['createForHostVersion', 'createForNewestSupportedVersion'];
         foreach ($candidates as $method) {
             if (!is_callable([$parserFactory, $method])) {
                 continue;
             }
 
-            $createdParser = $method === 'create'
-                ? $this->createLegacyParser($parserFactory)
-                : $parserFactory->{$method}();
+            $createdParser = $parserFactory->{$method}();
+            $this->cachedParser = $createdParser;
 
-            if ($createdParser instanceof PhpAstParser) {
-                $this->cachedParser = $createdParser;
-
-                return $this->cachedParser;
-            }
+            return $this->cachedParser;
         }
 
         return null;
-    }
-
-    /**
-     * Create parser for legacy parser-factory APIs.
-     */
-    private function createLegacyParser(ParserFactory $parserFactory): ?PhpAstParser
-    {
-        if (!defined(ParserFactory::class . '::PREFER_PHP7')) {
-            return null;
-        }
-
-        /** @var int $preferPhp7 */
-        $preferPhp7 = constant(ParserFactory::class . '::PREFER_PHP7');
-        $method = new ReflectionMethod($parserFactory, 'create');
-        $createdParser = $method->invoke($parserFactory, $preferPhp7);
-
-        return $createdParser instanceof PhpAstParser ? $createdParser : null;
     }
 
     /**
