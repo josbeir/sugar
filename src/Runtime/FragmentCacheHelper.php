@@ -40,19 +40,20 @@ final class FragmentCacheHelper
      * Resolve a TTL value (seconds) from directive options.
      *
      * @param mixed $options Directive expression result
-     * @param int|null $defaultTtl Default TTL in seconds, or null for backend default handling
-     * @return int|null Positive TTL in seconds, 0 for immediate expiry, or null for backend default handling
+     * @param int|null $defaultTtl Default TTL in seconds, or null to pass null to the PSR-16 store
+     * @return int|null Non-negative TTL in seconds, or null to pass null to the PSR-16 store
      */
     public static function resolveTtl(mixed $options, ?int $defaultTtl = null): ?int
     {
-        $ttl = $defaultTtl;
+        $ttl = is_int($defaultTtl) && $defaultTtl >= 0 ? $defaultTtl : null;
 
         if (is_array($options) && array_key_exists('ttl', $options)) {
             $ttlCandidate = $options['ttl'];
             if (is_int($ttlCandidate)) {
-                $ttl = $ttlCandidate;
+                $ttl = $ttlCandidate >= 0 ? $ttlCandidate : $ttl;
             } elseif (is_string($ttlCandidate) && is_numeric($ttlCandidate)) {
-                $ttl = (int)$ttlCandidate;
+                $parsedTtl = (int)$ttlCandidate;
+                $ttl = $parsedTtl >= 0 ? $parsedTtl : $ttl;
             }
         }
 

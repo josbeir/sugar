@@ -12,11 +12,11 @@ use Sugar\Directive\FragmentCacheDirective;
 final readonly class FragmentCacheExtension implements ExtensionInterface
 {
     /**
-     * @param \Psr\SimpleCache\CacheInterface $fragmentCache PSR-16 fragment cache store
-     * @param int|null $defaultTtl Default fragment cache TTL in seconds; null delegates to cache backend defaults
+     * @param \Psr\SimpleCache\CacheInterface|null $fragmentCache PSR-16 fragment cache store
+     * @param int|null $defaultTtl Default fragment cache TTL in seconds; null is passed to the PSR-16 store
      */
     public function __construct(
-        private CacheInterface $fragmentCache,
+        private ?CacheInterface $fragmentCache,
         private ?int $defaultTtl = null,
     ) {
     }

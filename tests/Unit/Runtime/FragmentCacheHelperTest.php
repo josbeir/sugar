@@ -46,6 +46,8 @@ final class FragmentCacheHelperTest extends TestCase
         $this->assertSame(45, FragmentCacheHelper::resolveTtl(['ttl' => '45'], 120));
         $this->assertSame(120, FragmentCacheHelper::resolveTtl(['ttl' => 'not-numeric'], 120));
         $this->assertSame(0, FragmentCacheHelper::resolveTtl(['ttl' => 0], 120));
+        $this->assertSame(120, FragmentCacheHelper::resolveTtl(['ttl' => -5], 120));
+        $this->assertNull(FragmentCacheHelper::resolveTtl(['ttl' => '-5']));
     }
 
     public function testGetReturnsNullWhenNoStoreConfigured(): void

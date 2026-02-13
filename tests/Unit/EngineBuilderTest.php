@@ -297,6 +297,19 @@ final class EngineBuilderTest extends TestCase
         $this->assertSame('<div>Cached</div>', $engine->render('cached-ttl.sugar.php'));
     }
 
+    public function testWithFragmentCacheRejectsNegativeTtlArgument(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+        $fragmentCache = new ArraySimpleCache();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Fragment cache TTL must be greater than or equal to 0');
+
+        (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withFragmentCache($fragmentCache, -1);
+    }
+
     public function testWithoutFragmentCacheStillRendersContent(): void
     {
         $loader = new StringTemplateLoader(new SugarConfig(), [

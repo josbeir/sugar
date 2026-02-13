@@ -26,7 +26,7 @@ final readonly class FragmentCacheDirective implements DirectiveInterface
 {
     /**
      * @param \Psr\SimpleCache\CacheInterface|null $fragmentCache Optional PSR-16 cache store
-     * @param int|null $defaultTtl Default TTL in seconds; null delegates to cache backend defaults
+     * @param int|null $defaultTtl Default TTL in seconds; null is passed to the PSR-16 store
      */
     public function __construct(
         private ?CacheInterface $fragmentCache = null,
@@ -62,7 +62,7 @@ final readonly class FragmentCacheDirective implements DirectiveInterface
             '%s = %s; %s = ' . FragmentCacheHelper::class . '::resolveKey(%s, %s); ' .
             '%s = ' . FragmentCacheHelper::class . '::resolveTtl(%s, %s); ' .
             '%s = ' . FragmentCacheHelper::class . '::get(%s); ' .
-            'if (%s !== null) { echo %s; } else { ob_start();',
+            'if (%s !== null) { echo %s; } else { ob_start(); try {',
             $optionsVar,
             $expression,
             $keyVar,
@@ -78,7 +78,7 @@ final readonly class FragmentCacheDirective implements DirectiveInterface
         );
 
         $closingCode = sprintf(
-            '%s = (string)ob_get_clean(); ' .
+            '} finally { %s = (string)ob_get_clean(); } ' .
             FragmentCacheHelper::class . '::set(%s, %s, %s); ' .
             'echo %s; }',
             $contentVar,

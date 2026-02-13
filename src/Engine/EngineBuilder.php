@@ -172,11 +172,16 @@ final class EngineBuilder
      * Set a fragment cache store for the built-in s:cache directive.
      *
      * @param \Psr\SimpleCache\CacheInterface $fragmentCache Fragment cache store
-     * @param int|null $ttl Default fragment cache TTL in seconds; null delegates to cache backend defaults
+     * @param int|null $ttl Default fragment cache TTL in seconds; null is passed to the PSR-16 store
      * @return $this
+     * @throws \RuntimeException If TTL is negative
      */
     public function withFragmentCache(CacheInterface $fragmentCache, ?int $ttl = null)
     {
+        if ($ttl !== null && $ttl < 0) {
+            throw new RuntimeException('Fragment cache TTL must be greater than or equal to 0');
+        }
+
         $this->fragmentCache = $fragmentCache;
         $this->fragmentCacheTtl = $ttl;
 
@@ -246,14 +251,10 @@ final class EngineBuilder
         // Use provided registry or create new one with defaults
         $registry = $this->registry ?? new DirectiveRegistry();
 
-        $extensions = $this->extensions;
-
-        if ($this->fragmentCache instanceof CacheInterface) {
-            $extensions[] = new FragmentCacheExtension(
-                fragmentCache: $this->fragmentCache,
-                defaultTtl: $this->fragmentCacheTtl,
-            );
-        }
+        $extensions = [new FragmentCacheExtension(
+            fragmentCache: $this->fragmentCache,
+            defaultTtl: $this->fragmentCacheTtl,
+        ), ...$this->extensions];
 
         // Process extensions: register directives and collect custom passes
         $customPasses = [];

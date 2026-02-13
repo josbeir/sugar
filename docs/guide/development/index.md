@@ -408,7 +408,7 @@ $fragmentCache = getYourFragmentCacheStore();
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withFragmentCache($fragmentCache) // default TTL: backend default
+    ->withFragmentCache($fragmentCache) // TTL null is passed to the PSR-16 store
     ->build();
 ```
 

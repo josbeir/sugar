@@ -39,7 +39,9 @@ final class FragmentCacheDirectiveTest extends DirectiveTestCase
         $this->assertInstanceOf(RawPhpNode::class, $result[2]);
         $this->assertStringContainsString('FragmentCacheHelper::resolveKey', $result[0]->code);
         $this->assertStringContainsString('FragmentCacheHelper::get', $result[0]->code);
+        $this->assertStringContainsString('ob_start(); try {', $result[0]->code);
         $this->assertStringContainsString("'users-list'", $result[0]->code);
+        $this->assertStringContainsString('finally {', $result[2]->code);
         $this->assertStringContainsString('FragmentCacheHelper::set', $result[2]->code);
     }
 
