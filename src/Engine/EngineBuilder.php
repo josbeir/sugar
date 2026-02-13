@@ -5,6 +5,7 @@ namespace Sugar\Engine;
 
 use PhpParser\Error;
 use PhpParser\ParserFactory;
+use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
 use Sugar\Cache\FileCache;
 use Sugar\Cache\TemplateCacheInterface;
@@ -17,6 +18,7 @@ use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Extension\DirectiveRegistry;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Extension\ExtensionInterface;
+use Sugar\Extension\FragmentCacheExtension;
 use Sugar\Extension\RegistrationContext;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
@@ -44,6 +46,10 @@ final class EngineBuilder
     private ?object $templateContext = null;
 
     private ?TemplateExceptionRendererInterface $exceptionRenderer = null;
+
+    private ?CacheInterface $fragmentCache = null;
+
+    private ?int $fragmentCacheTtl = null;
 
     /**
      * @var array<\Sugar\Extension\ExtensionInterface>
@@ -163,6 +169,26 @@ final class EngineBuilder
     }
 
     /**
+     * Set a fragment cache store for the built-in s:cache directive.
+     *
+     * @param \Psr\SimpleCache\CacheInterface $fragmentCache Fragment cache store
+     * @param int|null $ttl Default fragment cache TTL in seconds; null is passed to the PSR-16 store
+     * @return $this
+     * @throws \RuntimeException If TTL is negative
+     */
+    public function withFragmentCache(CacheInterface $fragmentCache, ?int $ttl = null)
+    {
+        if ($ttl !== null && $ttl < 0) {
+            throw new RuntimeException('Fragment cache TTL must be greater than or equal to 0');
+        }
+
+        $this->fragmentCache = $fragmentCache;
+        $this->fragmentCacheTtl = $ttl;
+
+        return $this;
+    }
+
+    /**
      * Configure the built-in HTML exception renderer using the current template loader.
      *
      * @param bool $includeStyles Include inline CSS output
@@ -225,9 +251,14 @@ final class EngineBuilder
         // Use provided registry or create new one with defaults
         $registry = $this->registry ?? new DirectiveRegistry();
 
+        $extensions = [new FragmentCacheExtension(
+            fragmentCache: $this->fragmentCache,
+            defaultTtl: $this->fragmentCacheTtl,
+        ), ...$this->extensions];
+
         // Process extensions: register directives and collect custom passes
         $customPasses = [];
-        foreach ($this->extensions as $extension) {
+        foreach ($extensions as $extension) {
             $context = new RegistrationContext();
             $extension->register($context);
 
@@ -256,6 +287,7 @@ final class EngineBuilder
             debug: $this->debug,
             templateContext: $this->templateContext,
             exceptionRenderer: $this->exceptionRenderer,
+            fragmentCache: $this->fragmentCache,
         );
     }
 }

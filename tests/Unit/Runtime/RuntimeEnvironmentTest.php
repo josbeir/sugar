@@ -10,6 +10,7 @@ use Sugar\Exception\TemplateRuntimeException;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
+use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
@@ -32,14 +33,14 @@ final class RuntimeEnvironmentTest extends TestCase
 
     protected function tearDown(): void
     {
-        RuntimeEnvironment::clearRenderer();
+        RuntimeEnvironment::clear();
         $this->cleanupTempDirs();
         parent::tearDown();
     }
 
     public function testGetRendererThrowsWhenUnset(): void
     {
-        RuntimeEnvironment::clearRenderer();
+        RuntimeEnvironment::clear();
 
         $this->expectException(TemplateRuntimeException::class);
 
@@ -58,6 +59,34 @@ final class RuntimeEnvironmentTest extends TestCase
 
         $this->expectException(TemplateRuntimeException::class);
         RuntimeEnvironment::getRenderer();
+    }
+
+    public function testSetAndClearRuntimeEnvironment(): void
+    {
+        $renderer = $this->createRenderer();
+        $fragmentCache = new ArraySimpleCache();
+
+        RuntimeEnvironment::set($renderer, $fragmentCache);
+
+        $this->assertSame($renderer, RuntimeEnvironment::getRenderer());
+        $this->assertSame($fragmentCache, RuntimeEnvironment::getFragmentCache());
+
+        RuntimeEnvironment::clear();
+
+        $this->assertNull(RuntimeEnvironment::getFragmentCache());
+        $this->expectException(TemplateRuntimeException::class);
+        RuntimeEnvironment::getRenderer();
+    }
+
+    public function testSetAndClearFragmentCache(): void
+    {
+        $fragmentCache = new ArraySimpleCache();
+
+        RuntimeEnvironment::setFragmentCache($fragmentCache);
+        $this->assertSame($fragmentCache, RuntimeEnvironment::getFragmentCache());
+
+        RuntimeEnvironment::clearFragmentCache();
+        $this->assertNull(RuntimeEnvironment::getFragmentCache());
     }
 
     private function createRenderer(): ComponentRenderer

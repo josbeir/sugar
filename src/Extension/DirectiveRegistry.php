@@ -174,6 +174,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         // Lazy instantiation: if a class name was registered, instantiate it
         if (is_string($compiler)) {
             $compiler = $this->resolveExtension($compiler, DirectiveInterface::class);
+
             $this->directives[$name] = $compiler; // Cache the instance
         }
 
