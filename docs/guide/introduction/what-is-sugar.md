@@ -27,20 +27,20 @@ These are high-level defaults as commonly described; behavior can vary by versio
 <div class="comparison-table">
 <div class="comparison-table__inner">
 
-| Feature | Sugar | Blade | Twig | Latte | Tempest | Smarty |
-| --- | --- | --- | --- | --- | --- | --- |
-| Learning Curve | PHP + `s:` | Custom | Python-like | PHP-like | PHP + `:attr` | Custom |
-| AST parser | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| Context-aware escaping | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | Optional |
-| Full PHP interop | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: |
-| Scope isolation | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| Layout inheritance | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: |
-| Compiles to PHP | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Components | `s-` files | Class/File | Macros/Embed | N:attributes | `x-` files | Blocks/partials |
-| IDE Support | Native PHP | Plugins | Plugins | Plugins | Native PHP | Plugins |
-| Security | Auto + isolate | Basic HTML | Sandbox mode | Context + Sandbox | Auto + isolate | Auto optional |
-| Debugging | Native traces | Good | Can be hard | Tracy plugin | Native traces | Plugins |
-| Pipes/Filters | Native `\|>` - funcs | Helpers | `\|upper` | `\|upper` | Native funcs | Modifiers |
+| Feature | Sugar | Blade | Twig | Latte | Tempest |
+| --- | --- | --- | --- | --- | --- |
+| Learning Curve | PHP + `s:` | Custom | Python-like | PHP-like | PHP + `:attr` |
+| AST parser | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Context-aware escaping | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: |
+| Full PHP interop | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| Scope isolation | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Layout inheritance | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| Compiles to PHP | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Components | `s-` files | Class/File | Macros/Embed | N:attributes | `x-` files |
+| IDE Support | Native PHP | Plugins | Plugins | Plugins | Native PHP |
+| Security | Auto + isolate | Basic HTML | Sandbox mode | Context + Sandbox | Auto + isolate |
+| Debugging | Native traces | Good | Can be hard | Tracy plugin | Native traces |
+| Pipes/Filters | Native `\|>` - funcs | Helpers | `\|upper` | `\|upper` | Native funcs |
 
 </div>
 </div>

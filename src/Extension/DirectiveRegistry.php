@@ -6,11 +6,11 @@ namespace Sugar\Extension;
 use RuntimeException;
 use Sugar\Directive\BooleanAttributeDirective;
 use Sugar\Directive\ClassDirective;
-use Sugar\Directive\ContentDirective;
 use Sugar\Directive\EmptyDirective;
 use Sugar\Directive\FinallyDirective;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\ForelseDirective;
+use Sugar\Directive\HtmlDirective;
 use Sugar\Directive\IfContentDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
@@ -20,12 +20,12 @@ use Sugar\Directive\PassThroughDirective;
 use Sugar\Directive\SpreadDirective;
 use Sugar\Directive\SwitchDirective;
 use Sugar\Directive\TagDirective;
+use Sugar\Directive\TextDirective;
 use Sugar\Directive\TimesDirective;
 use Sugar\Directive\TryDirective;
 use Sugar\Directive\UnlessDirective;
 use Sugar\Directive\WhileDirective;
 use Sugar\Enum\DirectiveType;
-use Sugar\Enum\OutputContext;
 use Sugar\Exception\Helper\DidYouMean;
 use Sugar\Exception\UnknownDirectiveException;
 
@@ -94,6 +94,9 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         'raw' => PassThroughDirective::class,
         // Content modifiers
         'nowrap' => NoWrapDirective::class,
+        // Content directives
+        'text' => TextDirective::class,
+        'html' => HtmlDirective::class,
     ];
 
     /**
@@ -232,10 +235,6 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         foreach (self::DEFAULT_DIRECTIVES as $name => $compiler) {
             $this->register($name, $compiler);
         }
-
-        // Register instance-based directives (ContentDirective with different configs)
-        $this->register('text', new ContentDirective(escape: true));
-        $this->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
     }
 
     /**
