@@ -63,7 +63,7 @@ ElementNode(tag="a", attributes=[href="/profile"])
 
 ### FragmentNode
 
-Wrapperless node used for `<s-template>` blocks. It renders only its children and can be self-closing for directive-only markup.
+Wrapperless node used for `<s-template>` blocks. It renders only its children, accepts only `s:*` attributes, and can be self-closing for directive-only markup.
 
 Example:
 
@@ -126,6 +126,23 @@ Example:
 RawPhpNode("$count = count($items);")
 ```
 
+### RawBodyNode
+
+Verbatim content preserved from `s:raw` regions. The parser does not interpret the contents, and the compiler emits them as-is.
+
+Example:
+
+```html
+<div s:raw>
+	<?php echo $notParsed; ?>
+	<span><?= $stillRaw ?></span>
+</div>
+```
+
+```text
+RawBodyNode("<?php echo $notParsed; ?>\n    <span><?= $stillRaw ?></span>")
+```
+
 ### DirectiveNode
 
 Structural directives like `s:if`, `s:foreach`, or `s:while`. These nodes wrap child nodes and may carry paired siblings (for directives like `forelse`).
@@ -164,7 +181,7 @@ A runtime call that returns output. Used when a template needs a dynamic runtime
 Example:
 
 ```text
-RuntimeCallNode(callable="$__sugar->renderComponent", arguments=["$name", "$bindings"])
+RuntimeCallNode(callableExpression="$__sugar->renderComponent", arguments=["$name", "$bindings"])
 ```
 
 ### AttributeNode
@@ -206,12 +223,14 @@ href      -> output(OutputNode("$url"))
 class     -> parts(["btn ", OutputNode("$state")])
 ```
 
-Use `AttributeValue::from()` to normalize legacy shapes. `toParts()` returns a parts list for rendering, or `null` for boolean attributes.
+Use `AttributeValue::from()` to normalize legacy shapes (including `null` for boolean attributes). `toParts()` returns a parts list for rendering, or `null` for boolean attributes.
 
 ## Output Context And Escaping
 
 `OutputNode` carries an `OutputContext` enum that tells the escaper how to render the value. The context analysis pass sets the correct context for output nodes in element bodies and attributes.
 
 ## Traversal Notes
+
+All nodes carry source `line` and `column`, and the base `Node` tracks the originating template path for better diagnostics.
 
 Some nodes implement sibling navigation helpers (for example `DocumentNode`, `ElementNode`, `ComponentNode`, and `DirectiveNode`). Use them when writing passes that depend on node order or need adjacent context.

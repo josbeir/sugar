@@ -49,15 +49,4 @@ Bind a set of attributes or props to a component element.
 ```
 :::
 
-### Combined usage
-
-Use `s:bind` and `s:slot` together to pass props and slot content.
-
-```html
-<s-card s:bind="$cardProps">
-    <div s:slot="header">Title</div>
-    <p>Body</p>
-</s-card>
-```
-
 <!--@include: ./_partials/s-raw.md-->
