@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Runtime;
 
-use DateInterval;
 use PHPUnit\Framework\TestCase;
 use Psr\SimpleCache\CacheInterface;
 use RuntimeException;
@@ -78,50 +77,10 @@ final class FragmentCacheHelperTest extends TestCase
 
     public function testGetReturnsNullWhenStoreThrows(): void
     {
-        RuntimeEnvironment::setFragmentCache(new class implements CacheInterface {
-            public function get(string $key, mixed $default = null): mixed
-            {
-                throw new RuntimeException('boom');
-            }
+        $store = $this->createStub(CacheInterface::class);
+        $store->method('get')->willThrowException(new RuntimeException('boom'));
 
-            public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
-            {
-                return true;
-            }
-
-            public function delete(string $key): bool
-            {
-                return true;
-            }
-
-            public function clear(): bool
-            {
-                return true;
-            }
-
-            public function getMultiple(iterable $keys, mixed $default = null): iterable
-            {
-                return [];
-            }
-
-            /**
-             * @param iterable<string, mixed> $values
-             */
-            public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
-            {
-                return true;
-            }
-
-            public function deleteMultiple(iterable $keys): bool
-            {
-                return true;
-            }
-
-            public function has(string $key): bool
-            {
-                return false;
-            }
-        });
+        RuntimeEnvironment::setFragmentCache($store);
 
         $this->assertNull(FragmentCacheHelper::get('users'));
     }
@@ -130,50 +89,10 @@ final class FragmentCacheHelperTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        RuntimeEnvironment::setFragmentCache(new class implements CacheInterface {
-            public function get(string $key, mixed $default = null): mixed
-            {
-                return null;
-            }
+        $store = $this->createStub(CacheInterface::class);
+        $store->method('set')->willThrowException(new RuntimeException('boom'));
 
-            public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
-            {
-                throw new RuntimeException('boom');
-            }
-
-            public function delete(string $key): bool
-            {
-                return true;
-            }
-
-            public function clear(): bool
-            {
-                return true;
-            }
-
-            public function getMultiple(iterable $keys, mixed $default = null): iterable
-            {
-                return [];
-            }
-
-            /**
-             * @param iterable<string, mixed> $values
-             */
-            public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
-            {
-                return true;
-            }
-
-            public function deleteMultiple(iterable $keys): bool
-            {
-                return true;
-            }
-
-            public function has(string $key): bool
-            {
-                return false;
-            }
-        });
+        RuntimeEnvironment::setFragmentCache($store);
 
         FragmentCacheHelper::set('users', '<p>cached</p>', 100);
     }
