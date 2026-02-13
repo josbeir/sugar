@@ -8,6 +8,7 @@ use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\TextNode;
 use Sugar\Compiler\Pipeline\AstPassInterface;
 use Sugar\Compiler\Pipeline\NodeAction;
@@ -49,7 +50,7 @@ final class ContextAnalysisPass implements AstPassInterface
             return NodeAction::none();
         }
 
-        if ($node instanceof TextNode) {
+        if ($node instanceof TextNode || $node instanceof RawBodyNode) {
             return NodeAction::none();
         }
 

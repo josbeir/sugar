@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
-use ReflectionMethod;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Enum\OutputContext;
@@ -379,7 +379,7 @@ final class ParserTest extends TestCase
         $this->assertSame('div', $element->tag);
         $this->assertCount(0, $element->attributes);
         $this->assertCount(1, $element->children);
-        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertInstanceOf(RawBodyNode::class, $element->children[0]);
         $this->assertSame('<?= $var ?>', $element->children[0]->content);
     }
 
@@ -393,7 +393,7 @@ final class ParserTest extends TestCase
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(0, $element->attributes);
         $this->assertCount(1, $element->children);
-        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertInstanceOf(RawBodyNode::class, $element->children[0]);
         $this->assertSame('<?php echo strtoupper($name); ?>', $element->children[0]->content);
     }
 
@@ -406,7 +406,7 @@ final class ParserTest extends TestCase
         $element = $doc->children[0];
         $this->assertInstanceOf(ElementNode::class, $element);
         $this->assertCount(1, $element->children);
-        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertInstanceOf(RawBodyNode::class, $element->children[0]);
         $this->assertSame('<span><?= $name ?></span>', $element->children[0]->content);
     }
 
@@ -423,7 +423,7 @@ final class ParserTest extends TestCase
         $this->assertTrue($element->attributes[0]->value->isStatic());
         $this->assertSame('card', $element->attributes[0]->value->static);
         $this->assertCount(1, $element->children);
-        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertInstanceOf(RawBodyNode::class, $element->children[0]);
         $this->assertSame('<?= $var ?>', $element->children[0]->content);
     }
 
@@ -450,27 +450,6 @@ final class ParserTest extends TestCase
         $this->assertTrue($element->selfClosing);
         $this->assertCount(1, $element->attributes);
         $this->assertSame('src', $element->attributes[0]->name);
-    }
-
-    public function testRestorePlaceholderChildrenReturnsOriginalWhenChildIsNotTextNode(): void
-    {
-        $method = new ReflectionMethod($this->parser, 'restorePlaceholderChildren');
-        $children = [new OutputNode('$value', true, OutputContext::HTML, 1, 1)];
-
-        $result = $method->invoke($this->parser, $children, ['__SUGAR_RAW_TEST__' => 'content']);
-
-        $this->assertSame($children, $result);
-    }
-
-    public function testRestorePlaceholderChildrenReturnsOriginalWhenPlaceholderMissing(): void
-    {
-        $method = new ReflectionMethod($this->parser, 'restorePlaceholderChildren');
-        $children = [new TextNode('__SUGAR_RAW_MISSING__', 1, 1)];
-
-        $result = $method->invoke($this->parser, $children, ['__SUGAR_RAW_OTHER__' => 'content']);
-
-        $this->assertSame($children, $result);
-        $this->assertSame('__SUGAR_RAW_MISSING__', $children[0]->content);
     }
 
     public function testParseRawPhpBlock(): void

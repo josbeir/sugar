@@ -107,12 +107,9 @@ final readonly class HtmlParser
     {
         $pos = $start + 1;
         $len = strlen($html);
-        $tagName = '';
-
-        // Extract tag name (alphanumeric + hyphens for custom elements like s-template)
-        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
-            $tagName .= $html[$pos++];
-        }
+        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $tagName = substr($html, $pos, $nameEnd - $pos);
+        $pos = $nameEnd;
 
         // Skip whitespace
         while ($pos < $len && ctype_space($html[$pos])) {
@@ -190,12 +187,9 @@ final readonly class HtmlParser
     {
         $pos = $start + 2; // Skip </
         $len = strlen($html);
-        $tagName = '';
-
-        // Extract tag name (alphanumeric + hyphens for custom elements)
-        while ($pos < $len && (ctype_alnum($html[$pos]) || $html[$pos] === '-')) {
-            $tagName .= $html[$pos++];
-        }
+        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $tagName = substr($html, $pos, $nameEnd - $pos);
+        $pos = $nameEnd;
 
         // Skip to >
         while ($pos < $len && $html[$pos] !== '>') {
@@ -303,29 +297,11 @@ final readonly class HtmlParser
         $cacheKey = Hash::make($html);
 
         if (!isset($lineStartCache[$cacheKey])) {
-            $starts = [0];
-            $pos = -1;
-            while (($pos = strpos($html, "\n", $pos + 1)) !== false) {
-                $starts[] = $pos + 1;
-            }
-
-            $lineStartCache[$cacheKey] = $starts;
+            $lineStartCache[$cacheKey] = HtmlScanHelper::buildLineStarts($html);
         }
 
         $lineStarts = $lineStartCache[$cacheKey];
-        $low = 0;
-        $high = count($lineStarts) - 1;
-        $lineIndex = 0;
-
-        while ($low <= $high) {
-            $mid = intdiv($low + $high, 2);
-            if ($lineStarts[$mid] <= $offset) {
-                $lineIndex = $mid;
-                $low = $mid + 1;
-            } else {
-                $high = $mid - 1;
-            }
-        }
+        $lineIndex = HtmlScanHelper::findLineIndexFromStarts($lineStarts, $offset);
 
         if ($lineIndex === 0) {
             return [$line, $column + $offset];
