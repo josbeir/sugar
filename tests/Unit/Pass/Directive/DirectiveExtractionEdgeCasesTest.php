@@ -12,6 +12,8 @@ use Sugar\Config\SugarConfig;
 use Sugar\Directive\ClassDirective;
 use Sugar\Directive\ContentDirective;
 use Sugar\Directive\ForeachDirective;
+use Sugar\Directive\FragmentCacheDirective;
+use Sugar\Directive\IfContentDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\NoWrapDirective;
 use Sugar\Enum\OutputContext;
@@ -33,6 +35,8 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
         $registry->register('class', ClassDirective::class);
         $registry->register('text', new ContentDirective(escape: true));
         $registry->register('html', new ContentDirective(escape: false, context: OutputContext::RAW));
+        $registry->register('ifcontent', IfContentDirective::class);
+        $registry->register('cache', FragmentCacheDirective::class);
         $registry->register('nowrap', NoWrapDirective::class);
 
         return new DirectiveExtractionPass($registry, new SugarConfig());
@@ -286,6 +290,21 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
             ->attribute('s:if', '$condition')
             ->attribute('s:foreach', '$items as $item')
             ->withChild($this->text('Content', 1, 50))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    public function testThrowsOnIfContentAndCacheOnSameElement(): void
+    {
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one control flow directive allowed per element');
+
+        $element = $this->element('div')
+            ->attributeNode($this->attributeNode('s:ifcontent', null, 1, 5))
+            ->attributeNode($this->attributeNode('s:cache', null, 1, 18))
+            ->withChild($this->text('Content', 1, 30))
             ->build();
 
         $ast = $this->document()->withChild($element)->build();

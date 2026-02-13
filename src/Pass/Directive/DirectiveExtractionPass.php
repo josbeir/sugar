@@ -276,6 +276,33 @@ final class DirectiveExtractionPass implements AstPassInterface
                     continue;
                 }
 
+                // Count directive types for validation (including custom-extraction directives)
+                if ($type === DirectiveType::CONTROL_FLOW) {
+                    $controlFlowCount++;
+                    if ($controlFlowCount > 1) {
+                        throw $this->context->createSyntaxExceptionForAttribute(
+                            'Only one control flow directive allowed per element. ' .
+                            'Nest elements to combine directives. Example: ' .
+                            '<div ' . $this->prefixHelper->getPrefix() . ':if="$condition">' .
+                            '<div ' . $this->prefixHelper->getPrefix() . ':foreach="$items as $item">...</div>' .
+                            '</div>',
+                            $attr,
+                        );
+                    }
+                }
+
+                if ($type === DirectiveType::CONTENT) {
+                    $contentCount++;
+                    if ($contentCount > 1) {
+                        throw $this->context->createSyntaxExceptionForAttribute(
+                            'Only one content directive allowed per element. ' .
+                            'Use either ' . $this->prefixHelper->getPrefix() . ':text or ' .
+                            $this->prefixHelper->getPrefix() . ':html, not both.',
+                            $attr,
+                        );
+                    }
+                }
+
                 // Check if directive needs custom extraction
                 if ($compiler instanceof ElementAwareDirectiveInterface) {
                     $customExtractionDirectives[] = [
@@ -306,33 +333,6 @@ final class DirectiveExtractionPass implements AstPassInterface
                         $remainingAttrs,
                     ),
                 };
-
-                // Count directive types for validation
-                if ($type === DirectiveType::CONTROL_FLOW) {
-                    $controlFlowCount++;
-                    if ($controlFlowCount > 1) {
-                        throw $this->context->createSyntaxExceptionForAttribute(
-                            'Only one control flow directive allowed per element. ' .
-                            'Nest elements to combine directives. Example: ' .
-                            '<div ' . $this->prefixHelper->getPrefix() . ':if="$condition">' .
-                            '<div ' . $this->prefixHelper->getPrefix() . ':foreach="$items as $item">...</div>' .
-                            '</div>',
-                            $attr,
-                        );
-                    }
-                }
-
-                if ($type === DirectiveType::CONTENT) {
-                    $contentCount++;
-                    if ($contentCount > 1) {
-                        throw $this->context->createSyntaxExceptionForAttribute(
-                            'Only one content directive allowed per element. ' .
-                            'Use either ' . $this->prefixHelper->getPrefix() . ':text or ' .
-                            $this->prefixHelper->getPrefix() . ':html, not both.',
-                            $attr,
-                        );
-                    }
-                }
             } else {
                 $remainingAttrs[] = $attr;
             }
