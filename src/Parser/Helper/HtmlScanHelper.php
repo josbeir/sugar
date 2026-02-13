@@ -90,6 +90,15 @@ final class HtmlScanHelper
 
             if ($quote !== null) {
                 if ($char === $quote) {
+                    $backslashCount = 0;
+                    for ($scan = $offset - 1; $scan >= 0 && $source[$scan] === '\\'; $scan--) {
+                        $backslashCount++;
+                    }
+
+                    if ($backslashCount % 2 === 1) {
+                        continue;
+                    }
+
                     $quote = null;
                 }
 

@@ -48,6 +48,15 @@ final class HtmlScanHelperTest extends TestCase
         $this->assertSame(strlen($tag), $end);
     }
 
+    public function testFindTagEndIgnoresEscapedQuotesInsideAttributes(): void
+    {
+        $tag = "<div data-a=\"foo\\\"bar\" data-b='baz\\'qux'>";
+
+        $end = HtmlScanHelper::findTagEnd($tag, 1);
+
+        $this->assertSame(strlen($tag), $end);
+    }
+
     public function testFindTagEndReturnsNullWhenTagIsUnterminated(): void
     {
         $this->assertNull(HtmlScanHelper::findTagEnd('<div class="x"', 1));
