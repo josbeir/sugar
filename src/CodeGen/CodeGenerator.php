@@ -10,6 +10,7 @@ use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\Ast\TextNode;
@@ -101,6 +102,7 @@ final class CodeGenerator
     {
         match ($node::class) {
             TextNode::class => $this->generateText($node, $buffer),
+            RawBodyNode::class => $this->generateRawBody($node, $buffer),
             OutputNode::class => $this->generateOutput($node, $buffer),
             RawPhpNode::class => $this->generateRawPhp($node, $buffer),
             ElementNode::class => $this->generateElement($node, $buffer),
@@ -131,6 +133,17 @@ final class CodeGenerator
         }
 
         $buffer->write($node->content);
+    }
+
+    /**
+     * Generate verbatim raw-body output.
+     *
+     * @param \Sugar\Ast\RawBodyNode $node Raw body node
+     * @param \Sugar\CodeGen\OutputBuffer $buffer Output buffer
+     */
+    private function generateRawBody(RawBodyNode $node, OutputBuffer $buffer): void
+    {
+        $buffer->write(sprintf('<?php echo %s; ?>', var_export($node->content, true)));
     }
 
     /**

@@ -7,19 +7,18 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
-use Sugar\Ast\Node;
-use Sugar\Ast\TextNode;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
 use Sugar\Parser\Helper\AttributeContinuation;
 use Sugar\Parser\Helper\ClosingTagMarker;
 use Sugar\Parser\Helper\HtmlParser;
+use Sugar\Parser\Helper\HtmlScanHelper;
 use Sugar\Parser\Helper\NodeFactory;
 use Sugar\Parser\Helper\ParserState;
 use Sugar\Parser\Helper\PipeParser;
-use Sugar\Parser\Helper\RawRegionMasker;
 use Sugar\Parser\Helper\TokenStream;
+use Sugar\Runtime\HtmlTagHelper;
 
 final readonly class Parser
 {
@@ -30,8 +29,6 @@ final readonly class Parser
     private HtmlParser $htmlParser;
 
     private NodeFactory $nodeFactory;
-
-    private RawRegionMasker $rawRegionMasker;
 
     /**
      * Constructor
@@ -44,7 +41,6 @@ final readonly class Parser
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
         $this->nodeFactory = new NodeFactory();
         $this->htmlParser = new HtmlParser($this->config, $this->prefixHelper, $this->nodeFactory);
-        $this->rawRegionMasker = new RawRegionMasker($this->config, $this->prefixHelper);
     }
 
     /**
@@ -55,99 +51,291 @@ final readonly class Parser
      */
     public function parse(string $source): DocumentNode
     {
-        $hasRawRegions = $this->rawRegionMasker->hasRawRegions($source);
-        $masked = $hasRawRegions
-            ? $this->rawRegionMasker->mask($source)
-            : [
-                'source' => $source,
-                'placeholders' => [],
-            ];
-
-        $tokens = Token::tokenize($masked['source']);
+        $tokens = $this->tokenizeSource($source);
         $stream = new TokenStream($tokens);
-        $state = new ParserState($stream, $masked['source']);
+        $state = new ParserState($stream, $source);
         $nodes = $this->parseTokens($state);
-
-        if ($hasRawRegions) {
-            $nodes = $this->restoreRawRegions($nodes, $masked['placeholders']);
-        }
 
         return new DocumentNode($nodes);
     }
 
     /**
-     * Restore raw placeholders and strip s:raw marker attributes.
+     * Tokenize source, preserving raw regions as dedicated raw-body tokens.
      *
-     * @param array<\Sugar\Ast\Node> $nodes
-     * @param array<string, string> $placeholders
-     * @return array<\Sugar\Ast\Node>
+     * @return array<\Sugar\Parser\Token>
      */
-    private function restoreRawRegions(array $nodes, array $placeholders): array
+    private function tokenizeSource(string $source): array
     {
-        $rawAttributeName = $this->prefixHelper->buildName('raw');
-
-        foreach ($nodes as $node) {
-            $this->restoreRawNode($node, $rawAttributeName, $placeholders);
+        if (!$this->hasRawRegions($source)) {
+            return Token::tokenize($source);
         }
 
-        return $nodes;
+        $tokens = [];
+        $offset = 0;
+        $rawAttribute = $this->prefixHelper->buildName('raw');
+        $lineStarts = HtmlScanHelper::buildLineStarts($source);
+
+        while (($region = $this->findNextRawRegion($source, $offset, $rawAttribute)) !== null) {
+            $this->appendTokenizedChunk($tokens, $source, $offset, $region['openStart'], $lineStarts);
+            $this->appendInlineHtmlToken($tokens, $source, $region['openStart'], $region['openEnd'], $lineStarts);
+
+            $inner = substr($source, $region['innerStart'], $region['innerEnd'] - $region['innerStart']);
+            $tokens[] = new Token(
+                Token::T_RAW_BODY,
+                $inner,
+                HtmlScanHelper::findLineNumberFromStarts($lineStarts, $region['innerStart']),
+                $region['innerStart'],
+            );
+
+            $this->appendInlineHtmlToken($tokens, $source, $region['closeStart'], $region['closeEnd'], $lineStarts);
+            $offset = $region['closeEnd'];
+        }
+
+        $this->appendTokenizedChunk($tokens, $source, $offset, strlen($source), $lineStarts);
+
+        return $tokens;
     }
 
     /**
-     * @param array<string, string> $placeholders
+     * Determine whether the source may contain raw directive regions.
      */
-    private function restoreRawNode(Node $node, string $rawAttributeName, array $placeholders): void
+    private function hasRawRegions(string $source): bool
     {
-        if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof ComponentNode) {
-            $hadRawAttribute = false;
-            $remainingAttributes = [];
-            foreach ($node->attributes as $attribute) {
-                if ($attribute->name === $rawAttributeName) {
-                    $hadRawAttribute = true;
-                    continue;
+        return str_contains($source, $this->prefixHelper->buildName('raw'));
+    }
+
+    /**
+     * Append tokenized source chunk with corrected absolute line/position metadata.
+     *
+     * @param array<\Sugar\Parser\Token> $tokens
+     * @param array<int, int> $lineStarts
+     */
+    private function appendTokenizedChunk(array &$tokens, string $source, int $start, int $end, array $lineStarts): void
+    {
+        if ($end <= $start) {
+            return;
+        }
+
+        $chunk = substr($source, $start, $end - $start);
+        if ($chunk === '') {
+            return;
+        }
+
+        if (!str_contains($chunk, '<?')) {
+            $tokens[] = new Token(
+                T_INLINE_HTML,
+                $chunk,
+                HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start),
+                $start,
+            );
+
+            return;
+        }
+
+        $baseLine = HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start);
+        foreach (Token::tokenize($chunk) as $token) {
+            $tokens[] = new Token(
+                $token->id,
+                $token->text,
+                $baseLine + $token->line - 1,
+                $start + $token->pos,
+            );
+        }
+    }
+
+    /**
+     * Append an HTML boundary token directly without PHP tokenization overhead.
+     *
+     * @param array<\Sugar\Parser\Token> $tokens
+     * @param array<int, int> $lineStarts
+     */
+    private function appendInlineHtmlToken(
+        array &$tokens,
+        string $source,
+        int $start,
+        int $end,
+        array $lineStarts,
+    ): void {
+        if ($end <= $start) {
+            return;
+        }
+
+        $content = substr($source, $start, $end - $start);
+        if ($content === '') {
+            return;
+        }
+
+        $tokens[] = new Token(
+            T_INLINE_HTML,
+            $content,
+            HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start),
+            $start,
+        );
+    }
+
+    /**
+     * @return array{openStart: int, openEnd: int, innerStart: int, innerEnd: int, closeStart: int, closeEnd: int}|null
+     */
+    private function findNextRawRegion(string $source, int $offset, string $rawAttribute): ?array
+    {
+        while (($tagStart = strpos($source, '<', $offset)) !== false) {
+            $tag = $this->extractTagAt($source, $tagStart);
+            if ($tag === null || $tag['type'] !== 'open') {
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $offset = $tag['end'];
+
+            if ($tag['selfClosing']) {
+                continue;
+            }
+
+            if (!$this->hasRawAttribute($tag['raw'], $rawAttribute)) {
+                continue;
+            }
+
+            $closeStart = $this->findMatchingClose($source, $tag['name'], $tag['end']);
+            if ($closeStart === null) {
+                continue;
+            }
+
+            $closeTag = $this->extractTagAt($source, $closeStart);
+            if ($closeTag === null) {
+                continue;
+            }
+
+            if ($closeTag['type'] !== 'close') {
+                continue;
+            }
+
+            return [
+                'openStart' => $tag['start'],
+                'openEnd' => $tag['end'],
+                'innerStart' => $tag['end'],
+                'innerEnd' => $closeStart,
+                'closeStart' => $closeStart,
+                'closeEnd' => $closeTag['end'],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{type: 'open'|'close', name: string, start: int, end: int, selfClosing: bool, raw: string}|null
+     */
+    private function extractTagAt(string $source, int $start): ?array
+    {
+        if (!isset($source[$start]) || $source[$start] !== '<') {
+            return null;
+        }
+
+        $next = $source[$start + 1] ?? null;
+        if (in_array($next, [null, '!', '?'], true)) {
+            return null;
+        }
+
+        if ($next === '/') {
+            $nameStart = $start + 2;
+            $nameEnd = HtmlScanHelper::readTagNameEnd($source, $nameStart);
+            if ($nameEnd === $nameStart) {
+                return null;
+            }
+
+            $end = HtmlScanHelper::findTagEnd($source, $nameEnd);
+            if ($end === null) {
+                return null;
+            }
+
+            return [
+                'type' => 'close',
+                'name' => substr($source, $nameStart, $nameEnd - $nameStart),
+                'start' => $start,
+                'end' => $end,
+                'selfClosing' => false,
+                'raw' => substr($source, $start, $end - $start),
+            ];
+        }
+
+        if (!ctype_alpha($next)) {
+            return null;
+        }
+
+        $nameStart = $start + 1;
+        $nameEnd = HtmlScanHelper::readTagNameEnd($source, $nameStart);
+        if ($nameEnd === $nameStart) {
+            return null;
+        }
+
+        $end = HtmlScanHelper::findTagEnd($source, $nameEnd);
+        if ($end === null) {
+            return null;
+        }
+
+        $name = substr($source, $nameStart, $nameEnd - $nameStart);
+        $rawTag = substr($source, $start, $end - $start);
+        $selfClosing = str_ends_with(rtrim($rawTag), '/>')
+            || HtmlTagHelper::isSelfClosing($name, $this->config->selfClosingTags);
+
+        return [
+            'type' => 'open',
+            'name' => $name,
+            'start' => $start,
+            'end' => $end,
+            'selfClosing' => $selfClosing,
+            'raw' => $rawTag,
+        ];
+    }
+
+    /**
+     * Find matching closing tag position for an opening tag offset.
+     */
+    private function findMatchingClose(string $source, string $tagName, int $offset): ?int
+    {
+        $depth = 1;
+
+        while (($tagStart = strpos($source, '<', $offset)) !== false) {
+            $tag = $this->extractTagAt($source, $tagStart);
+            if ($tag === null) {
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $offset = $tag['end'];
+
+            if (strcasecmp($tag['name'], $tagName) !== 0) {
+                continue;
+            }
+
+            if ($tag['type'] === 'close') {
+                $depth--;
+                if ($depth === 0) {
+                    return $tag['start'];
                 }
 
-                $remainingAttributes[] = $attribute;
+                continue;
             }
 
-            $node->attributes = $remainingAttributes;
-
-            if ($hadRawAttribute) {
-                $node->children = $this->restorePlaceholderChildren($node->children, $placeholders);
+            if (!$tag['selfClosing']) {
+                $depth++;
             }
         }
 
-        if (
-            $node instanceof DocumentNode
-            || $node instanceof ElementNode
-            || $node instanceof FragmentNode
-            || $node instanceof ComponentNode
-        ) {
-            foreach ($node->children as $child) {
-                $this->restoreRawNode($child, $rawAttributeName, $placeholders);
-            }
-        }
+        return null;
     }
 
     /**
-     * @param array<\Sugar\Ast\Node> $children
-     * @param array<string, string> $placeholders
-     * @return array<\Sugar\Ast\Node>
+     * Check whether an opening tag contains the configured raw directive attribute.
      */
-    private function restorePlaceholderChildren(array $children, array $placeholders): array
+    private function hasRawAttribute(string $tag, string $rawAttribute): bool
     {
-        if (count($children) !== 1 || !$children[0] instanceof TextNode) {
-            return $children;
-        }
+        $pattern =
+            '/(?:\s|^)' .
+            preg_quote($rawAttribute, '/') .
+            '(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+))?(?=\s|\/?>)/';
 
-        $placeholder = $children[0]->content;
-        if (!array_key_exists($placeholder, $placeholders)) {
-            return $children;
-        }
-
-        $children[0]->content = $placeholders[$placeholder];
-
-        return $children;
+        return preg_match($pattern, $tag) === 1;
     }
 
     /**
@@ -223,6 +411,12 @@ final readonly class Parser
                 continue;
             }
 
+            if ($token->isRawBody()) {
+                $column = $state->columnFromOffset($token->pos);
+                $state->addNode($this->nodeFactory->rawBody($token->content(), $token->line, $column));
+                continue;
+            }
+
             if ($token->canIgnore()) {
                 continue;
             }
@@ -250,6 +444,7 @@ final readonly class Parser
 
                 if (str_contains($html, '<') || str_contains($html, '>')) {
                     $htmlNodes = $this->htmlParser->parse($html, $token->line, $column);
+                    $this->stripRawDirectiveAttributes($htmlNodes);
                     $state->addNodes($htmlNodes);
                     if (!$state->hasPendingAttribute()) {
                         $state->setPendingAttribute(
@@ -265,6 +460,29 @@ final readonly class Parser
         }
 
         return $this->buildTree($state->nodes());
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node|\Sugar\Parser\Helper\ClosingTagMarker> $nodes
+     */
+    private function stripRawDirectiveAttributes(array $nodes): void
+    {
+        $rawAttributeName = $this->prefixHelper->buildName('raw');
+
+        foreach ($nodes as $node) {
+            if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof ComponentNode) {
+                $remainingAttributes = [];
+                foreach ($node->attributes as $attribute) {
+                    if ($attribute->name === $rawAttributeName) {
+                        continue;
+                    }
+
+                    $remainingAttributes[] = $attribute;
+                }
+
+                $node->attributes = $remainingAttributes;
+            }
+        }
     }
 
     /**

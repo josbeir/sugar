@@ -10,6 +10,7 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\RuntimeCallNode;
 use Sugar\CodeGen\CodeGenerator;
 use Sugar\Enum\OutputContext;
@@ -189,6 +190,18 @@ final class CodeGeneratorTest extends TestCase
         $output = $this->executeTemplate($code);
 
         $this->assertSame('<?php echo "hidden"; ?>', $output);
+    }
+
+    public function testGenerateRawBodyNodeRendersLiteralContent(): void
+    {
+        $ast = $this->document()
+            ->withChild(new RawBodyNode('<?= $value ?>', 1, 1))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+        $output = $this->executeTemplate($code, ['value' => 'executed']);
+
+        $this->assertSame('<?= $value ?>', $output);
     }
 
     public function testGenerateMixedPhpAndOutput(): void

@@ -9,6 +9,7 @@ use Sugar\Ast\FragmentNode;
 use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\TextNode;
 
 /**
@@ -236,7 +237,7 @@ final class SlotResolver
      */
     private function nodeToString(Node $node): string
     {
-        if ($node instanceof TextNode) {
+        if ($node instanceof TextNode || $node instanceof RawBodyNode) {
             return $node->content;
         }
 

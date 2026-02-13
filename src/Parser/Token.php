@@ -13,6 +13,8 @@ use PhpToken;
  */
 final class Token extends PhpToken
 {
+    public const int T_RAW_BODY = -10001;
+
     /**
      * Check if this is an HTML/text token outside PHP tags
      */
@@ -35,6 +37,14 @@ final class Token extends PhpToken
     public function isOpenTag(): bool
     {
         return $this->id === T_OPEN_TAG || $this->id === T_OPEN_TAG_WITH_ECHO;
+    }
+
+    /**
+     * Check if this is a synthetic raw-body token.
+     */
+    public function isRawBody(): bool
+    {
+        return $this->id === self::T_RAW_BODY;
     }
 
     /**

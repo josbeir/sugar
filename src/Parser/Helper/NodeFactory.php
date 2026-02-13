@@ -9,6 +9,7 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
 use Sugar\Ast\OutputNode;
+use Sugar\Ast\RawBodyNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Ast\TextNode;
 use Sugar\Enum\OutputContext;
@@ -55,6 +56,14 @@ final class NodeFactory
     public function rawPhp(string $code, int $line, int $column): RawPhpNode
     {
         return new RawPhpNode($code, $line, $column);
+    }
+
+    /**
+     * Create a raw body node.
+     */
+    public function rawBody(string $content, int $line, int $column): RawBodyNode
+    {
+        return new RawBodyNode($content, $line, $column);
     }
 
     /**
