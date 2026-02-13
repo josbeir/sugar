@@ -11,6 +11,7 @@ Pass-through directives look like normal directives, but they are handled by spe
 
 - `s:slot` - Component slot assignment.
 - `s:bind` - Component attribute binding.
+- `s:raw` - Preserve element inner content without directive parsing.
 
 ## Examples
 
@@ -58,3 +59,5 @@ Use `s:bind` and `s:slot` together to pass props and slot content.
     <p>Body</p>
 </s-card>
 ```
+
+<!--@include: ./_partials/s-raw.md-->
