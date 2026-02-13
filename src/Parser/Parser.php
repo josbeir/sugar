@@ -7,6 +7,8 @@ use Sugar\Ast\ComponentNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Node;
+use Sugar\Ast\TextNode;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Enum\OutputContext;
@@ -16,6 +18,7 @@ use Sugar\Parser\Helper\HtmlParser;
 use Sugar\Parser\Helper\NodeFactory;
 use Sugar\Parser\Helper\ParserState;
 use Sugar\Parser\Helper\PipeParser;
+use Sugar\Parser\Helper\RawRegionMasker;
 use Sugar\Parser\Helper\TokenStream;
 
 final readonly class Parser
@@ -28,6 +31,8 @@ final readonly class Parser
 
     private NodeFactory $nodeFactory;
 
+    private RawRegionMasker $rawRegionMasker;
+
     /**
      * Constructor
      *
@@ -39,6 +44,7 @@ final readonly class Parser
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
         $this->nodeFactory = new NodeFactory();
         $this->htmlParser = new HtmlParser($this->config, $this->prefixHelper, $this->nodeFactory);
+        $this->rawRegionMasker = new RawRegionMasker($this->config, $this->prefixHelper);
     }
 
     /**
@@ -49,12 +55,98 @@ final readonly class Parser
      */
     public function parse(string $source): DocumentNode
     {
-        $tokens = Token::tokenize($source);
+        $masked = $this->rawRegionMasker->hasRawRegions($source)
+            ? $this->rawRegionMasker->mask($source)
+            : [
+                'source' => $source,
+                'placeholders' => [],
+            ];
+
+        $tokens = Token::tokenize($masked['source']);
         $stream = new TokenStream($tokens);
-        $state = new ParserState($stream, $source);
+        $state = new ParserState($stream, $masked['source']);
         $nodes = $this->parseTokens($state);
 
+        if ($masked['placeholders'] !== []) {
+            $nodes = $this->restoreRawRegions($nodes, $masked['placeholders']);
+        }
+
         return new DocumentNode($nodes);
+    }
+
+    /**
+     * Restore raw placeholders and strip s:raw marker attributes.
+     *
+     * @param array<\Sugar\Ast\Node> $nodes
+     * @param array<string, string> $placeholders
+     * @return array<\Sugar\Ast\Node>
+     */
+    private function restoreRawRegions(array $nodes, array $placeholders): array
+    {
+        $rawAttributeName = $this->prefixHelper->buildName('raw');
+
+        foreach ($nodes as $node) {
+            $this->restoreRawNode($node, $rawAttributeName, $placeholders);
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * @param array<string, string> $placeholders
+     */
+    private function restoreRawNode(Node $node, string $rawAttributeName, array $placeholders): void
+    {
+        if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof ComponentNode) {
+            $hadRawAttribute = false;
+            $remainingAttributes = [];
+            foreach ($node->attributes as $attribute) {
+                if ($attribute->name === $rawAttributeName) {
+                    $hadRawAttribute = true;
+                    continue;
+                }
+
+                $remainingAttributes[] = $attribute;
+            }
+
+            $node->attributes = $remainingAttributes;
+
+            if ($hadRawAttribute) {
+                $node->children = $this->restorePlaceholderChildren($node->children, $placeholders);
+            }
+        }
+
+        if (
+            $node instanceof DocumentNode
+            || $node instanceof ElementNode
+            || $node instanceof FragmentNode
+            || $node instanceof ComponentNode
+        ) {
+            foreach ($node->children as $child) {
+                $this->restoreRawNode($child, $rawAttributeName, $placeholders);
+            }
+        }
+    }
+
+    /**
+     * @param array<\Sugar\Ast\Node> $children
+     * @param array<string, string> $placeholders
+     * @return array<\Sugar\Ast\Node>
+     */
+    private function restorePlaceholderChildren(array $children, array $placeholders): array
+    {
+        if (count($children) !== 1 || !$children[0] instanceof TextNode) {
+            return $children;
+        }
+
+        $placeholder = $children[0]->content;
+        if (!array_key_exists($placeholder, $placeholders)) {
+            return $children;
+        }
+
+        $children[0]->content = $placeholders[$placeholder];
+
+        return $children;
     }
 
     /**

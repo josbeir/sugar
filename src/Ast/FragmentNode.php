@@ -33,7 +33,7 @@ final class FragmentNode extends Node
      * @param bool $selfClosing Whether the fragment is self-closing
      */
     public function __construct(
-        public readonly array $attributes,
+        public array $attributes,
         public array $children, // NOT readonly - parser mutates this during tree building
         public readonly int $line,
         public readonly int $column,

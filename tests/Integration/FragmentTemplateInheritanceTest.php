@@ -124,6 +124,19 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertStringNotContainsString('Default list', $result);
     }
 
+    public function testFragmentWithRawDirectiveRendersChildrenWithoutFragmentWrapper(): void
+    {
+        $template = '<s-template s:raw><span s:if="$show">Literal</span>{{ token }}</s-template>';
+
+        $this->setUpCompiler();
+
+        $compiled = $this->compiler->compile($template);
+        $result = $this->executeTemplate($compiled, ['show' => false]);
+
+        $this->assertStringContainsString('<span s:if="$show">Literal</span>{{ token }}', $result);
+        $this->assertStringNotContainsString('s-template', $result);
+    }
+
     public function testFragmentBlockWithOnlyInheritanceAttribute(): void
     {
         // Fragment with only s:block (no directives)
