@@ -11,6 +11,23 @@ Configure the engine once and keep the rest of your templates clean. Most teams 
 Build your engine from a single `SugarConfig` instance so loaders, parser, and compiler share the same configuration.
 :::
 
+## Builder Method Reference
+
+The table below maps each `EngineBuilder` `with...` method to the section in this guide that explains it.
+
+| Method | Purpose | Section |
+| --- | --- | --- |
+| `withTemplateLoader()` | Configure how templates/components are resolved. | [Template Loaders](#template-loaders) |
+| `withCache()` | Configure compiled-template caching. | [Caching](#caching) |
+| `withDebug()` | Enable development diagnostics and freshness checks. | [Debug Mode](#debug-mode) |
+| `withPhpSyntaxValidation()` | Enable optional parser-based syntax checks. | [Optional PHP Syntax Validation](#optional-php-syntax-validation) |
+| `withTemplateContext()` | Expose helper methods to templates via `$this`. | [Template Context](#template-context) |
+| `withExceptionRenderer()` | Customize how template exceptions are rendered. | [Exception Rendering](#exception-rendering) |
+| `withHtmlExceptionRenderer()` | Use the built-in HTML exception renderer. | [Exception Rendering](#exception-rendering) |
+| `withFragmentCache()` | Enable fragment caching for `s:cache`. | [Fragment Caching (s:cache)](#fragment-caching-scache) |
+| `withDirectiveRegistry()` | Override or limit available directives. | [Custom Directive Registry](#custom-directive-registry) |
+| `withExtension()` | Register reusable directive/pass bundles. | [Extensions](#extensions) |
+
 ## Engine Configuration
 
 Use the builder to configure loaders, cache, and debug mode in one place:
@@ -375,6 +392,44 @@ $engine = Engine::builder()
 ::: warning
 Disable debug mode in production to avoid repeated filesystem checks.
 :::
+
+### Fragment Caching (s:cache)
+
+`s:cache` is optional and uses a PSR-16 cache store.
+
+Register a fragment cache store on the builder:
+
+```php
+use Psr\SimpleCache\CacheInterface;
+use Sugar\Engine;
+
+/** @var CacheInterface $fragmentCache */
+$fragmentCache = getYourFragmentCacheStore();
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withFragmentCache($fragmentCache) // default TTL: backend default
+    ->build();
+```
+
+Optionally set a default TTL (seconds) for all `s:cache` directives:
+
+```php
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withFragmentCache($fragmentCache, ttl: 300)
+    ->build();
+```
+
+Directive-level TTL can still override this default:
+
+```html
+<section s:cache="['key' => 'homepage:hero', 'ttl' => 60]">
+    <?= $heroHtml ?>
+</section>
+```
+
+See [Control Flow Directives](/guide/language/directives/control-flow#scache) for directive syntax and behavior.
 
 ## Debug Mode
 

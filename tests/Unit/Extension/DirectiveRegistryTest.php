@@ -176,6 +176,13 @@ final class DirectiveRegistryTest extends TestCase
         $this->assertInstanceOf(TestDirective::class, $all['lazy']);
     }
 
+    public function testDefaultRegistryDoesNotContainFragmentCacheDirective(): void
+    {
+        $registry = new DirectiveRegistry();
+
+        $this->assertFalse($registry->has('cache'));
+    }
+
     private function createMockDirectiveCompiler(?DirectiveType $type = null): DirectiveInterface
     {
         $type ??= DirectiveType::CONTROL_FLOW;

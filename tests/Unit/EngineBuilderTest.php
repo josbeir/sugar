@@ -20,6 +20,7 @@ use Sugar\Extension\ExtensionInterface;
 use Sugar\Extension\RegistrationContext;
 use Sugar\Loader\FileTemplateLoader;
 use Sugar\Loader\StringTemplateLoader;
+use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
@@ -248,6 +249,65 @@ final class EngineBuilderTest extends TestCase
 
         $engine = $builder->build();
         $this->assertInstanceOf(Engine::class, $engine);
+    }
+
+    public function testWithFragmentCache(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig());
+        $fragmentCache = new ArraySimpleCache();
+
+        $builder = new EngineBuilder();
+        $result = $builder
+            ->withTemplateLoader($loader)
+            ->withFragmentCache($fragmentCache);
+
+        $this->assertSame($builder, $result);
+        $this->assertInstanceOf(Engine::class, $builder->build());
+    }
+
+    public function testWithFragmentCacheRegistersCacheDirectiveViaExtensionPath(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'cached.sugar.php' => '<div s:cache>Cached</div>',
+        ]);
+
+        $fragmentCache = new ArraySimpleCache();
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withFragmentCache($fragmentCache)
+            ->build();
+
+        $this->assertSame('<div>Cached</div>', $engine->render('cached.sugar.php'));
+    }
+
+    public function testWithFragmentCacheAcceptsTtlArgument(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'cached-ttl.sugar.php' => '<div s:cache>Cached</div>',
+        ]);
+
+        $fragmentCache = new ArraySimpleCache();
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withFragmentCache($fragmentCache, 600)
+            ->build();
+
+        $this->assertSame('<div>Cached</div>', $engine->render('cached-ttl.sugar.php'));
+    }
+
+    public function testWithoutFragmentCacheStillRendersContent(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'cached.sugar.php' => '<div s:cache>Cached</div>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->assertSame('<div>Cached</div>', $engine->render('cached.sugar.php'));
     }
 
     public function testWithExceptionRenderer(): void

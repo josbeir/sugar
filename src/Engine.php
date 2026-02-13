@@ -5,6 +5,7 @@ namespace Sugar;
 
 use Closure;
 use ParseError;
+use Psr\SimpleCache\CacheInterface;
 use Sugar\Cache\CachedTemplate;
 use Sugar\Cache\DependencyTracker;
 use Sugar\Cache\TemplateCacheInterface;
@@ -35,6 +36,7 @@ final class Engine implements EngineInterface
      * @param bool $debug Debug mode (enables freshness checking)
      * @param object|null $templateContext Optional context object to bind to templates (for $this access)
      * @param \Sugar\Exception\Renderer\TemplateExceptionRendererInterface|null $exceptionRenderer Exception renderer
+     * @param \Psr\SimpleCache\CacheInterface|null $fragmentCache Optional PSR-16 cache store for s:cache fragments
      */
     public function __construct(
         private readonly Compiler $compiler,
@@ -43,6 +45,7 @@ final class Engine implements EngineInterface
         private readonly bool $debug = false,
         private readonly ?object $templateContext = null,
         private readonly ?TemplateExceptionRendererInterface $exceptionRenderer = null,
+        private readonly ?CacheInterface $fragmentCache = null,
     ) {
     }
 
@@ -159,7 +162,7 @@ final class Engine implements EngineInterface
             templateContext: $this->templateContext,
         );
 
-        RuntimeEnvironment::setRenderer($renderer);
+        RuntimeEnvironment::set($renderer, $this->fragmentCache);
 
         try {
             // Include the compiled file and execute the closure
@@ -190,7 +193,7 @@ final class Engine implements EngineInterface
 
             return '';
         } finally {
-            RuntimeEnvironment::clearRenderer();
+            RuntimeEnvironment::clear();
         }
     }
 }

@@ -18,6 +18,7 @@ Use `<s-template>` when you want control flow without adding a wrapper element.
 - `s:forelse` - Loop with an empty fallback.
 - `s:while` - Loop while a condition is true.
 - `s:times` - Loop a fixed number of times.
+- `s:cache` - Cache a rendered fragment by key.
 - `s:switch` - Switch/case rendering.
 - `s:ifcontent` - Render wrappers only if they contain output.
 - `s:try` - Wrap output in a try block with optional finally.
@@ -145,6 +146,52 @@ Repeat the element a fixed number of times.
 <span s:times="5 as $i">#<?= $i ?></span>
 ```
 :::
+
+### s:cache
+
+Cache a fragment's rendered output using a configured PSR-16 cache store.
+
+`s:cache` is opt-in at engine setup time. Register a cache store with `withFragmentCache()`:
+
+```php
+use Sugar\Engine;
+
+$cache = new YourPsr16CacheStore(); // must implement Psr\SimpleCache\CacheInterface
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withFragmentCache($cache, ttl: 300)
+    ->build();
+```
+
+Directive forms:
+
+- `s:cache` - auto key, default TTL from `withFragmentCache(..., ttl: ...)`
+- `s:cache="'users-' . $userId"` - explicit key, default TTL
+- `s:cache="['key' => 'users-' . $userId, 'ttl' => 60]"` - explicit key + per-fragment TTL override
+
+::: code-group
+```html [Auto key]
+<section s:cache>
+    <h2>Popular items</h2>
+    <?= $expensiveHtml ?>
+</section>
+```
+
+```html [Explicit key]
+<section s:cache="'users-' . $userId">
+    <?= $userCardHtml ?>
+</section>
+```
+
+```html [Key + TTL override]
+<section s:cache="['key' => 'users-' . $userId, 'ttl' => 120]">
+    <?= $userCardHtml ?>
+</section>
+```
+:::
+
+If no fragment cache store is configured, `s:cache` is treated as a no-op wrapper and content still renders.
 
 ### s:switch
 
