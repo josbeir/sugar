@@ -85,6 +85,17 @@ final class RawRegionMaskerTest extends TestCase
         $this->assertSame([], $masked['placeholders']);
     }
 
+    public function testMaskPreservesNewLineCountWithinRawRegion(): void
+    {
+        $masker = $this->createMasker();
+        $source = "<div s:raw><?= \$name ?>\n<?php echo \$other; ?>\n</div>\n<p>after</p>";
+
+        $masked = $masker->mask($source);
+
+        $this->assertCount(1, $masked['placeholders']);
+        $this->assertSame(substr_count($source, "\n"), substr_count($masked['source'], "\n"));
+    }
+
     private function createMasker(): RawRegionMasker
     {
         $config = new SugarConfig();

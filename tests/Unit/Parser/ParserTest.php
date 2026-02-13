@@ -427,6 +427,31 @@ final class ParserTest extends TestCase
         $this->assertSame('<?= $var ?>', $element->children[0]->content);
     }
 
+    public function testParseRawDirectiveStripsAttributeOnSelfClosingTag(): void
+    {
+        $template = '<div s:raw />';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertTrue($element->selfClosing);
+        $this->assertCount(0, $element->attributes);
+    }
+
+    public function testParseRawDirectiveStripsAttributeOnVoidTag(): void
+    {
+        $template = '<img s:raw src="logo.png">';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertTrue($element->selfClosing);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('src', $element->attributes[0]->name);
+    }
+
     public function testRestorePlaceholderChildrenReturnsOriginalWhenChildIsNotTextNode(): void
     {
         $method = new ReflectionMethod($this->parser, 'restorePlaceholderChildren');

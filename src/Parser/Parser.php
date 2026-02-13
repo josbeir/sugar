@@ -55,7 +55,8 @@ final readonly class Parser
      */
     public function parse(string $source): DocumentNode
     {
-        $masked = $this->rawRegionMasker->hasRawRegions($source)
+        $hasRawRegions = $this->rawRegionMasker->hasRawRegions($source);
+        $masked = $hasRawRegions
             ? $this->rawRegionMasker->mask($source)
             : [
                 'source' => $source,
@@ -67,7 +68,7 @@ final readonly class Parser
         $state = new ParserState($stream, $masked['source']);
         $nodes = $this->parseTokens($state);
 
-        if ($masked['placeholders'] !== []) {
+        if ($hasRawRegions) {
             $nodes = $this->restoreRawRegions($nodes, $masked['placeholders']);
         }
 

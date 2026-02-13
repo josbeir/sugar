@@ -124,6 +124,12 @@ final class CodeGenerator
      */
     private function generateText(TextNode $node, OutputBuffer $buffer): void
     {
+        if (str_contains($node->content, '<?')) {
+            $buffer->write(sprintf('<?php echo %s; ?>', var_export($node->content, true)));
+
+            return;
+        }
+
         $buffer->write($node->content);
     }
 

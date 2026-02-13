@@ -1,6 +1,8 @@
 ### s:raw
 
-Use `s:raw` when you need verbatim inner content. Sugar skips parsing directives and special tags inside the element body.
+Use `s:raw` when you need verbatim inner content. Sugar skips parsing directives and special tags inside the node body.
+
+`s:raw` is supported on attribute-bearing template nodes (elements, fragments, and components).
 
 ```html
 <code s:raw>
@@ -10,5 +12,5 @@ Use `s:raw` when you need verbatim inner content. Sugar skips parsing directives
 ```
 
 Notes:
-- `s:raw` applies to element children, not to the outer element itself.
+- `s:raw` applies to children, not to the outer node itself.
 - The `s:raw` attribute is not rendered in final HTML.

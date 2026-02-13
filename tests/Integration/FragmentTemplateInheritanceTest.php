@@ -137,6 +137,18 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertStringNotContainsString('s-template', $result);
     }
 
+    public function testFragmentWithRawDirectivePreservesPhpTagAsLiteralText(): void
+    {
+        $template = '<s-template s:raw><?= $value ?></s-template>';
+
+        $this->setUpCompiler();
+
+        $compiled = $this->compiler->compile($template);
+        $result = $this->executeTemplate($compiled, ['value' => 'executed']);
+
+        $this->assertSame('<?= $value ?>', $result);
+    }
+
     public function testFragmentBlockWithOnlyInheritanceAttribute(): void
     {
         // Fragment with only s:block (no directives)

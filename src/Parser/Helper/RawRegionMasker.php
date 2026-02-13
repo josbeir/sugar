@@ -70,7 +70,7 @@ final readonly class RawRegionMasker
             }
 
             $innerContent = substr($source, $tagEnd, $closeStart - $tagEnd);
-            $placeholder = sprintf('__SUGAR_RAW_%s__', Hash::make($counter . $innerContent));
+            $placeholder = $this->buildPlaceholder($innerContent, $counter);
             $placeholders[$placeholder] = $innerContent;
             $counter++;
 
@@ -82,6 +82,17 @@ final readonly class RawRegionMasker
             'source' => $source,
             'placeholders' => $placeholders,
         ];
+    }
+
+    /**
+     * Build a placeholder that preserves original line count.
+     */
+    private function buildPlaceholder(string $innerContent, int $counter): string
+    {
+        $placeholder = sprintf('__SUGAR_RAW_%s__', Hash::make($counter . $innerContent));
+        $newLineCount = substr_count($innerContent, "\n");
+
+        return $placeholder . str_repeat("\n", $newLineCount);
     }
 
     /**

@@ -94,6 +94,8 @@ Use `|> json()` to force JSON encoding with context-aware escaping. In HTML cont
 Only use `|> raw()` with trusted HTML. Never pass user input to raw output.
 :::
 
+For verbatim template regions (where inner directives/tags should not be parsed), use [`s:raw`](./directives/pass-through.md#sraw).
+
 ```html
 <div><?= $article->renderedBody |> raw() ?></div>
 ```

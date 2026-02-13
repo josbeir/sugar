@@ -179,6 +179,18 @@ final class CodeGeneratorTest extends TestCase
         $this->assertStringContainsString('<?php endif; ?>', $code);
     }
 
+    public function testGenerateTextWithPhpOpenTagRendersLiteralContent(): void
+    {
+        $ast = $this->document()
+            ->withChild($this->text('<?php echo "hidden"; ?>', 1, 1))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+        $output = $this->executeTemplate($code);
+
+        $this->assertSame('<?php echo "hidden"; ?>', $output);
+    }
+
     public function testGenerateMixedPhpAndOutput(): void
     {
         $ast = $this->document()
