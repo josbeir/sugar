@@ -11,6 +11,7 @@ Content directives replace the element contents with a single value.
 
 - `s:text` - Escaped output.
 - `s:html` - Raw HTML output.
+- `s:raw` - Verbatim inner markup output (child directives/tags are not parsed).
 
 ## Examples
 
@@ -45,6 +46,8 @@ Only use `s:html` with trusted content.
 <div s:html="$snippet"></div>
 ```
 :::
+
+<!--@include: ./_partials/s-raw.md-->
 
 ## No Wrapper Output
 

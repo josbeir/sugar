@@ -18,7 +18,7 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 | Control Flow | Wraps elements in conditions or loops. | `s:if`, `s:foreach`, `s:switch`, `s:try` |
 | Attribute | Computes or merges attributes. | `s:class`, `s:spread`, `s:tag` |
 | Content | Replaces element content with output. | `s:text`, `s:html` |
-| Pass-through | Handled by other passes. | `s:slot`, `s:bind` |
+| Pass-through | Handled by other passes. | `s:slot`, `s:bind`, `s:raw` |
 
 ::: code-group
 ```html [Control flow]
@@ -37,6 +37,13 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 <s-card s:bind="$cardProps">
 	<div s:slot="header">Title</div>
 </s-card>
+```
+
+```html [Raw block]
+<div s:raw>
+	{{ this-is-left-untouched }}
+	<s-template s:if="$nope">Not parsed</s-template>
+</div>
 ```
 :::
 

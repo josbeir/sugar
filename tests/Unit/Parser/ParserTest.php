@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Parser;
 
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\Node;
@@ -365,6 +366,86 @@ final class ParserTest extends TestCase
         $output = $div->children[0];
         $this->assertInstanceOf(OutputNode::class, $output);
         $this->assertSame('$var', $output->expression);
+    }
+
+    public function testParseRawDirectivePreservesOutputAsText(): void
+    {
+        $template = '<div s:raw><?= $var ?></div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertSame('div', $element->tag);
+        $this->assertCount(0, $element->attributes);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('<?= $var ?>', $element->children[0]->content);
+    }
+
+    public function testParseRawDirectivePreservesPhpBlockAsText(): void
+    {
+        $template = '<div s:raw><?php echo strtoupper($name); ?></div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(0, $element->attributes);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('<?php echo strtoupper($name); ?>', $element->children[0]->content);
+    }
+
+    public function testParseRawDirectivePreservesNestedMarkupAsText(): void
+    {
+        $template = '<div s:raw><span><?= $name ?></span></div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('<span><?= $name ?></span>', $element->children[0]->content);
+    }
+
+    public function testParseRawDirectiveKeepsNonRawAttributes(): void
+    {
+        $template = '<div class="card" s:raw><?= $var ?></div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(1, $doc->children);
+        $element = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $element);
+        $this->assertCount(1, $element->attributes);
+        $this->assertSame('class', $element->attributes[0]->name);
+        $this->assertTrue($element->attributes[0]->value->isStatic());
+        $this->assertSame('card', $element->attributes[0]->value->static);
+        $this->assertCount(1, $element->children);
+        $this->assertInstanceOf(TextNode::class, $element->children[0]);
+        $this->assertSame('<?= $var ?>', $element->children[0]->content);
+    }
+
+    public function testRestorePlaceholderChildrenReturnsOriginalWhenChildIsNotTextNode(): void
+    {
+        $method = new ReflectionMethod($this->parser, 'restorePlaceholderChildren');
+        $children = [new OutputNode('$value', true, OutputContext::HTML, 1, 1)];
+
+        $result = $method->invoke($this->parser, $children, ['__SUGAR_RAW_TEST__' => 'content']);
+
+        $this->assertSame($children, $result);
+    }
+
+    public function testRestorePlaceholderChildrenReturnsOriginalWhenPlaceholderMissing(): void
+    {
+        $method = new ReflectionMethod($this->parser, 'restorePlaceholderChildren');
+        $children = [new TextNode('__SUGAR_RAW_MISSING__', 1, 1)];
+
+        $result = $method->invoke($this->parser, $children, ['__SUGAR_RAW_OTHER__' => 'content']);
+
+        $this->assertSame($children, $result);
+        $this->assertSame('__SUGAR_RAW_MISSING__', $children[0]->content);
     }
 
     public function testParseRawPhpBlock(): void
