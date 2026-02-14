@@ -121,6 +121,36 @@ final class EmptyDirectiveTest extends TestCase
         $this->assertStringContainsString('<div>Zero!</div>', $output);
     }
 
+    // s:notempty directive tests
+
+    public function testNotEmptyDirectiveWithNonEmptyString(): void
+    {
+        $template = '<div s:notempty="$value">Has content</div>';
+        $compiled = $this->compiler->compile($template);
+
+        $output = $this->executeTemplate($compiled, ['value' => 'hello']);
+
+        $this->assertStringContainsString('<div>Has content</div>', $output);
+    }
+
+    public function testNotEmptyDirectiveWithEmptyString(): void
+    {
+        $template = '<div s:notempty="$value">Has content</div>';
+        $compiled = $this->compiler->compile($template);
+
+        $output = $this->executeTemplate($compiled, ['value' => '']);
+
+        $this->assertStringNotContainsString('Has content', $output);
+    }
+
+    public function testNotEmptyDirectiveCompiledOutput(): void
+    {
+        $template = '<div s:notempty="$items">Has items</div>';
+        $compiled = $this->compiler->compile($template);
+
+        $this->assertStringContainsString('!' . EmptyHelper::class . '::isEmpty($items)', $compiled);
+    }
+
     // s:forelse directive tests
 
     public function testForelseWithEmptyArray(): void

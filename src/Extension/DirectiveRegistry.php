@@ -15,6 +15,7 @@ use Sugar\Directive\IfContentDirective;
 use Sugar\Directive\IfDirective;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\IssetDirective;
+use Sugar\Directive\NotEmptyDirective;
 use Sugar\Directive\NoWrapDirective;
 use Sugar\Directive\PassThroughDirective;
 use Sugar\Directive\SpreadDirective;
@@ -66,6 +67,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         'unless' => UnlessDirective::class,
         'isset' => IssetDirective::class,
         'empty' => EmptyDirective::class,
+        'notempty' => NotEmptyDirective::class,
         'switch' => SwitchDirective::class,
         'case' => SwitchDirective::class,
         'default' => SwitchDirective::class,
