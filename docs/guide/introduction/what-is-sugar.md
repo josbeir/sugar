@@ -26,8 +26,8 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 ```html [Sugar template]
 <div
     s:forelse="$users as $user"
-    class="user-card"
     s:class="[
+        'user-card',
         $user->isAdmin() ? 'admin' : 'user',
         'online' => $user->isOnline(),
         'no-email' => empty($user->email),

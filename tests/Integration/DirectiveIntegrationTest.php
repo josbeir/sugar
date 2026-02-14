@@ -9,14 +9,18 @@ use Sugar\CodeGen\CodeGenerator;
 use Sugar\Compiler\Pipeline\AstPipeline;
 use Sugar\Config\SugarConfig;
 use Sugar\Directive\BooleanAttributeDirective;
+use Sugar\Directive\ClassDirective;
 use Sugar\Directive\FinallyDirective;
 use Sugar\Directive\ForeachDirective;
 use Sugar\Directive\IfDirective;
+use Sugar\Directive\SpreadDirective;
 use Sugar\Directive\TryDirective;
 use Sugar\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Pass\Directive\DirectivePairingPass;
+use Sugar\Runtime\HtmlAttributeHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
@@ -25,6 +29,7 @@ use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 final class DirectiveIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
+    use ExecuteTemplateTrait;
     use TemplateTestHelperTrait;
 
     private AstPipeline $pipeline;
@@ -264,6 +269,83 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Should NOT have trailing space before closing angle bracket
         $this->assertStringNotContainsString(' >', $code);
+    }
+
+    public function testClassDirectiveMergesWithExistingStaticClassInPipeline(): void
+    {
+        $this->registry->register('class', new ClassDirective());
+
+        $template = '<div class="card" s:class="[\'active\' => $isActive]">Content</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $this->assertSame(1, substr_count($code, 'class="'));
+        $this->assertStringContainsString("HtmlAttributeHelper::classNames(['card'", $code);
+        $this->assertStringContainsString('HtmlAttributeHelper::classNames([\'active\' => $isActive])', $code);
+    }
+
+    public function testSpreadDirectiveExcludesExplicitAndMergedNamedAttributesInPipeline(): void
+    {
+        $this->registry->register('class', new ClassDirective());
+        $this->registry->register('spread', new SpreadDirective());
+
+        $template = '<div id="profile" class="card" s:class="[\'active\' => $isActive]" s:spread="$attrs">Content</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $this->assertStringContainsString('HtmlAttributeHelper::spreadAttrs(array_diff_key((array) ($attrs), [\'id\' => true, \'class\' => true]))', $code);
+        $this->assertStringContainsString('class="<?php echo ' . HtmlAttributeHelper::class . "::classNames(['card'", $code);
+    }
+
+    public function testClassDirectiveRendersMergedOutput(): void
+    {
+        $this->registry->register('class', new ClassDirective());
+
+        $template = '<div class="card" s:class="[\'active\' => $isActive]">Content</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $output = $this->executeTemplate($code, ['isActive' => true]);
+        $this->assertStringContainsString('<div class="card active">Content</div>', $output);
+        $this->assertSame(1, substr_count($output, 'class='));
+
+        $inactiveOutput = $this->executeTemplate($code, ['isActive' => false]);
+        $this->assertStringContainsString('<div class="card">Content</div>', $inactiveOutput);
+    }
+
+    public function testSpreadDirectiveRendersExcludedNamedAttributes(): void
+    {
+        $this->registry->register('class', new ClassDirective());
+        $this->registry->register('spread', new SpreadDirective());
+
+        $template = '<div id="profile" class="card" s:class="[\'active\' => $isActive]" s:spread="$attrs">Content</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $output = $this->executeTemplate($code, [
+            'isActive' => true,
+            'attrs' => [
+                'id' => 'override',
+                'class' => 'ignored',
+                'disabled' => true,
+                'data-role' => 'admin',
+            ],
+        ]);
+
+        $this->assertStringContainsString('id="profile"', $output);
+        $this->assertStringContainsString('class="card active"', $output);
+        $this->assertStringContainsString('disabled', $output);
+        $this->assertStringContainsString('data-role="admin"', $output);
+        $this->assertStringNotContainsString('id="override"', $output);
+        $this->assertStringNotContainsString('class="ignored"', $output);
     }
 
     public function testSelfClosingElementsNoTrailingSpaces(): void

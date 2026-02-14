@@ -121,6 +121,114 @@ Usage:
 <div s:datatest="$id"></div>
 ```
 
+### AttributeMergePolicyDirectiveInterface
+
+Implement `AttributeMergePolicyDirectiveInterface` on **attribute directives** when you need explicit control over how generated attributes merge with existing element attributes during extraction.
+
+This is useful when your directive should:
+- merge into an existing named attribute (like `class`), or
+- behave like spread and automatically exclude explicitly defined attributes.
+
+**Methods:**
+- `getAttributeMergeMode()` selects the merge strategy.
+- `getMergeTargetAttributeName()` defines which named attribute can be merged.
+- `mergeNamedAttributeExpression()` builds the merged PHP expression.
+- `buildExcludedAttributesExpression()` builds the final source expression with exclusions.
+
+`DirectiveInterface` alone is enough when your directive only **adds** an attribute (append behavior). `AttributeMergePolicyDirectiveInterface` is needed when extraction must coordinate with attributes that are already on the element:
+
+- merge into an existing named attribute (for example, combine static `class` + directive class output),
+- or rewrite spread behavior so explicit attributes are excluded from `s:spread`/`s:attr` input.
+
+Without merge policy, extraction treats compiled attribute output as append-only and does not apply conflict/exclusion rules.
+
+Available modes (`Sugar\\Enum\\AttributeMergeMode`):
+- `MERGE_NAMED` - merge directive output into an existing named attribute.
+- `EXCLUDE_NAMED` - exclude explicit named attributes from a directive source payload.
+
+Default append behavior does not require `AttributeMergePolicyDirectiveInterface`; use plain `DirectiveInterface` when you only need to emit attributes without merge/exclusion rules.
+
+#### Real-world behavior by mode
+
+Use these examples as a quick mental model for what extraction does after your directive compiles.
+
+::: code-group
+```html [MERGE_NAMED]
+<!-- Existing class + directive-generated class are merged into one class attr -->
+<button class="btn" s:class="['btn-primary' => $primary]">Save</button>
+```
+
+```html [Rendered]
+<!-- $primary = true -->
+<button class="btn btn-primary">Save</button>
+```
+:::
+
+::: code-group
+```html [EXCLUDE_NAMED]
+<!-- Explicit attrs win; spread ignores keys already present on the element -->
+<button id="save" class="btn" s:spread="$attrs">Save</button>
+```
+
+```html [Rendered]
+<!-- $attrs = ['id' => 'override', 'class' => 'x', 'disabled' => true] -->
+<button id="save" class="btn" disabled>Save</button>
+```
+:::
+
+```php
+use Sugar\Ast\Node;
+use Sugar\Ast\RawPhpNode;
+use Sugar\Compiler\CompilationContext;
+use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
+use Sugar\Enum\AttributeMergeMode;
+use Sugar\Enum\DirectiveType;
+use Sugar\Runtime\HtmlAttributeHelper;
+
+final class ClassDirective implements AttributeMergePolicyDirectiveInterface
+{
+    public function compile(Node $node, CompilationContext $context): array
+    {
+        return [
+            new RawPhpNode(
+                sprintf('class="<?= %s::classNames(%s) ?>"', HtmlAttributeHelper::class, $node->expression),
+                $node->line,
+                $node->column,
+            ),
+        ];
+    }
+
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::ATTRIBUTE;
+    }
+
+    public function getAttributeMergeMode(): AttributeMergeMode
+    {
+        return AttributeMergeMode::MERGE_NAMED;
+    }
+
+    public function getMergeTargetAttributeName(): ?string
+    {
+        return 'class';
+    }
+
+    public function mergeNamedAttributeExpression(string $existingExpression, string $incomingExpression): string
+    {
+        return sprintf('%s::classNames([%s, %s])', HtmlAttributeHelper::class, $existingExpression, $incomingExpression);
+    }
+
+    public function buildExcludedAttributesExpression(string $sourceExpression, array $excludedAttributeNames): string
+    {
+        return sprintf('%s::spreadAttrs(%s)', HtmlAttributeHelper::class, $sourceExpression);
+    }
+}
+```
+
+Sugar built-ins use this interface as follows:
+- `s:class` uses `MERGE_NAMED` for `class`.
+- `s:spread` / `s:attr` use `EXCLUDE_NAMED`.
+
 ### PairedDirectiveInterface
 
 Use `PairedDirectiveInterface` when a directive requires a paired sibling, such as an `else`-style fallback.

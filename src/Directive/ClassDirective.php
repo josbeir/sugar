@@ -6,7 +6,9 @@ namespace Sugar\Directive;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Compiler\CompilationContext;
+use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Enum\AttributeMergeMode;
 use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\HtmlAttributeHelper;
 
@@ -33,7 +35,7 @@ use Sugar\Runtime\HtmlAttributeHelper;
  * Note: s:class is compiled into a class="..." attribute, not a directive node.
  * This compilation happens in DirectiveExtractionPass.
  */
-readonly class ClassDirective implements DirectiveInterface
+readonly class ClassDirective implements DirectiveInterface, AttributeMergePolicyDirectiveInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node
@@ -61,5 +63,42 @@ readonly class ClassDirective implements DirectiveInterface
     public function getType(): DirectiveType
     {
         return DirectiveType::ATTRIBUTE;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getAttributeMergeMode(): AttributeMergeMode
+    {
+        return AttributeMergeMode::MERGE_NAMED;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getMergeTargetAttributeName(): ?string
+    {
+        return 'class';
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function mergeNamedAttributeExpression(string $existingExpression, string $incomingExpression): string
+    {
+        return sprintf(
+            '%s::classNames([%s, %s])',
+            HtmlAttributeHelper::class,
+            $existingExpression,
+            $incomingExpression,
+        );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function buildExcludedAttributesExpression(string $sourceExpression, array $excludedAttributeNames): string
+    {
+        return sprintf('%s::spreadAttrs(%s)', HtmlAttributeHelper::class, $sourceExpression);
     }
 }
