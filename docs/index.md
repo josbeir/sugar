@@ -49,7 +49,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
   <h1>Your Orders</h1>
 
   <!-- Include reusable partials -->
-  <s-template s:include="components/filter-bar"></s-template>
+  <s-template s:include="partials/filter-bar"></s-template>
 
   <!-- Use a component with props and slots -->
   <s-orders-table s:bind="['orders' => $orders, 'pagination' => $pagination]">
@@ -62,12 +62,8 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
   </s-orders-table>
 
   <!-- Another include -->
-  <s-template s:include="components/pagination" s:with="['pagination' => $pagination]"></s-template>
+  <s-template s:include="partials/pagination" s:with="['pagination' => $pagination]"></s-template>
 </div>
-
-<script s:block="footer-js">
-  console.log('Orders page loaded');
-</script>
 ```
 
 ```html [Parent Layout]
@@ -101,7 +97,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 ```
 
 ```html [Component: OrdersTable]
-<!-- components/orders-table.sugar.php -->
+<!-- components/s-orders-table.sugar.php -->
 <div class="orders-table">
   <!-- Main slot content (if needed) -->
   <div class="header">
