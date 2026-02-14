@@ -13,15 +13,9 @@ Sugar compiles templates to plain PHP and caches the result for fast rendering.
 
 ## Installation
 
-::: code-group
 ```bash [Composer]
 composer require josbeir/sugar
 ```
-
-```bash [Dev]
-composer require josbeir/sugar --dev
-```
-:::
 
 ## Basic Usage
 
