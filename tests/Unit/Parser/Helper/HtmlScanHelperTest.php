@@ -61,4 +61,13 @@ final class HtmlScanHelperTest extends TestCase
     {
         $this->assertNull(HtmlScanHelper::findTagEnd('<div class="x"', 1));
     }
+
+    public function testResolvePositionHandlesEmptySourceAndLargeOffset(): void
+    {
+        $emptyResult = HtmlScanHelper::resolvePosition('', 10, 3, 4);
+        $this->assertSame([3, 4], $emptyResult);
+
+        $clampedResult = HtmlScanHelper::resolvePosition('abc', 10, 1, 1);
+        $this->assertSame([1, 4], $clampedResult);
+    }
 }

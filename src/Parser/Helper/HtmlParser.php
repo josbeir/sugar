@@ -6,7 +6,6 @@ namespace Sugar\Parser\Helper;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Runtime\HtmlTagHelper;
-use Sugar\Util\Hash;
 
 /**
  * Parse HTML fragments into flat node lists for the template parser.
@@ -45,7 +44,7 @@ final readonly class HtmlParser
             if ($tagStart === false) {
                 // Rest is text
                 if ($pos < $len) {
-                    [$textLine, $textColumn] = $this->resolvePosition($html, $pos, $line, $column);
+                    [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $pos, $line, $column);
                     $nodes[] = $this->nodeFactory->text(substr($html, $pos), $textLine, $textColumn);
                 }
 
@@ -54,7 +53,7 @@ final readonly class HtmlParser
 
             // Text before tag
             if ($tagStart > $pos) {
-                [$textLine, $textColumn] = $this->resolvePosition($html, $pos, $line, $column);
+                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $pos, $line, $column);
                 $nodes[] = $this->nodeFactory->text(
                     substr($html, $pos, $tagStart - $pos),
                     $textLine,
@@ -76,7 +75,7 @@ final readonly class HtmlParser
                     $endPos++;
                 }
 
-                [$textLine, $textColumn] = $this->resolvePosition($html, $tagStart, $line, $column);
+                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $tagStart, $line, $column);
                 $nodes[] = $this->nodeFactory->text(
                     substr($html, $tagStart, $endPos - $tagStart),
                     $textLine,
@@ -119,7 +118,7 @@ final readonly class HtmlParser
         // Parse attributes
         $attributes = [];
         $selfClosing = false;
-        [$elementLine, $elementColumn] = $this->resolvePosition($html, $start, $line, $column);
+        [$elementLine, $elementColumn] = HtmlScanHelper::resolvePosition($html, $start, $line, $column);
 
         while ($pos < $len) {
             $char = $html[$pos];
@@ -143,7 +142,7 @@ final readonly class HtmlParser
             // Parse attribute
             $attrStart = $pos;
             [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            [$attrLine, $attrColumn] = $this->resolvePosition($html, $attrStart, $line, $column);
+            [$attrLine, $attrColumn] = HtmlScanHelper::resolvePosition($html, $attrStart, $line, $column);
             $attributes[] = $this->nodeFactory->attribute($attrName, $attrValue, $attrLine, $attrColumn);
         }
 
@@ -270,43 +269,5 @@ final readonly class HtmlParser
         }
 
         return [$name, $value, $pos];
-    }
-
-    /**
-     * Resolve a 1-based line and column for an offset within the HTML fragment.
-     *
-     * @return array{0: int, 1: int}
-     */
-    private function resolvePosition(string $html, int $offset, int $line, int $column): array
-    {
-        if ($offset <= 0) {
-            return [$line, $column];
-        }
-
-        $length = strlen($html);
-        if ($length === 0) {
-            return [$line, $column];
-        }
-
-        if ($offset > $length) {
-            $offset = $length;
-        }
-
-        /** @var array<string, array<int, int>> $lineStartCache */
-        static $lineStartCache = [];
-        $cacheKey = Hash::make($html);
-
-        if (!isset($lineStartCache[$cacheKey])) {
-            $lineStartCache[$cacheKey] = HtmlScanHelper::buildLineStarts($html);
-        }
-
-        $lineStarts = $lineStartCache[$cacheKey];
-        $lineIndex = HtmlScanHelper::findLineIndexFromStarts($lineStarts, $offset);
-
-        if ($lineIndex === 0) {
-            return [$line, $column + $offset];
-        }
-
-        return [$line + $lineIndex, $offset - $lineStarts[$lineIndex] + 1];
     }
 }

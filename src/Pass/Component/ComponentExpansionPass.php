@@ -27,9 +27,9 @@ use Sugar\Exception\SyntaxException;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
-use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
 use Sugar\Pass\Component\Helper\ComponentSlots;
 use Sugar\Pass\Component\Helper\SlotResolver;
+use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Runtime\RuntimeEnvironment;
 
@@ -49,7 +49,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
     private readonly AstPipeline $componentTemplatePipeline;
 
-    private readonly ComponentAttributeCategorizer $attributeCategorizer;
+    private readonly DirectiveClassifier $directiveClassifier;
 
     private readonly SlotResolver $slotResolver;
 
@@ -77,7 +77,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
         $this->componentTemplatePipeline = $componentTemplatePipeline;
-        $this->attributeCategorizer = new ComponentAttributeCategorizer($this->registry, $this->prefixHelper);
+        $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
     }
 
@@ -160,7 +160,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
 
         // Categorize attributes: control flow, attribute directives, bindings, merge
-        $categorized = $this->attributeCategorizer->categorize($component->attributes);
+        $categorized = $this->categorizeComponentAttributes($component->attributes);
 
         // Find root element in component template for attribute merging
         $rootElement = NodeTraverser::findRootElement($templateAst);
@@ -169,8 +169,8 @@ final class ComponentExpansionPass implements AstPassInterface
         if ($rootElement instanceof ElementNode) {
             $this->mergeAttributesToRoot(
                 $rootElement,
-                $categorized->merge,
-                $categorized->attributeDirectives,
+                $categorized['merge'],
+                $categorized['attributeDirectives'],
             );
         }
 
@@ -182,7 +182,7 @@ final class ComponentExpansionPass implements AstPassInterface
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
             $templateAst,
-            $categorized->componentBindings,
+            $categorized['componentBindings'],
             $expandedSlots,
             $context,
         );
@@ -191,9 +191,9 @@ final class ComponentExpansionPass implements AstPassInterface
         $expandedContent = $this->expandNodes($wrappedTemplate->children, $context);
 
         // If component has control flow directives, wrap in FragmentNode
-        if ($categorized->controlFlow !== []) {
+        if ($categorized['controlFlow'] !== []) {
             $fragment = new FragmentNode(
-                attributes: $categorized->controlFlow,
+                attributes: $categorized['controlFlow'],
                 children: $expandedContent,
                 line: $component->line,
                 column: $component->column,
@@ -340,12 +340,12 @@ final class ComponentExpansionPass implements AstPassInterface
         int $column,
         ?CompilationContext $context,
     ): RuntimeCallNode {
-        $categorized = $this->attributeCategorizer->categorize($attributes);
+        $categorized = $this->categorizeComponentAttributes($attributes);
 
         $bindingsExpression = '[]';
         $bindContext = $this->prefixHelper->buildName('bind') . ' attribute';
-        if ($categorized->componentBindings instanceof AttributeNode) {
-            $bindAttribute = $categorized->componentBindings;
+        if ($categorized['componentBindings'] instanceof AttributeNode) {
+            $bindAttribute = $categorized['componentBindings'];
             $bindingsValue = $bindAttribute->value;
 
             if ($bindingsValue->isBoolean()) {
@@ -398,8 +398,8 @@ final class ComponentExpansionPass implements AstPassInterface
         $slots = $this->slotResolver->extract($children);
         $slotsExpression = $this->slotResolver->buildSlotsExpression($slots);
         $attributesExpression = $this->buildRuntimeAttributesExpression(array_merge(
-            $categorized->merge,
-            $categorized->attributeDirectives,
+            $categorized['merge'],
+            $categorized['attributeDirectives'],
         ));
 
         return new RuntimeCallNode(
@@ -512,6 +512,52 @@ final class ComponentExpansionPass implements AstPassInterface
 
         // Update root element attributes
         $rootElement->attributes = array_values($existingAttrs);
+    }
+
+    /**
+     * Split component attributes into control-flow, directive, bind and merge buckets.
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes
+     * @return array{
+     *   controlFlow: array<\Sugar\Ast\AttributeNode>,
+     *   attributeDirectives: array<\Sugar\Ast\AttributeNode>,
+     *   componentBindings: \Sugar\Ast\AttributeNode|null,
+     *   merge: array<\Sugar\Ast\AttributeNode>
+     * }
+     */
+    private function categorizeComponentAttributes(array $attributes): array
+    {
+        $controlFlow = [];
+        $attributeDirectives = [];
+        $componentBindings = null;
+        $mergeAttrs = [];
+
+        foreach ($attributes as $attr) {
+            $name = $attr->name;
+
+            if ($this->prefixHelper->isDirective($name)) {
+                $directiveName = $this->prefixHelper->stripPrefix($name);
+
+                if ($directiveName === 'bind') {
+                    $componentBindings = $attr;
+                } elseif ($this->directiveClassifier->isControlFlowDirectiveAttribute($name)) {
+                    $controlFlow[] = $attr;
+                } else {
+                    $attributeDirectives[] = $attr;
+                }
+
+                continue;
+            }
+
+            $mergeAttrs[] = $attr;
+        }
+
+        return [
+            'controlFlow' => $controlFlow,
+            'attributeDirectives' => $attributeDirectives,
+            'componentBindings' => $componentBindings,
+            'merge' => $mergeAttrs,
+        ];
     }
 
     /**

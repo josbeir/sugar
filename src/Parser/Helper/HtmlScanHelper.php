@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Parser\Helper;
 
+use Sugar\Util\Hash;
+
 /**
  * Shared low-level scanning primitives for HTML-like template source.
  */
@@ -116,5 +118,43 @@ final class HtmlScanHelper
         }
 
         return null;
+    }
+
+    /**
+     * Resolve a 1-based line and column for an offset within a fragment.
+     *
+     * @return array{0: int, 1: int}
+     */
+    public static function resolvePosition(string $source, int $offset, int $line, int $column): array
+    {
+        if ($offset <= 0) {
+            return [$line, $column];
+        }
+
+        $length = strlen($source);
+        if ($length === 0) {
+            return [$line, $column];
+        }
+
+        if ($offset > $length) {
+            $offset = $length;
+        }
+
+        /** @var array<string, array<int, int>> $lineStartCache */
+        static $lineStartCache = [];
+        $cacheKey = Hash::make($source);
+
+        if (!isset($lineStartCache[$cacheKey])) {
+            $lineStartCache[$cacheKey] = self::buildLineStarts($source);
+        }
+
+        $lineStarts = $lineStartCache[$cacheKey];
+        $lineIndex = self::findLineIndexFromStarts($lineStarts, $offset);
+
+        if ($lineIndex === 0) {
+            return [$line, $column + $offset];
+        }
+
+        return [$line + $lineIndex, $offset - $lineStarts[$lineIndex] + 1];
     }
 }

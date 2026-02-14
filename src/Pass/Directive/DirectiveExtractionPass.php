@@ -27,7 +27,6 @@ use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Pass\Directive\Helper\DirectiveClassifier;
-use Sugar\Pass\Directive\Helper\UnknownDirectiveValidator;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -58,8 +57,6 @@ final class DirectiveExtractionPass implements AstPassInterface
 
     private DirectiveClassifier $directiveClassifier;
 
-    private UnknownDirectiveValidator $unknownDirectiveValidator;
-
     private CompilationContext $context;
 
     /**
@@ -74,7 +71,6 @@ final class DirectiveExtractionPass implements AstPassInterface
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
-        $this->unknownDirectiveValidator = new UnknownDirectiveValidator($this->registry, $this->prefixHelper);
     }
 
     /**
@@ -256,7 +252,7 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 $expression = $attr->value->isBoolean() ? 'true' : ($attr->value->static ?? '');
 
-                $this->unknownDirectiveValidator->validateDirectiveAttribute($attr, $this->context);
+                $this->directiveClassifier->validateDirectiveAttribute($attr, $this->context);
 
                 // Get directive type
                 $compiler = $this->registry->get($name);
@@ -613,7 +609,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 }
 
                 $expression = $attr->value->isBoolean() ? 'true' : ($attr->value->static ?? '');
-                $this->unknownDirectiveValidator->validateDirectiveAttribute($attr, $this->context, false);
+                $this->directiveClassifier->validateDirectiveAttribute($attr, $this->context, false);
 
                 // Get directive type
                 $compiler = $this->registry->get($name);
