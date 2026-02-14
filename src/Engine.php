@@ -18,8 +18,8 @@ use Sugar\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Runtime\ComponentRenderer;
 use Sugar\Runtime\RuntimeEnvironment;
-use Sugar\Util\ArrayHelper;
 use Sugar\Util\Hash;
+use Sugar\Util\ValueNormalizer;
 
 /**
  * Sugar template engine
@@ -65,7 +65,7 @@ final class Engine implements EngineInterface
      */
     public function render(string $template, array $data = [], ?array $blocks = null): string
     {
-        $blocks = ArrayHelper::normalizeStringList($blocks);
+        $blocks = ValueNormalizer::normalizeStringList($blocks);
 
         try {
             // Get compiled PHP code
@@ -184,11 +184,7 @@ final class Engine implements EngineInterface
                     return $result;
                 }
 
-                if (is_scalar($result) || (is_object($result) && method_exists($result, '__toString'))) {
-                    return (string)$result;
-                }
-
-                return '';
+                return ValueNormalizer::toDisplayString($result);
             }
 
             return '';

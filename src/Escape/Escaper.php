@@ -5,6 +5,7 @@ namespace Sugar\Escape;
 
 use InvalidArgumentException;
 use Sugar\Enum\OutputContext;
+use Sugar\Util\ValueNormalizer;
 
 /**
  * Context-aware escaper for XSS prevention
@@ -177,10 +178,6 @@ final class Escaper implements EscaperInterface
      */
     public static function raw(mixed $value): string
     {
-        if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
-            return (string)$value;
-        }
-
-        return '';
+        return ValueNormalizer::toDisplayString($value);
     }
 }
