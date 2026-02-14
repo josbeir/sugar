@@ -528,6 +528,57 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->assertStringContainsString('spreadAttrs', $attrs[0]->value->output->expression);
     }
 
+    public function testMergesStaticClassWithClassDirective(): void
+    {
+        $element = $this->element('div')
+            ->attribute('class', 'user-card')
+            ->attribute('s:class', "['online' => \$isOnline]")
+            ->at(1, 1)
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+
+        $attrs = $result->children[0]->attributes;
+        $this->assertCount(1, $attrs);
+        $this->assertSame('class', $attrs[0]->name);
+        $this->assertTrue($attrs[0]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $attrs[0]->value->output);
+        $this->assertStringContainsString('classNames', $attrs[0]->value->output->expression);
+        $this->assertStringContainsString('user-card', $attrs[0]->value->output->expression);
+    }
+
+    public function testSpreadDirectiveExcludesExplicitAndMergedAttributes(): void
+    {
+        $element = $this->element('div')
+            ->attribute('id', 'profile')
+            ->attribute('class', 'user-card')
+            ->attribute('s:class', "['online' => \$isOnline]")
+            ->attribute('s:spread', '$attrs')
+            ->at(1, 1)
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(ElementNode::class, $result->children[0]);
+
+        $attrs = $result->children[0]->attributes;
+        $this->assertCount(3, $attrs);
+        $this->assertSame('id', $attrs[0]->name);
+        $this->assertSame('class', $attrs[1]->name);
+        $this->assertSame('', $attrs[2]->name);
+        $this->assertTrue($attrs[2]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $attrs[2]->value->output);
+        $this->assertStringContainsString('array_diff_key', $attrs[2]->value->output->expression);
+        $this->assertStringContainsString("'id' => true", $attrs[2]->value->output->expression);
+        $this->assertStringContainsString("'class' => true", $attrs[2]->value->output->expression);
+    }
+
     public function testKeepsFragmentWithInheritanceAttributeOnly(): void
     {
         $fragment = $this->fragment(

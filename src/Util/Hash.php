@@ -23,7 +23,7 @@ final class Hash
      */
     public static function short(string $data, int $length = 8): string
     {
-        $hash = hash('xxh3', $data);
+        $hash = self::make($data);
 
         return substr($hash, 0, $length);
     }

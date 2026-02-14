@@ -6,7 +6,10 @@ namespace Sugar\Tests\Unit\Directive;
 use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Directive\ClassDirective;
+use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Enum\AttributeMergeMode;
+use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\HtmlAttributeHelper;
 
 final class ClassDirectiveTest extends DirectiveTestCase
@@ -58,5 +61,39 @@ final class ClassDirectiveTest extends DirectiveTestCase
             ->hasPhpCode('class="')
             ->hasPhpCode('<?=')
             ->hasPhpCode('?>');
+    }
+
+    public function testImplementsMergePolicyInterface(): void
+    {
+        $directive = new ClassDirective();
+
+        $this->assertInstanceOf(AttributeMergePolicyDirectiveInterface::class, $directive);
+        $this->assertSame(DirectiveType::ATTRIBUTE, $directive->getType());
+    }
+
+    public function testReturnsMergePolicyMetadata(): void
+    {
+        $directive = new ClassDirective();
+
+        $this->assertSame(AttributeMergeMode::MERGE_NAMED, $directive->getAttributeMergeMode());
+        $this->assertSame('class', $directive->getMergeTargetAttributeName());
+    }
+
+    public function testMergesNamedAttributeExpression(): void
+    {
+        $directive = new ClassDirective();
+        $result = $directive->mergeNamedAttributeExpression("'card'", "HtmlAttributeHelper::classNames(['active' => \$active])");
+
+        $this->assertStringContainsString(HtmlAttributeHelper::class . '::classNames', $result);
+        $this->assertStringContainsString("'card'", $result);
+        $this->assertStringContainsString("'active' => \$active", $result);
+    }
+
+    public function testBuildExcludedAttributesExpressionReturnsSpreadCall(): void
+    {
+        $directive = new ClassDirective();
+        $result = $directive->buildExcludedAttributesExpression('$attrs', ['id', 'class']);
+
+        $this->assertSame(HtmlAttributeHelper::class . '::spreadAttrs($attrs)', $result);
     }
 }

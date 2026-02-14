@@ -7,6 +7,7 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
+use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\NodeTraverser;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
@@ -176,38 +177,11 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
      */
     private function attributeValueExpression(AttributeNode $attr): string
     {
-        if ($attr->value->isOutput()) {
-            $output = $attr->value->output;
-            if ($output instanceof OutputNode) {
-                return '(' . $output->expression . ')';
-            }
-        }
-
-        if ($attr->value->isBoolean()) {
-            return 'null';
-        }
-
-        $parts = $attr->value->toParts() ?? [];
-        if (count($parts) > 1) {
-            $expressionParts = [];
-            foreach ($parts as $part) {
-                if ($part instanceof OutputNode) {
-                    $expressionParts[] = '(' . $part->expression . ')';
-                    continue;
-                }
-
-                $expressionParts[] = var_export($part, true);
-            }
-
-            return implode(' . ', $expressionParts);
-        }
-
-        $part = $parts[0] ?? '';
-        if ($part instanceof OutputNode) {
-            return '(' . $part->expression . ')';
-        }
-
-        return var_export($part, true);
+        return AttributeHelper::attributeValueToPhpExpression(
+            $attr->value,
+            wrapOutputExpressions: true,
+            booleanLiteral: 'null',
+        );
     }
 
     /**

@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
 use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Ast\OutputNode;
 use Sugar\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
@@ -154,5 +155,52 @@ final class AttributeHelperTest extends TestCase
         $this->assertSame(1, AttributeHelper::findAttributeIndex($attributes, 'class'));
         $this->assertSame(2, AttributeHelper::findAttributeIndex($attributes, 'disabled'));
         $this->assertNull(AttributeHelper::findAttributeIndex($attributes, 'missing'));
+    }
+
+    public function testCollectNamedAttributeNamesSkipsSpreadPlaceholdersAndDeduplicates(): void
+    {
+        $attributes = [
+            $this->attribute('id', 'main', 1, 1),
+            $this->attribute('class', 'btn', 1, 10),
+            $this->attribute('id', 'duplicate', 1, 20),
+            $this->attributeNode('', $this->outputNode('$attrs', false, OutputContext::HTML_ATTRIBUTE, 1, 30), 1, 30),
+        ];
+
+        $result = AttributeHelper::collectNamedAttributeNames($attributes);
+
+        $this->assertSame(['id', 'class'], $result);
+    }
+
+    public function testAttributeValueToPhpExpressionOutputWithWrapping(): void
+    {
+        $value = AttributeValue::output(new OutputNode('$name', false, OutputContext::HTML_ATTRIBUTE, 1, 1));
+
+        $this->assertSame('$name', AttributeHelper::attributeValueToPhpExpression($value));
+        $this->assertSame('($name)', AttributeHelper::attributeValueToPhpExpression($value, wrapOutputExpressions: true));
+    }
+
+    public function testAttributeValueToPhpExpressionStaticAndBooleanLiterals(): void
+    {
+        $this->assertSame("'card'", AttributeHelper::attributeValueToPhpExpression(AttributeValue::static('card')));
+        $this->assertSame('null', AttributeHelper::attributeValueToPhpExpression(AttributeValue::boolean(), booleanLiteral: 'null'));
+    }
+
+    public function testAttributeValueToPhpExpressionParts(): void
+    {
+        $value = AttributeValue::parts([
+            'pre-',
+            new OutputNode('$value', false, OutputContext::HTML_ATTRIBUTE, 1, 1),
+            '-post',
+        ]);
+
+        $this->assertSame("'pre-' . \$value . '-post'", AttributeHelper::attributeValueToPhpExpression($value));
+        $this->assertSame("'pre-' . (\$value) . '-post'", AttributeHelper::attributeValueToPhpExpression($value, wrapOutputExpressions: true));
+    }
+
+    public function testNormalizeCompiledPhpExpression(): void
+    {
+        $this->assertSame('$value', AttributeHelper::normalizeCompiledPhpExpression('<?= $value ?>'));
+        $this->assertSame('$value', AttributeHelper::normalizeCompiledPhpExpression('<?php echo $value ?>'));
+        $this->assertSame('HtmlAttributeHelper::spreadAttrs($attrs)', AttributeHelper::normalizeCompiledPhpExpression('<?= HtmlAttributeHelper::spreadAttrs($attrs) ?>'));
     }
 }

@@ -10,6 +10,7 @@ use Sugar\Ast\DirectiveNode;
 use Sugar\Ast\DocumentNode;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\Helper\AttributeHelper;
 use Sugar\Ast\Helper\NodeCloner;
 use Sugar\Ast\Node;
 use Sugar\Ast\OutputNode;
@@ -20,9 +21,11 @@ use Sugar\Compiler\Pipeline\NodeAction;
 use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
+use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Directive\Interface\DirectiveInterface;
 use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
+use Sugar\Enum\AttributeMergeMode;
 use Sugar\Enum\DirectiveType;
 use Sugar\Enum\OutputContext;
 use Sugar\Extension\DirectiveRegistryInterface;
@@ -747,6 +750,8 @@ final class DirectiveExtractionPass implements AstPassInterface
         // Attribute compilers can return two formats:
         // 1. Named attribute: name="value" (e.g., s:class)
         // 2. Spread output: raw output without name (e.g., s:spread)
+        $mergePolicy = $compiler instanceof AttributeMergePolicyDirectiveInterface ? $compiler : null;
+
         foreach ($compiledNodes as $node) {
             if (!($node instanceof RawPhpNode)) {
                 continue;
@@ -759,7 +764,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $attrName = $matches[1];
                 $attrValue = $matches[2];
                 $outputNode = new OutputNode(
-                    expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $attrValue)),
+                    expression: AttributeHelper::normalizeCompiledPhpExpression($attrValue),
                     escape: false, // Already handled by the directive compiler
                     context: OutputContext::HTML_ATTRIBUTE,
                     line: $attr->line,
@@ -774,12 +779,60 @@ final class DirectiveExtractionPass implements AstPassInterface
                     column: $attr->column,
                 );
                 $newAttr->inheritTemplatePathFrom($attr);
+
+                if (
+                    $mergePolicy instanceof AttributeMergePolicyDirectiveInterface &&
+                    $mergePolicy->getAttributeMergeMode() === AttributeMergeMode::MERGE_NAMED &&
+                    $mergePolicy->getMergeTargetAttributeName() === $attrName
+                ) {
+                    $existingIndex = AttributeHelper::findAttributeIndex($remainingAttrs, $attrName);
+
+                    if ($existingIndex !== null) {
+                        $existingAttr = $remainingAttrs[$existingIndex];
+                        $mergedExpression = $mergePolicy->mergeNamedAttributeExpression(
+                            AttributeHelper::attributeValueToPhpExpression($existingAttr->value),
+                            AttributeHelper::attributeValueToPhpExpression($newAttr->value),
+                        );
+
+                        $mergedOutput = new OutputNode(
+                            expression: $mergedExpression,
+                            escape: false,
+                            context: OutputContext::HTML_ATTRIBUTE,
+                            line: $attr->line,
+                            column: $attr->column,
+                        );
+                        $mergedOutput->inheritTemplatePathFrom($attr);
+
+                        $remainingAttrs[$existingIndex] = new AttributeNode(
+                            name: $attrName,
+                            value: AttributeValue::output($mergedOutput),
+                            line: $existingAttr->line,
+                            column: $existingAttr->column,
+                        );
+                        $remainingAttrs[$existingIndex]->inheritTemplatePathFrom($existingAttr);
+
+                        continue;
+                    }
+                }
+
                 $remainingAttrs[] = $newAttr;
             } else {
                 // Spread format - raw output without name
                 // Empty name signals to code generator to output directly
+                $outputExpression = AttributeHelper::normalizeCompiledPhpExpression($node->code);
+
+                if (
+                    $mergePolicy instanceof AttributeMergePolicyDirectiveInterface &&
+                    $mergePolicy->getAttributeMergeMode() === AttributeMergeMode::EXCLUDE_NAMED
+                ) {
+                    $outputExpression = $mergePolicy->buildExcludedAttributesExpression(
+                        $expression,
+                        AttributeHelper::collectNamedAttributeNames($remainingAttrs),
+                    );
+                }
+
                 $outputNode = new OutputNode(
-                    expression: trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $node->code)),
+                    expression: $outputExpression,
                     escape: false,
                     context: OutputContext::HTML_ATTRIBUTE,
                     line: $attr->line,

@@ -7,6 +7,12 @@ description: Modify element attributes with helpers.
 
 Attribute directives compute or adjust attributes while keeping templates readable. They can be combined with control flow directives.
 
+## Merge rules
+
+- `s:class` merges with an existing static `class` attribute into one final `class` output.
+- `s:spread` / `s:attr` exclude attribute names already defined explicitly on the element.
+- Explicit attributes win over spread-provided values for the same attribute name.
+
 ## Directives
 
 - `s:class` - Conditional class lists.
@@ -21,6 +27,8 @@ Attribute directives compute or adjust attributes while keeping templates readab
 ### s:class
 
 Build classes from an associative array of conditions.
+
+When an element already has a static `class` attribute, `s:class` merges into that same `class` output instead of creating a duplicate attribute.
 
 ::: code-group
 ```html [Array map]
@@ -42,6 +50,8 @@ Build classes from an associative array of conditions.
 
 Spread an array of attributes onto the element. `s:attr` is a short alias.
 
+Explicitly defined attributes on the element are excluded from spread input, including merged attributes like `class`.
+
 ::: code-group
 ```html [Simple]
 <div s:spread="$attrs"></div>
@@ -60,6 +70,15 @@ Spread an array of attributes onto the element. `s:attr` is a short alias.
 ```html [Rendered (merged)]
 <!-- $extraAttrs = ['type' => 'submit', 'disabled' => true] -->
 <button class="btn" type="submit" disabled>Save</button>
+```
+
+```html [Exclusion behavior]
+<button id="save" class="btn" s:class="['primary' => true]" s:spread="$extraAttrs">Save</button>
+```
+
+```html [Rendered (exclusions applied)]
+<!-- $extraAttrs = ['id' => 'override', 'class' => 'x', 'disabled' => true] -->
+<button id="save" class="btn primary" disabled>Save</button>
 ```
 :::
 

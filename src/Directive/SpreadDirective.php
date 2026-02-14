@@ -6,7 +6,9 @@ namespace Sugar\Directive;
 use Sugar\Ast\Node;
 use Sugar\Ast\RawPhpNode;
 use Sugar\Compiler\CompilationContext;
+use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Directive\Interface\DirectiveInterface;
+use Sugar\Enum\AttributeMergeMode;
 use Sugar\Enum\DirectiveType;
 use Sugar\Runtime\HtmlAttributeHelper;
 
@@ -41,7 +43,7 @@ use Sugar\Runtime\HtmlAttributeHelper;
  * <div id="user-123" class="card" disabled>Content</div>
  * ```
  */
-readonly class SpreadDirective implements DirectiveInterface
+readonly class SpreadDirective implements DirectiveInterface, AttributeMergePolicyDirectiveInterface
 {
     /**
      * @param \Sugar\Ast\DirectiveNode $node
@@ -68,5 +70,54 @@ readonly class SpreadDirective implements DirectiveInterface
     public function getType(): DirectiveType
     {
         return DirectiveType::ATTRIBUTE;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getAttributeMergeMode(): AttributeMergeMode
+    {
+        return AttributeMergeMode::EXCLUDE_NAMED;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getMergeTargetAttributeName(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function mergeNamedAttributeExpression(string $existingExpression, string $incomingExpression): string
+    {
+        return $incomingExpression;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function buildExcludedAttributesExpression(string $sourceExpression, array $excludedAttributeNames): string
+    {
+        if ($excludedAttributeNames === []) {
+            return sprintf('%s::spreadAttrs(%s)', HtmlAttributeHelper::class, $sourceExpression);
+        }
+
+        $keys = implode(
+            ', ',
+            array_map(
+                static fn(string $name): string => sprintf('%s => true', var_export($name, true)),
+                array_values(array_unique($excludedAttributeNames)),
+            ),
+        );
+
+        return sprintf(
+            '%s::spreadAttrs(array_diff_key((array) (%s), [%s]))',
+            HtmlAttributeHelper::class,
+            $sourceExpression,
+            $keys,
+        );
     }
 }

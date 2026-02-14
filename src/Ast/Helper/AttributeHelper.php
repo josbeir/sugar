@@ -7,6 +7,7 @@ use Sugar\Ast\AttributeNode;
 use Sugar\Ast\AttributeValue;
 use Sugar\Ast\ElementNode;
 use Sugar\Ast\FragmentNode;
+use Sugar\Ast\OutputNode;
 
 /**
  * Helper for AST attribute operations during compilation
@@ -178,5 +179,83 @@ final class AttributeHelper
         }
 
         return null;
+    }
+
+    /**
+     * Returns unique named attributes, excluding spread placeholders.
+     *
+     * @param array<\Sugar\Ast\AttributeNode> $attributes Attributes to inspect
+     * @return array<int, string> Unique named attribute names in encounter order
+     */
+    public static function collectNamedAttributeNames(array $attributes): array
+    {
+        $names = [];
+
+        foreach ($attributes as $attribute) {
+            if ($attribute->name === '') {
+                continue;
+            }
+
+            $names[] = $attribute->name;
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Converts an attribute value into a PHP expression string.
+     *
+     * @param \Sugar\Ast\AttributeValue $value Attribute value to convert
+     * @param bool $wrapOutputExpressions Whether dynamic expressions are wrapped in parentheses
+     * @param string $booleanLiteral Literal expression used for boolean attributes
+     */
+    public static function attributeValueToPhpExpression(
+        AttributeValue $value,
+        bool $wrapOutputExpressions = false,
+        string $booleanLiteral = 'true',
+    ): string {
+        if ($value->isOutput()) {
+            $output = $value->output;
+            if ($output instanceof OutputNode) {
+                return $wrapOutputExpressions ? sprintf('(%s)', $output->expression) : $output->expression;
+            }
+        }
+
+        if ($value->isStatic()) {
+            return var_export($value->static, true);
+        }
+
+        if ($value->isParts()) {
+            $parts = $value->toParts() ?? [];
+            if ($parts === []) {
+                return "''";
+            }
+
+            $expressions = array_map(
+                static function (string|OutputNode $part) use ($wrapOutputExpressions): string {
+                    if (is_string($part)) {
+                        return var_export($part, true);
+                    }
+
+                    return $wrapOutputExpressions ? sprintf('(%s)', $part->expression) : $part->expression;
+                },
+                $parts,
+            );
+
+            return implode(' . ', $expressions);
+        }
+
+        return $booleanLiteral;
+    }
+
+    /**
+     * Normalizes compiled PHP snippets to plain expression code.
+     *
+     * @param string $compiledCode Compiled snippet, e.g. <?= expr ?> or <?php echo expr ?>
+     * @return string Extracted expression
+     */
+    public static function normalizeCompiledPhpExpression(string $compiledCode): string
+    {
+        return trim(str_replace(['<?=', '?>', '<?php', 'echo'], '', $compiledCode));
     }
 }
