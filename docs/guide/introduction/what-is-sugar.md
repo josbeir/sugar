@@ -22,11 +22,32 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 
 ## Before and After
 
-**Your existing PHP template:**
-```php
+::: code-group
+```html [Sugar template]
+<div
+    s:forelse="$users as $user"
+    class="user-card"
+    s:class="[
+        $user->isAdmin() ? 'admin' : 'user',
+        'online' => $user->isOnline(),
+        'no-email' => empty($user->email),
+    ]"
+>
+    <?= $user->name ?>
+    <small s:if="$user->email"><?= $user->email ?></small>
+</div>
+<div s:empty>No users found</div>
+```
+
+```php [Existing PHP template]
 <?php if (!empty($users)): ?>
     <?php foreach ($users as $user): ?>
-        <div class="<?= $user->isAdmin() ? 'admin' : 'user' ?>">
+        <div class="<?= implode(' ', array_filter([
+            'user-card',
+            $user->isAdmin() ? 'admin' : 'user',
+            $user->isOnline() ? 'online' : null,
+            empty($user->email) ? 'no-email' : null,
+        ])) ?>">
             <?= htmlspecialchars($user->name, ENT_QUOTES, 'UTF-8') ?>
             <?php if ($user->email): ?>
                 <small><?= htmlspecialchars($user->email, ENT_QUOTES, 'UTF-8') ?></small>
@@ -38,20 +59,15 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 <?php endif; ?>
 ```
 
-**Converted to Sugar:**
-```html
-<div s:forelse="$users as $user" s:class="['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]">
-    <?= $user->name ?>
-    <small s:if="$user->email"><?= $user->email ?></small>
-</div>
-<div s:empty>No users found</div>
-```
-
-**Compiles to optimized PHP:**
-```php
+```php [Compiled PHP]
 <?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($users)): ?>
     <?php foreach ($users as $user): ?>
-        <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['admin' => $user->isAdmin(), 'user' => !$user->isAdmin()]) ?>">
+        <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames([
+            'user-card',
+            $user->isAdmin() ? 'admin' : 'user',
+            'online' => $user->isOnline(),
+            'no-email' => empty($user->email),
+        ]) ?>">
             <?= \Sugar\Escape\Escaper::html($user->name) ?>
             <?php if ($user->email): ?>
                 <small><?= \Sugar\Escape\Escaper::html($user->email) ?></small>
@@ -62,6 +78,7 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
     <div>No users found</div>
 <?php endif; ?>
 ```
+:::
 
 ## Why Sugar
 
