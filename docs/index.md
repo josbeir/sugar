@@ -35,74 +35,113 @@ Don't worry: This **Sugar** is **safe** for diabetics. :drum:
 
 ## A Taste of the Syntax
 
-```html [Sugar Template]
-<ul s:forelse="$orders as $order">
-  <li s:class="['paid' => $order->isPaid, 'unpaid' => !$order->isPaid]">
-    #<?= $order->number ?>
-    <span><?= $order->customerName ?></span>
-    <a href="/orders/<?= $order->id ?>">View</a>
-  </li>
-</ul>
-<p s:empty>No orders yet</p>
-```
+Here's what a real template looks like with Sugar. Click each tab to see the full picture:
 
 ::: code-group
-```php [Vanilla PHP]
-<?php if (!empty($orders)): ?>
-  <ul>
-    <?php foreach ($orders as $order): ?>
-      <li class="<?= $order->isPaid ? 'paid' : 'unpaid' ?>">
-        #<?= htmlspecialchars($order->number, ENT_QUOTES, 'UTF-8') ?>
-        <span><?= htmlspecialchars($order->customerName, ENT_QUOTES, 'UTF-8') ?></span>
-        <a href="/orders/<?= urlencode($order->id) ?>">View</a>
-      </li>
-    <?php endforeach; ?>
-  </ul>
-<?php else: ?>
-  <p>No orders yet</p>
-<?php endif; ?>
-```
 
-```php [Compiled Template]
-<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($orders)): ?>
-  <ul>
-    <?php foreach ($orders as $order): ?>
-      <li class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames(['paid' => $order->isPaid, 'unpaid' => !$order->isPaid]) ?>">
-        #<?= \Sugar\Escape\Escaper::html($order->number) ?>
-        <span><?= \Sugar\Escape\Escaper::html($order->customerName) ?></span>
-        <a href="/orders/<?= \Sugar\Escape\Escaper::url($order->id) ?>">View</a>
-      </li>
-    <?php endforeach; ?>
-  </ul>
-<?php else: ?>
-  <p>No orders yet</p>
-<?php endif; ?>
-```
-:::
+```html [Child Template]
+<!-- pages/orders.sugar.php -->
+<s-template s:extends="layouts/app.sugar.php"></s-template>
 
-## Built For Real Templates
+<title s:block="title">Orders</title>
 
-::: code-group
-```html [Layout]
-<s-template s:extends="../layouts/base.sugar.php"></s-template>
-<title s:block="title">Dashboard</title>
 <div s:block="content">
-  <s-template s:include="partials/header"></s-template>
-  <s-template s:include="partials/stats"></s-template>
+  <h1>Your Orders</h1>
+
+  <!-- Include reusable partials -->
+  <s-template s:include="components/filter-bar"></s-template>
+
+  <!-- Use a component with props and slots -->
+  <s-orders-table s:bind="['orders' => $orders, 'pagination' => $pagination]">
+    <h2>Order Summary</h2>
+    <p>View and manage all your orders below.</p>
+
+    <div s:slot="empty">
+      <p>No orders found. <a href="/orders/new">Create one</a>.</p>
+    </div>
+  </s-orders-table>
+
+  <!-- Another include -->
+  <s-template s:include="components/pagination" s:with="['pagination' => $pagination]"></s-template>
+</div>
+
+<script s:block="footer-js">
+  console.log('Orders page loaded');
+</script>
+```
+
+```html [Parent Layout]
+<!-- layouts/app.sugar.php -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title s:block="title">My App</title>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/orders">Orders</a>
+      <a href="/settings">Settings</a>
+    </nav>
+  </header>
+
+  <main>
+    <div s:block="content">
+      <!-- Child pages replace this block -->
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024. All rights reserved.</p>
+  </footer>
+</body>
+</html>
+```
+
+```html [Component: OrdersTable]
+<!-- components/orders-table.sugar.php -->
+<div class="orders-table">
+  <!-- Main slot content (if needed) -->
+  <div class="header">
+    <?= $slot ?>
+  </div>
+
+  <s-template s:if="!empty($orders)">
+    <table>
+      <thead>
+        <tr>
+          <th>Order #</th>
+          <th>Customer</th>
+          <th>Status</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr s:foreach="$orders as $order"
+          s:class="['paid' => $order->isPaid, 'pending' => !$order->isPaid]"
+        >
+          <td>#<?= $order->id ?></td>
+          <td><?= $order->customerName ?></td>
+          <td>
+            <span s:class="['badge-success' => $order->isPaid, 'badge-warning' => !$order->isPaid]">
+              <?= $order->isPaid ? 'Paid' : 'Pending' ?>
+            </span>
+          </td>
+          <td>$<?= number_format($order->total, 2) ?></td>
+        </tr>
+      </tbody>
+    </table>
+  </s-template>
+
+  <!-- Empty state named slot -->
+  <s-template s:if="empty($orders)">
+    <?= $empty ?? '' ?>
+  </s-template>
 </div>
 ```
 
-```html [Safe Output]
-<!-- template -->
-<a href="/search?q=<?= $query ?>">Search</a>
-<div data-user="<?= $userName ?>"></div>
-<style>.badge::before { content: '<?= $label ?>'; }</style>
-<p><?= $summary ?></p>
-
-<!-- compiled -->
-<a href="/search?q=<?= \Sugar\Escape\Escaper::url($query) ?>">Search</a>
-<div data-user="<?= \Sugar\Escape\Escaper::attr($userName) ?>"></div>
-<style>.badge::before { content: '<?= \Sugar\Escape\Escaper::css($label) ?>'; }</style>
-<p><?= \Sugar\Escape\Escaper::html($summary) ?></p>
-```
 :::
+
+

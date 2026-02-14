@@ -51,6 +51,8 @@ echo $engine->render('pages/home', [
 
 ::: tip
 By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths relative to the current template. If you prefer absolute-only lookups, pass `absolutePathsOnly: true` and use root-style paths like `layouts/base.sugar.php`.
+
+For a complete overview of all builder methods and configuration options, see [Engine Configuration](/guide/development/index).
 :::
 
 ## Example Template
