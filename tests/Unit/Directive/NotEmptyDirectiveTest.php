@@ -47,4 +47,50 @@ final class NotEmptyDirectiveTest extends DirectiveTestCase
         $this->assertAst($result)
             ->hasPhpCode('if (!' . EmptyHelper::class . '::isEmpty(trim($input))):');
     }
+
+    public function testNotEmptyWithArrayAccess(): void
+    {
+        $node = $this->directive('notempty')
+            ->expression('$data[\'items\']')
+            ->withChild($this->text('Has items'))
+            ->build();
+
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
+
+        $this->assertAst($result)
+            ->hasPhpCode('if (!' . EmptyHelper::class . '::isEmpty($data[\'items\'])):');
+    }
+
+    public function testNotEmptyWithPropertyAccess(): void
+    {
+        $node = $this->directive('notempty')
+            ->expression('$user->posts')
+            ->withChild($this->text('Has posts'))
+            ->build();
+
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
+
+        $this->assertAst($result)
+            ->hasPhpCode('if (!' . EmptyHelper::class . '::isEmpty($user->posts)):');
+    }
+
+    public function testNotEmptyWithMultipleChildren(): void
+    {
+        $node = $this->directive('notempty')
+            ->expression('$results')
+            ->withChildren([
+                $this->text('Results found'),
+                $this->text('Showing first page'),
+            ])
+            ->build();
+
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
+
+        $this->assertAst($result)
+            ->hasCount(4)
+            ->hasPhpCode('if (!' . EmptyHelper::class . '::isEmpty($results)):')
+            ->containsText('Results found')
+            ->containsText('Showing first page')
+            ->hasPhpCode('endif;');
+    }
 }
