@@ -47,9 +47,31 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 
 <div s:block="content">
   <h1>Your Orders</h1>
+  <p class="rating" aria-label="Priority">
+    <span s:times="3">★</span>
+  </p>
+
+  <p s:if="$showFilters" class="muted">Refine results using the filters below.</p>
+  <p s:else class="muted">Showing all orders.</p>
 
   <!-- Include reusable partials -->
   <s-template s:include="partials/filter-bar"></s-template>
+
+  <div s:cache="['key' => 'orders:summary:' . $user->id, 'ttl' => 300]"
+    s:class="['summary', 'summary--empty' => empty($orders)]">
+    <strong><?= count($orders) ?></strong> orders found
+    <span class="muted">(<?= $user->name |> trim(...) |> strtoupper(...) ?>)</span>
+  </div>
+
+  <?php
+    // Regular PHP is still available for prep/transform logic
+    $visibleOrders = array_values(array_filter(
+      $orders,
+      static fn($order) => $order->isVisible,
+    ));
+    $topOrder = $visibleOrders[0] ?? null;
+  ?>
+  <p s:if="$topOrder" class="muted">Top visible order: <?= $topOrder->id ?></p>
 
   <!-- Use a component with props and slots -->
   <s-orders-table s:bind="['orders' => $orders, 'pagination' => $pagination]">
@@ -104,37 +126,35 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
     <?= $slot ?>
   </div>
 
-  <s-template s:if="!empty($orders)">
-    <table>
-      <thead>
-        <tr>
-          <th>Order #</th>
-          <th>Customer</th>
-          <th>Status</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr s:foreach="$orders as $order"
-          s:class="['paid' => $order->isPaid, 'pending' => !$order->isPaid]"
-        >
-          <td>#<?= $order->id ?></td>
-          <td><?= $order->customerName ?></td>
-          <td>
-            <span s:class="['badge-success' => $order->isPaid, 'badge-warning' => !$order->isPaid]">
-              <?= $order->isPaid ? 'Paid' : 'Pending' ?>
-            </span>
-          </td>
-          <td>$<?= number_format($order->total, 2) ?></td>
-        </tr>
-      </tbody>
-    </table>
-  </s-template>
+  <table>
+    <thead>
+      <tr>
+        <th>Order #</th>
+        <th>Customer</th>
+        <th>Status</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr s:forelse="$orders as $order"
+        s:class="['paid' => $order->isPaid, 'pending' => !$order->isPaid]"
+      >
+        <td>#<?= $order->id ?></td>
+        <td><?= $order->customerName ?></td>
+        <td>
+          <span s:class="['badge-success' => $order->isPaid, 'badge-warning' => !$order->isPaid]">
+            <?= $order->isPaid ? 'Paid' : 'Pending' ?>
+          </span>
+        </td>
+        <td>$<?= number_format($order->total, 2) ?></td>
+      </tr>
 
-  <!-- Empty state named slot -->
-  <s-template s:if="empty($orders)">
-    <?= $empty ?? '' ?>
-  </s-template>
+      <!-- Empty state named slot -->
+      <tr s:empty>
+        <td colspan="4"><?= $empty ?? 'No orders found' ?></td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 ```
 
