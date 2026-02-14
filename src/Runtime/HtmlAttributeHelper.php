@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Runtime;
 
 use Sugar\Escape\Escaper;
+use Sugar\Util\ValueNormalizer;
 
 /**
  * Utility class for HTML attribute manipulation at runtime
@@ -43,9 +44,10 @@ final class HtmlAttributeHelper
 
         foreach ($classes as $key => $value) {
             if (is_int($key)) {
-                // Numeric key: include value if truthy
-                if (!empty($value) && is_string($value)) {
-                    $result[] = $value;
+                // Numeric key: include non-empty stringable value
+                $className = trim(ValueNormalizer::toDisplayString($value));
+                if ($className !== '') {
+                    $result[] = $className;
                 }
             } elseif ($value) {
                 // Associative key: include key if value is truthy
@@ -81,6 +83,8 @@ final class HtmlAttributeHelper
         $result = [];
 
         foreach ($attributes as $key => $value) {
+            $value = ValueNormalizer::toAttributeValue($value);
+
             // Skip false and null values
             if ($value === null) {
                 continue;
@@ -98,9 +102,7 @@ final class HtmlAttributeHelper
 
             // Regular attribute: key="value"
             $escapedKey = Escaper::attr($key);
-            // After checking null, false, true above, value must be stringable
-            assert(is_scalar($value) || (is_object($value) && method_exists($value, '__toString')));
-            $escapedValue = Escaper::attr((string)$value);
+            $escapedValue = Escaper::attr(ValueNormalizer::toDisplayString($value));
             $result[] = sprintf('%s="%s"', $escapedKey, $escapedValue);
         }
 

@@ -12,6 +12,7 @@ use Sugar\Compiler\Compiler;
 use Sugar\Exception\CompilationException;
 use Sugar\Exception\ComponentNotFoundException;
 use Sugar\Loader\TemplateLoaderInterface;
+use Sugar\Util\ValueNormalizer;
 
 /**
  * Renders components at runtime for dynamic component calls
@@ -120,7 +121,7 @@ final class ComponentRenderer
     {
         $normalizedSlots = [];
         foreach ($slots as $name => $value) {
-            $normalizedSlots[$name] = $this->normalizeSlotValue($value);
+            $normalizedSlots[$name] = ValueNormalizer::toDisplayString($value);
         }
 
         if (!isset($normalizedSlots['slot'])) {
@@ -140,26 +141,6 @@ final class ComponentRenderer
     }
 
     /**
-     * Normalize slot value to a string
-     */
-    private function normalizeSlotValue(mixed $value): string
-    {
-        if ($value === null) {
-            return '';
-        }
-
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
-            return (string)$value;
-        }
-
-        return '';
-    }
-
-    /**
      * Normalize attribute array values to stringable values
      *
      * @param array<string, mixed> $attributes
@@ -171,18 +152,7 @@ final class ComponentRenderer
 
         foreach ($attributes as $name => $value) {
             $key = (string)$name;
-
-            if ($value === null || is_bool($value) || is_scalar($value)) {
-                $normalized[$key] = $value;
-                continue;
-            }
-
-            if (is_object($value) && method_exists($value, '__toString')) {
-                $normalized[$key] = (string)$value;
-                continue;
-            }
-
-            $normalized[$key] = null;
+            $normalized[$key] = ValueNormalizer::toAttributeValue($value);
         }
 
         return $normalized;
@@ -212,11 +182,7 @@ final class ComponentRenderer
                 return $result;
             }
 
-            if (is_scalar($result) || (is_object($result) && method_exists($result, '__toString'))) {
-                return (string)$result;
-            }
-
-            return '';
+            return ValueNormalizer::toDisplayString($result);
         }
 
         return '';

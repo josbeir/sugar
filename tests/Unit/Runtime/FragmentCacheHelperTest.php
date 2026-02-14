@@ -33,6 +33,15 @@ final class FragmentCacheHelperTest extends TestCase
     public function testResolveKeySupportsScalarAndFallsBackForInvalidValues(): void
     {
         $this->assertSame('users-1', FragmentCacheHelper::resolveKey('users-1', 'fallback'));
+        $this->assertSame(
+            'users-2',
+            FragmentCacheHelper::resolveKey(new class {
+                public function __toString(): string
+                {
+                    return 'users-2';
+                }
+            }, 'fallback'),
+        );
         $this->assertSame('fallback', FragmentCacheHelper::resolveKey(['key' => ['invalid']], 'fallback'));
         $this->assertSame('fallback', FragmentCacheHelper::resolveKey(['key' => '   '], 'fallback'));
         $this->assertSame('fallback', FragmentCacheHelper::resolveKey(new stdClass(), 'fallback'));

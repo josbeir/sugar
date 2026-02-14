@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Runtime;
 
 use Psr\SimpleCache\CacheInterface;
+use Sugar\Util\ValueNormalizer;
 use Throwable;
 
 /**
@@ -112,11 +113,7 @@ final class FragmentCacheHelper
      */
     private static function normalizeKey(mixed $value, string $fallbackKey): string
     {
-        if (!is_scalar($value) && !(is_object($value) && method_exists($value, '__toString'))) {
-            return $fallbackKey;
-        }
-
-        $key = trim((string)$value);
+        $key = trim(ValueNormalizer::toDisplayString($value));
 
         return $key !== '' ? $key : $fallbackKey;
     }
