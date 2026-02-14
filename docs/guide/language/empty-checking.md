@@ -5,7 +5,7 @@ description: Why Sugar uses EmptyHelper instead of PHP empty().
 
 # Empty Checking
 
-Sugar uses `EmptyHelper::isEmpty()` for `s:empty` and `s:forelse` instead of PHP's `empty()`. This provides consistent behavior across arrays, countable objects, and iterators while avoiding false positives.
+Sugar uses `EmptyHelper::isEmpty()` for `s:empty`, `s:notempty`, and `s:forelse` instead of PHP's `empty()`. This provides consistent behavior across arrays, countable objects, and iterators while avoiding false positives.
 
 ::: info
 `empty()` treats some values (like `0` and `"0"`) as empty. `EmptyHelper` follows those rules for scalars, but adds smarter handling for objects and iterables.
@@ -58,7 +58,7 @@ EmptyHelper::isEmpty($generator); // throws GeneratorNotSupportedException
 ```
 
 ::: tip
-Convert generators to arrays before using them with `s:empty` or `s:forelse`.
+Convert generators to arrays before using them with `s:empty`, `s:notempty`, or `s:forelse`.
 :::
 
 ## In Templates
@@ -68,4 +68,5 @@ Convert generators to arrays before using them with `s:empty` or `s:forelse`.
     <li><?= $item ?></li>
 </ul>
 <div s:empty>No items found</div>
+<div s:notempty>Items found</div>
 ```

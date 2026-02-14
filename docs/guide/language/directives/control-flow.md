@@ -14,6 +14,7 @@ Use `<s-template>` when you want control flow without adding a wrapper element.
 - `s:unless` - Render when a condition is false.
 - `s:isset` - Render when a variable is set.
 - `s:empty` - Render when a value is empty.
+- `s:notempty` - Render when a value is not empty.
 - `s:foreach` - Loop over an iterable.
 - `s:forelse` - Loop with an empty fallback.
 - `s:while` - Loop while a condition is true.
@@ -66,6 +67,16 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 
 ```html
 <div s:empty="$items">No items found</div>
+```
+
+### s:notempty
+
+Render the element when the value is not empty.
+
+For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
+
+```html
+<div s:notempty="$items">Items available</div>
 ```
 
 ### s:foreach
