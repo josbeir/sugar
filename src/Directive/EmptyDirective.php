@@ -40,7 +40,7 @@ readonly class EmptyDirective implements DirectiveInterface
 
         // Opening control structure with empty check
         $parts[] = new RawPhpNode(
-            'if (' . EmptyHelper::class . '::isEmpty(' . $node->expression . ')):',
+            'if (' . $this->buildCondition($node->expression) . '):',
             $node->line,
             $node->column,
         );
@@ -52,6 +52,17 @@ readonly class EmptyDirective implements DirectiveInterface
         $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * Build the condition used by the generated `if` statement.
+     *
+     * @param string $expression Directive expression to evaluate.
+     * @return string PHP condition expression.
+     */
+    protected function buildCondition(string $expression): string
+    {
+        return EmptyHelper::class . '::isEmpty(' . $expression . ')';
     }
 
     /**
