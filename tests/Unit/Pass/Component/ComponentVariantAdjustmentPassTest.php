@@ -1,21 +1,36 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Component\Helper;
+namespace Sugar\Tests\Unit\Pass\Component;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Ast\AttributeValue;
 use Sugar\Ast\OutputNode;
+use Sugar\Compiler\CompilationContext;
+use Sugar\Compiler\Pipeline\PipelineContext;
 use Sugar\Enum\OutputContext;
-use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
+use Sugar\Pass\Component\ComponentVariantAdjustmentPass;
 use Sugar\Runtime\HtmlAttributeHelper;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
-final class ComponentAttributeOverrideHelperTest extends TestCase
+final class ComponentVariantAdjustmentPassTest extends TestCase
 {
     use NodeBuildersTrait;
 
-    public function testAppliesRuntimeAttributeOverrides(): void
+    public function testBeforeDisablesEscapingForSlotVariables(): void
+    {
+        $slotOutput = $this->outputNode('$slot', true, OutputContext::HTML, 1, 1);
+        $otherOutput = $this->outputNode('$title', true, OutputContext::HTML, 1, 10);
+        $document = $this->document()->withChildren([$slotOutput, $otherOutput])->build();
+
+        $pass = new ComponentVariantAdjustmentPass(['slot']);
+        $pass->before($document, $this->createPipelineContext());
+
+        $this->assertFalse($slotOutput->escape);
+        $this->assertTrue($otherOutput->escape);
+    }
+
+    public function testAfterAppliesRuntimeAttributeOverrides(): void
     {
         $outputNode = $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1);
         $element = $this->element('div')
@@ -25,7 +40,8 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $document = $this->document()->withChild($element)->build();
 
-        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+        $pass = new ComponentVariantAdjustmentPass([]);
+        $pass->after($document, $this->createPipelineContext());
 
         $this->assertCount(3, $element->attributes);
 
@@ -49,17 +65,18 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
         $this->assertStringContainsString(HtmlAttributeHelper::class . '::spreadAttrs', $spreadAttr->value->output->expression);
     }
 
-    public function testNoRootElementLeavesDocumentUnchanged(): void
+    public function testAfterNoRootElementLeavesDocumentUnchanged(): void
     {
         $text = $this->text('Hello', 1, 1);
         $document = $this->document()->withChild($text)->build();
 
-        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+        $pass = new ComponentVariantAdjustmentPass([]);
+        $pass->after($document, $this->createPipelineContext());
 
         $this->assertSame($text, $document->children[0]);
     }
 
-    public function testAppliesOverridesToFirstRootElementOnly(): void
+    public function testAfterAppliesOverridesToFirstRootElementOnly(): void
     {
         $first = $this->element('div')
             ->attribute('id', 'first')
@@ -70,7 +87,8 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $document = $this->document()->withChildren([$first, $second])->build();
 
-        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+        $pass = new ComponentVariantAdjustmentPass([]);
+        $pass->after($document, $this->createPipelineContext());
 
         $this->assertCount(2, $first->attributes);
         $this->assertSame('', $first->attributes[1]->name);
@@ -79,7 +97,7 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
         $this->assertCount(1, $second->attributes);
     }
 
-    public function testAttributeValueExpressionHandlesBooleanAndParts(): void
+    public function testAfterAttributeValueExpressionHandlesBooleanAndParts(): void
     {
         $titleParts = AttributeValue::parts([
             'Hello ',
@@ -93,7 +111,8 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
 
         $document = $this->document()->withChild($element)->build();
 
-        ComponentAttributeOverrideHelper::apply($document, '$__sugar_attrs');
+        $pass = new ComponentVariantAdjustmentPass([]);
+        $pass->after($document, $this->createPipelineContext());
 
         $disabledAttr = $element->attributes[0];
         $this->assertSame('disabled', $disabledAttr->name);
@@ -108,5 +127,16 @@ final class ComponentAttributeOverrideHelperTest extends TestCase
         $this->assertStringContainsString('$__sugar_attrs[\'title\'] ??', $titleAttr->value->output->expression);
         $this->assertStringContainsString("'Hello '", $titleAttr->value->output->expression);
         $this->assertStringContainsString('$name', $titleAttr->value->output->expression);
+    }
+
+    private function createPipelineContext(): PipelineContext
+    {
+        $compilationContext = new CompilationContext(
+            templatePath: 'test.sugar.php',
+            source: '',
+            debug: false,
+        );
+
+        return new PipelineContext($compilationContext, null, 0);
     }
 }

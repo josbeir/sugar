@@ -20,7 +20,7 @@ use Sugar\Enum\BlockMergeMode;
 use Sugar\Extension\DirectiveRegistryInterface;
 use Sugar\Loader\TemplateLoaderInterface;
 use Sugar\Parser\Parser;
-use Sugar\Pass\Directive\Helper\UnknownDirectiveValidator;
+use Sugar\Pass\Directive\Helper\DirectiveClassifier;
 use Sugar\Pass\Trait\ScopeIsolationTrait;
 
 final class TemplateInheritancePass implements AstPassInterface
@@ -29,7 +29,7 @@ final class TemplateInheritancePass implements AstPassInterface
 
     private DirectivePrefixHelper $prefixHelper;
 
-    private UnknownDirectiveValidator $unknownDirectiveValidator;
+    private DirectiveClassifier $directiveClassifier;
 
     /**
      * Stack of loaded templates for circular detection
@@ -61,7 +61,7 @@ final class TemplateInheritancePass implements AstPassInterface
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
-        $this->unknownDirectiveValidator = new UnknownDirectiveValidator($this->registry, $this->prefixHelper);
+        $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
     }
 
     /**
@@ -103,7 +103,7 @@ final class TemplateInheritancePass implements AstPassInterface
         CompilationContext $context,
         array &$loadedTemplates,
     ): DocumentNode {
-        $this->unknownDirectiveValidator->validateUnknownDirectivesInNodes($document->children, $context, false);
+        $this->directiveClassifier->validateUnknownDirectivesInNodes($document->children, $context, false);
         $this->validateExtendsPlacement($document, $context);
 
         if ($context->blocks !== null) {
@@ -403,7 +403,7 @@ final class TemplateInheritancePass implements AstPassInterface
                 );
                 $includeContext->stampTemplatePath($includeDocument);
 
-                $this->unknownDirectiveValidator->validateUnknownDirectivesInNodes(
+                $this->directiveClassifier->validateUnknownDirectivesInNodes(
                     $includeDocument->children,
                     $includeContext,
                     false,
