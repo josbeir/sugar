@@ -39,7 +39,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 
 ::: code-group
 
-```html [Child Template]
+```php [Child Template]
 <!-- pages/orders.sugar.php -->
 <s-template s:extends="layouts/app.sugar.php"></s-template>
 
@@ -64,7 +64,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
   </div>
 
   <?php
-    // Regular PHP is still available for prep/transform logic
+    // PHP is still available, just like you expect
     $visibleOrders = array_values(array_filter(
       $orders,
       static fn($order) => $order->isVisible,
@@ -88,7 +88,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 </div>
 ```
 
-```html [Parent Layout]
+```php [Parent Layout]
 <!-- layouts/app.sugar.php -->
 <!DOCTYPE html>
 <html>
@@ -118,7 +118,7 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 </html>
 ```
 
-```html [Component: OrdersTable]
+```php [Component: OrdersTable]
 <!-- components/s-orders-table.sugar.php -->
 <div class="orders-table">
   <!-- Main slot content (if needed) -->
