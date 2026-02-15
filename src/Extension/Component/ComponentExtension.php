@@ -13,6 +13,7 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
@@ -31,7 +32,7 @@ final class ComponentExtension implements ExtensionInterface
     /**
      * Runtime service id for the component renderer.
      */
-    public const SERVICE_RENDERER = 'renderer.component';
+    public const SERVICE_RENDERER = RuntimeEnvironment::RENDERER_SERVICE_ID;
 
     private ?ComponentLoaderInterface $componentLoader = null;
 

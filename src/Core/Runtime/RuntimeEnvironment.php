@@ -10,6 +10,8 @@ use Sugar\Core\Exception\TemplateRuntimeException;
  */
 final class RuntimeEnvironment
 {
+    public const RENDERER_SERVICE_ID = 'renderer.component';
+
     /**
      * @var array<string, mixed>
      */

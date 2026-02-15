@@ -146,7 +146,7 @@ final class ComponentIntegrationTest extends TestCase
 
         file_put_contents(
             $basePath . '/components/s-button.sugar.php',
-            '<button class="btn" s:spread="$__sugar_attrs"><?= $slot ?></button>',
+            '<button class="btn"><?= $slot ?></button>',
         );
 
         file_put_contents(
@@ -185,7 +185,7 @@ SUGAR,
         $output = $engine->render('Pages/home.sugar.php');
 
         $this->assertStringContainsString('Click me!', $output);
-        $this->assertStringContainsString('btn-primary', $output);
+        $this->assertStringContainsString('<button class="btn btn-primary">', $output);
         $this->assertStringContainsString('<p>hello world</p>', $output);
         $this->assertStringContainsString('<h1>Cool title</h1>', $output);
     }
@@ -206,7 +206,7 @@ SUGAR,
 
         file_put_contents(
             $basePath . '/components/s-button.sugar.php',
-            '<button class="btn" s:spread="$__sugar_attrs"><?= $slot ?></button>',
+            '<button class="btn"><?= $slot ?></button>',
         );
 
         file_put_contents(
@@ -242,9 +242,9 @@ SUGAR,
         $secondOutput = $engine->render('Pages/home.sugar.php');
 
         $this->assertStringContainsString('Click me!', $firstOutput);
-        $this->assertStringContainsString('btn-primary', $firstOutput);
+        $this->assertStringContainsString('<button class="btn btn-primary">', $firstOutput);
         $this->assertStringContainsString('Click me!', $secondOutput);
-        $this->assertStringContainsString('btn-primary', $secondOutput);
+        $this->assertStringContainsString('<button class="btn btn-primary">', $secondOutput);
     }
 
     public function testComponentsWorkWithDirectives(): void

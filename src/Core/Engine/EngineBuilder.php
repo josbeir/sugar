@@ -20,6 +20,7 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Util\Hash;
 
 /**
@@ -247,7 +248,13 @@ final class EngineBuilder
             }
 
             array_push($customPasses, ...$context->getPasses());
-            $runtimeServices = [...$runtimeServices, ...$context->getRuntimeServices()];
+            $incomingRuntimeServices = $context->getRuntimeServices();
+
+            if (array_key_exists(RuntimeEnvironment::RENDERER_SERVICE_ID, $runtimeServices)) {
+                unset($incomingRuntimeServices[RuntimeEnvironment::RENDERER_SERVICE_ID]);
+            }
+
+            $runtimeServices = [...$runtimeServices, ...$incomingRuntimeServices];
         }
 
         // Create compiler with all dependencies

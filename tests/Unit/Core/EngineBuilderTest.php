@@ -20,6 +20,7 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -313,6 +314,46 @@ final class EngineBuilderTest extends TestCase
 
         $this->assertSame('<div>First</div>', $engine->render('cached.sugar.php', ['value' => 'First']));
         $this->assertSame('<div>Second</div>', $engine->render('cached.sugar.php', ['value' => 'Second']));
+    }
+
+    public function testComponentRendererServiceCannotBeOverriddenByLaterExtension(): void
+    {
+        $loader = new StringTemplateLoader(new SugarConfig(), [
+            'page.sugar.php' => '<s-button>Click</s-button>',
+            'components/s-button.sugar.php' => '<button class="btn"><?= $slot ?></button>',
+        ]);
+
+        $overridingExtension = new class implements ExtensionInterface {
+            public function register(RegistrationContext $context): void
+            {
+                $context->runtimeService(ComponentExtension::SERVICE_RENDERER, new class {
+                    /**
+                     * @param array<string, mixed> $vars
+                     * @param array<string, mixed> $slots
+                     * @param array<string, mixed> $attributes
+                     */
+                    public function renderComponent(
+                        string $name,
+                        array $vars = [],
+                        array $slots = [],
+                        array $attributes = [],
+                    ): string {
+                        return 'OVERRIDDEN';
+                    }
+                });
+            }
+        };
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
+            ->withExtension($overridingExtension)
+            ->build();
+
+        $output = $engine->render('page.sugar.php');
+
+        $this->assertStringContainsString('<button class="btn">Click</button>', $output);
+        $this->assertStringNotContainsString('OVERRIDDEN', $output);
     }
 
     public function testWithExceptionRenderer(): void
