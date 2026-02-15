@@ -14,8 +14,8 @@ use Sugar\Core\Engine\CompiledTemplateResult;
 use Sugar\Core\Engine\EngineBuilder;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
+use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
-use Sugar\Core\Runtime\ComponentRenderer;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Util\Hash;
 use Sugar\Core\Util\ValueNormalizer;
@@ -44,6 +44,7 @@ final class Engine implements EngineInterface
         private readonly bool $debug = false,
         private readonly ?object $templateContext = null,
         private readonly ?TemplateExceptionRendererInterface $exceptionRenderer = null,
+        private readonly ?SugarConfig $config = null,
         private readonly array $runtimeServices = [],
     ) {
     }
@@ -152,16 +153,17 @@ final class Engine implements EngineInterface
      */
     private function execute(string $compiledPath, array $data, ?DependencyTracker $tracker): string
     {
-        $renderer = new ComponentRenderer(
-            compiler: $this->compiler,
-            loader: $this->loader,
-            cache: $this->cache,
-            tracker: $tracker,
-            debug: $this->debug,
+        $runtimeContext = new RegistrationContext(
+            config: $this->config,
+            templateLoader: $this->loader,
+            templateCache: $this->cache,
             templateContext: $this->templateContext,
+            debug: $this->debug,
+            compiler: $this->compiler,
+            tracker: $tracker,
         );
 
-        RuntimeEnvironment::set($renderer, $this->runtimeServices);
+        RuntimeEnvironment::set($this->materializeRuntimeServices($runtimeContext));
 
         try {
             // Include the compiled file and execute the closure
@@ -190,5 +192,30 @@ final class Engine implements EngineInterface
         } finally {
             RuntimeEnvironment::clear();
         }
+    }
+
+    /**
+     * Materialize runtime services for a single template execution.
+     *
+     * Services may be either concrete values or closures that accept
+     * RegistrationContext and return a concrete runtime service.
+     *
+     * @param \Sugar\Core\Extension\RegistrationContext $runtimeContext Runtime registration context
+     * @return array<string, mixed>
+     */
+    private function materializeRuntimeServices(RegistrationContext $runtimeContext): array
+    {
+        $services = [];
+
+        foreach ($this->runtimeServices as $id => $service) {
+            if ($service instanceof Closure) {
+                $services[$id] = $service($runtimeContext);
+                continue;
+            }
+
+            $services[$id] = $service;
+        }
+
+        return $services;
     }
 }

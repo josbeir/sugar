@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 
 /**
  * Integration test: StringTemplateLoader with full compilation pipeline
@@ -24,6 +25,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('home', [
@@ -46,6 +48,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('users', [
@@ -69,6 +72,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $resultShown = $engine->render('conditional', ['show' => true]);
@@ -94,6 +98,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('page');
@@ -118,6 +123,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('alert-page');
@@ -149,6 +155,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('card-page');
@@ -168,6 +175,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('dynamic', ['name' => 'Template']);
@@ -185,6 +193,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('escaping', [
@@ -374,6 +383,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('test-template', [

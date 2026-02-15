@@ -18,6 +18,7 @@ interface CompilerInterface
      * @param bool $debug Enable debug mode with inline source comments (default: false)
      * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Dependency tracker
      * @param array<string>|null $blocks Restrict output to these block names
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $inlinePasses Additional per-compilation passes
      * @return string Compiled PHP code
      */
     public function compile(
@@ -26,21 +27,6 @@ interface CompilerInterface
         bool $debug = false,
         ?DependencyTracker $tracker = null,
         ?array $blocks = null,
-    ): string;
-
-    /**
-     * Compile a component template with runtime slots and attributes
-     *
-     * @param string $componentName Component name
-     * @param array<string> $slotNames Slot variable names to mark as raw
-     * @param bool $debug Enable debug mode
-     * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Dependency tracker
-     * @return string Compiled PHP code
-     */
-    public function compileComponent(
-        string $componentName,
-        array $slotNames = [],
-        bool $debug = false,
-        ?DependencyTracker $tracker = null,
+        array $inlinePasses = [],
     ): string;
 }

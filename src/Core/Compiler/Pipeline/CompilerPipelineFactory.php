@@ -7,8 +7,6 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
-use Sugar\Core\Pass\Component\ComponentExpansionPass;
-use Sugar\Core\Pass\Component\ComponentVariantAdjustmentPass;
 use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
@@ -30,10 +28,6 @@ final class CompilerPipelineFactory
 
     private ?ContextAnalysisPass $contextPass = null;
 
-    private ?AstPipeline $componentTemplatePipeline = null;
-
-    private ?ComponentExpansionPass $componentExpansionPass = null;
-
     /**
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
      */
@@ -48,10 +42,12 @@ final class CompilerPipelineFactory
 
     /**
      * Build the main compiler pipeline.
+     *
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $inlinePasses Additional per-compilation passes
      */
     public function buildCompilerPipeline(
         bool $enableInheritance,
-        ?ComponentVariantAdjustmentPass $variantAdjustments = null,
+        array $inlinePasses = [],
     ): AstPipeline {
         $pipeline = new AstPipeline();
 
@@ -62,63 +58,15 @@ final class CompilerPipelineFactory
         $pipeline->addPass($this->getDirectiveExtractionPass(), CompilerPassPriority::DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getDirectivePairingPass(), CompilerPassPriority::DIRECTIVE_PAIRING);
         $pipeline->addPass($this->getDirectiveCompilationPass(), CompilerPassPriority::DIRECTIVE_COMPILATION);
-        $pipeline->addPass($this->getComponentExpansionPass(), CompilerPassPriority::COMPONENT_EXPANSION);
 
-        if ($variantAdjustments instanceof ComponentVariantAdjustmentPass) {
-            $pipeline->addPass($variantAdjustments, CompilerPassPriority::COMPONENT_VARIANTS);
+        foreach ($inlinePasses as $entry) {
+            $pipeline->addPass($entry['pass'], $entry['priority']);
         }
 
         $pipeline->addPass($this->getContextPass(), CompilerPassPriority::CONTEXT_ANALYSIS);
         $this->addCustomPasses($pipeline);
 
         return $pipeline;
-    }
-
-    /**
-     * Build the component template pipeline.
-     */
-    public function buildComponentTemplatePipeline(): AstPipeline
-    {
-        if ($this->componentTemplatePipeline instanceof AstPipeline) {
-            return $this->componentTemplatePipeline;
-        }
-
-        $pipeline = new AstPipeline();
-
-        $pipeline->addPass($this->getInheritancePass(), CompilerPassPriority::TEMPLATE_INHERITANCE);
-        $pipeline->addPass($this->getDirectiveExtractionPass(), CompilerPassPriority::DIRECTIVE_EXTRACTION);
-        $pipeline->addPass($this->getDirectivePairingPass(), CompilerPassPriority::DIRECTIVE_PAIRING);
-        $pipeline->addPass($this->getDirectiveCompilationPass(), CompilerPassPriority::DIRECTIVE_COMPILATION);
-
-        $this->addCustomPasses(
-            $pipeline,
-            minPriority: CompilerPassPriority::DIRECTIVE_COMPILATION,
-            maxPriority: CompilerPassPriority::COMPONENT_EXPANSION,
-        );
-
-        $this->componentTemplatePipeline = $pipeline;
-
-        return $pipeline;
-    }
-
-    /**
-     * Get the component expansion pass instance.
-     */
-    public function getComponentExpansionPass(): ComponentExpansionPass
-    {
-        if ($this->componentExpansionPass instanceof ComponentExpansionPass) {
-            return $this->componentExpansionPass;
-        }
-
-        $this->componentExpansionPass = new ComponentExpansionPass(
-            $this->loader,
-            $this->parser,
-            $this->registry,
-            $this->config,
-            $this->buildComponentTemplatePipeline(),
-        );
-
-        return $this->componentExpansionPass;
     }
 
     /**

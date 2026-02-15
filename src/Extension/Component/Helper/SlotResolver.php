@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Pass\Component\Helper;
+namespace Sugar\Extension\Component\Helper;
 
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;

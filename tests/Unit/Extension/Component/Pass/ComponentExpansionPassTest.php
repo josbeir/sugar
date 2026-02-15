@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Component;
+namespace Sugar\Tests\Unit\Extension\Component\Pass;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeValue;
@@ -17,7 +17,6 @@ use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
-use Sugar\Core\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
@@ -28,6 +27,7 @@ use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -58,7 +58,7 @@ final class ComponentExpansionPassTest extends TestCase
 
         $this->parser = $this->createParser();
         $this->registry = $this->createRegistry();
-        $pipelineFactory = new CompilerPipelineFactory(
+        $passFactory = new ComponentPassFactory(
             $this->loader,
             $this->parser,
             $this->registry,
@@ -70,7 +70,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->registry->register('foreach', ForeachDirective::class);
         $this->registry->register('while', WhileDirective::class);
 
-        $pass = $pipelineFactory->getComponentExpansionPass();
+        $pass = $passFactory->createExpansionPass();
         $this->pipeline = new AstPipeline([$pass]);
     }
 
@@ -126,7 +126,7 @@ final class ComponentExpansionPassTest extends TestCase
             }
         };
 
-        $pipelineFactory = new CompilerPipelineFactory(
+        $passFactory = new ComponentPassFactory(
             $this->loader,
             $this->parser,
             $this->registry,
@@ -135,7 +135,7 @@ final class ComponentExpansionPassTest extends TestCase
                 ['pass' => $pass, 'priority' => 35],
             ],
         );
-        $componentPass = $pipelineFactory->getComponentExpansionPass();
+        $componentPass = $passFactory->createExpansionPass();
         $pipeline = new AstPipeline([$componentPass]);
 
         $ast = $this->parser->parse('<s-plain></s-plain>');
@@ -843,13 +843,13 @@ final class ComponentExpansionPassTest extends TestCase
     {
         // Create a tracking parser to count parse calls
         $registry = $this->createRegistry();
-        $pipelineFactory = new CompilerPipelineFactory(
+        $passFactory = new ComponentPassFactory(
             $this->loader,
             $this->parser,
             $registry,
             $this->config,
         );
-        $pass = $pipelineFactory->getComponentExpansionPass();
+        $pass = $passFactory->createExpansionPass();
 
         // Create AST with same component used 3 times
         // Each button component will be loaded but should only be parsed once
@@ -886,13 +886,13 @@ final class ComponentExpansionPassTest extends TestCase
     public function testCachesSeparateComponentsSeparately(): void
     {
         $registry = $this->createRegistry();
-        $pipelineFactory = new CompilerPipelineFactory(
+        $passFactory = new ComponentPassFactory(
             $this->loader,
             $this->parser,
             $registry,
             $this->config,
         );
-        $pass = $pipelineFactory->getComponentExpansionPass();
+        $pass = $passFactory->createExpansionPass();
 
         // Use different components multiple times each
         $ast = $this->document()

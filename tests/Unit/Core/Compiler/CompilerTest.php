@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Compiler;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Escape\Escaper;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -216,14 +215,6 @@ final class CompilerTest extends TestCase
 
         $this->assertStringContainsString('<?php', $result);
         $this->assertStringContainsString('declare(strict_types=1);', $result);
-    }
-
-    public function testCompileComponentThrowsWhenComponentMissing(): void
-    {
-        $this->expectException(ComponentNotFoundException::class);
-        $this->expectExceptionMessage('Component "button" not found');
-
-        $this->compiler->compileComponent('button');
     }
 
     public function testMultipleContextSwitches(): void

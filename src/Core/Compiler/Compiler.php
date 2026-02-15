@@ -12,12 +12,13 @@ use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser as TemplateParser;
-use Sugar\Core\Pass\Component\ComponentVariantAdjustmentPass;
 
 /**
- * Orchestrates template compilation pipeline
+ * Orchestrates template compilation pipeline.
  *
- * Pipeline: Parser -> TemplateInheritancePass (optional) -> DirectiveExtractionPass -> DirectivePairingPass -> DirectiveCompilationPass -> ComponentExpansionPass -> ContextAnalysisPass -> CodeGenerator
+ * Pipeline: Parser -> TemplateInheritancePass (optional) -> DirectiveExtractionPass
+ * -> DirectivePairingPass -> DirectiveCompilationPass -> ContextAnalysisPass
+ * -> CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
@@ -34,8 +35,6 @@ final class Compiler implements CompilerInterface
     private readonly bool $phpSyntaxValidationEnabled;
 
     /**
-     * Constructor
-     *
      * @param \Sugar\Core\Parser\Parser $parser Template parser
      * @param \Sugar\Core\Escape\Escaper $escaper Escaper for code generation
      * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Directive registry with registered compilers
@@ -69,7 +68,9 @@ final class Compiler implements CompilerInterface
     }
 
     /**
-     * @inheritDoc
+     * Compile template source to executable PHP code.
+     *
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $inlinePasses Additional per-compilation passes
      */
     public function compile(
         string $source,
@@ -77,6 +78,7 @@ final class Compiler implements CompilerInterface
         bool $debug = false,
         ?DependencyTracker $tracker = null,
         ?array $blocks = null,
+        array $inlinePasses = [],
     ): string {
         $context = $this->createContext(
             $templatePath ?? 'inline-template',
@@ -86,7 +88,6 @@ final class Compiler implements CompilerInterface
             $blocks,
         );
 
-        // Step 1: Parse template source into AST
         $ast = $this->parser->parse($source);
         $context->stampTemplatePath($ast);
         if ($this->phpSyntaxValidationEnabled) {
@@ -97,44 +98,7 @@ final class Compiler implements CompilerInterface
             $ast,
             $context,
             $templatePath !== null,
-        );
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function compileComponent(
-        string $componentName,
-        array $slotNames = [],
-        bool $debug = false,
-        ?DependencyTracker $tracker = null,
-    ): string {
-        $templateContent = $this->templateLoader->loadComponent($componentName);
-        $componentPath = $this->templateLoader->getComponentPath($componentName);
-
-        $tracker?->addComponent($this->templateLoader->getComponentFilePath($componentName));
-
-        $context = new CompilationContext(
-            $componentPath,
-            $templateContent,
-            $debug,
-            $tracker,
-        );
-
-        $ast = $this->parser->parse($templateContent);
-        $context->stampTemplatePath($ast);
-        if ($this->phpSyntaxValidationEnabled) {
-            $this->phpSyntaxValidator->templateSegments($ast, $context);
-        }
-
-        $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
-        $variantAdjustments = new ComponentVariantAdjustmentPass($slotVars);
-
-        return $this->compileAst(
-            $ast,
-            $context,
-            true,
-            $variantAdjustments,
+            $inlinePasses,
         );
     }
 
@@ -159,20 +123,21 @@ final class Compiler implements CompilerInterface
 
     /**
      * Execute the middleware pipeline and generate PHP code.
+     *
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $inlinePasses
      */
     private function compileAst(
         DocumentNode $ast,
         CompilationContext $context,
         bool $enableInheritance,
-        ?ComponentVariantAdjustmentPass $variantAdjustments = null,
+        array $inlinePasses = [],
     ): string {
         $pipeline = $this->pipelineFactory->buildCompilerPipeline(
             enableInheritance: $enableInheritance,
-            variantAdjustments: $variantAdjustments,
+            inlinePasses: $inlinePasses,
         );
         $analyzedAst = $pipeline->execute($ast, $context);
 
-        // Step 7: Generate executable PHP code with inline escaping
         $generator = new CodeGenerator($this->escaper, $context);
         $compiledCode = $generator->generate($analyzedAst);
         if ($this->phpSyntaxValidationEnabled) {

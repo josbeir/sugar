@@ -25,9 +25,9 @@ final class RuntimeEnvironment
      *
      * @param array<string, mixed> $services Runtime services keyed by identifier
      */
-    public static function set(ComponentRenderer $renderer, array $services = []): void
+    public static function set(array $services = []): void
     {
-        self::$services = [self::RENDERER_SERVICE_ID => $renderer, ...$services];
+        self::$services = $services;
     }
 
     /**

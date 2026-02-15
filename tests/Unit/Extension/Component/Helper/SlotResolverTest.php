@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Component\Helper;
+namespace Sugar\Tests\Unit\Extension\Component\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Pass\Component\Helper\SlotResolver;
+use Sugar\Extension\Component\Helper\SlotResolver;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class SlotResolverTest extends TestCase

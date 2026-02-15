@@ -63,7 +63,7 @@ final class CompilerPipelineFactoryTest extends TestCase
         $this->assertSame('HELLO', $result->children[0]->content);
     }
 
-    public function testComponentTemplatePipelineSkipsOutOfRangeCustomPasses(): void
+    public function testCompilerPipelineAppliesAllCustomPassesByPriority(): void
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(config: $config);
@@ -86,7 +86,7 @@ final class CompilerPipelineFactoryTest extends TestCase
             }
         };
 
-        $outOfRange = new class implements AstPassInterface {
+        $afterPass = new class implements AstPassInterface {
             public function before(Node $node, PipelineContext $context): NodeAction
             {
                 if ($node instanceof TextNode) {
@@ -109,15 +109,15 @@ final class CompilerPipelineFactoryTest extends TestCase
             $config,
             [
                 ['pass' => $inRange, 'priority' => 35],
-                ['pass' => $outOfRange, 'priority' => 45],
+                ['pass' => $afterPass, 'priority' => 45],
             ],
         );
 
-        $pipeline = $factory->buildComponentTemplatePipeline();
+        $pipeline = $factory->buildCompilerPipeline(enableInheritance: false);
         $ast = $this->document()->withChild($this->text('hello', 1, 1))->build();
         $result = $pipeline->execute($ast, $this->createContext());
 
         $this->assertInstanceOf(TextNode::class, $result->children[0]);
-        $this->assertSame('HELLO', $result->children[0]->content);
+        $this->assertSame('HELLOX', $result->children[0]->content);
     }
 }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Component;
+namespace Sugar\Tests\Unit\Extension\Component\Pass;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeValue;
@@ -9,8 +9,8 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Pass\Component\ComponentVariantAdjustmentPass;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
+use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 
 final class ComponentVariantAdjustmentPassTest extends TestCase

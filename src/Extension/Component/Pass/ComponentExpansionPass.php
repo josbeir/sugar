@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Pass\Component;
+namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
@@ -27,11 +27,11 @@ use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
-use Sugar\Core\Pass\Component\Helper\ComponentSlots;
-use Sugar\Core\Pass\Component\Helper\SlotResolver;
 use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Extension\Component\Helper\ComponentSlots;
+use Sugar\Extension\Component\Helper\SlotResolver;
 
 /**
  * Expands component invocations into their template content
@@ -566,7 +566,7 @@ final class ComponentExpansionPass implements AstPassInterface
      *
      * @param \Sugar\Core\Ast\DocumentNode $template Component template AST
      * @param \Sugar\Core\Ast\AttributeNode|null $bindAttribute Optional s:bind attribute node
-     * @param \Sugar\Core\Pass\Component\Helper\ComponentSlots $slots Slot content
+     * @param \Sugar\Extension\Component\Helper\ComponentSlots $slots Slot content
      * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for error reporting
      * @return \Sugar\Core\Ast\DocumentNode Wrapped template
      */

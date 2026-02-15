@@ -1,26 +1,26 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Runtime;
+namespace Sugar\Extension\Component\Runtime;
 
 use Closure;
 use ParseError;
 use Sugar\Core\Cache\CachedTemplate;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
-use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Util\ValueNormalizer;
+use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 
 /**
- * Renders components at runtime for dynamic component calls
+ * Renders components at runtime for dynamic component calls.
  */
 final class ComponentRenderer
 {
     /**
-     * @param \Sugar\Core\Compiler\Compiler $compiler Compiler instance
+     * @param \Sugar\Extension\Component\Compiler\ComponentTemplateCompiler $componentCompiler Component template compiler
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Core\Cache\TemplateCacheInterface $cache Template cache
      * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Optional dependency tracker
@@ -28,7 +28,7 @@ final class ComponentRenderer
      * @param object|null $templateContext Optional template context
      */
     public function __construct(
-        private readonly Compiler $compiler,
+        private readonly ComponentTemplateCompiler $componentCompiler,
         private readonly TemplateLoaderInterface $loader,
         private readonly TemplateCacheInterface $cache,
         private readonly ?DependencyTracker $tracker = null,
@@ -38,7 +38,7 @@ final class ComponentRenderer
     }
 
     /**
-     * Render a component by name with bindings, slots, and attributes
+     * Render a component by name with bindings, slots, and attributes.
      *
      * @param string $name Component name
      * @param array<string, mixed> $vars Bound variables (s:bind)
@@ -71,7 +71,7 @@ final class ComponentRenderer
     }
 
     /**
-     * Compile or retrieve a compiled component variant
+     * Compile or retrieve a compiled component variant.
      *
      * @param array<string> $slotNames
      */
@@ -87,7 +87,7 @@ final class ComponentRenderer
         }
 
         $tracker = new DependencyTracker();
-        $compiled = $this->compiler->compileComponent(
+        $compiled = $this->componentCompiler->compileComponent(
             componentName: $name,
             slotNames: $slotNames,
             debug: $this->debug,
@@ -110,7 +110,7 @@ final class ComponentRenderer
     }
 
     /**
-     * Normalize render data for component execution
+     * Normalize render data for component execution.
      *
      * @param array<string, mixed> $vars
      * @param array<string, mixed> $slots
@@ -141,7 +141,7 @@ final class ComponentRenderer
     }
 
     /**
-     * Normalize attribute array values to stringable values
+     * Normalize attribute array values to stringable values.
      *
      * @param array<string, mixed> $attributes
      * @return array<string, mixed>
@@ -159,7 +159,7 @@ final class ComponentRenderer
     }
 
     /**
-     * Execute compiled template
+     * Execute compiled template.
      *
      * @param array<string, mixed> $data
      */

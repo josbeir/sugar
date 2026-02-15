@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Pass\Component;
+namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
@@ -15,8 +15,8 @@ use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Pass\Component\Helper\SlotResolver;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
+use Sugar\Extension\Component\Helper\SlotResolver;
 
 /**
  * Applies component-specific adjustments during compilation.

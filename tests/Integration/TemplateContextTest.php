@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 
 /**
@@ -92,6 +93,7 @@ final class TemplateContextTest extends TestCase
                 ),
             )
             ->withTemplateContext($viewContext)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $output = $engine->render('test-component-context.sugar.php');

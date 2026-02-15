@@ -231,7 +231,15 @@ final class EngineBuilder
         $customPasses = [];
         $runtimeServices = [];
         foreach ($extensions as $extension) {
-            $context = new RegistrationContext();
+            $context = new RegistrationContext(
+                config: $this->config,
+                templateLoader: $this->loader,
+                templateCache: $this->cache,
+                templateContext: $this->templateContext,
+                debug: $this->debug,
+                parser: $parser,
+                directiveRegistry: $registry,
+            );
             $extension->register($context);
 
             foreach ($context->getDirectives() as $name => $compiler) {
@@ -260,6 +268,7 @@ final class EngineBuilder
             debug: $this->debug,
             templateContext: $this->templateContext,
             exceptionRenderer: $this->exceptionRenderer,
+            config: $this->config,
             runtimeServices: $runtimeServices,
         );
     }

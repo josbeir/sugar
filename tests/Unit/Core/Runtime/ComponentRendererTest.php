@@ -13,7 +13,8 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Core\Runtime\ComponentRenderer;
+use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -276,7 +277,10 @@ PHP,
         $cache = $cache ?? $this->createCache();
 
         return new ComponentRenderer(
-            compiler: $this->compiler,
+            componentCompiler: new ComponentTemplateCompiler(
+                compiler: $this->compiler,
+                loader: $this->templateLoader,
+            ),
             loader: $this->templateLoader,
             cache: $cache,
             tracker: $tracker,
@@ -323,7 +327,10 @@ PHP,
         };
 
         return new ComponentRenderer(
-            compiler: $this->compiler,
+            componentCompiler: new ComponentTemplateCompiler(
+                compiler: $this->compiler,
+                loader: $this->templateLoader,
+            ),
             loader: $this->templateLoader,
             cache: $cache,
         );

@@ -16,9 +16,5 @@ final class CompilerPassPriority
 
     public const DIRECTIVE_COMPILATION = 30;
 
-    public const COMPONENT_EXPANSION = 40;
-
-    public const COMPONENT_VARIANTS = 45;
-
     public const CONTEXT_ANALYSIS = 50;
 }

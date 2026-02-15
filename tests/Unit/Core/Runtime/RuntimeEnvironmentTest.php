@@ -8,8 +8,9 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Loader\FileTemplateLoader;
-use Sugar\Core\Runtime\ComponentRenderer;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -67,7 +68,10 @@ final class RuntimeEnvironmentTest extends TestCase
         $renderer = $this->createRenderer();
         $fragmentCache = new ArraySimpleCache();
 
-        RuntimeEnvironment::set($renderer, ['cache.fragment' => $fragmentCache]);
+        RuntimeEnvironment::set([
+            RuntimeEnvironment::RENDERER_SERVICE_ID => $renderer,
+            'cache.fragment' => $fragmentCache,
+        ]);
 
         $this->assertSame($renderer, RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID));
         $this->assertSame($fragmentCache, RuntimeEnvironment::getService('cache.fragment'));
@@ -101,7 +105,10 @@ final class RuntimeEnvironmentTest extends TestCase
         $this->assertInstanceOf(FileTemplateLoader::class, $loader);
 
         return new ComponentRenderer(
-            compiler: $this->compiler,
+            componentCompiler: new ComponentTemplateCompiler(
+                compiler: $this->compiler,
+                loader: $loader,
+            ),
             loader: $loader,
             cache: $cache,
         );

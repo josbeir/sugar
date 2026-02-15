@@ -11,6 +11,9 @@ use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Extension\Component\Pass\ComponentExpansionPass;
+use Sugar\Extension\Component\Pass\ComponentPassFactory;
+use Sugar\Extension\Component\Pass\ComponentPassPriority;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -57,6 +60,7 @@ trait CompilerTestTrait
         $registry = $withDefaultDirectives
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
+        $this->registry = $registry;
 
         $this->templateLoader = new FileTemplateLoader(
             $config ?? new SugarConfig(),
@@ -64,16 +68,22 @@ trait CompilerTestTrait
             $componentPaths,
             $absolutePathsOnly,
         );
+
+        $customPasses = $this->withDefaultComponentExpansion(
+            config: $config,
+            customPasses: [],
+        );
+
         $this->compiler = new Compiler(
             parser: $this->parser,
             escaper: $this->escaper,
             registry: $registry,
             templateLoader: $this->templateLoader,
             config: $config,
+            customPasses: $customPasses,
         );
 
-        // Set registry property for tests that need access
-        $this->registry = $registry;
+        // Registry property is initialized before pass wiring.
     }
 
     /**
@@ -97,12 +107,18 @@ trait CompilerTestTrait
         $registry = $withDefaultDirectives
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
+        $this->registry = $registry;
 
         $this->templateLoader = new StringTemplateLoader(
             $config ?? new SugarConfig(),
             $templates,
             $components,
             $absolutePathsOnly,
+        );
+
+        $customPasses = $this->withDefaultComponentExpansion(
+            config: $config,
+            customPasses: $customPasses,
         );
 
         $this->compiler = new Compiler(
@@ -114,7 +130,7 @@ trait CompilerTestTrait
             customPasses: $customPasses,
         );
 
-        $this->registry = $registry;
+        // Registry property is initialized before pass wiring.
     }
 
     /**
@@ -146,5 +162,33 @@ trait CompilerTestTrait
     protected function createRegistry(): DirectiveRegistry
     {
         return new DirectiveRegistry();
+    }
+
+    /**
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}>
+     */
+    private function withDefaultComponentExpansion(?SugarConfig $config, array $customPasses): array
+    {
+        foreach ($customPasses as $entry) {
+            if ($entry['pass'] instanceof ComponentExpansionPass) {
+                return $customPasses;
+            }
+        }
+
+        $passFactory = new ComponentPassFactory(
+            loader: $this->templateLoader,
+            parser: $this->parser,
+            registry: $this->registry,
+            config: $config ?? new SugarConfig(),
+            customPasses: $customPasses,
+        );
+
+        $customPasses[] = [
+            'pass' => $passFactory->createExpansionPass(),
+            'priority' => ComponentPassPriority::EXPANSION,
+        ];
+
+        return $customPasses;
     }
 }

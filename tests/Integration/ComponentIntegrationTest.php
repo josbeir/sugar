@@ -9,6 +9,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -769,6 +770,7 @@ final class ComponentIntegrationTest extends TestCase
         return Engine::builder($this->config)
             ->withTemplateLoader($loader)
             ->withCache($cache)
+            ->withExtension(new ComponentExtension())
             ->build();
     }
 
