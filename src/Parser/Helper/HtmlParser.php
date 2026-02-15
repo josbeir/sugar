@@ -21,6 +21,7 @@ final readonly class HtmlParser
         private SugarConfig $config,
         private DirectivePrefixHelper $prefixHelper,
         private NodeFactory $nodeFactory,
+        private HtmlScanHelper $htmlScanHelper,
     ) {
     }
 
@@ -37,7 +38,7 @@ final readonly class HtmlParser
         $nodes = [];
         $pos = 0;
         $len = strlen($html);
-        $lineStarts = HtmlScanHelper::lineStartsForSource($html);
+        $lineStarts = $this->htmlScanHelper->lineStartsForSource($html);
 
         while ($pos < $len) {
             $tagStart = strpos($html, '<', $pos);
@@ -45,7 +46,7 @@ final readonly class HtmlParser
             if ($tagStart === false) {
                 // Rest is text
                 if ($pos < $len) {
-                    [$textLine, $textColumn] = HtmlScanHelper::resolvePosition(
+                    [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
                         $html,
                         $pos,
                         $line,
@@ -60,7 +61,13 @@ final readonly class HtmlParser
 
             // Text before tag
             if ($tagStart > $pos) {
-                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $pos, $line, $column, $lineStarts);
+                [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
+                    $html,
+                    $pos,
+                    $line,
+                    $column,
+                    $lineStarts,
+                );
                 $nodes[] = $this->nodeFactory->text(
                     substr($html, $pos, $tagStart - $pos),
                     $textLine,
@@ -82,7 +89,7 @@ final readonly class HtmlParser
                     $endPos++;
                 }
 
-                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition(
+                [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
                     $html,
                     $tagStart,
                     $line,
@@ -120,7 +127,7 @@ final readonly class HtmlParser
     {
         $pos = $start + 1;
         $len = strlen($html);
-        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $nameEnd = $this->htmlScanHelper->readTagNameEnd($html, $pos);
         $tagName = substr($html, $pos, $nameEnd - $pos);
         $pos = $nameEnd;
 
@@ -132,7 +139,13 @@ final readonly class HtmlParser
         // Parse attributes
         $attributes = [];
         $selfClosing = false;
-        [$elementLine, $elementColumn] = HtmlScanHelper::resolvePosition($html, $start, $line, $column, $lineStarts);
+        [$elementLine, $elementColumn] = $this->htmlScanHelper->resolvePosition(
+            $html,
+            $start,
+            $line,
+            $column,
+            $lineStarts,
+        );
 
         while ($pos < $len) {
             $char = $html[$pos];
@@ -156,7 +169,7 @@ final readonly class HtmlParser
             // Parse attribute
             $attrStart = $pos;
             [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            [$attrLine, $attrColumn] = HtmlScanHelper::resolvePosition(
+            [$attrLine, $attrColumn] = $this->htmlScanHelper->resolvePosition(
                 $html,
                 $attrStart,
                 $line,
@@ -206,7 +219,7 @@ final readonly class HtmlParser
     {
         $pos = $start + 2; // Skip </
         $len = strlen($html);
-        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $nameEnd = $this->htmlScanHelper->readTagNameEnd($html, $pos);
         $tagName = substr($html, $pos, $nameEnd - $pos);
         $pos = $nameEnd;
 

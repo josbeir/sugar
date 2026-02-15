@@ -117,7 +117,7 @@ final class AttributeContinuation
                 return ['name' => $attrName, 'quote' => $quote];
             }
 
-            while ($pos < $len && !self::isAttributeValueDelimiter($html[$pos])) {
+            while ($pos < $len && !self::isUnquotedValueDelimiter($html[$pos])) {
                 $pos++;
             }
 
@@ -261,7 +261,7 @@ final class AttributeContinuation
             }
 
             $name = '';
-            while ($pos < $len && !self::isAttributeValueDelimiter($html[$pos])) {
+            while ($pos < $len && !self::isAttributeDelimiter($html[$pos])) {
                 $name .= $html[$pos++];
             }
 
@@ -306,7 +306,7 @@ final class AttributeContinuation
                         }
                     } else {
                         $value = '';
-                        while ($pos < $len && !self::isAttributeValueDelimiter($html[$pos])) {
+                        while ($pos < $len && !self::isUnquotedValueDelimiter($html[$pos])) {
                             $value .= $html[$pos++];
                         }
 
@@ -357,9 +357,17 @@ final class AttributeContinuation
     /**
      * Check whether a character terminates an attribute token.
      */
-    private static function isAttributeValueDelimiter(string $char): bool
+    private static function isAttributeDelimiter(string $char): bool
     {
         return in_array($char, ['=', '>', '/', ' ', "\t", "\n", "\r"], true);
+    }
+
+    /**
+     * Check whether a character terminates an unquoted attribute value token.
+     */
+    private static function isUnquotedValueDelimiter(string $char): bool
+    {
+        return in_array($char, ['>', '/', ' ', "\t", "\n", "\r"], true);
     }
 
     /**

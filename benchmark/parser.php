@@ -145,9 +145,9 @@ final class ParserBenchmark
     private function measureCase(Parser $parser, string $template, int $iterations, int $samples, string $caseName): array
     {
         $sampleSeconds = [];
-                $sampleTokenizeUs = [];
-                $sampleParseUs = [];
-                $samplePeakMemoryKb = [];
+        $sampleTokenizeUs = [];
+        $sampleParseUs = [];
+        $samplePeakMemoryKb = [];
 
         for ($sample = 0; $sample < $samples; $sample++) {
             $this->printProgress(sprintf('  %s sample %d/%d', $caseName, $sample + 1, $samples));
@@ -204,7 +204,7 @@ final class ParserBenchmark
         }
 
         for ($index = 0; $index < $iterations; $index++) {
-            if ($this->tokenizeSource instanceof \Closure && $this->parseTokens instanceof \Closure) {
+            if ($this->tokenizeSource instanceof Closure && $this->parseTokens instanceof Closure) {
                 $totalStart = hrtime(true);
 
                 $phaseStart = hrtime(true);
@@ -700,7 +700,7 @@ final class ParserBenchmark
 
     /**
      * @param array<string> $arguments
-        * @return array{iterations: int, warmup: int, samples: int, json: string|null, compare: string|null, referenceDom: bool}
+     * @return array{iterations: int, warmup: int, samples: int, json: string|null, compare: string|null, referenceDom: bool}
      */
     private function parseOptions(array $arguments): array
     {

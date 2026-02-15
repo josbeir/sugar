@@ -12,6 +12,7 @@ use Sugar\Config\Helper\DirectivePrefixHelper;
 use Sugar\Config\SugarConfig;
 use Sugar\Parser\Helper\ClosingTagMarker;
 use Sugar\Parser\Helper\HtmlParser;
+use Sugar\Parser\Helper\HtmlScanHelper;
 use Sugar\Parser\Helper\NodeFactory;
 
 final class HtmlParserTest extends TestCase
@@ -100,6 +101,7 @@ final class HtmlParserTest extends TestCase
             $config,
             new DirectivePrefixHelper($config->directivePrefix),
             new NodeFactory(),
+            new HtmlScanHelper(),
         );
     }
 }
