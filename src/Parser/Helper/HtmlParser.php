@@ -21,6 +21,7 @@ final readonly class HtmlParser
         private SugarConfig $config,
         private DirectivePrefixHelper $prefixHelper,
         private NodeFactory $nodeFactory,
+        private HtmlScanHelper $htmlScanHelper,
     ) {
     }
 
@@ -37,6 +38,7 @@ final readonly class HtmlParser
         $nodes = [];
         $pos = 0;
         $len = strlen($html);
+        $lineStarts = $this->htmlScanHelper->lineStartsForSource($html);
 
         while ($pos < $len) {
             $tagStart = strpos($html, '<', $pos);
@@ -44,7 +46,13 @@ final readonly class HtmlParser
             if ($tagStart === false) {
                 // Rest is text
                 if ($pos < $len) {
-                    [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $pos, $line, $column);
+                    [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
+                        $html,
+                        $pos,
+                        $line,
+                        $column,
+                        $lineStarts,
+                    );
                     $nodes[] = $this->nodeFactory->text(substr($html, $pos), $textLine, $textColumn);
                 }
 
@@ -53,7 +61,13 @@ final readonly class HtmlParser
 
             // Text before tag
             if ($tagStart > $pos) {
-                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $pos, $line, $column);
+                [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
+                    $html,
+                    $pos,
+                    $line,
+                    $column,
+                    $lineStarts,
+                );
                 $nodes[] = $this->nodeFactory->text(
                     substr($html, $pos, $tagStart - $pos),
                     $textLine,
@@ -75,7 +89,13 @@ final readonly class HtmlParser
                     $endPos++;
                 }
 
-                [$textLine, $textColumn] = HtmlScanHelper::resolvePosition($html, $tagStart, $line, $column);
+                [$textLine, $textColumn] = $this->htmlScanHelper->resolvePosition(
+                    $html,
+                    $tagStart,
+                    $line,
+                    $column,
+                    $lineStarts,
+                );
                 $nodes[] = $this->nodeFactory->text(
                     substr($html, $tagStart, $endPos - $tagStart),
                     $textLine,
@@ -84,7 +104,7 @@ final readonly class HtmlParser
                 $pos = $endPos;
             } else {
                 // Opening or self-closing tag
-                [$element, $endPos] = $this->extractOpeningTag($html, $tagStart, $line, $column);
+                [$element, $endPos] = $this->extractOpeningTag($html, $tagStart, $line, $column, $lineStarts);
                 $nodes[] = $element;
                 $pos = $endPos;
             }
@@ -100,13 +120,14 @@ final readonly class HtmlParser
      * @param int $start Position of <
      * @param int $line Line number
      * @param int $column Column number
+     * @param array<int, int> $lineStarts Precomputed line starts for this fragment
      * @return array{0: \Sugar\Ast\ElementNode|\Sugar\Ast\FragmentNode|\Sugar\Ast\ComponentNode, 1: int} Element, Fragment, or Component and position after tag
      */
-    private function extractOpeningTag(string $html, int $start, int $line, int $column): array
+    private function extractOpeningTag(string $html, int $start, int $line, int $column, array $lineStarts): array
     {
         $pos = $start + 1;
         $len = strlen($html);
-        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $nameEnd = $this->htmlScanHelper->readTagNameEnd($html, $pos);
         $tagName = substr($html, $pos, $nameEnd - $pos);
         $pos = $nameEnd;
 
@@ -118,7 +139,13 @@ final readonly class HtmlParser
         // Parse attributes
         $attributes = [];
         $selfClosing = false;
-        [$elementLine, $elementColumn] = HtmlScanHelper::resolvePosition($html, $start, $line, $column);
+        [$elementLine, $elementColumn] = $this->htmlScanHelper->resolvePosition(
+            $html,
+            $start,
+            $line,
+            $column,
+            $lineStarts,
+        );
 
         while ($pos < $len) {
             $char = $html[$pos];
@@ -142,7 +169,13 @@ final readonly class HtmlParser
             // Parse attribute
             $attrStart = $pos;
             [$attrName, $attrValue, $pos] = $this->extractAttribute($html, $pos);
-            [$attrLine, $attrColumn] = HtmlScanHelper::resolvePosition($html, $attrStart, $line, $column);
+            [$attrLine, $attrColumn] = $this->htmlScanHelper->resolvePosition(
+                $html,
+                $attrStart,
+                $line,
+                $column,
+                $lineStarts,
+            );
             $attributes[] = $this->nodeFactory->attribute($attrName, $attrValue, $attrLine, $attrColumn);
         }
 
@@ -186,7 +219,7 @@ final readonly class HtmlParser
     {
         $pos = $start + 2; // Skip </
         $len = strlen($html);
-        $nameEnd = HtmlScanHelper::readTagNameEnd($html, $pos);
+        $nameEnd = $this->htmlScanHelper->readTagNameEnd($html, $pos);
         $tagName = substr($html, $pos, $nameEnd - $pos);
         $pos = $nameEnd;
 
@@ -216,7 +249,7 @@ final readonly class HtmlParser
         $name = '';
 
         // Extract attribute name (including : and - for s:if, data-attr)
-        while ($pos < $len && !in_array($html[$pos], ['=', '>', '/', ' ', "\t", "\n", "\r"], true)) {
+        while ($pos < $len && !$this->isAttributeDelimiter($html[$pos])) {
             $name .= $html[$pos++];
         }
 
@@ -264,10 +297,26 @@ final readonly class HtmlParser
 
         // Unquoted value
         $value = '';
-        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
+        while ($pos < $len && !$this->isUnquotedValueDelimiter($html[$pos])) {
             $value .= $html[$pos++];
         }
 
         return [$name, $value, $pos];
+    }
+
+    /**
+     * Check whether a character terminates an attribute name token.
+     */
+    private function isAttributeDelimiter(string $char): bool
+    {
+        return in_array($char, ['=', '>', '/', ' ', "\t", "\n", "\r"], true);
+    }
+
+    /**
+     * Check whether a character terminates an unquoted attribute value.
+     */
+    private function isUnquotedValueDelimiter(string $char): bool
+    {
+        return in_array($char, ['>', '/', ' ', "\t", "\n", "\r"], true);
     }
 }

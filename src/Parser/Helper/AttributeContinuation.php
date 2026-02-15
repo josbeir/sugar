@@ -22,23 +22,13 @@ final class AttributeContinuation
      */
     public static function detectOpenAttribute(string $html, array $htmlNodes): ?array
     {
-        $attrName = null;
-        $quote = null;
-
-        if (preg_match('/([A-Za-z_:][\\w:.-]*)\\s*=\\s*$/', $html, $matches) === 1) {
-            $attrName = $matches[1];
-        } else {
-            $pattern = '/([A-Za-z_:][\\w:.-]*)\\s*=\\s*(["\"])|([A-Za-z_:][\\w:.-]*)\\s*=\\s*(\')/';
-            if (preg_match_all($pattern, $html, $matches, PREG_OFFSET_CAPTURE) >= 1) {
-                $lastIndex = count($matches[0]) - 1;
-                $attrName = $matches[1][$lastIndex][0] ?: $matches[3][$lastIndex][0];
-                $quote = $matches[2][$lastIndex][0] ?: $matches[4][$lastIndex][0];
-                $startPos = $matches[0][$lastIndex][1] + strlen($matches[0][$lastIndex][0]);
-                if (strpos($html, $quote, $startPos) !== false) {
-                    return null;
-                }
-            }
+        $lastOpen = self::findLastOpenAttribute($html);
+        if ($lastOpen === null) {
+            return null;
         }
+
+        $attrName = $lastOpen['name'];
+        $quote = $lastOpen['quote'];
 
         if ($attrName === null) {
             return null;
@@ -59,6 +49,80 @@ final class AttributeContinuation
         foreach ($element->attributes as $index => $attr) {
             if ($attr->name === $attrName) {
                 return ['element' => $element, 'attrIndex' => $index, 'quote' => $quote];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{name: string, quote: string|null}|null
+     */
+    private static function findLastOpenAttribute(string $html): ?array
+    {
+        $len = strlen($html);
+        $pos = 0;
+
+        while ($pos < $len) {
+            while ($pos < $len && !self::isAttributeNameStart($html[$pos])) {
+                $pos++;
+            }
+
+            if ($pos >= $len) {
+                break;
+            }
+
+            $nameStart = $pos;
+            $pos++;
+            while ($pos < $len && self::isAttributeNamePart($html[$pos])) {
+                $pos++;
+            }
+
+            $attrName = substr($html, $nameStart, $pos - $nameStart);
+
+            while ($pos < $len && ctype_space($html[$pos])) {
+                $pos++;
+            }
+
+            if ($pos >= $len) {
+                continue;
+            }
+
+            if ($html[$pos] !== '=') {
+                continue;
+            }
+
+            $pos++;
+            while ($pos < $len && ctype_space($html[$pos])) {
+                $pos++;
+            }
+
+            if ($pos >= $len) {
+                return ['name' => $attrName, 'quote' => null];
+            }
+
+            $quote = $html[$pos];
+            if ($quote === '"' || $quote === "'") {
+                $pos++;
+                while ($pos < $len) {
+                    $char = $html[$pos];
+                    if ($char === $quote && !self::isEscapedQuote($html, $pos)) {
+                        $pos++;
+                        continue 2;
+                    }
+
+                    $pos++;
+                }
+
+                return ['name' => $attrName, 'quote' => $quote];
+            }
+
+            while ($pos < $len && !self::isUnquotedValueDelimiter($html[$pos])) {
+                $pos++;
+            }
+
+            if ($pos >= $len) {
+                return ['name' => $attrName, 'quote' => null];
             }
         }
 
@@ -197,7 +261,7 @@ final class AttributeContinuation
             }
 
             $name = '';
-            while ($pos < $len && !in_array($html[$pos], ['=', '>', '/', ' ', "\t", "\n", "\r"], true)) {
+            while ($pos < $len && !self::isAttributeDelimiter($html[$pos])) {
                 $name .= $html[$pos++];
             }
 
@@ -242,7 +306,7 @@ final class AttributeContinuation
                         }
                     } else {
                         $value = '';
-                        while ($pos < $len && !in_array($html[$pos], ['>', '/', ' ', "\t", "\n", "\r"], true)) {
+                        while ($pos < $len && !self::isUnquotedValueDelimiter($html[$pos])) {
                             $value .= $html[$pos++];
                         }
 
@@ -272,5 +336,50 @@ final class AttributeContinuation
         }
 
         return [substr($html, $pos), $pendingAttribute];
+    }
+
+    /**
+     * Check whether a character can start an attribute name.
+     */
+    private static function isAttributeNameStart(string $char): bool
+    {
+        return ctype_alpha($char) || $char === '_' || $char === ':';
+    }
+
+    /**
+     * Check whether a character is valid inside an attribute name.
+     */
+    private static function isAttributeNamePart(string $char): bool
+    {
+        return ctype_alnum($char) || $char === '_' || $char === ':' || $char === '.' || $char === '-';
+    }
+
+    /**
+     * Check whether a character terminates an attribute token.
+     */
+    private static function isAttributeDelimiter(string $char): bool
+    {
+        return in_array($char, ['=', '>', '/', ' ', "\t", "\n", "\r"], true);
+    }
+
+    /**
+     * Check whether a character terminates an unquoted attribute value token.
+     */
+    private static function isUnquotedValueDelimiter(string $char): bool
+    {
+        return in_array($char, ['>', '/', ' ', "\t", "\n", "\r"], true);
+    }
+
+    /**
+     * Determine if a quote character is escaped by an odd number of backslashes.
+     */
+    private static function isEscapedQuote(string $html, int $quotePos): bool
+    {
+        $backslashCount = 0;
+        for ($scan = $quotePos - 1; $scan >= 0 && $html[$scan] === '\\'; $scan--) {
+            $backslashCount++;
+        }
+
+        return $backslashCount % 2 === 1;
     }
 }

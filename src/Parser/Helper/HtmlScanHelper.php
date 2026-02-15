@@ -10,12 +10,19 @@ use Sugar\Util\Hash;
  */
 final class HtmlScanHelper
 {
+    private const LINE_START_CACHE_MAX_ENTRIES = 512;
+
+    /**
+     * @var array<string, array<int, int>>
+     */
+    private array $lineStartCache = [];
+
     /**
      * Build an array of absolute offsets where each line starts.
      *
      * @return array<int, int>
      */
-    public static function buildLineStarts(string $source): array
+    public function buildLineStarts(string $source): array
     {
         $starts = [0];
         $position = -1;
@@ -27,11 +34,40 @@ final class HtmlScanHelper
     }
 
     /**
+     * Retrieve cached line-start offsets for a source fragment.
+     *
+     * @return array<int, int>
+     */
+    public function lineStartsForSource(string $source): array
+    {
+        $cacheKey = Hash::make($source);
+
+        if (isset($this->lineStartCache[$cacheKey])) {
+            $cached = $this->lineStartCache[$cacheKey];
+            unset($this->lineStartCache[$cacheKey]);
+            $this->lineStartCache[$cacheKey] = $cached;
+
+            return $cached;
+        }
+
+        if (count($this->lineStartCache) >= self::LINE_START_CACHE_MAX_ENTRIES) {
+            $oldestKey = array_key_first($this->lineStartCache);
+            if (is_string($oldestKey)) {
+                unset($this->lineStartCache[$oldestKey]);
+            }
+        }
+
+        $this->lineStartCache[$cacheKey] = $this->buildLineStarts($source);
+
+        return $this->lineStartCache[$cacheKey];
+    }
+
+    /**
      * Find the zero-based line index for an absolute offset.
      *
      * @param array<int, int> $lineStarts
      */
-    public static function findLineIndexFromStarts(array $lineStarts, int $offset): int
+    public function findLineIndexFromStarts(array $lineStarts, int $offset): int
     {
         if ($offset <= 0) {
             return 0;
@@ -60,15 +96,15 @@ final class HtmlScanHelper
      *
      * @param array<int, int> $lineStarts
      */
-    public static function findLineNumberFromStarts(array $lineStarts, int $offset): int
+    public function findLineNumberFromStarts(array $lineStarts, int $offset): int
     {
-        return self::findLineIndexFromStarts($lineStarts, $offset) + 1;
+        return $this->findLineIndexFromStarts($lineStarts, $offset) + 1;
     }
 
     /**
      * Read tag name end offset from a name start.
      */
-    public static function readTagNameEnd(string $source, int $start): int
+    public function readTagNameEnd(string $source, int $start): int
     {
         $length = strlen($source);
         $offset = $start;
@@ -82,7 +118,7 @@ final class HtmlScanHelper
     /**
      * Find the offset immediately after a tag's closing `>` while honoring quoted attributes.
      */
-    public static function findTagEnd(string $source, int $start): ?int
+    public function findTagEnd(string $source, int $start): ?int
     {
         $length = strlen($source);
         $quote = null;
@@ -123,10 +159,16 @@ final class HtmlScanHelper
     /**
      * Resolve a 1-based line and column for an offset within a fragment.
      *
+     * @param array<int, int>|null $lineStarts Optional precomputed line starts for source
      * @return array{0: int, 1: int}
      */
-    public static function resolvePosition(string $source, int $offset, int $line, int $column): array
-    {
+    public function resolvePosition(
+        string $source,
+        int $offset,
+        int $line,
+        int $column,
+        ?array $lineStarts = null,
+    ): array {
         if ($offset <= 0) {
             return [$line, $column];
         }
@@ -140,16 +182,8 @@ final class HtmlScanHelper
             $offset = $length;
         }
 
-        /** @var array<string, array<int, int>> $lineStartCache */
-        static $lineStartCache = [];
-        $cacheKey = Hash::make($source);
-
-        if (!isset($lineStartCache[$cacheKey])) {
-            $lineStartCache[$cacheKey] = self::buildLineStarts($source);
-        }
-
-        $lineStarts = $lineStartCache[$cacheKey];
-        $lineIndex = self::findLineIndexFromStarts($lineStarts, $offset);
+        $lineStarts ??= $this->lineStartsForSource($source);
+        $lineIndex = $this->findLineIndexFromStarts($lineStarts, $offset);
 
         if ($lineIndex === 0) {
             return [$line, $column + $offset];

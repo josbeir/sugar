@@ -26,6 +26,8 @@ final readonly class Parser
 
     private DirectivePrefixHelper $prefixHelper;
 
+    private HtmlScanHelper $htmlScanHelper;
+
     private HtmlParser $htmlParser;
 
     private NodeFactory $nodeFactory;
@@ -39,8 +41,14 @@ final readonly class Parser
     {
         $this->config = $config ?? new SugarConfig();
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
+        $this->htmlScanHelper = new HtmlScanHelper();
         $this->nodeFactory = new NodeFactory();
-        $this->htmlParser = new HtmlParser($this->config, $this->prefixHelper, $this->nodeFactory);
+        $this->htmlParser = new HtmlParser(
+            $this->config,
+            $this->prefixHelper,
+            $this->nodeFactory,
+            $this->htmlScanHelper,
+        );
     }
 
     /**
@@ -73,7 +81,7 @@ final readonly class Parser
         $tokens = [];
         $offset = 0;
         $rawAttribute = $this->prefixHelper->buildName('raw');
-        $lineStarts = HtmlScanHelper::buildLineStarts($source);
+        $lineStarts = $this->htmlScanHelper->buildLineStarts($source);
 
         while (($region = $this->findNextRawRegion($source, $offset, $rawAttribute)) !== null) {
             $this->appendTokenizedChunk($tokens, $source, $offset, $region['openStart'], $lineStarts);
@@ -83,7 +91,7 @@ final readonly class Parser
             $tokens[] = new Token(
                 Token::T_RAW_BODY,
                 $inner,
-                HtmlScanHelper::findLineNumberFromStarts($lineStarts, $region['innerStart']),
+                $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $region['innerStart']),
                 $region['innerStart'],
             );
 
@@ -125,14 +133,14 @@ final readonly class Parser
             $tokens[] = new Token(
                 T_INLINE_HTML,
                 $chunk,
-                HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start),
+                $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start),
                 $start,
             );
 
             return;
         }
 
-        $baseLine = HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start);
+        $baseLine = $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start);
         foreach (Token::tokenize($chunk) as $token) {
             $tokens[] = new Token(
                 $token->id,
@@ -168,7 +176,7 @@ final readonly class Parser
         $tokens[] = new Token(
             T_INLINE_HTML,
             $content,
-            HtmlScanHelper::findLineNumberFromStarts($lineStarts, $start),
+            $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start),
             $start,
         );
     }
@@ -238,12 +246,12 @@ final readonly class Parser
 
         if ($next === '/') {
             $nameStart = $start + 2;
-            $nameEnd = HtmlScanHelper::readTagNameEnd($source, $nameStart);
+            $nameEnd = $this->htmlScanHelper->readTagNameEnd($source, $nameStart);
             if ($nameEnd === $nameStart) {
                 return null;
             }
 
-            $end = HtmlScanHelper::findTagEnd($source, $nameEnd);
+            $end = $this->htmlScanHelper->findTagEnd($source, $nameEnd);
             if ($end === null) {
                 return null;
             }
@@ -263,12 +271,12 @@ final readonly class Parser
         }
 
         $nameStart = $start + 1;
-        $nameEnd = HtmlScanHelper::readTagNameEnd($source, $nameStart);
+        $nameEnd = $this->htmlScanHelper->readTagNameEnd($source, $nameStart);
         if ($nameEnd === $nameStart) {
             return null;
         }
 
-        $end = HtmlScanHelper::findTagEnd($source, $nameEnd);
+        $end = $this->htmlScanHelper->findTagEnd($source, $nameEnd);
         if ($end === null) {
             return null;
         }
