@@ -13,6 +13,7 @@ use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -362,13 +363,297 @@ final class AstPipelineTest extends TestCase
         };
 
         $pipeline = new AstPipeline();
-        $pipeline->addPass($first, 0);
-        $pipeline->addPass($second, -10);
-        $pipeline->addPass($third, 0);
+        $pipeline->addPass($first, PassPriority::DIRECTIVE_EXTRACTION);
+        $pipeline->addPassBefore($second, PassPriority::DIRECTIVE_EXTRACTION);
+        $pipeline->addPass($third, PassPriority::DIRECTIVE_EXTRACTION);
 
         $pipeline->execute($this->document()->build(), $this->createContext());
 
         $this->assertSame(['second', 'first', 'third'], $events);
+    }
+
+    public function testAddPassAfterAnchorInsertsRelativeToAnchorPriority(): void
+    {
+        $events = [];
+
+        $anchor = new class ($events, 'anchor') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $after = new class ($events, 'after') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipeline = new AstPipeline();
+        $pipeline->addPass($anchor, PassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPassAfter($after, PassPriority::DIRECTIVE_COMPILATION);
+
+        $pipeline->execute($this->document()->build(), $this->createContext());
+
+        $this->assertSame(['anchor', 'after'], $events);
+    }
+
+    public function testAddPassBeforeAnchorInsertsRelativeToAnchorPriority(): void
+    {
+        $events = [];
+
+        $anchor = new class ($events, 'anchor') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $before = new class ($events, 'before') implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events, private string $label)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = $this->label;
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipeline = new AstPipeline();
+        $pipeline->addPass($anchor, PassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPassBefore($before, PassPriority::DIRECTIVE_COMPILATION);
+
+        $pipeline->execute($this->document()->build(), $this->createContext());
+
+        $this->assertSame(['before', 'anchor'], $events);
+    }
+
+    public function testAddPassBeforeUsesAnchorPriority(): void
+    {
+        $events = [];
+
+        $before = new class ($events) implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = 'before';
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $anchor = new class ($events) implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = 'anchor';
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipeline = new AstPipeline();
+        $pipeline->addPassBefore($before, PassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPass($anchor, PassPriority::DIRECTIVE_COMPILATION);
+
+        $pipeline->execute($this->document()->build(), $this->createContext());
+
+        $this->assertSame(['before', 'anchor'], $events);
+    }
+
+    public function testAddPassAfterUsesAnchorPriority(): void
+    {
+        $events = [];
+
+        $anchor = new class ($events) implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = 'anchor';
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $after = new class ($events) implements AstPassInterface {
+            /**
+             * @var array<int, string>
+             */
+            public array $events;
+
+            /**
+             * @param array<int, string> $events
+             */
+            public function __construct(array &$events)
+            {
+                $this->events = &$events;
+            }
+
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                if ($node instanceof DocumentNode) {
+                    $this->events[] = 'after';
+                }
+
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+
+        $pipeline = new AstPipeline();
+        $pipeline->addPass($anchor, PassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPassAfter($after, PassPriority::DIRECTIVE_COMPILATION);
+
+        $pipeline->execute($this->document()->build(), $this->createContext());
+
+        $this->assertSame(['anchor', 'after'], $events);
     }
 
     public function testThrowsWhenPipelineReturnsNonDocumentNode(): void

@@ -11,6 +11,7 @@ use Sugar\Core\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
@@ -51,7 +52,7 @@ final class CompilerPipelineFactoryTest extends TestCase
             $registry,
             $config,
             [
-                ['pass' => $pass, 'priority' => 35],
+                ['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
             ],
         );
 
@@ -108,8 +109,8 @@ final class CompilerPipelineFactoryTest extends TestCase
             $registry,
             $config,
             [
-                ['pass' => $inRange, 'priority' => 35],
-                ['pass' => $afterPass, 'priority' => 45],
+                ['pass' => $inRange, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
+                ['pass' => $afterPass, 'priority' => PassPriority::CONTEXT_ANALYSIS],
             ],
         );
 

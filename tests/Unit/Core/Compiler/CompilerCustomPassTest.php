@@ -12,6 +12,7 @@ use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
@@ -41,7 +42,7 @@ final class CompilerCustomPassTest extends TestCase
         };
 
         $this->setUpCompilerWithStringLoader(
-            customPasses: [['pass' => $pass, 'priority' => 45]],
+            customPasses: [['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION]],
         );
 
         $result = $this->compiler->compile('<p>hello world</p>');
@@ -74,7 +75,7 @@ final class CompilerCustomPassTest extends TestCase
         };
 
         $this->setUpCompilerWithStringLoader(
-            customPasses: [['pass' => $pass, 'priority' => 35]],
+            customPasses: [['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION]],
         );
 
         $result = $this->compiler->compile('<div>content</div>');
@@ -91,8 +92,8 @@ final class CompilerCustomPassTest extends TestCase
 
         $this->setUpCompilerWithStringLoader(
             customPasses: [
-                ['pass' => $pass1, 'priority' => 5],
-                ['pass' => $pass2, 'priority' => 45],
+                ['pass' => $pass1, 'priority' => PassPriority::PRE_DIRECTIVE_EXTRACTION],
+                ['pass' => $pass2, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
             ],
         );
 

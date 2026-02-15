@@ -8,13 +8,13 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\ComponentExtension;
-use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 
 /**
@@ -42,7 +42,7 @@ final class ComponentExtensionTest extends TestCase
 
         $passes = $context->getPasses();
         $this->assertCount(1, $passes);
-        $this->assertSame(ComponentPassPriority::EXPANSION, $passes[0]['priority']);
+        $this->assertSame(PassPriority::POST_DIRECTIVE_COMPILATION, $passes[0]['priority']);
     }
 
     public function testRegistersRendererServiceInitializerClosure(): void

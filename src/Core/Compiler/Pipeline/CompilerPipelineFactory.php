@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Core\Compiler\Pipeline;
 
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
@@ -29,7 +30,7 @@ final class CompilerPipelineFactory
     private ?ContextAnalysisPass $contextPass = null;
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     public function __construct(
         private readonly TemplateLoaderInterface $loader,
@@ -43,7 +44,7 @@ final class CompilerPipelineFactory
     /**
      * Build the main compiler pipeline.
      *
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $inlinePasses Additional per-compilation passes
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      */
     public function buildCompilerPipeline(
         bool $enableInheritance,
@@ -52,18 +53,18 @@ final class CompilerPipelineFactory
         $pipeline = new AstPipeline();
 
         if ($enableInheritance) {
-            $pipeline->addPass($this->getInheritancePass(), CompilerPassPriority::TEMPLATE_INHERITANCE);
+            $pipeline->addPass($this->getInheritancePass(), PassPriority::TEMPLATE_INHERITANCE);
         }
 
-        $pipeline->addPass($this->getDirectiveExtractionPass(), CompilerPassPriority::DIRECTIVE_EXTRACTION);
-        $pipeline->addPass($this->getDirectivePairingPass(), CompilerPassPriority::DIRECTIVE_PAIRING);
-        $pipeline->addPass($this->getDirectiveCompilationPass(), CompilerPassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPass($this->getDirectiveExtractionPass(), PassPriority::DIRECTIVE_EXTRACTION);
+        $pipeline->addPass($this->getDirectivePairingPass(), PassPriority::DIRECTIVE_PAIRING);
+        $pipeline->addPass($this->getDirectiveCompilationPass(), PassPriority::DIRECTIVE_COMPILATION);
 
         foreach ($inlinePasses as $entry) {
             $pipeline->addPass($entry['pass'], $entry['priority']);
         }
 
-        $pipeline->addPass($this->getContextPass(), CompilerPassPriority::CONTEXT_ANALYSIS);
+        $pipeline->addPass($this->getContextPass(), PassPriority::CONTEXT_ANALYSIS);
         $this->addCustomPasses($pipeline);
 
         return $pipeline;
@@ -152,18 +153,8 @@ final class CompilerPipelineFactory
      */
     private function addCustomPasses(
         AstPipeline $pipeline,
-        int $minPriority = PHP_INT_MIN,
-        int $maxPriority = PHP_INT_MAX,
     ): void {
         foreach ($this->customPasses as $entry) {
-            if ($entry['priority'] < $minPriority) {
-                continue;
-            }
-
-            if ($entry['priority'] >= $maxPriority) {
-                continue;
-            }
-
             $pipeline->addPass($entry['pass'], $entry['priority']);
         }
     }

@@ -14,6 +14,7 @@ use Sugar\Core\Compiler\Pipeline\AstPipeline;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
@@ -91,7 +92,7 @@ final class ComponentPassFactoryTest extends TestCase
             registry: $registry,
             config: $config,
             customPasses: [
-                ['pass' => $upperCasePass, 'priority' => 35],
+                ['pass' => $upperCasePass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
             ],
         );
 
@@ -140,8 +141,8 @@ final class ComponentPassFactoryTest extends TestCase
             registry: $registry,
             config: $config,
             customPasses: [
-                ['pass' => $appendPass, 'priority' => 20],
-                ['pass' => $appendPass, 'priority' => 40],
+                ['pass' => $appendPass, 'priority' => PassPriority::DIRECTIVE_PAIRING],
+                ['pass' => $appendPass, 'priority' => PassPriority::CONTEXT_ANALYSIS],
             ],
         );
 

@@ -11,7 +11,7 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
-use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
@@ -280,7 +280,7 @@ PHP,
         $cache = $cache ?? $this->createCache();
 
         return new ComponentRenderer(
-            componentCompiler: new ComponentTemplateCompiler(
+            componentCompiler: new ComponentCompiler(
                 compiler: $this->compiler,
                 loader: $this->componentLoader,
             ),
@@ -330,7 +330,7 @@ PHP,
         };
 
         return new ComponentRenderer(
-            componentCompiler: new ComponentTemplateCompiler(
+            componentCompiler: new ComponentCompiler(
                 compiler: $this->compiler,
                 loader: $this->componentLoader,
             ),

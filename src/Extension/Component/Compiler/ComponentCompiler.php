@@ -5,10 +5,10 @@ namespace Sugar\Extension\Component\Compiler;
 
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Compiler\CompilerInterface;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 
 /**
@@ -18,7 +18,7 @@ use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
  * component extension while delegating generic template compilation
  * to the core compiler.
  */
-final readonly class ComponentTemplateCompiler
+final readonly class ComponentCompiler
 {
     /**
      * @param \Sugar\Core\Compiler\CompilerInterface $compiler Core template compiler
@@ -69,7 +69,7 @@ final readonly class ComponentTemplateCompiler
      * Build inline passes needed for component variant compilation.
      *
      * @param array<string> $slotNames
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}>
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
      */
     private function buildInlinePasses(array $slotNames): array
     {
@@ -77,7 +77,7 @@ final readonly class ComponentTemplateCompiler
 
         return [[
             'pass' => new ComponentVariantAdjustmentPass($slotVars),
-            'priority' => ComponentPassPriority::VARIANT_ADJUSTMENTS,
+            'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
         ]];
     }
 }

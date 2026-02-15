@@ -9,6 +9,7 @@ use Sugar\Core\Compiler\CompilerInterface;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 
@@ -22,7 +23,7 @@ use Sugar\Core\Parser\Parser;
  * Example:
  *
  *     $context->directive('custom', 'CustomDirectiveClass');
- *     $context->compilerPass($customPass, 35);
+ *     $context->compilerPass($customPass, PassPriority::POST_DIRECTIVE_COMPILATION);
  */
 final class RegistrationContext
 {
@@ -32,7 +33,7 @@ final class RegistrationContext
     private array $directives = [];
 
     /**
-     * @var array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}>
+     * @var array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
      */
     private array $passes = [];
 
@@ -82,10 +83,12 @@ final class RegistrationContext
      * Register a custom AST compiler pass
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass The compiler pass
-     * @param int $priority Ordering priority (negative before, positive after)
+     * @param \Sugar\Core\Enum\PassPriority $priority Ordering priority
      */
-    public function compilerPass(AstPassInterface $pass, int $priority = 0): void
-    {
+    public function compilerPass(
+        AstPassInterface $pass,
+        PassPriority $priority = PassPriority::POST_DIRECTIVE_COMPILATION,
+    ): void {
         $this->passes[] = ['pass' => $pass, 'priority' => $priority];
     }
 
@@ -113,7 +116,7 @@ final class RegistrationContext
     /**
      * Get all registered compiler passes
      *
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}>
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
      */
     public function getPasses(): array
     {

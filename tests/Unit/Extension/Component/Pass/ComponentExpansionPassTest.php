@@ -24,6 +24,7 @@ use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Directive\WhileDirective;
 use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
@@ -137,7 +138,7 @@ final class ComponentExpansionPassTest extends TestCase
             registry: $this->registry,
             config: $this->config,
             customPasses: [
-                ['pass' => $pass, 'priority' => 35],
+                ['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
             ],
         );
         $componentPass = $passFactory->createExpansionPass();

@@ -15,6 +15,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Engine;
 use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\StringTemplateLoader;
@@ -95,7 +96,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -160,7 +161,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -204,7 +205,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -226,7 +227,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 

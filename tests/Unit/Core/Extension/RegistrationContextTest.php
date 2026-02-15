@@ -9,6 +9,7 @@ use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\RegistrationContext;
 
 /**
@@ -74,15 +75,15 @@ final class RegistrationContextTest extends TestCase
     {
         $pass = $this->createStubPass();
 
-        $this->context->compilerPass($pass, 35);
+        $this->context->compilerPass($pass, PassPriority::POST_DIRECTIVE_COMPILATION);
 
         $passes = $this->context->getPasses();
         $this->assertCount(1, $passes);
         $this->assertSame($pass, $passes[0]['pass']);
-        $this->assertSame(35, $passes[0]['priority']);
+        $this->assertSame(PassPriority::POST_DIRECTIVE_COMPILATION, $passes[0]['priority']);
     }
 
-    public function testCompilerPassDefaultsToZeroPriority(): void
+    public function testCompilerPassDefaultsToPostDirectiveCompilationPriority(): void
     {
         $pass = $this->createStubPass();
 
@@ -90,7 +91,7 @@ final class RegistrationContextTest extends TestCase
 
         $passes = $this->context->getPasses();
         $this->assertCount(1, $passes);
-        $this->assertSame(0, $passes[0]['priority']);
+        $this->assertSame(PassPriority::POST_DIRECTIVE_COMPILATION, $passes[0]['priority']);
     }
 
     public function testMultipleCompilerPassRegistrations(): void
@@ -98,13 +99,13 @@ final class RegistrationContextTest extends TestCase
         $pass1 = $this->createStubPass();
         $pass2 = $this->createStubPass();
 
-        $this->context->compilerPass($pass1, 5);
-        $this->context->compilerPass($pass2, 45);
+        $this->context->compilerPass($pass1, PassPriority::PRE_DIRECTIVE_EXTRACTION);
+        $this->context->compilerPass($pass2, PassPriority::CONTEXT_ANALYSIS);
 
         $passes = $this->context->getPasses();
         $this->assertCount(2, $passes);
-        $this->assertSame(5, $passes[0]['priority']);
-        $this->assertSame(45, $passes[1]['priority']);
+        $this->assertSame(PassPriority::PRE_DIRECTIVE_EXTRACTION, $passes[0]['priority']);
+        $this->assertSame(PassPriority::CONTEXT_ANALYSIS, $passes[1]['priority']);
     }
 
     public function testSamePriorityMultiplePasses(): void
@@ -112,8 +113,8 @@ final class RegistrationContextTest extends TestCase
         $pass1 = $this->createStubPass();
         $pass2 = $this->createStubPass();
 
-        $this->context->compilerPass($pass1, 35);
-        $this->context->compilerPass($pass2, 35);
+        $this->context->compilerPass($pass1, PassPriority::POST_DIRECTIVE_COMPILATION);
+        $this->context->compilerPass($pass2, PassPriority::POST_DIRECTIVE_COMPILATION);
 
         $passes = $this->context->getPasses();
         $this->assertCount(2, $passes);
@@ -134,7 +135,7 @@ final class RegistrationContextTest extends TestCase
         $pass = $this->createStubPass();
 
         $this->context->directive('my-dir', $directive);
-        $this->context->compilerPass($pass, 45);
+        $this->context->compilerPass($pass, PassPriority::CONTEXT_ANALYSIS);
         $this->context->runtimeService('custom.service', ['enabled' => true]);
 
         $this->assertCount(1, $this->context->getDirectives());

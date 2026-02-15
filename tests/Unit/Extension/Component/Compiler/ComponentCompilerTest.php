@@ -11,12 +11,12 @@ use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
-use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
-final class ComponentTemplateCompilerTest extends TestCase
+final class ComponentCompilerTest extends TestCase
 {
     use ExecuteTemplateTrait;
 
@@ -33,7 +33,7 @@ final class ComponentTemplateCompilerTest extends TestCase
             config: $config,
         );
 
-        $componentCompiler = new ComponentTemplateCompiler(
+        $componentCompiler = new ComponentCompiler(
             compiler: $compiler,
             loader: $componentLoader,
         );
@@ -61,7 +61,7 @@ final class ComponentTemplateCompilerTest extends TestCase
             config: $config,
         );
 
-        $componentCompiler = new ComponentTemplateCompiler(
+        $componentCompiler = new ComponentCompiler(
             compiler: $compiler,
             loader: $componentLoader,
         );
@@ -93,7 +93,7 @@ final class ComponentTemplateCompilerTest extends TestCase
             config: $config,
         );
 
-        $componentCompiler = new ComponentTemplateCompiler(
+        $componentCompiler = new ComponentCompiler(
             compiler: $compiler,
             loader: $componentLoader,
         );

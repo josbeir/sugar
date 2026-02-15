@@ -5,6 +5,7 @@ namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\FileTemplateLoader;
@@ -16,7 +17,6 @@ use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
 use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
-use Sugar\Extension\Component\Pass\ComponentPassPriority;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -101,7 +101,7 @@ trait CompilerTestTrait
      *
      * @param array<string, string> $templates
      * @param array<string, string> $components
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],
@@ -181,8 +181,8 @@ trait CompilerTestTrait
     }
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}>
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
      */
     private function withDefaultComponentExpansion(?SugarConfig $config, array $customPasses): array
     {
@@ -203,7 +203,7 @@ trait CompilerTestTrait
 
         $customPasses[] = [
             'pass' => $passFactory->createExpansionPass(),
-            'priority' => ComponentPassPriority::EXPANSION,
+            'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
         ];
 
         return $customPasses;

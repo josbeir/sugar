@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
-use Sugar\Core\Compiler\Pipeline\CompilerPassPriority;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
@@ -28,7 +28,7 @@ final class ComponentPassFactory
     private ?ComponentExpansionPass $componentExpansionPass = null;
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     public function __construct(
         private readonly TemplateLoaderInterface $templateLoader,
@@ -76,20 +76,20 @@ final class ComponentPassFactory
             parser: $this->parser,
             registry: $this->registry,
             config: $this->config,
-        ), CompilerPassPriority::TEMPLATE_INHERITANCE);
+        ), PassPriority::TEMPLATE_INHERITANCE);
 
         $pipeline->addPass(new DirectiveExtractionPass(
             registry: $this->registry,
             config: $this->config,
-        ), CompilerPassPriority::DIRECTIVE_EXTRACTION);
+        ), PassPriority::DIRECTIVE_EXTRACTION);
 
-        $pipeline->addPass(new DirectivePairingPass($this->registry), CompilerPassPriority::DIRECTIVE_PAIRING);
-        $pipeline->addPass(new DirectiveCompilationPass($this->registry), CompilerPassPriority::DIRECTIVE_COMPILATION);
+        $pipeline->addPass(new DirectivePairingPass($this->registry), PassPriority::DIRECTIVE_PAIRING);
+        $pipeline->addPass(new DirectiveCompilationPass($this->registry), PassPriority::DIRECTIVE_COMPILATION);
 
         $this->addCustomPasses(
             $pipeline,
-            minPriority: CompilerPassPriority::DIRECTIVE_COMPILATION,
-            maxPriority: ComponentPassPriority::EXPANSION,
+            minPriority: PassPriority::DIRECTIVE_COMPILATION,
+            maxPriority: PassPriority::CONTEXT_ANALYSIS,
         );
 
         $this->componentTemplatePipeline = $pipeline;
@@ -102,15 +102,15 @@ final class ComponentPassFactory
      */
     private function addCustomPasses(
         AstPipeline $pipeline,
-        int $minPriority = PHP_INT_MIN,
-        int $maxPriority = PHP_INT_MAX,
+        PassPriority $minPriority,
+        PassPriority $maxPriority,
     ): void {
         foreach ($this->customPasses as $entry) {
-            if ($entry['priority'] < $minPriority) {
+            if ($entry['priority']->value < $minPriority->value) {
                 continue;
             }
 
-            if ($entry['priority'] >= $maxPriority) {
+            if ($entry['priority']->value >= $maxPriority->value) {
                 continue;
             }
 

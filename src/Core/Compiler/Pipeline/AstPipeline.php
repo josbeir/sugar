@@ -11,14 +11,21 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Enum\PassPriority;
 
 /**
  * Executes compiler passes in a single AST traversal.
  */
 final class AstPipeline
 {
+    private const POSITION_BEFORE = -1;
+
+    private const POSITION_NORMAL = 0;
+
+    private const POSITION_AFTER = 1;
+
     /**
-     * @var array<int, array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int, sequence: int}>
+     * @var array<int, array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority, position: int, sequence: int}>
      */
     private array $passEntries = [];
 
@@ -48,14 +55,57 @@ final class AstPipeline
      * Lower priorities run first; equal priorities preserve insertion order.
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to add
-     * @param int $priority Ordering priority (negative before, positive after)
+     * @param \Sugar\Core\Enum\PassPriority $priority Ordering priority
      * @return $this
      */
-    public function addPass(AstPassInterface $pass, int $priority = 0)
+    public function addPass(AstPassInterface $pass, PassPriority $priority = PassPriority::TEMPLATE_INHERITANCE)
     {
         $this->passEntries[] = [
             'pass' => $pass,
             'priority' => $priority,
+            'position' => self::POSITION_NORMAL,
+            'sequence' => $this->sequence,
+        ];
+        $this->sequence++;
+        $this->passesReady = false;
+
+        return $this;
+    }
+
+    /**
+     * Insert a pass before an anchored priority.
+     *
+     * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to insert
+     * @param \Sugar\Core\Enum\PassPriority $anchorPriority Anchor priority
+     * @return $this
+     */
+    public function addPassBefore(AstPassInterface $pass, PassPriority $anchorPriority)
+    {
+        $this->passEntries[] = [
+            'pass' => $pass,
+            'priority' => $anchorPriority,
+            'position' => self::POSITION_BEFORE,
+            'sequence' => $this->sequence,
+        ];
+        $this->sequence++;
+        $this->passesReady = false;
+
+        return $this;
+    }
+
+    /**
+     * Insert a pass after an anchored priority.
+     *
+     * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to insert
+     * @param \Sugar\Core\Enum\PassPriority $anchorPriority Anchor priority
+     * @return $this
+     */
+    public function addPassAfter(AstPassInterface $pass, PassPriority $anchorPriority)
+    {
+        $this->passEntries[] = [
+            'pass' => $pass,
+            'priority' => $anchorPriority,
+            'position' => self::POSITION_AFTER,
             'sequence' => $this->sequence,
         ];
         $this->sequence++;
@@ -75,9 +125,14 @@ final class AstPipeline
 
         $entries = $this->passEntries;
         usort($entries, static function (array $left, array $right): int {
-            $priority = $left['priority'] <=> $right['priority'];
+            $priority = $left['priority']->value <=> $right['priority']->value;
             if ($priority !== 0) {
                 return $priority;
+            }
+
+            $position = $left['position'] <=> $right['position'];
+            if ($position !== 0) {
+                return $position;
             }
 
             return $left['sequence'] <=> $right['sequence'];
