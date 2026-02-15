@@ -14,7 +14,7 @@ use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 /**
  * Component loader that delegates lookups to the core ResourceLocator.
  */
-final readonly class ResourceLocatorComponentTemplateLoader implements ComponentTemplateLoaderInterface
+final readonly class ResourceLocatorLoader implements ComponentLoaderInterface
 {
     private const TYPE = 'component';
 

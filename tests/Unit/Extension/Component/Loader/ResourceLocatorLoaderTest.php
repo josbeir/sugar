@@ -6,9 +6,9 @@ namespace Sugar\Tests\Unit\Extension\Component\Loader;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
 
-final class ResourceLocatorComponentTemplateLoaderTest extends TestCase
+final class ResourceLocatorLoaderTest extends TestCase
 {
     public function testLoadsComponentFromTemplateLoaderResources(): void
     {
@@ -17,7 +17,7 @@ final class ResourceLocatorComponentTemplateLoaderTest extends TestCase
             'components/s-card.sugar.php' => '<div class="card"><?= $slot ?></div>',
         ]);
 
-        $loader = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+        $loader = ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $templateLoader,
             config: $config,
             directories: ['components'],

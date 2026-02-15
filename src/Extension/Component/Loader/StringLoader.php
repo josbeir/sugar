@@ -9,11 +9,11 @@ use Sugar\Core\Loader\StringTemplateLoader;
 /**
  * In-memory component loader powered by the core string template loader.
  */
-final class StringComponentTemplateLoader implements ComponentTemplateLoaderInterface
+final class StringLoader implements ComponentLoaderInterface
 {
     private readonly StringTemplateLoader $templateLoader;
 
-    private readonly ResourceLocatorComponentTemplateLoader $delegate;
+    private readonly ResourceLocatorLoader $delegate;
 
     /**
      * @param array<string, string> $components
@@ -28,7 +28,7 @@ final class StringComponentTemplateLoader implements ComponentTemplateLoaderInte
         }
 
         $this->templateLoader = new StringTemplateLoader(config: $this->config, templates: $templates);
-        $this->delegate = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+        $this->delegate = ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $this->templateLoader,
             config: $this->config,
             directories: ['components'],

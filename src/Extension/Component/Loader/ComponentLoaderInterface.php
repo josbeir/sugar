@@ -9,7 +9,7 @@ namespace Sugar\Extension\Component\Loader;
  * Keeping this interface in the extension prevents component-specific
  * responsibilities from leaking into core template loading contracts.
  */
-interface ComponentTemplateLoaderInterface
+interface ComponentLoaderInterface
 {
     /**
      * Load a component template by name.

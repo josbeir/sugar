@@ -29,10 +29,10 @@ use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Helper\ComponentSlots;
 use Sugar\Extension\Component\Helper\SlotResolver;
-use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
-use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 
 /**
  * Expands component invocations into their template content
@@ -62,14 +62,14 @@ final class ComponentExpansionPass implements AstPassInterface
     /**
      * Constructor
      *
-     * @param \Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface $loader Component template loader
+     * @param \Sugar\Extension\Component\Loader\ComponentLoaderInterface $loader Component template loader
      * @param \Sugar\Core\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Extension registry for directive type checking
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
      * @param \Sugar\Core\Compiler\Pipeline\AstPipeline $componentTemplatePipeline Pipeline for component templates
      */
     public function __construct(
-        private readonly ComponentTemplateLoaderInterface $loader,
+        private readonly ComponentLoaderInterface $loader,
         private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
@@ -405,7 +405,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
         return new RuntimeCallNode(
             callableExpression: RuntimeEnvironment::class
-                . '::requireService(' . ComponentRuntimeServiceIds::class . '::RENDERER)->renderComponent',
+                . '::requireService(' . ComponentExtension::class . '::SERVICE_RENDERER)->renderComponent',
             arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
             line: $line,
             column: $column,

@@ -20,7 +20,6 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -452,25 +451,5 @@ final class EngineBuilderTest extends TestCase
             ->build();
 
         $this->assertInstanceOf(Engine::class, $engine);
-    }
-
-    public function testComponentsAreExpandedWhenComponentExtensionIsRegistered(): void
-    {
-        $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
-            templates: [
-                'page.sugar.php' => '<s-card>Hello</s-card>',
-                'components/s-card.sugar.php' => '<div class="card"><?= $slot ?></div>',
-            ],
-        );
-
-        $engine = (new EngineBuilder())
-            ->withTemplateLoader($loader)
-            ->withExtension(new ComponentExtension())
-            ->build();
-
-        $result = $engine->render('page.sugar.php');
-
-        $this->assertSame('<div class="card">Hello</div>', trim($result));
     }
 }

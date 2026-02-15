@@ -27,9 +27,9 @@ use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
+use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
-use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -40,7 +40,7 @@ final class ComponentExpansionPassTest extends TestCase
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
-    private StringComponentTemplateLoader $loader;
+    private StringLoader $loader;
 
     private AstPipeline $pipeline;
 
@@ -50,7 +50,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $this->config = new SugarConfig();
         $this->templateLoader = new StringTemplateLoader(config: $this->config);
-        $this->loader = new StringComponentTemplateLoader(
+        $this->loader = new StringLoader(
             config: $this->config,
             components: [
                 'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
@@ -435,7 +435,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertInstanceOf(RuntimeCallNode::class, $call);
         $this->assertSame(
             RuntimeEnvironment::class
-                . '::requireService(' . ComponentRuntimeServiceIds::class . '::RENDERER)->renderComponent',
+                . '::requireService(' . ComponentExtension::class . '::SERVICE_RENDERER)->renderComponent',
             $call->callableExpression,
         );
         $this->assertSame('$component', $call->arguments[0]);

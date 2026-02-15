@@ -93,4 +93,24 @@ final class ResourceLocatorTest extends TestCase
         $this->assertTrue($locator->has('raw_component', 's-button'));
         $this->assertSame('components/s-button.sugar.php', $locator->path('raw_component', 's-button'));
     }
+
+    public function testSkipsWrongSuffixAndFragmentElementForDefaultComponentDefinition(): void
+    {
+        $config = new SugarConfig();
+        $templateLoader = new StringTemplateLoader($config, [
+            'components/s-template.sugar.php' => '<div>fragment</div>',
+            'components/s-readme.txt' => 'ignored',
+            'components/s-alert.sugar.php' => '<div>alert</div>',
+        ]);
+
+        $locator = new ResourceLocator($templateLoader, $config);
+        $locator->registerType(new ResourceTypeDefinition(
+            name: 'component',
+            directories: ['components'],
+        ));
+
+        $this->assertFalse($locator->has('component', 'template'));
+        $this->assertFalse($locator->has('component', 'readme'));
+        $this->assertTrue($locator->has('component', 'alert'));
+    }
 }

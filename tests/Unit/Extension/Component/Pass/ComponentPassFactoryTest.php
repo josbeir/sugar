@@ -17,7 +17,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
-use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -34,7 +34,7 @@ final class ComponentPassFactoryTest extends TestCase
         $loader = new StringTemplateLoader(
             config: $config,
         );
-        $componentLoader = new StringComponentTemplateLoader(
+        $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
         );
@@ -61,7 +61,7 @@ final class ComponentPassFactoryTest extends TestCase
         $loader = new StringTemplateLoader(
             config: $config,
         );
-        $componentLoader = new StringComponentTemplateLoader(
+        $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
         );
@@ -110,7 +110,7 @@ final class ComponentPassFactoryTest extends TestCase
         $loader = new StringTemplateLoader(
             config: $config,
         );
-        $componentLoader = new StringComponentTemplateLoader(
+        $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
         );

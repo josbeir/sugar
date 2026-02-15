@@ -13,13 +13,12 @@ use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
-use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
-use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 
 /**
  * Registers component expansion behavior and runtime services.
@@ -29,6 +28,11 @@ use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
  */
 final class ComponentExtension implements ExtensionInterface
 {
+    /**
+     * Runtime service id for the component renderer.
+     */
+    public const SERVICE_RENDERER = 'renderer.component';
+
     /**
      * @inheritDoc
      */
@@ -40,7 +44,7 @@ final class ComponentExtension implements ExtensionInterface
         );
 
         $context->runtimeService(
-            ComponentRuntimeServiceIds::RENDERER,
+            self::SERVICE_RENDERER,
             static function (RegistrationContext $runtimeContext): ComponentRenderer {
                 $compiler = $runtimeContext->getCompiler();
                 $loader = $runtimeContext->getTemplateLoader();
@@ -114,8 +118,8 @@ final class ComponentExtension implements ExtensionInterface
     private static function buildComponentLoader(
         TemplateLoaderInterface $loader,
         SugarConfig $config,
-    ): ComponentTemplateLoaderInterface {
-        return ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+    ): ComponentLoaderInterface {
+        return ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $loader,
             config: $config,
             directories: ['components'],

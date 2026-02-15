@@ -11,9 +11,9 @@ use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
-use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
-use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
+use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
@@ -35,7 +35,7 @@ trait CompilerTestTrait
 
     protected TemplateLoaderInterface $templateLoader;
 
-    protected ComponentTemplateLoaderInterface $componentLoader;
+    protected ComponentLoaderInterface $componentLoader;
 
     /**
      * Set up compiler dependencies
@@ -73,7 +73,7 @@ trait CompilerTestTrait
             $absolutePathsOnly,
         );
 
-        $this->componentLoader = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $this->templateLoader,
             config: $config ?? new SugarConfig(),
             directories: $componentPaths,
@@ -127,7 +127,7 @@ trait CompilerTestTrait
             $absolutePathsOnly,
         );
 
-        $this->componentLoader = new StringComponentTemplateLoader(
+        $this->componentLoader = new StringLoader(
             config: $loaderConfig,
             components: $components,
         );

@@ -13,7 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class ComponentTemplateCompilerTest extends TestCase
@@ -24,7 +24,7 @@ final class ComponentTemplateCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringComponentTemplateLoader(config: $config);
+        $componentLoader = new StringLoader(config: $config);
         $compiler = new Compiler(
             parser: new Parser($config),
             escaper: new Escaper(),
@@ -48,7 +48,7 @@ final class ComponentTemplateCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringComponentTemplateLoader(
+        $componentLoader = new StringLoader(
             config: $config,
             components: ['button' => '<button><?= $slot ?></button>'],
         );
@@ -80,7 +80,7 @@ final class ComponentTemplateCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringComponentTemplateLoader(
+        $componentLoader = new StringLoader(
             config: $config,
             components: ['button' => '<button><?= $slot ?></button>'],
         );

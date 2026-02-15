@@ -13,7 +13,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -90,7 +90,7 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesSlotValues(): void
     {
-        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
         $this->componentLoader->addComponent(
             'slot-test',
             '<div class="slot-test">'
@@ -123,7 +123,7 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesAttributes(): void
     {
-        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
         $this->componentLoader->addComponent(
             'attr-test',
             '<div class="box" s:spread="$__sugar_attrs"><?= $slot ?></div>',
@@ -155,7 +155,7 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentBindsTemplateContext(): void
     {
-        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
         $this->componentLoader->addComponent(
             'context-test',
             '<div><?= $this->greet() ?></div>',

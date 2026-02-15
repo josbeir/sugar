@@ -13,7 +13,7 @@ use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
 use Sugar\Core\Pass\Template\TemplateInheritancePass;
-use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 
 /**
  * Builds component extension pipeline artifacts.
@@ -32,7 +32,7 @@ final class ComponentPassFactory
      */
     public function __construct(
         private readonly TemplateLoaderInterface $templateLoader,
-        private readonly ComponentTemplateLoaderInterface $componentLoader,
+        private readonly ComponentLoaderInterface $componentLoader,
         private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         private readonly SugarConfig $config,

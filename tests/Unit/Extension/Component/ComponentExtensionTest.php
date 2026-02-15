@@ -16,7 +16,6 @@ use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
-use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 
 /**
  * Tests for ComponentExtension registration behavior.
@@ -76,10 +75,10 @@ final class ComponentExtensionTest extends TestCase
         $extension->register($context);
 
         $services = $context->getRuntimeServices();
-        $this->assertArrayHasKey(ComponentRuntimeServiceIds::RENDERER, $services);
-        $this->assertInstanceOf(Closure::class, $services[ComponentRuntimeServiceIds::RENDERER]);
+        $this->assertArrayHasKey(ComponentExtension::SERVICE_RENDERER, $services);
+        $this->assertInstanceOf(Closure::class, $services[ComponentExtension::SERVICE_RENDERER]);
 
-        $renderer = $services[ComponentRuntimeServiceIds::RENDERER]($context);
+        $renderer = $services[ComponentExtension::SERVICE_RENDERER]($context);
         $this->assertInstanceOf(ComponentRenderer::class, $renderer);
     }
 }
