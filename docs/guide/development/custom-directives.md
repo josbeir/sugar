@@ -157,14 +157,7 @@ Use these examples as a quick mental model for what extraction does after your d
 <!-- Existing class + directive-generated class are merged into one class attr -->
 <button class="btn" s:class="['btn-primary' => $primary]">Save</button>
 ```
-use Sugar\Core\Ast\Node;
-use Sugar\Core\Ast\RawPhpNode;
-use Sugar\Core\Compiler\CompilationContext;
-use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
-use Sugar\Core\Enum\AttributeMergeMode;
-use Sugar\Core\Enum\DirectiveType;
-use Sugar\Core\Runtime\HtmlAttributeHelper;
-use Sugar\Core\Util\Hash;
+
 ```html [EXCLUDE_NAMED]
 <!-- Explicit attrs win; spread ignores keys already present on the element -->
 <button id="save" class="btn" s:spread="$attrs">Save</button>
@@ -177,13 +170,13 @@ use Sugar\Core\Util\Hash;
 :::
 
 ```php
-use Sugar\Ast\Node;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Compiler\CompilationContext;
-use Sugar\Directive\Interface\AttributeMergePolicyDirectiveInterface;
-use Sugar\Enum\AttributeMergeMode;
-use Sugar\Enum\DirectiveType;
-use Sugar\Runtime\HtmlAttributeHelper;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
+use Sugar\Core\Enum\AttributeMergeMode;
+use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Runtime\HtmlAttributeHelper;
 
 final class ClassDirective implements AttributeMergePolicyDirectiveInterface
 {

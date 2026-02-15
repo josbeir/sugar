@@ -13,17 +13,16 @@ Compilation happens once per template change. Rendering is a cached PHP include.
 
 ## Compilation Pipeline
 
-| Priority | Stage | Purpose | Notes |
+| Priority Enum | Stage | Purpose | Notes |
 | --- | --- | --- | --- |
-| 1 | Parser | Converts template source into a Sugar AST. | Uses `PhpToken` for PHP-aware tokenization and preserves line/column for error reporting. |
-| 2 | TemplateInheritancePass | Applies `s:extends` and merges blocks. | Optional, requires a template loader. |
-| 3 | DirectiveExtractionPass | Pulls out `s:*` directives and validates placement. | Produces directive nodes from attributes. |
-| 4 | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |
-| 5 | DirectiveCompilationPass | Rewrites directive nodes into executable AST nodes. | Produces control flow, attributes, and output nodes. |
-| 6 | ComponentExpansionPass | Resolves component tags into their AST. | Optional, requires a template loader. |
-| 7 | ComponentVariantAdjustmentPass | Normalizes component slot variables for variants. | Only used when compiling components. |
-| 8 | ContextAnalysisPass | Determines output context for escaping decisions. | Tags output nodes with HTML/attribute/URL/JS/CSS contexts. |
-| 9 | CodeGenerator | Emits pure PHP from the final AST. | Output is ready for opcache. |
+| — | Parser | Converts template source into a Sugar AST. | Uses `PhpToken` for PHP-aware tokenization and preserves line/column for error reporting. |
+| `TEMPLATE_INHERITANCE` | TemplateInheritancePass | Applies `s:extends` and merges blocks. | Optional, requires a template loader. |
+| `DIRECTIVE_EXTRACTION` | DirectiveExtractionPass | Pulls out `s:*` directives and validates placement. | Produces directive nodes from attributes. |
+| `DIRECTIVE_PAIRING` | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |
+| `DIRECTIVE_COMPILATION` | DirectiveCompilationPass | Rewrites directive nodes into executable AST nodes. | Produces control flow, attributes, and output nodes. |
+| `POST_DIRECTIVE_COMPILATION` | ComponentExpansionPass | Resolves component tags into their AST. | Registered by `ComponentExtension` (optional, requires a template loader). |
+| `CONTEXT_ANALYSIS` | ContextAnalysisPass | Determines output context for escaping decisions. | Tags output nodes with HTML/attribute/URL/JS/CSS contexts. |
+| — | CodeGenerator | Emits pure PHP from the final AST. | Output is ready for opcache. |
 
 ::: tip
 If a template compiles, it will render deterministically. All runtime behavior is inside the generated PHP.
@@ -34,8 +33,8 @@ If a template compiles, it will render deterministically. All runtime behavior i
 Sugar keeps a small set of nodes so transformations remain predictable. Directives compile into nodes that the code generator can output without re-parsing.
 
 ```php
-use Sugar\Ast\ElementNode;
-use Sugar\Ast\RawPhpNode;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\RawPhpNode;
 
 $element = new ElementNode(
     tag: 'div',

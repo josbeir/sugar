@@ -18,7 +18,10 @@ final class AuditExtension implements ExtensionInterface
     public function register(RegistrationContext $context): void
     {
         $context->directive('audit', AuditDirective::class);
-        $context->compilerPass(new AuditPass(), 35);
+        $context->compilerPass(
+            new AuditPass(),
+            \Sugar\Core\Enum\PassPriority::POST_DIRECTIVE_COMPILATION,
+        );
     }
 }
 ```
@@ -57,6 +60,43 @@ final class MetricsExtension implements ExtensionInterface
 ```
 
 Runtime services are available through `RuntimeEnvironment` during template execution.
+
+`runtimeService()` also supports factories (closures) that receive a `RegistrationContext` at render time, so services can be built from runtime dependencies:
+
+```php
+use Sugar\Core\Extension\RegistrationContext;
+
+$context->runtimeService('metrics', function (RegistrationContext $runtimeContext): MetricsClient {
+        $cache = $runtimeContext->getTemplateCache();
+
+        return new MetricsClient($cache);
+});
+```
+
+The renderer service id (`RuntimeEnvironment::RENDERER_SERVICE_ID`) is reserved by the engine. If multiple extensions register that id, the first registration wins.
+
+## RegistrationContext API
+
+`RegistrationContext` now exposes engine dependencies to extensions through typed getters. Availability depends on when the context is used:
+
+- **During extension registration** (`ExtensionInterface::register()`):
+    - `getConfig()`
+    - `getTemplateLoader()`
+    - `getTemplateCache()`
+    - `getTemplateContext()`
+    - `isDebug()`
+    - `getParser()`
+    - `getDirectiveRegistry()`
+- **During runtime service materialization** (closure passed to `runtimeService()`):
+    - `getConfig()`
+    - `getTemplateLoader()`
+    - `getTemplateCache()`
+    - `getTemplateContext()`
+    - `isDebug()`
+    - `getCompiler()`
+    - `getTracker()`
+
+Depending on phase, some getters can return `null`, so extensions should guard dependency assumptions when needed.
 
 For example, fragment caching is now registered as an optional extension:
 
@@ -190,10 +230,12 @@ final class NormalizeWhitespacePass implements AstPassInterface
 ```
 :::
 
-Register it with a priority:
+Register it with a semantic priority:
 
 ```php
-$context->compilerPass(new UppercaseTextPass(), 35);
+use Sugar\Core\Enum\PassPriority;
+
+$context->compilerPass(new UppercaseTextPass(), PassPriority::POST_DIRECTIVE_COMPILATION);
 ```
 
 ### When to Use a Compiler Pass
@@ -210,35 +252,27 @@ $context->compilerPass(new UppercaseTextPass(), 35);
 
 ### Priorities
 
-Each pass can include a numeric priority:
+Compiler passes now use enum priorities (`Sugar\Core\Enum\PassPriority`) instead of numeric values:
 
-- Lower numbers run earlier.
-- Higher numbers run later.
-- Equal priorities keep the registration order.
+- `TEMPLATE_INHERITANCE`
+- `PRE_DIRECTIVE_EXTRACTION`
+- `DIRECTIVE_EXTRACTION`
+- `DIRECTIVE_PAIRING`
+- `DIRECTIVE_COMPILATION`
+- `POST_DIRECTIVE_COMPILATION`
+- `CONTEXT_ANALYSIS`
 
 ```php
-$context->compilerPass(new NormalizePass(), -10); // early
-$context->compilerPass(new OptimizePass(), 35);   // mid-pipeline
-$context->compilerPass(new FinalizePass(), 60);   // late
+use Sugar\Core\Enum\PassPriority;
+
+$context->compilerPass(new NormalizePass(), PassPriority::PRE_DIRECTIVE_EXTRACTION);
+$context->compilerPass(new OptimizePass(), PassPriority::POST_DIRECTIVE_COMPILATION);
+$context->compilerPass(new FinalizePass(), PassPriority::CONTEXT_ANALYSIS);
 ```
-
-### Built-In Pass Order (Reference)
-
-Sugar assigns numeric priorities to its built-in passes. Use numbers around these values to place your pass:
-
-- 0: Template inheritance
-- 10: Directive extraction
-- 20: Directive pairing
-- 30: Directive compilation
-- 40: Component expansion
-- 45: Component variant adjustments
-- 50: Context analysis
-
-If you need a pass to run between two built-ins, choose a value between their priorities (for example, `25` between pairing and compilation).
 
 ## Multiple Extensions
 
-Extensions are applied in the order you register them. For passes with the same priority, that registration order is preserved.
+Extensions are applied in the order you register them. For passes with the same enum priority, that registration order is preserved.
 
 ```php
 $engine = Engine::builder()

@@ -60,17 +60,17 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 ```
 
 ```php [Compiled PHP]
-<?php if (!\Sugar\Runtime\EmptyHelper::isEmpty($users)): ?>
+<?php if (!\Sugar\Core\Runtime\EmptyHelper::isEmpty($users)): ?>
     <?php foreach ($users as $user): ?>
-        <div class="<?= \Sugar\Runtime\HtmlAttributeHelper::classNames([
+        <div class="<?= \Sugar\Core\Runtime\HtmlAttributeHelper::classNames([
             'user-card',
             $user->isAdmin() ? 'admin' : 'user',
             'online' => $user->isOnline(),
             'no-email' => empty($user->email),
         ]) ?>">
-            <?= \Sugar\Escape\Escaper::html($user->name) ?>
+            <?= \Sugar\Core\Escape\Escaper::html($user->name) ?>
             <?php if ($user->email): ?>
-                <small><?= \Sugar\Escape\Escaper::html($user->email) ?></small>
+                <small><?= \Sugar\Core\Escape\Escaper::html($user->email) ?></small>
             <?php endif; ?>
         </div>
     <?php endforeach; ?>

@@ -65,7 +65,7 @@ Customize behavior with these builder methods. Click any section to learn more.
 
 ### Template Loaders
 
-Tell Sugar where to find templates and components.
+Tell Sugar where to find templates.
 
 #### FileTemplateLoader
 
@@ -77,8 +77,7 @@ use Sugar\Core\Loader\FileTemplateLoader;
 
 $loader = new FileTemplateLoader(
     config: new SugarConfig(),
-    templatePaths: __DIR__ . '/templates',
-    componentPaths: 'components'
+    templatePaths: __DIR__ . '/templates'
 );
 ```
 
@@ -91,18 +90,16 @@ $loader = new FileTemplateLoader(
         __DIR__ . '/templates',
         __DIR__ . '/vendor/package/templates',
     ],
-    componentPaths: 'components'
 );
 ```
 
 ::: tip
-Enable `absolutePathsOnly: true` to enforce root-relative paths and prevent `../` navigation:
+Enable `absolutePathsOnly: true` to enforce root-relative paths and prevent `../` navigation for includes and extends:
 
 ```php
 $loader = new FileTemplateLoader(
     config: new SugarConfig(),
     templatePaths: __DIR__ . '/templates',
-    componentPaths: 'components',
     absolutePathsOnly: true
 );
 ```

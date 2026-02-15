@@ -14,7 +14,7 @@ Sugar ships with a small set of helpers that make custom passes easier to implem
 Utilities for finding, filtering, and reading attributes on `ElementNode` and `FragmentNode`.
 
 ```php
-use Sugar\Ast\Helper\AttributeHelper;
+use Sugar\Core\Ast\Helper\AttributeHelper;
 
 $attr = AttributeHelper::findAttribute($element->attributes, 'class');
 $hasDirective = AttributeHelper::hasAttributeWithPrefix($element, 's:');
@@ -26,7 +26,7 @@ $value = AttributeHelper::getStringAttributeValue($element, 'id');
 Tree walking helpers for transforms and inspections.
 
 ```php
-use Sugar\Ast\Helper\NodeTraverser;
+use Sugar\Core\Ast\Helper\NodeTraverser;
 
 $nodes = NodeTraverser::walk($nodes, function ($node, $recurse) {
     if ($node instanceof ComponentNode) {
@@ -44,7 +44,7 @@ Use `walkRecursive()` when you only need to collect information without modifyin
 Create modified copies of `ElementNode` or `FragmentNode` without mutating the original instance.
 
 ```php
-use Sugar\Ast\Helper\NodeCloner;
+use Sugar\Core\Ast\Helper\NodeCloner;
 
 $newElement = NodeCloner::withAttributesAndChildren($element, $attrs, $children);
 ```
@@ -54,7 +54,7 @@ $newElement = NodeCloner::withAttributesAndChildren($element, $attrs, $children)
 Validate expressions that must be array-like, such as `s:bind` or `s:spread` values.
 
 ```php
-use Sugar\Ast\Helper\ExpressionValidator;
+use Sugar\Core\Ast\Helper\ExpressionValidator;
 
 ExpressionValidator::validateArrayExpression($expression, 's:bind attribute', $context, $line, $column);
 ```
@@ -66,35 +66,11 @@ ExpressionValidator::validateArrayExpression($expression, 's:bind attribute', $c
 Parse and build directive names with a configurable prefix.
 
 ```php
-use Sugar\Config\Helper\DirectivePrefixHelper;
+use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 
 $prefix = new DirectivePrefixHelper('s');
 $name = $prefix->stripPrefix('s:if'); // "if"
 $full = $prefix->buildName('foreach'); // "s:foreach"
-```
-
-## Component Pass Helpers
-
-### ComponentAttributeCategorizer
-
-Classifies component attributes into control flow, attribute directives, bindings, and plain attributes.
-
-```php
-use Sugar\Pass\Component\Helper\ComponentAttributeCategorizer;
-
-$categories = $categorizer->categorize($component->attributes);
-```
-
-The buckets are stored in `ComponentAttributeCategories`.
-
-### ComponentAttributeOverrideHelper
-
-Merges runtime attribute overrides into the first root element of a component template.
-
-```php
-use Sugar\Pass\Component\Helper\ComponentAttributeOverrideHelper;
-
-ComponentAttributeOverrideHelper::apply($templateAst, '$__sugar_attrs');
 ```
 
 ### SlotResolver
@@ -102,7 +78,7 @@ ComponentAttributeOverrideHelper::apply($templateAst, '$__sugar_attrs');
 Extracts named and default slots and builds runtime slot expressions. Also exposes `disableEscaping()` for slot variables.
 
 ```php
-use Sugar\Pass\Component\Helper\SlotResolver;
+use Sugar\Extension\Component\Helper\SlotResolver;
 
 $slots = $slotResolver->extract($component->children);
 $slotVars = $slotResolver->buildSlotVars($slots);
@@ -119,7 +95,7 @@ Value object for default and named slot buckets. Useful when passing slot data b
 Classifies directive attribute names based on the registry and prefix.
 
 ```php
-use Sugar\Pass\Directive\Helper\DirectiveClassifier;
+use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
 
 $isControlFlow = $classifier->isControlFlowDirectiveAttribute('s:if');
 ```

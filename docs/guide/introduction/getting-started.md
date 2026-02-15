@@ -26,13 +26,14 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
         config: new SugarConfig(),
-        templatePaths: __DIR__ . '/templates',
-        componentPaths: 'components'
+        templatePaths: __DIR__ . '/templates'
     ))
+    ->withExtension(new ComponentExtension())
     ->withCache(new FileCache(__DIR__ . '/cache'))
     ->withDebug(true)
     ->build();
@@ -44,7 +45,7 @@ echo $engine->render('pages/home', [
 ```
 
 ::: tip
-By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths relative to the current template. If you prefer absolute-only lookups, pass `absolutePathsOnly: true` and use root-style paths like `layouts/base.sugar.php`.
+By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths relative to the current template. To use components, register `ComponentExtension` on the builder. If you prefer absolute-only lookups, pass `absolutePathsOnly: true` and use root-style paths like `layouts/base.sugar.php`.
 
 For a complete overview of all builder methods and configuration options, see [Engine Configuration](/guide/development/index).
 :::

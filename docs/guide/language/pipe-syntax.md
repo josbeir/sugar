@@ -20,8 +20,8 @@ Pipes keep templates readable by turning nested function calls into a left-to-ri
 ```
 
 ```php [Compiled]
-<h1><?= \Sugar\Escape\Escaper::html(substr(strtoupper($title), 0, 50)) ?></h1>
-<p><?= \Sugar\Escape\Escaper::html(number_format($product->price, 2)) ?></p>
+<h1><?= \Sugar\Core\Escape\Escaper::html(substr(strtoupper($title), 0, 50)) ?></h1>
+<p><?= \Sugar\Core\Escape\Escaper::html(number_format($product->price, 2)) ?></p>
 ```
 :::
 
@@ -102,10 +102,10 @@ For verbatim template regions (where inner directives/tags should not be parsed)
 
 ### IDE Stubs
 
-Function stubs are provided for `json()` and `raw()` in `Sugar\Runtime` to help IDEs understand the pipe syntax. Import them in your template files for better autocomplete:
+Function stubs are provided for `json()` and `raw()` in `Sugar\Core\Runtime` to help IDEs understand the pipe syntax. Import them in your template files for better autocomplete:
 
 ```php
-use function Sugar\Runtime\{json, raw};
+use function Sugar\Core\Runtime\{json, raw};
 
 // Now IDEs will recognize json() and raw() in pipes
 <?= $payload |> json() ?>

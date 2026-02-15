@@ -29,7 +29,7 @@ Most template errors are `SugarException` subclasses. Catch `SugarException` to 
 Catch `SugarException` to report template errors consistently:
 
 ```php
-use Sugar\Exception\SugarException;
+use Sugar\Core\Exception\SugarException;
 
 try {
     echo $engine->render('pages/home', ['user' => $user]);
