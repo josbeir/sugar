@@ -27,6 +27,24 @@ final class HtmlScanHelper
     }
 
     /**
+     * Retrieve cached line-start offsets for a source fragment.
+     *
+     * @return array<int, int>
+     */
+    public static function lineStartsForSource(string $source): array
+    {
+        /** @var array<string, array<int, int>> $lineStartCache */
+        static $lineStartCache = [];
+        $cacheKey = Hash::make($source);
+
+        if (!isset($lineStartCache[$cacheKey])) {
+            $lineStartCache[$cacheKey] = self::buildLineStarts($source);
+        }
+
+        return $lineStartCache[$cacheKey];
+    }
+
+    /**
      * Find the zero-based line index for an absolute offset.
      *
      * @param array<int, int> $lineStarts
@@ -123,10 +141,16 @@ final class HtmlScanHelper
     /**
      * Resolve a 1-based line and column for an offset within a fragment.
      *
+     * @param array<int, int>|null $lineStarts Optional precomputed line starts for source
      * @return array{0: int, 1: int}
      */
-    public static function resolvePosition(string $source, int $offset, int $line, int $column): array
-    {
+    public static function resolvePosition(
+        string $source,
+        int $offset,
+        int $line,
+        int $column,
+        ?array $lineStarts = null,
+    ): array {
         if ($offset <= 0) {
             return [$line, $column];
         }
@@ -140,15 +164,7 @@ final class HtmlScanHelper
             $offset = $length;
         }
 
-        /** @var array<string, array<int, int>> $lineStartCache */
-        static $lineStartCache = [];
-        $cacheKey = Hash::make($source);
-
-        if (!isset($lineStartCache[$cacheKey])) {
-            $lineStartCache[$cacheKey] = self::buildLineStarts($source);
-        }
-
-        $lineStarts = $lineStartCache[$cacheKey];
+        $lineStarts ??= self::lineStartsForSource($source);
         $lineIndex = self::findLineIndexFromStarts($lineStarts, $offset);
 
         if ($lineIndex === 0) {

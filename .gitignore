@@ -13,4 +13,4 @@ composer.lock
 docs/.vitepress/dist
 docs/.vitepress/cache
 node_modules/
-benchmark/
+benchmark/*.json
