@@ -89,7 +89,6 @@ final class TemplateContextTest extends TestCase
                 new FileTemplateLoader(
                     new SugarConfig(),
                     [$this->templatesPath],
-                    ['components'],
                 ),
             )
             ->withTemplateContext($viewContext)

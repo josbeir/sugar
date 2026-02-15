@@ -27,6 +27,7 @@ use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
@@ -39,7 +40,7 @@ final class ComponentExpansionPassTest extends TestCase
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
-    private StringTemplateLoader $loader;
+    private StringComponentTemplateLoader $loader;
 
     private AstPipeline $pipeline;
 
@@ -48,7 +49,8 @@ final class ComponentExpansionPassTest extends TestCase
     protected function setUp(): void
     {
         $this->config = new SugarConfig();
-        $this->loader = new StringTemplateLoader(
+        $this->templateLoader = new StringTemplateLoader(config: $this->config);
+        $this->loader = new StringComponentTemplateLoader(
             config: $this->config,
             components: [
                 'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
@@ -60,10 +62,11 @@ final class ComponentExpansionPassTest extends TestCase
         $this->parser = $this->createParser();
         $this->registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            $this->loader,
-            $this->parser,
-            $this->registry,
-            $this->config,
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->loader,
+            parser: $this->parser,
+            registry: $this->registry,
+            config: $this->config,
         );
 
         // Register standard directives for testing
@@ -128,11 +131,12 @@ final class ComponentExpansionPassTest extends TestCase
         };
 
         $passFactory = new ComponentPassFactory(
-            $this->loader,
-            $this->parser,
-            $this->registry,
-            $this->config,
-            [
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->loader,
+            parser: $this->parser,
+            registry: $this->registry,
+            config: $this->config,
+            customPasses: [
                 ['pass' => $pass, 'priority' => 35],
             ],
         );
@@ -845,10 +849,11 @@ final class ComponentExpansionPassTest extends TestCase
         // Create a tracking parser to count parse calls
         $registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            $this->loader,
-            $this->parser,
-            $registry,
-            $this->config,
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->loader,
+            parser: $this->parser,
+            registry: $registry,
+            config: $this->config,
         );
         $pass = $passFactory->createExpansionPass();
 
@@ -888,10 +893,11 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            $this->loader,
-            $this->parser,
-            $registry,
-            $this->config,
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->loader,
+            parser: $this->parser,
+            registry: $registry,
+            config: $this->config,
         );
         $pass = $passFactory->createExpansionPass();
 

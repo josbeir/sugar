@@ -6,8 +6,8 @@ namespace Sugar\Extension\Component\Compiler;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Compiler\CompilerInterface;
 use Sugar\Core\Exception\TemplateRuntimeException;
-use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 
@@ -22,11 +22,11 @@ final readonly class ComponentTemplateCompiler
 {
     /**
      * @param \Sugar\Core\Compiler\CompilerInterface $compiler Core template compiler
-     * @param \Sugar\Core\Loader\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface $loader Component template loader
      */
     public function __construct(
         private CompilerInterface $compiler,
-        private TemplateLoaderInterface $loader,
+        private ComponentTemplateLoaderInterface $loader,
     ) {
     }
 

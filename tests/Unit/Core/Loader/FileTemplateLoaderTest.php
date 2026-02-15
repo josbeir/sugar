@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Exception\TemplateNotFoundException;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -234,25 +233,6 @@ final class FileTemplateLoaderTest extends TestCase
         }
     }
 
-    public function testDiscoversAndLoadsComponents(): void
-    {
-        $tempDir = $this->createTempDir('sugar_components_');
-        $componentsDir = $tempDir . '/components';
-        mkdir($componentsDir, 0755, true);
-
-        file_put_contents($componentsDir . '/s-button.sugar.php', '<button>Click</button>');
-        file_put_contents($componentsDir . '/s-template.sugar.php', '<div>Ignored</div>');
-
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir], ['components']);
-
-        $this->assertTrue($loader->hasComponent('button'));
-        $this->assertSame('<button>Click</button>', $loader->loadComponent('button'));
-
-        unlink($componentsDir . '/s-button.sugar.php');
-        unlink($componentsDir . '/s-template.sugar.php');
-        $this->removeTempDir($tempDir);
-    }
-
     public function testResolveToFilePathWithAbsolutePath(): void
     {
         $tempDir = $this->createTempDir('sugar_test_');
@@ -285,13 +265,49 @@ final class FileTemplateLoaderTest extends TestCase
         $this->removeTempDir($tempDir);
     }
 
-    public function testLoadComponentThrowsWhenMissing(): void
+    public function testListTemplatePathsReturnsUniqueSortedLogicalPaths(): void
     {
-        $tempDir = $this->createTempDir('sugar_components_');
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir], ['components']);
+        $tempDir1 = $this->createTempDir('sugar_test_');
+        $tempDir2 = $this->createTempDir('sugar_test_');
 
-        $this->expectException(ComponentNotFoundException::class);
+        mkdir($tempDir1 . '/components/forms', 0777, true);
+        mkdir($tempDir2 . '/components', 0777, true);
 
-        $loader->loadComponent('missing');
+        file_put_contents($tempDir1 . '/components/s-alert.sugar.php', '<div>alert</div>');
+        file_put_contents($tempDir1 . '/components/forms/s-input.sugar.php', '<input>');
+        file_put_contents($tempDir2 . '/components/s-alert.sugar.php', '<div>alert v2</div>');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir1, $tempDir2]);
+
+        $this->assertSame([
+            'components/forms/s-input.sugar.php',
+            'components/s-alert.sugar.php',
+        ], $loader->listTemplatePaths('components'));
+
+        unlink($tempDir1 . '/components/s-alert.sugar.php');
+        unlink($tempDir1 . '/components/forms/s-input.sugar.php');
+        unlink($tempDir2 . '/components/s-alert.sugar.php');
+        $this->removeTempDir($tempDir1);
+        $this->removeTempDir($tempDir2);
+    }
+
+    public function testListTemplatePathsWithoutPrefixReturnsAllTemplates(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        mkdir($tempDir . '/partials', 0777, true);
+
+        file_put_contents($tempDir . '/home.sugar.php', '<h1>Home</h1>');
+        file_put_contents($tempDir . '/partials/header.sugar.php', '<header>Header</header>');
+
+        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+
+        $this->assertSame([
+            'home.sugar.php',
+            'partials/header.sugar.php',
+        ], $loader->listTemplatePaths());
+
+        unlink($tempDir . '/home.sugar.php');
+        unlink($tempDir . '/partials/header.sugar.php');
+        $this->removeTempDir($tempDir);
     }
 }

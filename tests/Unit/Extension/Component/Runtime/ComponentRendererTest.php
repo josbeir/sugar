@@ -11,9 +11,9 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
-use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -80,7 +80,7 @@ final class ComponentRendererTest extends TestCase
 
         $this->assertStringContainsString('Save', $output);
 
-        $componentPath = $this->templateLoader->getComponentPath('alert');
+        $componentPath = $this->componentLoader->getComponentPath('alert');
         $cacheKey = $componentPath . '::slots:footer|slot';
 
         $cached = $cache->get($cacheKey);
@@ -90,8 +90,8 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesSlotValues(): void
     {
-        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
-        $this->templateLoader->addComponent(
+        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->componentLoader->addComponent(
             'slot-test',
             '<div class="slot-test">'
             . '<div class="header"><?= $header ?></div>'
@@ -123,8 +123,8 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesAttributes(): void
     {
-        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
-        $this->templateLoader->addComponent(
+        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->componentLoader->addComponent(
             'attr-test',
             '<div class="box" s:spread="$__sugar_attrs"><?= $slot ?></div>',
         );
@@ -155,8 +155,8 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentBindsTemplateContext(): void
     {
-        $this->assertInstanceOf(StringTemplateLoader::class, $this->templateLoader);
-        $this->templateLoader->addComponent(
+        $this->assertInstanceOf(StringComponentTemplateLoader::class, $this->componentLoader);
+        $this->componentLoader->addComponent(
             'context-test',
             '<div><?= $this->greet() ?></div>',
         );
@@ -182,7 +182,7 @@ final class ComponentRendererTest extends TestCase
 
         $renderer->renderComponent(name: 'alert');
 
-        $componentPath = $this->templateLoader->getComponentFilePath('alert');
+        $componentPath = $this->componentLoader->getComponentFilePath('alert');
         $metadata = $tracker->getMetadata($componentPath);
 
         $this->assertContains($componentPath, $metadata->components);
@@ -282,9 +282,9 @@ PHP,
         return new ComponentRenderer(
             componentCompiler: new ComponentTemplateCompiler(
                 compiler: $this->compiler,
-                loader: $this->templateLoader,
+                loader: $this->componentLoader,
             ),
-            loader: $this->templateLoader,
+            loader: $this->componentLoader,
             cache: $cache,
             tracker: $tracker,
             templateContext: $context,
@@ -294,7 +294,7 @@ PHP,
     private function createRendererWithCachedTemplate(string $compiledPhp): ComponentRenderer
     {
         $compiledPath = $this->writeCompiledTemplate($compiledPhp);
-        $cacheKey = $this->templateLoader->getComponentPath('alert') . '::slots:slot';
+        $cacheKey = $this->componentLoader->getComponentPath('alert') . '::slots:slot';
         $cached = new CachedTemplate($compiledPath, new CacheMetadata());
 
         $cache = new class ($cacheKey, $cached) implements TemplateCacheInterface {
@@ -332,9 +332,9 @@ PHP,
         return new ComponentRenderer(
             componentCompiler: new ComponentTemplateCompiler(
                 compiler: $this->compiler,
-                loader: $this->templateLoader,
+                loader: $this->componentLoader,
             ),
-            loader: $this->templateLoader,
+            loader: $this->componentLoader,
             cache: $cache,
         );
     }

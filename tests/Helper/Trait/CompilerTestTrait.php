@@ -11,6 +11,9 @@ use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
+use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
+use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
@@ -31,6 +34,8 @@ trait CompilerTestTrait
     protected Compiler $compiler;
 
     protected TemplateLoaderInterface $templateLoader;
+
+    protected ComponentTemplateLoaderInterface $componentLoader;
 
     /**
      * Set up compiler dependencies
@@ -65,8 +70,13 @@ trait CompilerTestTrait
         $this->templateLoader = new FileTemplateLoader(
             $config ?? new SugarConfig(),
             $templatePaths,
-            $componentPaths,
             $absolutePathsOnly,
+        );
+
+        $this->componentLoader = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+            templateLoader: $this->templateLoader,
+            config: $config ?? new SugarConfig(),
+            directories: $componentPaths,
         );
 
         $customPasses = $this->withDefaultComponentExpansion(
@@ -109,11 +119,17 @@ trait CompilerTestTrait
             : DirectiveRegistry::empty();
         $this->registry = $registry;
 
+        $loaderConfig = $config ?? new SugarConfig();
+
         $this->templateLoader = new StringTemplateLoader(
-            $config ?? new SugarConfig(),
+            $loaderConfig,
             $templates,
-            $components,
             $absolutePathsOnly,
+        );
+
+        $this->componentLoader = new StringComponentTemplateLoader(
+            config: $loaderConfig,
+            components: $components,
         );
 
         $customPasses = $this->withDefaultComponentExpansion(
@@ -177,7 +193,8 @@ trait CompilerTestTrait
         }
 
         $passFactory = new ComponentPassFactory(
-            loader: $this->templateLoader,
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->componentLoader,
             parser: $this->parser,
             registry: $this->registry,
             config: $config ?? new SugarConfig(),

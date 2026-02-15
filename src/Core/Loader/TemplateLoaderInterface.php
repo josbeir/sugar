@@ -33,29 +33,13 @@ interface TemplateLoaderInterface
     public function resolveToFilePath(string $path, string $currentTemplate = ''): string;
 
     /**
-     * Load a component template by name.
+     * List known logical template paths.
      *
-     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
-     * @return string Component template content
-     * @throws \Sugar\Core\Exception\ComponentNotFoundException If component is not found
+     * Returned paths are normalized and relative to the loader root namespace
+     * (e.g. "components/s-button.sugar.php").
+     *
+     * @param string $pathPrefix Optional normalized prefix filter
+     * @return array<string>
      */
-    public function loadComponent(string $name): string;
-
-    /**
-     * Get the resolved path for a component.
-     *
-     * Used for error messages and resolving relative paths within component templates.
-     *
-     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
-     * @return string Component path (e.g., "components/button.sugar.php")
-     */
-    public function getComponentPath(string $name): string;
-
-    /**
-     * Get the resolved filesystem path for a component.
-     *
-     * @param string $name Component name (without prefix, e.g., "button" for "s-button")
-     * @return string Component file path
-     */
-    public function getComponentFilePath(string $name): string;
+    public function listTemplatePaths(string $pathPrefix = ''): array;
 }

@@ -10,10 +10,10 @@ use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\TemplateRuntimeException;
-use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Util\ValueNormalizer;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
 
 /**
  * Renders components at runtime for dynamic component calls.
@@ -22,7 +22,7 @@ final class ComponentRenderer
 {
     /**
      * @param \Sugar\Extension\Component\Compiler\ComponentTemplateCompiler $componentCompiler Component template compiler
-     * @param \Sugar\Core\Loader\TemplateLoaderInterface $loader Template loader
+     * @param \Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface $loader Component template loader
      * @param \Sugar\Core\Cache\TemplateCacheInterface $cache Template cache
      * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Optional dependency tracker
      * @param bool $debug Debug mode
@@ -30,7 +30,7 @@ final class ComponentRenderer
      */
     public function __construct(
         private readonly ComponentTemplateCompiler $componentCompiler,
-        private readonly TemplateLoaderInterface $loader,
+        private readonly ComponentTemplateLoaderInterface $loader,
         private readonly TemplateCacheInterface $cache,
         private readonly ?DependencyTracker $tracker = null,
         private readonly bool $debug = false,

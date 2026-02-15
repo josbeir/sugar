@@ -88,10 +88,14 @@ trait EngineTestTrait
         bool $debug = false,
     ): Engine {
         $config = new SugarConfig();
+        $resourceTemplates = $templates;
+        foreach ($components as $name => $source) {
+            $resourceTemplates['components/s-' . $name . $config->fileSuffix] = $source;
+        }
+
         $loader = new StringTemplateLoader(
             config: $config,
-            templates: $templates,
-            components: $components,
+            templates: $resourceTemplates,
         );
 
         $builder = Engine::builder($config)

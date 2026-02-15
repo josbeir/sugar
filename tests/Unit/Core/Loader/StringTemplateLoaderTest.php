@@ -5,7 +5,6 @@ namespace Sugar\Tests\Unit\Loader;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Exception\TemplateNotFoundException;
 use Sugar\Core\Loader\StringTemplateLoader;
 
@@ -14,7 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
  */
 final class StringTemplateLoaderTest extends TestCase
 {
-    public function testConstructorAcceptsTemplatesAndComponents(): void
+    public function testConstructorAcceptsTemplates(): void
     {
         $loader = new StringTemplateLoader(
             config: new SugarConfig(),
@@ -22,13 +21,9 @@ final class StringTemplateLoaderTest extends TestCase
                 'home' => '<div>Home</div>',
                 'about' => '<div>About</div>',
             ],
-            components: [
-                'button' => '<button><?= $slot ?></button>',
-            ],
         );
 
         $this->assertSame('<div>Home</div>', $loader->load('home'));
-        $this->assertSame('<button><?= $slot ?></button>', $loader->loadComponent('button'));
     }
 
     public function testLoadReturnsExactMatch(): void
@@ -98,26 +93,6 @@ final class StringTemplateLoaderTest extends TestCase
         $loader->load('nonexistent');
     }
 
-    public function testLoadComponentReturnsComponentSource(): void
-    {
-        $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
-            components: ['button' => '<button class="btn"><?= $slot ?></button>'],
-        );
-
-        $this->assertSame('<button class="btn"><?= $slot ?></button>', $loader->loadComponent('button'));
-    }
-
-    public function testLoadComponentThrowsExceptionWhenNotFound(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->expectException(ComponentNotFoundException::class);
-        $this->expectExceptionMessage('Component "button" not found');
-
-        $loader->loadComponent('button');
-    }
-
     public function testAddTemplateAddsNewTemplate(): void
     {
         $loader = new StringTemplateLoader(config: new SugarConfig());
@@ -133,23 +108,6 @@ final class StringTemplateLoaderTest extends TestCase
         $loader->addTemplate('home', '<div>Updated</div>');
 
         $this->assertSame('<div>Updated</div>', $loader->load('home'));
-    }
-
-    public function testAddComponentAddsNewComponent(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-        $loader->addComponent('button', '<button><?= $slot ?></button>');
-
-        $this->assertSame('<button><?= $slot ?></button>', $loader->loadComponent('button'));
-    }
-
-    public function testAddComponentOverwritesExistingComponent(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig(), components: ['button' => '<button>Original</button>']);
-
-        $loader->addComponent('button', '<button>Updated</button>');
-
-        $this->assertSame('<button>Updated</button>', $loader->loadComponent('button'));
     }
 
     public function testLoadNormalizesPathsWithLeadingSlash(): void
@@ -258,107 +216,38 @@ final class StringTemplateLoaderTest extends TestCase
         );
     }
 
-    public function testHasComponentReturnsTrueForExistingComponent(): void
+    public function testListTemplatePathsReturnsSortedPaths(): void
     {
         $loader = new StringTemplateLoader(
             config: new SugarConfig(),
-            components: ['button' => '<button><?= $slot ?></button>'],
+            templates: [
+                'zeta.sugar.php' => 'z',
+                'components/s-card.sugar.php' => '<div>card</div>',
+                'alpha.sugar.php' => 'a',
+            ],
         );
 
-        $this->assertTrue($loader->hasComponent('button'));
+        $this->assertSame([
+            'alpha.sugar.php',
+            'components/s-card.sugar.php',
+            'zeta.sugar.php',
+        ], $loader->listTemplatePaths());
     }
 
-    public function testHasComponentReturnsFalseForNonExistingComponent(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->assertFalse($loader->hasComponent('button'));
-    }
-
-    public function testIsComponentReturnsTrueForRegisteredComponent(): void
+    public function testListTemplatePathsFiltersByNormalizedPrefix(): void
     {
         $loader = new StringTemplateLoader(
             config: new SugarConfig(),
-            components: ['button' => '<button><?= $slot ?></button>'],
+            templates: [
+                'components/s-alert.sugar.php' => '<div>alert</div>',
+                'components/forms/s-input.sugar.php' => '<input>',
+                'partials/header.sugar.php' => '<header></header>',
+            ],
         );
 
-        $this->assertTrue($loader->isComponent('s-button'));
-    }
-
-    public function testIsComponentReturnsFalseForNonExistingComponent(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->assertFalse($loader->isComponent('s-button'));
-    }
-
-    public function testIsComponentReturnsFalseForFragmentElement(): void
-    {
-        $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
-
-        // s-template is the fragment element, not a component
-        $this->assertFalse($loader->isComponent($config->getFragmentElement()));
-    }
-
-    public function testIsComponentReturnsFalseForElementWithoutPrefix(): void
-    {
-        $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
-            components: ['button' => '<button><?= $slot ?></button>'],
-        );
-
-        // 'button' without prefix 's-' is not considered a component element
-        $this->assertFalse($loader->isComponent('button'));
-    }
-
-    public function testGetComponentNameStripsPrefix(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->assertSame('button', $loader->getComponentName('s-button'));
-        $this->assertSame('alert', $loader->getComponentName('s-alert'));
-    }
-
-    public function testGetComponentsReturnsAllComponents(): void
-    {
-        $components = [
-            'button' => '<button><?= $slot ?></button>',
-            'alert' => '<div class="alert"><?= $slot ?></div>',
-        ];
-        $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
-            components: $components,
-        );
-
-        $this->assertSame($components, $loader->getComponents());
-    }
-
-    public function testGetComponentsReturnsEmptyArrayWhenNoComponents(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->assertSame([], $loader->getComponents());
-    }
-
-    public function testGetComponentPathReturnsVirtualPath(): void
-    {
-        $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
-            components: ['button' => '<button><?= $slot ?></button>'],
-        );
-
-        $path = $loader->getComponentPath('button');
-        $this->assertSame('components/button.sugar.php', $path);
-    }
-
-    public function testGetComponentPathThrowsExceptionForUnknownComponent(): void
-    {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
-
-        $this->expectException(ComponentNotFoundException::class);
-        $this->expectExceptionMessage('Component "unknown" not found');
-
-        $loader->getComponentPath('unknown');
+        $this->assertSame([
+            'components/forms/s-input.sugar.php',
+            'components/s-alert.sugar.php',
+        ], $loader->listTemplatePaths('/components/./'));
     }
 }

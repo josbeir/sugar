@@ -7,14 +7,10 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Exception\TemplateNotFoundException;
 
 /**
- * Loads templates and components from filesystem
- *
- * Handles both regular template loading (s:include, s:extends) and
- * component discovery and loading (s-button, s-alert).
+ * Loads templates from filesystem.
  */
 class FileTemplateLoader extends AbstractTemplateLoader
 {
@@ -28,30 +24,22 @@ class FileTemplateLoader extends AbstractTemplateLoader
      *
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
      * @param array<string>|string $templatePaths Paths to search for templates (searched in order)
-     * @param array<string>|string $componentPaths Paths to scan for component templates
      * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     public function __construct(
         SugarConfig $config = new SugarConfig(),
         string|array $templatePaths = [],
-        string|array $componentPaths = [],
         bool $absolutePathsOnly = false,
     ) {
         parent::__construct($config, $absolutePathsOnly);
 
         $templatePaths = is_string($templatePaths) ? [$templatePaths] : $templatePaths;
-        $componentPaths = is_string($componentPaths) ? [$componentPaths] : $componentPaths;
 
         if ($templatePaths === []) {
             $cwd = getcwd();
             $this->templatePaths = [$cwd !== false ? $cwd : '.'];
         } else {
             $this->templatePaths = $templatePaths;
-        }
-
-        // Auto-discover components from provided paths
-        foreach ($componentPaths as $path) {
-            $this->discoverComponents($path);
         }
     }
 
@@ -110,113 +98,6 @@ class FileTemplateLoader extends AbstractTemplateLoader
     }
 
     /**
-     * Discover components in directory
-     *
-     * Scans recursively for {elementPrefix}*{fileSuffix} files (e.g., s-button.sugar.php)
-     * Excludes {elementPrefix}template{fileSuffix} (that's the fragment element)
-     *
-     * @param string $path Relative path from template paths (e.g., 'components')
-     */
-    public function discoverComponents(string $path): void
-    {
-        // Scan each template path for components
-        foreach ($this->templatePaths as $basePath) {
-            $fullPath = $basePath . '/' . ltrim($path, '/');
-
-            if (!is_dir($fullPath)) {
-                continue;
-            }
-
-            $this->scanComponentDirectory($fullPath);
-        }
-    }
-
-    /**
-     * Scan a directory for component files
-     *
-     * @param string $fullPath Full path to directory to scan
-     */
-    private function scanComponentDirectory(string $fullPath): void
-    {
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($fullPath, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::LEAVES_ONLY,
-        );
-
-        $fragmentElement = $this->config->getFragmentElement();
-
-        foreach ($iterator as $file) {
-            if (!$file instanceof SplFileInfo) {
-                continue;
-            }
-
-            if (!$file->isFile()) {
-                continue;
-            }
-
-            $filename = $file->getFilename();
-
-            $suffix = $this->config->fileSuffix;
-            // Must end with the configured suffix
-            if (!str_ends_with($filename, $suffix)) {
-                continue;
-            }
-
-            $basename = $file->getBasename($suffix);
-
-            // Must start with element prefix
-            if (!$this->prefixHelper->hasElementPrefix($basename)) {
-                continue;
-            }
-
-            // Skip fragment element (s-template)
-            if ($basename === $fragmentElement) {
-                continue;
-            }
-
-            // Extract component name (e.g., "button" from "s-button")
-            $componentName = $this->prefixHelper->stripElementPrefix($basename);
-
-            // Find relative path from first template path
-            $basePath = $this->templatePaths[0];
-            $relativePath = str_replace($basePath . '/', '', $file->getPathname());
-            // Normalize path separators for cross-platform consistency
-            $relativePath = str_replace('\\', '/', $relativePath);
-            $this->components[$componentName] = $relativePath;
-        }
-    }
-
-    /**
-     * Check if component exists
-     *
-     * @param string $name Component name (e.g., "button", "alert")
-     * @return bool True if component is registered
-     */
-    public function hasComponent(string $name): bool
-    {
-        return isset($this->components[$name]);
-    }
-
-    /**
-     * Load component template by name
-     *
-     * @param string $name Component name (e.g., "button", "alert")
-     * @return string Component template content
-     * @throws \Sugar\Core\Exception\ComponentNotFoundException
-     */
-    public function loadComponent(string $name): string
-    {
-        if (!$this->hasComponent($name)) {
-            throw new ComponentNotFoundException(
-                sprintf('Component "%s" not found', $name),
-            );
-        }
-
-        // Reuse existing load() method with relative path
-        return $this->load($this->components[$name]);
-    }
-
-    /**
      * Find the full template path in configured template roots.
      */
     private function findTemplateFilePath(string $resolvedPath, string $originalPath): string
@@ -249,8 +130,58 @@ class FileTemplateLoader extends AbstractTemplateLoader
     /**
      * @inheritDoc
      */
-    protected function resolveComponentPath(string $name): string
+    public function listTemplatePaths(string $pathPrefix = ''): array
     {
-        return $this->components[$name];
+        $normalizedPrefix = $pathPrefix !== '' ? $this->normalizePath($pathPrefix) : '';
+        $prefix = $normalizedPrefix !== '' ? rtrim($normalizedPrefix, '/') . '/' : '';
+        $paths = [];
+
+        foreach ($this->templatePaths as $basePath) {
+            if (!is_dir($basePath)) {
+                continue;
+            }
+
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($basePath, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::LEAVES_ONLY,
+            );
+
+            foreach ($iterator as $file) {
+                if (!$file instanceof SplFileInfo) {
+                    continue;
+                }
+
+                if (!$file->isFile()) {
+                    continue;
+                }
+
+                $absolutePath = $file->getPathname();
+                if (!str_starts_with($absolutePath, $basePath . DIRECTORY_SEPARATOR)) {
+                    continue;
+                }
+
+                $relativePath = substr($absolutePath, strlen($basePath) + 1);
+                if ($relativePath === '') {
+                    continue;
+                }
+
+                $logicalPath = str_replace('\\', '/', $relativePath);
+                $logicalPath = $this->normalizePath($logicalPath);
+
+                if ($normalizedPrefix === '') {
+                    $paths[$logicalPath] = true;
+                    continue;
+                }
+
+                if ($logicalPath === $normalizedPrefix || str_starts_with($logicalPath, $prefix)) {
+                    $paths[$logicalPath] = true;
+                }
+            }
+        }
+
+        $result = array_keys($paths);
+        sort($result);
+
+        return $result;
     }
 }

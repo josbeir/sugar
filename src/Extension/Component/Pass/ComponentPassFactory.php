@@ -13,6 +13,7 @@ use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
 use Sugar\Core\Pass\Template\TemplateInheritancePass;
+use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
 
 /**
  * Builds component extension pipeline artifacts.
@@ -30,7 +31,8 @@ final class ComponentPassFactory
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
      */
     public function __construct(
-        private readonly TemplateLoaderInterface $loader,
+        private readonly TemplateLoaderInterface $templateLoader,
+        private readonly ComponentTemplateLoaderInterface $componentLoader,
         private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         private readonly SugarConfig $config,
@@ -48,7 +50,7 @@ final class ComponentPassFactory
         }
 
         $this->componentExpansionPass = new ComponentExpansionPass(
-            loader: $this->loader,
+            loader: $this->componentLoader,
             parser: $this->parser,
             registry: $this->registry,
             config: $this->config,
@@ -70,7 +72,7 @@ final class ComponentPassFactory
         $pipeline = new AstPipeline();
 
         $pipeline->addPass(new TemplateInheritancePass(
-            loader: $this->loader,
+            loader: $this->templateLoader,
             parser: $this->parser,
             registry: $this->registry,
             config: $this->config,

@@ -17,6 +17,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
+use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -32,13 +33,17 @@ final class ComponentPassFactoryTest extends TestCase
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(
             config: $config,
+        );
+        $componentLoader = new StringComponentTemplateLoader(
+            config: $config,
             components: ['plain' => '<div>hello</div>'],
         );
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
         $factory = new ComponentPassFactory(
-            loader: $loader,
+            templateLoader: $loader,
+            componentLoader: $componentLoader,
             parser: $parser,
             registry: $registry,
             config: $config,
@@ -54,6 +59,9 @@ final class ComponentPassFactoryTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(
+            config: $config,
+        );
+        $componentLoader = new StringComponentTemplateLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
         );
@@ -77,7 +85,8 @@ final class ComponentPassFactoryTest extends TestCase
         };
 
         $factory = new ComponentPassFactory(
-            loader: $loader,
+            templateLoader: $loader,
+            componentLoader: $componentLoader,
             parser: $parser,
             registry: $registry,
             config: $config,
@@ -99,6 +108,9 @@ final class ComponentPassFactoryTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(
+            config: $config,
+        );
+        $componentLoader = new StringComponentTemplateLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
         );
@@ -122,7 +134,8 @@ final class ComponentPassFactoryTest extends TestCase
         };
 
         $factory = new ComponentPassFactory(
-            loader: $loader,
+            templateLoader: $loader,
+            componentLoader: $componentLoader,
             parser: $parser,
             registry: $registry,
             config: $config,

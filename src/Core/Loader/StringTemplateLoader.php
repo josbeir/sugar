@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Core\Loader;
 
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Exception\TemplateNotFoundException;
 
 /**
@@ -25,18 +24,15 @@ class StringTemplateLoader extends AbstractTemplateLoader
      *
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
      * @param array<string, string> $templates Templates (path => source)
-     * @param array<string, string> $components Components (name => source)
      * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
      */
     public function __construct(
         SugarConfig $config = new SugarConfig(),
         array $templates = [],
-        array $components = [],
         bool $absolutePathsOnly = false,
     ) {
         parent::__construct($config, $absolutePathsOnly);
         $this->templates = $templates;
-        $this->components = $components;
     }
 
     /**
@@ -48,17 +44,6 @@ class StringTemplateLoader extends AbstractTemplateLoader
     public function addTemplate(string $path, string $source): void
     {
         $this->templates[$path] = $source;
-    }
-
-    /**
-     * Add a component to the loader
-     *
-     * @param string $name Component name (e.g., 'button', 'card')
-     * @param string $source Component source code
-     */
-    public function addComponent(string $name, string $source): void
-    {
-        $this->components[$name] = $source;
     }
 
     /**
@@ -93,23 +78,28 @@ class StringTemplateLoader extends AbstractTemplateLoader
     /**
      * @inheritDoc
      */
-    public function loadComponent(string $name): string
+    public function listTemplatePaths(string $pathPrefix = ''): array
     {
-        if (!isset($this->components[$name])) {
-            throw new ComponentNotFoundException(
-                sprintf('Component "%s" not found', $name),
-            );
+        $normalizedPrefix = $pathPrefix !== '' ? $this->normalizePath($pathPrefix) : '';
+        $templates = array_keys($this->templates);
+
+        if ($normalizedPrefix === '') {
+            sort($templates);
+
+            return $templates;
         }
 
-        return $this->components[$name];
-    }
+        $prefix = rtrim($normalizedPrefix, '/') . '/';
+        $result = [];
 
-    /**
-     * @inheritDoc
-     */
-    protected function resolveComponentPath(string $name): string
-    {
-        // For StringTemplateLoader, use a virtual path for inheritance resolution
-        return 'components/' . $name . $this->config->fileSuffix;
+        foreach ($templates as $path) {
+            if ($path === $normalizedPrefix || str_starts_with($path, $prefix)) {
+                $result[] = $path;
+            }
+        }
+
+        sort($result);
+
+        return $result;
     }
 }

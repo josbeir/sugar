@@ -5,8 +5,9 @@ namespace Sugar\Test\Unit\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class FileTemplateLoaderComponentTest extends TestCase
@@ -15,274 +16,48 @@ final class FileTemplateLoaderComponentTest extends TestCase
 
     private string $tempDir;
 
-    private FileTemplateLoader $loader;
+    private ResourceLocatorComponentTemplateLoader $loader;
 
     protected function setUp(): void
     {
         $this->tempDir = $this->createTempDir('sugar_component_test_');
-        $this->loader = new FileTemplateLoader(new SugarConfig(), [$this->tempDir]);
+        $templateLoader = new FileTemplateLoader(new SugarConfig(), [$this->tempDir]);
+        $this->loader = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+            templateLoader: $templateLoader,
+            config: new SugarConfig(),
+            directories: ['components'],
+        );
     }
 
-    public function testDiscoverComponentsFindsComponentsInDirectory(): void
-    {
-        // Create component files
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
-        file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->hasComponent('button'));
-        $this->assertTrue($this->loader->hasComponent('alert'));
-    }
-
-    public function testDiscoverComponentsRecursivelyFindsNestedComponents(): void
-    {
-        // Create nested component files
-        mkdir($this->tempDir . '/components/forms', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-card.sugar.php', '<div>Card</div>');
-        file_put_contents($this->tempDir . '/components/forms/s-input.sugar.php', '<input>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->hasComponent('card'));
-        $this->assertTrue($this->loader->hasComponent('input'));
-    }
-
-    public function testDiscoverComponentsIgnoresFragmentElement(): void
-    {
-        // Create s-template (should be ignored as it's the fragment element)
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-template.sugar.php', '<div>Template</div>');
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertFalse($this->loader->hasComponent('template'));
-        $this->assertTrue($this->loader->hasComponent('button'));
-    }
-
-    public function testDiscoverComponentsIgnoresNonSugarFiles(): void
-    {
-        // Create non-.sugar.php files
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-        file_put_contents($this->tempDir . '/components/s-alert.php', '<div>Alert</div>');
-        file_put_contents($this->tempDir . '/components/button.sugar.php', '<button>No prefix</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->hasComponent('button'));
-        $this->assertFalse($this->loader->hasComponent('alert'));
-    }
-
-    public function testDiscoverComponentsIgnoresFilesWithoutPrefix(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Prefixed</button>');
-        file_put_contents($this->tempDir . '/components/button.sugar.php', '<button>Not prefixed</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->hasComponent('button'));
-        $this->assertCount(1, $this->loader->getComponents());
-    }
-
-    public function testDiscoverComponentsWithCustomPrefix(): void
-    {
-        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x'), [$this->tempDir]);
-
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/x-button.sugar.php', '<button>Button</button>');
-        file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
-
-        $loader->discoverComponents('components');
-
-        $this->assertTrue($loader->hasComponent('button'));
-        $this->assertFalse($loader->hasComponent('alert'));
-    }
-
-    public function testDiscoverComponentsHandlesNonExistentDirectory(): void
-    {
-        // Should not throw exception
-        $this->loader->discoverComponents('non-existent');
-
-        $this->assertSame([], $this->loader->getComponents());
-    }
-
-    public function testHasComponentReturnsTrueForDiscoveredComponent(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->hasComponent('button'));
-    }
-
-    public function testHasComponentReturnsFalseForUndiscoveredComponent(): void
-    {
-        $this->assertFalse($this->loader->hasComponent('nonexistent'));
-    }
-
-    public function testLoadComponentReturnsComponentContent(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click Me</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $content = $this->loader->loadComponent('button');
-
-        $this->assertSame('<button>Click Me</button>', $content);
-    }
-
-    public function testLoadComponentThrowsExceptionForUndiscoveredComponent(): void
-    {
-        $this->expectException(ComponentNotFoundException::class);
-        $this->expectExceptionMessage('Component "nonexistent" not found');
-
-        $this->loader->loadComponent('nonexistent');
-    }
-
-    public function testIsComponentReturnsTrueForComponentElement(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertTrue($this->loader->isComponent('s-button'));
-    }
-
-    public function testIsComponentReturnsFalseForFragmentElement(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-template.sugar.php', '<div>Template</div>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertFalse($this->loader->isComponent('s-template'));
-    }
-
-    public function testIsComponentReturnsFalseForNonPrefixedElement(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertFalse($this->loader->isComponent('button'));
-        $this->assertFalse($this->loader->isComponent('div'));
-    }
-
-    public function testIsComponentReturnsFalseForUndiscoveredComponent(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $this->assertFalse($this->loader->isComponent('s-alert'));
-    }
-
-    public function testGetComponentNameExtractsNameFromElementName(): void
-    {
-        $name = $this->loader->getComponentName('s-button');
-
-        $this->assertSame('button', $name);
-    }
-
-    public function testGetComponentNameWorksWithCustomPrefix(): void
-    {
-        $loader = new FileTemplateLoader(SugarConfig::withPrefix('x'), [$this->tempDir]);
-
-        $name = $loader->getComponentName('x-alert');
-
-        $this->assertSame('alert', $name);
-    }
-
-    public function testGetComponentsReturnsAllDiscoveredComponents(): void
-    {
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Button</button>');
-        file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
-
-        $this->loader->discoverComponents('components');
-
-        $components = $this->loader->getComponents();
-
-        $this->assertCount(2, $components);
-        $this->assertArrayHasKey('button', $components);
-        $this->assertArrayHasKey('alert', $components);
-    }
-
-    public function testAutoDiscoversComponentsFromConfigPaths(): void
-    {
-        // TDD: Test that components are auto-discovered from config.componentPaths
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
-        file_put_contents($this->tempDir . '/components/s-alert.sugar.php', '<div>Alert</div>');
-
-        // Create loader with componentPaths in config
-        $config = new SugarConfig();
-
-        $loader = new FileTemplateLoader($config, [$this->tempDir], ['components']);
-
-        // Should auto-discover without manual discoverComponents() call
-        $this->assertTrue($loader->hasComponent('button'));
-        $this->assertTrue($loader->hasComponent('alert'));
-    }
-
-    public function testAutoDiscoversFromMultipleComponentPaths(): void
-    {
-        // TDD: Test auto-discovery from multiple component directories
-        mkdir($this->tempDir . '/components', 0777, true);
-        mkdir($this->tempDir . '/widgets', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
-        file_put_contents($this->tempDir . '/widgets/s-widget.sugar.php', '<div>Widget</div>');
-
-        $config = new SugarConfig();
-
-        $loader = new FileTemplateLoader($config, [$this->tempDir], ['components', 'widgets']);
-
-        $this->assertTrue($loader->hasComponent('button'));
-        $this->assertTrue($loader->hasComponent('widget'));
-    }
-
-    public function testEmptyComponentPathsDoesNotAutodiscover(): void
-    {
-        // TDD: Empty componentPaths should not trigger auto-discovery
-        mkdir($this->tempDir . '/components', 0777, true);
-        file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
-
-        $config = new SugarConfig();
-        $loader = new FileTemplateLoader($config, [$this->tempDir]);
-
-        // Should NOT be discovered automatically
-        $this->assertFalse($loader->hasComponent('button'));
-    }
-
-    public function testGetComponentPathReturnsRelativePath(): void
+    public function testLoadsComponentFromComponentDirectory(): void
     {
         mkdir($this->tempDir . '/components', 0777, true);
         file_put_contents($this->tempDir . '/components/s-button.sugar.php', '<button>Click</button>');
-
-        $this->loader->discoverComponents('components');
-
-        $path = $this->loader->getComponentPath('button');
-        $this->assertSame('components/s-button.sugar.php', $path);
+        $this->assertSame('<button>Click</button>', $this->loader->loadComponent('button'));
     }
 
-    public function testGetComponentPathWorksWithNestedComponents(): void
+    public function testGetComponentPathReturnsLogicalPath(): void
     {
         mkdir($this->tempDir . '/components/forms', 0777, true);
         file_put_contents($this->tempDir . '/components/forms/s-input.sugar.php', '<input>');
 
-        $this->loader->discoverComponents('components');
+        $this->assertSame('components/forms/s-input.sugar.php', $this->loader->getComponentPath('input'));
+    }
 
-        $path = $this->loader->getComponentPath('input');
-        $this->assertSame('components/forms/s-input.sugar.php', $path);
+    public function testSupportsCustomElementPrefix(): void
+    {
+        $config = SugarConfig::withPrefix('x');
+        $templateLoader = new FileTemplateLoader($config, [$this->tempDir]);
+        $loader = ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+            templateLoader: $templateLoader,
+            config: $config,
+            directories: ['components'],
+        );
+
+        mkdir($this->tempDir . '/components', 0777, true);
+        file_put_contents($this->tempDir . '/components/x-alert.sugar.php', '<div>Alert</div>');
+
+        $this->assertSame('<div>Alert</div>', $loader->loadComponent('alert'));
     }
 
     public function testGetComponentPathThrowsExceptionForUnknownComponent(): void

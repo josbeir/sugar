@@ -758,10 +758,13 @@ final class ComponentIntegrationTest extends TestCase
             'components/s-base-panel.sugar.php' => $components['base-panel'],
         ];
 
+        foreach ($components as $name => $source) {
+            $templates['components/s-' . $name . '.sugar.php'] = $source;
+        }
+
         $loader = new StringTemplateLoader(
             config: $this->config,
             templates: $templates,
-            components: $components,
         );
 
         $cacheDir = $this->createTempDir('sugar_cache_');

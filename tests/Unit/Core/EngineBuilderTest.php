@@ -460,9 +460,7 @@ final class EngineBuilderTest extends TestCase
             config: new SugarConfig(),
             templates: [
                 'page.sugar.php' => '<s-card>Hello</s-card>',
-            ],
-            components: [
-                'card' => '<div class="card"><?= $slot ?></div>',
+                'components/s-card.sugar.php' => '<div class="card"><?= $slot ?></div>',
             ],
         );
 

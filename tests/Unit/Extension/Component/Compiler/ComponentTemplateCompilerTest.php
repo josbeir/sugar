@@ -13,6 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\StringComponentTemplateLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class ComponentTemplateCompilerTest extends TestCase
@@ -23,6 +24,7 @@ final class ComponentTemplateCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(config: $config);
+        $componentLoader = new StringComponentTemplateLoader(config: $config);
         $compiler = new Compiler(
             parser: new Parser($config),
             escaper: new Escaper(),
@@ -33,7 +35,7 @@ final class ComponentTemplateCompilerTest extends TestCase
 
         $componentCompiler = new ComponentTemplateCompiler(
             compiler: $compiler,
-            loader: $loader,
+            loader: $componentLoader,
         );
 
         $this->expectException(ComponentNotFoundException::class);
@@ -45,11 +47,10 @@ final class ComponentTemplateCompilerTest extends TestCase
     public function testCompileComponentMarksSlotVariablesAsRawViaInlinePasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
+        $loader = new StringTemplateLoader(config: $config);
+        $componentLoader = new StringComponentTemplateLoader(
             config: $config,
-            components: [
-                'button' => '<button><?= $slot ?></button>',
-            ],
+            components: ['button' => '<button><?= $slot ?></button>'],
         );
 
         $compiler = new Compiler(
@@ -62,7 +63,7 @@ final class ComponentTemplateCompilerTest extends TestCase
 
         $componentCompiler = new ComponentTemplateCompiler(
             compiler: $compiler,
-            loader: $loader,
+            loader: $componentLoader,
         );
 
         $compiled = $componentCompiler->compileComponent('button', ['slot']);
@@ -78,11 +79,10 @@ final class ComponentTemplateCompilerTest extends TestCase
     public function testCompileComponentTracksComponentDependency(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
+        $loader = new StringTemplateLoader(config: $config);
+        $componentLoader = new StringComponentTemplateLoader(
             config: $config,
-            components: [
-                'button' => '<button><?= $slot ?></button>',
-            ],
+            components: ['button' => '<button><?= $slot ?></button>'],
         );
 
         $compiler = new Compiler(
@@ -95,13 +95,16 @@ final class ComponentTemplateCompilerTest extends TestCase
 
         $componentCompiler = new ComponentTemplateCompiler(
             compiler: $compiler,
-            loader: $loader,
+            loader: $componentLoader,
         );
 
         $tracker = new DependencyTracker();
 
         $componentCompiler->compileComponent('button', ['slot'], tracker: $tracker);
 
-        $this->assertContains($loader->getComponentFilePath('button'), $tracker->getMetadata($loader->getComponentPath('button'))->components);
+        $this->assertContains(
+            $componentLoader->getComponentFilePath('button'),
+            $tracker->getMetadata($componentLoader->getComponentPath('button'))->components,
+        );
     }
 }

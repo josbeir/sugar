@@ -13,6 +13,8 @@ use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Loader\ComponentTemplateLoaderInterface;
+use Sugar\Extension\Component\Loader\ResourceLocatorComponentTemplateLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
@@ -43,21 +45,25 @@ final class ComponentExtension implements ExtensionInterface
                 $compiler = $runtimeContext->getCompiler();
                 $loader = $runtimeContext->getTemplateLoader();
                 $cache = $runtimeContext->getTemplateCache();
+                $config = $runtimeContext->getConfig();
 
                 if (
                     !$compiler instanceof CompilerInterface
                     || !$loader instanceof TemplateLoaderInterface
                     || !$cache instanceof TemplateCacheInterface
+                    || !$config instanceof SugarConfig
                 ) {
                     throw new TemplateRuntimeException('Component renderer runtime dependencies are not initialized.');
                 }
 
+                $componentLoader = self::buildComponentLoader($loader, $config);
+
                 return new ComponentRenderer(
                     componentCompiler: new ComponentTemplateCompiler(
                         compiler: $compiler,
-                        loader: $loader,
+                        loader: $componentLoader,
                     ),
-                    loader: $loader,
+                    loader: $componentLoader,
                     cache: $cache,
                     tracker: $runtimeContext->getTracker(),
                     debug: $runtimeContext->isDebug(),
@@ -88,8 +94,11 @@ final class ComponentExtension implements ExtensionInterface
             throw new TemplateRuntimeException('Component extension registration dependencies are not initialized.');
         }
 
+        $componentLoader = self::buildComponentLoader($loader, $config);
+
         $passFactory = new ComponentPassFactory(
-            loader: $loader,
+            templateLoader: $loader,
+            componentLoader: $componentLoader,
             parser: $parser,
             registry: $registry,
             config: $config,
@@ -97,5 +106,19 @@ final class ComponentExtension implements ExtensionInterface
         );
 
         return $passFactory->createExpansionPass();
+    }
+
+    /**
+     * Build component loader backed by core resource locator.
+     */
+    private static function buildComponentLoader(
+        TemplateLoaderInterface $loader,
+        SugarConfig $config,
+    ): ComponentTemplateLoaderInterface {
+        return ResourceLocatorComponentTemplateLoader::forTemplateLoader(
+            templateLoader: $loader,
+            config: $config,
+            directories: ['components'],
+        );
     }
 }
