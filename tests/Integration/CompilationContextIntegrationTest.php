@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Exception\SyntaxException;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
@@ -109,7 +109,7 @@ final class CompilationContextIntegrationTest extends TestCase
             $this->compiler->compile('<s-widget></s-widget>', 'pages/home.sugar.php');
         } catch (SyntaxException $syntaxException) {
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('template: components/widget.sugar.php', $exceptionString);
+            $this->assertStringContainsString('template: components/s-widget.sugar.php', $exceptionString);
 
             throw $syntaxException;
         }

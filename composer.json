@@ -20,7 +20,7 @@
             "Sugar\\": "src/"
         },
         "files": [
-            "src/Runtime/functions.php"
+            "src/Core/Runtime/functions.php"
         ]
     },
     "autoload-dev": {

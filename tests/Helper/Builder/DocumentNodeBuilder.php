@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Builder;
 
-use Sugar\Ast\DocumentNode;
-use Sugar\Ast\Node;
+use Sugar\Core\Ast\DocumentNode;
+use Sugar\Core\Ast\Node;
 
 /**
  * Fluent builder for creating DocumentNode instances in tests

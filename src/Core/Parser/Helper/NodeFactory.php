@@ -1,0 +1,154 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Core\Parser\Helper;
+
+use Sugar\Core\Ast\AttributeNode;
+use Sugar\Core\Ast\AttributeValue;
+use Sugar\Core\Ast\ComponentNode;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\FragmentNode;
+use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\RawBodyNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Enum\OutputContext;
+
+/**
+ * Factory for creating parser nodes with shared defaults.
+ */
+final class NodeFactory
+{
+    /**
+     * Create a text node.
+     */
+    public function text(string $content, int $line, int $column): TextNode
+    {
+        return new TextNode($content, $line, $column);
+    }
+
+    /**
+     * Create an output node.
+     *
+     * @param array<string>|null $pipes
+     */
+    public function output(
+        string $expression,
+        bool $escape,
+        OutputContext $context,
+        int $line,
+        int $column,
+        ?array $pipes,
+    ): OutputNode {
+        return new OutputNode(
+            expression: $expression,
+            escape: $escape,
+            context: $context,
+            line: $line,
+            column: $column,
+            pipes: $pipes,
+        );
+    }
+
+    /**
+     * Create a raw PHP node.
+     */
+    public function rawPhp(string $code, int $line, int $column): RawPhpNode
+    {
+        return new RawPhpNode($code, $line, $column);
+    }
+
+    /**
+     * Create a raw body node.
+     */
+    public function rawBody(string $content, int $line, int $column): RawBodyNode
+    {
+        return new RawBodyNode($content, $line, $column);
+    }
+
+    /**
+     * Create an attribute node.
+     *
+     * @param \Sugar\Core\Ast\AttributeValue|\Sugar\Core\Ast\OutputNode|array<int, string|\Sugar\Core\Ast\OutputNode>|string|null $value
+     */
+    public function attribute(
+        string $name,
+        AttributeValue|OutputNode|array|string|null $value,
+        int $line,
+        int $column,
+    ): AttributeNode {
+        $attributeValue = $value instanceof AttributeValue ? $value : AttributeValue::from($value);
+
+        return new AttributeNode($name, $attributeValue, $line, $column);
+    }
+
+    /**
+     * Create an element node.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     */
+    public function element(
+        string $tag,
+        array $attributes,
+        bool $selfClosing,
+        int $line,
+        int $column,
+    ): ElementNode {
+        return new ElementNode(
+            tag: $tag,
+            attributes: $attributes,
+            children: [],
+            selfClosing: $selfClosing,
+            line: $line,
+            column: $column,
+        );
+    }
+
+    /**
+     * Create a fragment node.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     */
+    public function fragment(
+        array $attributes,
+        bool $selfClosing,
+        int $line,
+        int $column,
+    ): FragmentNode {
+        return new FragmentNode(
+            attributes: $attributes,
+            children: [],
+            line: $line,
+            column: $column,
+            selfClosing: $selfClosing,
+        );
+    }
+
+    /**
+     * Create a component node.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     */
+    public function component(
+        string $name,
+        array $attributes,
+        int $line,
+        int $column,
+    ): ComponentNode {
+        return new ComponentNode(
+            name: $name,
+            attributes: $attributes,
+            children: [],
+            line: $line,
+            column: $column,
+        );
+    }
+
+    /**
+     * Create a closing tag marker.
+     */
+    public function closingTagMarker(string $tagName): ClosingTagMarker
+    {
+        return new ClosingTagMarker($tagName);
+    }
+}

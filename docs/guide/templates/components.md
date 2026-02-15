@@ -8,8 +8,33 @@ description: Reusable components with props, slots, and attribute merging.
 Components let you package markup into reusable building blocks with clear inputs and clean output. Think of them as small, composable templates that keep your views tidy without hiding the PHP you still need.
 
 ::: info
-Components are template files resolved from a configurable components path and rendered with props and slots.
+Components are opt-in. Enable the component extension first, then Sugar resolves component templates from configured component paths and renders them with props and slots.
 :::
+
+## Enable Components
+
+Register the component extension on the engine builder:
+
+```php
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
+
+$engine = Engine::builder()
+    ->withTemplateLoader(new FileTemplateLoader(
+        config: new SugarConfig(),
+        templatePaths: __DIR__ . '/templates',
+    ))
+    ->withExtension(new ComponentExtension()) // [!code focus]
+    ->build();
+```
+
+You can customize component directories when needed:
+
+```php
+->withExtension(new ComponentExtension(['components', 'ui/components']))
+```
 
 ## Basic Component Usage
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Test\Integration\Config;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 

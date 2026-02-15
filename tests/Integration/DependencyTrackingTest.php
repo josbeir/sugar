@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Test\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Cache\DependencyTracker;
-use Sugar\Config\SugarConfig;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**
@@ -136,7 +136,7 @@ final class DependencyTrackingTest extends TestCase
 
         // Should track the button component
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('button'),
+            $this->componentLoader->getComponentFilePath('button'),
             $metadata->components,
         );
     }
@@ -162,15 +162,15 @@ final class DependencyTrackingTest extends TestCase
 
         // Should track all components
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('button'),
+            $this->componentLoader->getComponentFilePath('button'),
             $metadata->components,
         );
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('badge'),
+            $this->componentLoader->getComponentFilePath('badge'),
             $metadata->components,
         );
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('alert'),
+            $this->componentLoader->getComponentFilePath('alert'),
             $metadata->components,
         );
         $this->assertCount(3, $metadata->components);
@@ -197,7 +197,7 @@ final class DependencyTrackingTest extends TestCase
 
         // Should track button only once
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('button'),
+            $this->componentLoader->getComponentFilePath('button'),
             $metadata->components,
         );
         $this->assertCount(1, $metadata->components);
@@ -244,7 +244,7 @@ SUGAR;
         // The include path is resolved relative to the parent template
         $this->assertGreaterThan(0, count($metadata->dependencies));
         $this->assertContains(
-            $this->templateLoader->getComponentFilePath('button'),
+            $this->componentLoader->getComponentFilePath('button'),
             $metadata->components,
         );
     }

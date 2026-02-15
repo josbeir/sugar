@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Constraint;
 
 use PHPUnit\Framework\Constraint\Constraint;
-use Sugar\Ast\DocumentNode;
+use Sugar\Core\Ast\DocumentNode;
 
 /**
  * Constraint that asserts AST matches expected structure
@@ -29,7 +29,7 @@ final class MatchesAstStructure extends Constraint
         }
 
         if (is_array($other)) {
-            /** @var array<\Sugar\Ast\Node> $other */
+            /** @var array<\Sugar\Core\Ast\Node> $other */
             return $this->matchesStructure($other, $this->expectedStructure);
         }
 
@@ -37,7 +37,7 @@ final class MatchesAstStructure extends Constraint
     }
 
     /**
-     * @param array<\Sugar\Ast\Node> $nodes
+     * @param array<\Sugar\Core\Ast\Node> $nodes
      * @param array<string|array{type: string, properties?: array<string, mixed>}> $structure
      */
     private function matchesStructure(array $nodes, array $structure): bool

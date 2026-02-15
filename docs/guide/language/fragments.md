@@ -23,7 +23,7 @@ Restrictions:
 You can override the fragment element name when you need a different tag.
 
 ```php
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 
 $config = (new SugarConfig())
     ->withFragmentElement('s-fragment');

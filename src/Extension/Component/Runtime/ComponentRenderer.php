@@ -1,0 +1,199 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Extension\Component\Runtime;
+
+use Closure;
+use ParseError;
+use Sugar\Core\Cache\CachedTemplate;
+use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Cache\TemplateCacheInterface;
+use Sugar\Core\Exception\CompilationException;
+use Sugar\Core\Exception\TemplateRuntimeException;
+use Sugar\Core\Util\ValueNormalizer;
+use Sugar\Extension\Component\Compiler\ComponentCompiler;
+use Sugar\Extension\Component\Exception\ComponentNotFoundException;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+
+/**
+ * Renders components at runtime for dynamic component calls.
+ */
+final class ComponentRenderer
+{
+    /**
+     * @param \Sugar\Extension\Component\Compiler\ComponentCompiler $componentCompiler Component template compiler
+     * @param \Sugar\Extension\Component\Loader\ComponentLoaderInterface $loader Component template loader
+     * @param \Sugar\Core\Cache\TemplateCacheInterface $cache Template cache
+     * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Optional dependency tracker
+     * @param bool $debug Debug mode
+     * @param object|null $templateContext Optional template context
+     */
+    public function __construct(
+        private readonly ComponentCompiler $componentCompiler,
+        private readonly ComponentLoaderInterface $loader,
+        private readonly TemplateCacheInterface $cache,
+        private readonly ?DependencyTracker $tracker = null,
+        private readonly bool $debug = false,
+        private readonly ?object $templateContext = null,
+    ) {
+    }
+
+    /**
+     * Render a component by name with bindings, slots, and attributes.
+     *
+     * @param string $name Component name
+     * @param array<string, mixed> $vars Bound variables (s:bind)
+     * @param array<string, mixed> $slots Slot content
+     * @param array<string, mixed> $attributes Runtime attributes
+     */
+    public function renderComponent(
+        string $name,
+        array $vars = [],
+        array $slots = [],
+        array $attributes = [],
+    ): string {
+        $componentName = trim($name);
+        if ($componentName === '') {
+            throw new ComponentNotFoundException('Component "" not found');
+        }
+
+        $slotNames = array_keys($slots);
+        if (!in_array('slot', $slotNames, true)) {
+            $slotNames[] = 'slot';
+        }
+
+        sort($slotNames);
+
+        $compiledPath = $this->getCompiledComponent($componentName, $slotNames);
+
+        $data = $this->normalizeRenderData($vars, $slots, $attributes);
+
+        return $this->execute($compiledPath, $data);
+    }
+
+    /**
+     * Compile or retrieve a compiled component variant.
+     *
+     * @param array<string> $slotNames
+     */
+    private function getCompiledComponent(string $name, array $slotNames): string
+    {
+        try {
+            $componentPath = $this->loader->getComponentPath($name);
+            $componentSourcePath = $this->loader->getComponentFilePath($name);
+        } catch (TemplateRuntimeException $templateRuntimeException) {
+            throw new ComponentNotFoundException(
+                $templateRuntimeException->getRawMessage(),
+                previous: $templateRuntimeException,
+            );
+        }
+
+        $cacheKey = $componentPath . '::slots:' . implode('|', $slotNames);
+
+        $cached = $this->cache->get($cacheKey, $this->debug);
+        if ($cached instanceof CachedTemplate) {
+            return $cached->path;
+        }
+
+        $tracker = new DependencyTracker();
+        $compiled = $this->componentCompiler->compileComponent(
+            componentName: $name,
+            slotNames: $slotNames,
+            debug: $this->debug,
+            tracker: $tracker,
+        );
+
+        $metadata = $tracker->getMetadata($componentSourcePath, $this->debug);
+
+        if ($this->tracker instanceof DependencyTracker) {
+            foreach ($metadata->dependencies as $dependency) {
+                $this->tracker->addDependency($dependency);
+            }
+
+            foreach ($metadata->components as $component) {
+                $this->tracker->addComponent($component);
+            }
+        }
+
+        return $this->cache->put($cacheKey, $compiled, $metadata);
+    }
+
+    /**
+     * Normalize render data for component execution.
+     *
+     * @param array<string, mixed> $vars
+     * @param array<string, mixed> $slots
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
+    private function normalizeRenderData(array $vars, array $slots, array $attributes): array
+    {
+        $normalizedSlots = [];
+        foreach ($slots as $name => $value) {
+            $normalizedSlots[$name] = ValueNormalizer::toDisplayString($value);
+        }
+
+        if (!isset($normalizedSlots['slot'])) {
+            $normalizedSlots['slot'] = '';
+        }
+
+        $normalizedAttributes = $this->normalizeAttributes($attributes);
+
+        $data = $vars;
+        foreach ($normalizedSlots as $name => $value) {
+            $data[$name] = $value;
+        }
+
+        $data['__sugar_attrs'] = $normalizedAttributes;
+
+        return $data;
+    }
+
+    /**
+     * Normalize attribute array values to stringable values.
+     *
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
+    private function normalizeAttributes(array $attributes): array
+    {
+        $normalized = [];
+
+        foreach ($attributes as $name => $value) {
+            $key = (string)$name;
+            $normalized[$key] = ValueNormalizer::toAttributeValue($value);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Execute compiled template.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function execute(string $compiledPath, array $data): string
+    {
+        try {
+            $fn = include $compiledPath;
+        } catch (ParseError $parseError) {
+            throw CompilationException::fromCompiledComponentParseError($compiledPath, $parseError);
+        }
+
+        if ($fn instanceof Closure) {
+            if ($this->templateContext !== null) {
+                $fn = $fn->bindTo($this->templateContext);
+            }
+
+            $result = $fn($data);
+
+            if (is_string($result)) {
+                return $result;
+            }
+
+            return ValueNormalizer::toDisplayString($result);
+        }
+
+        return '';
+    }
+}

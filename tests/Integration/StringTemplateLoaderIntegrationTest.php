@@ -4,9 +4,10 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Config\SugarConfig;
-use Sugar\Engine;
-use Sugar\Loader\StringTemplateLoader;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 
 /**
  * Integration test: StringTemplateLoader with full compilation pipeline
@@ -22,9 +23,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader);
 
         $result = $engine->render('home', [
             'title' => 'Welcome',
@@ -44,9 +43,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader);
 
         $result = $engine->render('users', [
             'users' => ['Alice', 'Bob', 'Charlie'],
@@ -67,9 +64,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader);
 
         $resultShown = $engine->render('conditional', ['show' => true]);
         $this->assertStringContainsString('Visible', $resultShown);
@@ -87,14 +82,11 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             templates: [
                 'page' => '<s-button>Click Me</s-button>',
             ],
-            components: [
-                'button' => '<button class="btn"><?= $slot ?></button>',
-            ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'button' => '<button class="btn"><?= $slot ?></button>',
+        ]);
 
         $result = $engine->render('page');
 
@@ -108,17 +100,14 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             templates: [
                 'alert-page' => '<s-alert s:bind="[\'title\' => \'Important\']">Message</s-alert>',
             ],
-            components: [
-                'alert' => '<div class="alert">' .
-                    '<strong><?= $title ?? \'Notice\' ?></strong>' .
-                    '<p><?= $slot ?></p>' .
-                    '</div>',
-            ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'alert' => '<div class="alert">'
+                . '<strong><?= $title ?? \'Notice\' ?></strong>'
+                . '<p><?= $slot ?></p>'
+                . '</div>',
+        ]);
 
         $result = $engine->render('alert-page');
 
@@ -138,18 +127,15 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
                     '<small s:slot="footer">Footer</small>' .
                     '</s-card>',
             ],
-            components: [
-                'card' => '<div class="card">' .
-                    '<div class="card-header"><?= $header ?></div>' .
-                    '<div class="card-body"><?= $slot ?></div>' .
-                    '<div class="card-footer"><?= $footer ?></div>' .
-                    '</div>',
-            ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'card' => '<div class="card">'
+                . '<div class="card-header"><?= $header ?></div>'
+                . '<div class="card-body"><?= $slot ?></div>'
+                . '<div class="card-footer"><?= $footer ?></div>'
+                . '</div>',
+        ]);
 
         $result = $engine->render('card-page');
 
@@ -164,10 +150,11 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         // Add templates dynamically
         $loader->addTemplate('dynamic', '<h1>Dynamic <?= $name ?></h1>');
-        $loader->addComponent('badge', '<span class="badge"><?= $slot ?></span>');
+        $loader->addTemplate('components/s-badge.sugar.php', '<span class="badge"><?= $slot ?></span>');
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
             ->build();
 
         $result = $engine->render('dynamic', ['name' => 'Template']);
@@ -274,7 +261,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
                     '<s-template s:block="content">Home Content</s-template>' .
                     '</div>',
             ],
-            components: [],
             absolutePathsOnly: true,
         );
 
@@ -367,14 +353,11 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
             templates: [
                 'test-template' => '<s-custom-component s:bind="[\'data\' => $testData]">Test</s-custom-component>',
             ],
-            components: [
-                'custom-component' => '<div class="test"><?= json_encode($data) ?>: <?= $slot ?></div>',
-            ],
         );
 
-        $engine = Engine::builder(new SugarConfig())
-            ->withTemplateLoader($loader)
-            ->build();
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'custom-component' => '<div class="test"><?= json_encode($data) ?>: <?= $slot ?></div>',
+        ]);
 
         $result = $engine->render('test-template', [
             'testData' => ['test' => 'value'],
@@ -412,5 +395,22 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $this->assertStringContainsString('<h1>Welcome John Doe!</h1>', $welcomeEmail);
         $this->assertStringContainsString('<p>Thank you for joining!</p>', $welcomeEmail);
+    }
+
+    /**
+     * Build an engine configured with the component extension and component loader.
+     *
+     * @param array<string, string> $components
+     */
+    private function createEngineWithComponentExtension(StringTemplateLoader $loader, array $components = []): Engine
+    {
+        foreach ($components as $name => $source) {
+            $loader->addTemplate('components/s-' . $name . '.sugar.php', $source);
+        }
+
+        return Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withExtension(new ComponentExtension())
+            ->build();
     }
 }

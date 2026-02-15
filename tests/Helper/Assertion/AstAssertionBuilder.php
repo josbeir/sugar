@@ -4,12 +4,12 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Assertion;
 
 use PHPUnit\Framework\Assert;
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\DocumentNode;
-use Sugar\Ast\ElementNode;
-use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
+use Sugar\Core\Ast\DirectiveNode;
+use Sugar\Core\Ast\DocumentNode;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
 
 /**
  * Fluent builder for AST assertions
@@ -19,7 +19,7 @@ use Sugar\Ast\TextNode;
 final class AstAssertionBuilder
 {
     /**
-     * @param array<\Sugar\Ast\Node>|DocumentNode $ast
+     * @param array<\Sugar\Core\Ast\Node>|DocumentNode $ast
      */
     public function __construct(
         private readonly array|DocumentNode $ast,
@@ -171,7 +171,7 @@ final class AstAssertionBuilder
     /**
      * Get all nodes as array
      *
-     * @return array<\Sugar\Ast\Node>
+     * @return array<\Sugar\Core\Ast\Node>
      */
     private function getNodes(): array
     {
@@ -205,7 +205,7 @@ final class AstAssertionBuilder
     /**
      * Find element in children recursively
      *
-     * @param array<\Sugar\Ast\Node> $children
+     * @param array<\Sugar\Core\Ast\Node> $children
      */
     private function findElementInChildren(array $children, string $tagName): ?ElementNode
     {
@@ -252,7 +252,7 @@ final class AstAssertionBuilder
     /**
      * Find directive in children recursively
      *
-     * @param array<\Sugar\Ast\Node> $children
+     * @param array<\Sugar\Core\Ast\Node> $children
      */
     private function findDirectiveInChildren(array $children, string $name): ?DirectiveNode
     {

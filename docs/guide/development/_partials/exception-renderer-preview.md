@@ -7,10 +7,10 @@ The renderer uses the template loader to fetch the source.
 Consecutive identical stack frames are automatically collapsed in the rendered trace to reduce recursion noise.
 
 ```php
-use Sugar\Engine;
-use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Exception\Renderer\HtmlTemplateExceptionRenderer;
+use Sugar\Core\Loader\FileTemplateLoader;
 
 $config = new SugarConfig();
 $loader = new FileTemplateLoader(
@@ -33,7 +33,7 @@ $engine = Engine::builder($config)
 Use `withExceptionRenderer()` when you need custom renderer options:
 
 ```php
-use Sugar\Exception\Renderer\HtmlTemplateExceptionRenderer;
+use Sugar\Core\Exception\Renderer\HtmlTemplateExceptionRenderer;
 
 $renderer = new HtmlTemplateExceptionRenderer(
 	loader: $loader,

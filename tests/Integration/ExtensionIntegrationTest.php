@@ -4,20 +4,21 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Ast\Node;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
-use Sugar\Compiler\CompilationContext;
-use Sugar\Compiler\Pipeline\AstPassInterface;
-use Sugar\Compiler\Pipeline\NodeAction;
-use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Config\SugarConfig;
-use Sugar\Directive\Interface\DirectiveInterface;
-use Sugar\Engine;
-use Sugar\Enum\DirectiveType;
-use Sugar\Extension\ExtensionInterface;
-use Sugar\Extension\RegistrationContext;
-use Sugar\Loader\StringTemplateLoader;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Engine;
+use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Extension\ExtensionInterface;
+use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Loader\StringTemplateLoader;
 
 /**
  * Integration tests for the extension system
@@ -34,8 +35,8 @@ final class ExtensionIntegrationTest extends TestCase
             {
                 $context->directive('repeat', new class implements DirectiveInterface {
                     /**
-                     * @param \Sugar\Ast\DirectiveNode $node
-                     * @return array<\Sugar\Ast\Node>
+                     * @param \Sugar\Core\Ast\DirectiveNode $node
+                     * @return array<\Sugar\Core\Ast\Node>
                      */
                     public function compile(Node $node, CompilationContext $context): array
                     {
@@ -95,7 +96,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -124,8 +125,8 @@ final class ExtensionIntegrationTest extends TestCase
                 // Register a simple control-flow directive
                 $context->directive('repeat', new class implements DirectiveInterface {
                     /**
-                     * @param \Sugar\Ast\DirectiveNode $node
-                     * @return array<\Sugar\Ast\Node>
+                     * @param \Sugar\Core\Ast\DirectiveNode $node
+                     * @return array<\Sugar\Core\Ast\Node>
                      */
                     public function compile(Node $node, CompilationContext $context): array
                     {
@@ -160,7 +161,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -204,7 +205,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 
@@ -226,7 +227,7 @@ final class ExtensionIntegrationTest extends TestCase
                     {
                         return NodeAction::none();
                     }
-                }, 45);
+                }, PassPriority::POST_DIRECTIVE_COMPILATION);
             }
         };
 

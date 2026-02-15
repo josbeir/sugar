@@ -3,14 +3,20 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Compiler\Compiler;
-use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Extension\DirectiveRegistry;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Loader\StringTemplateLoader;
-use Sugar\Loader\TemplateLoaderInterface;
-use Sugar\Parser\Parser;
+use Sugar\Core\Compiler\Compiler;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Escape\Escaper;
+use Sugar\Core\Extension\DirectiveRegistry;
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Loader\TemplateLoaderInterface;
+use Sugar\Core\Parser\Parser;
+use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
+use Sugar\Extension\Component\Loader\StringLoader;
+use Sugar\Extension\Component\Pass\ComponentExpansionPass;
+use Sugar\Extension\Component\Pass\ComponentPassFactory;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -28,6 +34,8 @@ trait CompilerTestTrait
     protected Compiler $compiler;
 
     protected TemplateLoaderInterface $templateLoader;
+
+    protected ComponentLoaderInterface $componentLoader;
 
     /**
      * Set up compiler dependencies
@@ -57,23 +65,35 @@ trait CompilerTestTrait
         $registry = $withDefaultDirectives
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
+        $this->registry = $registry;
 
         $this->templateLoader = new FileTemplateLoader(
             $config ?? new SugarConfig(),
             $templatePaths,
-            $componentPaths,
             $absolutePathsOnly,
         );
+
+        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
+            templateLoader: $this->templateLoader,
+            config: $config ?? new SugarConfig(),
+            directories: $componentPaths,
+        );
+
+        $customPasses = $this->withDefaultComponentExpansion(
+            config: $config,
+            customPasses: [],
+        );
+
         $this->compiler = new Compiler(
             parser: $this->parser,
             escaper: $this->escaper,
             registry: $registry,
             templateLoader: $this->templateLoader,
             config: $config,
+            customPasses: $customPasses,
         );
 
-        // Set registry property for tests that need access
-        $this->registry = $registry;
+        // Registry property is initialized before pass wiring.
     }
 
     /**
@@ -81,7 +101,7 @@ trait CompilerTestTrait
      *
      * @param array<string, string> $templates
      * @param array<string, string> $components
-     * @param array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],
@@ -97,12 +117,24 @@ trait CompilerTestTrait
         $registry = $withDefaultDirectives
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
+        $this->registry = $registry;
+
+        $loaderConfig = $config ?? new SugarConfig();
 
         $this->templateLoader = new StringTemplateLoader(
-            $config ?? new SugarConfig(),
+            $loaderConfig,
             $templates,
-            $components,
             $absolutePathsOnly,
+        );
+
+        $this->componentLoader = new StringLoader(
+            config: $loaderConfig,
+            components: $components,
+        );
+
+        $customPasses = $this->withDefaultComponentExpansion(
+            config: $config,
+            customPasses: $customPasses,
         );
 
         $this->compiler = new Compiler(
@@ -114,7 +146,7 @@ trait CompilerTestTrait
             customPasses: $customPasses,
         );
 
-        $this->registry = $registry;
+        // Registry property is initialized before pass wiring.
     }
 
     /**
@@ -146,5 +178,34 @@ trait CompilerTestTrait
     protected function createRegistry(): DirectiveRegistry
     {
         return new DirectiveRegistry();
+    }
+
+    /**
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
+     */
+    private function withDefaultComponentExpansion(?SugarConfig $config, array $customPasses): array
+    {
+        foreach ($customPasses as $entry) {
+            if ($entry['pass'] instanceof ComponentExpansionPass) {
+                return $customPasses;
+            }
+        }
+
+        $passFactory = new ComponentPassFactory(
+            templateLoader: $this->templateLoader,
+            componentLoader: $this->componentLoader,
+            parser: $this->parser,
+            registry: $this->registry,
+            config: $config ?? new SugarConfig(),
+            customPasses: $customPasses,
+        );
+
+        $customPasses[] = [
+            'pass' => $passFactory->createExpansionPass(),
+            'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
+        ];
+
+        return $customPasses;
     }
 }

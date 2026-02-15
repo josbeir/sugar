@@ -1,0 +1,170 @@
+<?php
+declare(strict_types=1);
+
+namespace Sugar\Tests\Unit\Core\Extension;
+
+use PHPUnit\Framework\TestCase;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Extension\RegistrationContext;
+
+/**
+ * Tests for RegistrationContext
+ */
+final class RegistrationContextTest extends TestCase
+{
+    private RegistrationContext $context;
+
+    protected function setUp(): void
+    {
+        $this->context = new RegistrationContext();
+    }
+
+    public function testDirectiveRegistration(): void
+    {
+        $directive = $this->createStub(DirectiveInterface::class);
+
+        $this->context->directive('custom', $directive);
+
+        $directives = $this->context->getDirectives();
+        $this->assertCount(1, $directives);
+        $this->assertSame($directive, $directives['custom']);
+    }
+
+    public function testDirectiveRegistrationWithClassName(): void
+    {
+        $this->context->directive('test', TestDirective::class);
+
+        $directives = $this->context->getDirectives();
+        $this->assertCount(1, $directives);
+        $this->assertSame(TestDirective::class, $directives['test']);
+    }
+
+    public function testMultipleDirectiveRegistrations(): void
+    {
+        $directive1 = $this->createStub(DirectiveInterface::class);
+        $directive2 = $this->createStub(DirectiveInterface::class);
+
+        $this->context->directive('one', $directive1);
+        $this->context->directive('two', $directive2);
+
+        $directives = $this->context->getDirectives();
+        $this->assertCount(2, $directives);
+        $this->assertArrayHasKey('one', $directives);
+        $this->assertArrayHasKey('two', $directives);
+    }
+
+    public function testDirectiveOverwrite(): void
+    {
+        $directive1 = $this->createStub(DirectiveInterface::class);
+        $directive2 = $this->createStub(DirectiveInterface::class);
+
+        $this->context->directive('name', $directive1);
+        $this->context->directive('name', $directive2);
+
+        $directives = $this->context->getDirectives();
+        $this->assertCount(1, $directives);
+        $this->assertSame($directive2, $directives['name']);
+    }
+
+    public function testCompilerPassRegistration(): void
+    {
+        $pass = $this->createStubPass();
+
+        $this->context->compilerPass($pass, PassPriority::POST_DIRECTIVE_COMPILATION);
+
+        $passes = $this->context->getPasses();
+        $this->assertCount(1, $passes);
+        $this->assertSame($pass, $passes[0]['pass']);
+        $this->assertSame(PassPriority::POST_DIRECTIVE_COMPILATION, $passes[0]['priority']);
+    }
+
+    public function testCompilerPassDefaultsToPostDirectiveCompilationPriority(): void
+    {
+        $pass = $this->createStubPass();
+
+        $this->context->compilerPass($pass);
+
+        $passes = $this->context->getPasses();
+        $this->assertCount(1, $passes);
+        $this->assertSame(PassPriority::POST_DIRECTIVE_COMPILATION, $passes[0]['priority']);
+    }
+
+    public function testMultipleCompilerPassRegistrations(): void
+    {
+        $pass1 = $this->createStubPass();
+        $pass2 = $this->createStubPass();
+
+        $this->context->compilerPass($pass1, PassPriority::PRE_DIRECTIVE_EXTRACTION);
+        $this->context->compilerPass($pass2, PassPriority::CONTEXT_ANALYSIS);
+
+        $passes = $this->context->getPasses();
+        $this->assertCount(2, $passes);
+        $this->assertSame(PassPriority::PRE_DIRECTIVE_EXTRACTION, $passes[0]['priority']);
+        $this->assertSame(PassPriority::CONTEXT_ANALYSIS, $passes[1]['priority']);
+    }
+
+    public function testSamePriorityMultiplePasses(): void
+    {
+        $pass1 = $this->createStubPass();
+        $pass2 = $this->createStubPass();
+
+        $this->context->compilerPass($pass1, PassPriority::POST_DIRECTIVE_COMPILATION);
+        $this->context->compilerPass($pass2, PassPriority::POST_DIRECTIVE_COMPILATION);
+
+        $passes = $this->context->getPasses();
+        $this->assertCount(2, $passes);
+        $this->assertSame($pass1, $passes[0]['pass']);
+        $this->assertSame($pass2, $passes[1]['pass']);
+    }
+
+    public function testEmptyByDefault(): void
+    {
+        $this->assertSame([], $this->context->getDirectives());
+        $this->assertSame([], $this->context->getPasses());
+        $this->assertSame([], $this->context->getRuntimeServices());
+    }
+
+    public function testMixedRegistrations(): void
+    {
+        $directive = $this->createStub(DirectiveInterface::class);
+        $pass = $this->createStubPass();
+
+        $this->context->directive('my-dir', $directive);
+        $this->context->compilerPass($pass, PassPriority::CONTEXT_ANALYSIS);
+        $this->context->runtimeService('custom.service', ['enabled' => true]);
+
+        $this->assertCount(1, $this->context->getDirectives());
+        $this->assertCount(1, $this->context->getPasses());
+        $this->assertSame(['enabled' => true], $this->context->getRuntimeServices()['custom.service']);
+    }
+
+    public function testRuntimeServiceRegistrationOverwritesById(): void
+    {
+        $this->context->runtimeService('custom.service', 1);
+        $this->context->runtimeService('custom.service', 2);
+
+        $services = $this->context->getRuntimeServices();
+        $this->assertCount(1, $services);
+        $this->assertSame(2, $services['custom.service']);
+    }
+
+    protected function createStubPass(): AstPassInterface
+    {
+        return new class implements AstPassInterface {
+            public function before(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+
+            public function after(Node $node, PipelineContext $context): NodeAction
+            {
+                return NodeAction::none();
+            }
+        };
+    }
+}
