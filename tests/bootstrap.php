@@ -7,6 +7,19 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+spl_autoload_register(static function (string $class): void {
+    $prefix = 'Sugar\\Tests\\Unit\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+
+    $relativeClass = substr($class, strlen($prefix));
+    $file = __DIR__ . '/Unit/Core/' . str_replace('\\', '/', $relativeClass) . '.php';
+    if (is_file($file)) {
+        require $file;
+    }
+});
+
 // Define fixture path constants
 define('SUGAR_TEST_FIXTURES_PATH', __DIR__ . '/fixtures');
 define('SUGAR_TEST_TEMPLATES_PATH', SUGAR_TEST_FIXTURES_PATH . '/templates');

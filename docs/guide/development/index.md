@@ -22,10 +22,10 @@ These three things get you started:
 Here's the minimal setup:
 
 ```php
-use Sugar\Engine;
-use Sugar\Cache\FileCache;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\FileTemplateLoader;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
@@ -55,7 +55,7 @@ Here's every `with*` method for configuring the engine. Jump to any section for 
 | `withTemplateContext()` | Helpers available as `$this` in templates | [Template Context](#template-context) |
 | `withExceptionRenderer()` | Custom exception rendering | [Exception Rendering](#exception-rendering) |
 | `withHtmlExceptionRenderer()` | Built-in HTML exception renderer | [Exception Rendering](#exception-rendering) |
-| `withFragmentCache()` | Enable `s:cache` with a PSR-16 store | [Fragment Caching (s:cache)](#fragment-caching-scache) |
+| `withExtension(new FragmentCacheExtension(...))` | Enable `s:cache` via optional extension | [Fragment Caching (s:cache)](#fragment-caching-scache) |
 | `withDirectiveRegistry()` | Override available directives | [Custom Directive Registry](#custom-directive-registry) |
 | `withExtension()` | Register reusable directive/pass bundles | [Extensions](#extensions) |
 
@@ -72,8 +72,8 @@ Tell Sugar where to find templates and components.
 The standard choice: load templates from the filesystem.
 
 ```php
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Loader\FileTemplateLoader;
 
 $loader = new FileTemplateLoader(
     config: new SugarConfig(),
@@ -113,8 +113,8 @@ $loader = new FileTemplateLoader(
 Load templates from memory. Perfect for tests or dynamic content:
 
 ```php
-use Sugar\Loader\StringTemplateLoader;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Loader\StringTemplateLoader;
 
 $loader = new StringTemplateLoader(
     config: new SugarConfig(),
@@ -132,8 +132,8 @@ $loader = new StringTemplateLoader(
 Compile templates once, cache them, render fast.
 
 ```php
-use Sugar\Engine;
-use Sugar\Cache\FileCache;
+use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Engine;
 
 $cache = new FileCache(__DIR__ . '/cache/templates');
 
@@ -178,7 +178,7 @@ $engine = Engine::builder()
 Sugar uses `s:` by default (`s:if`, `s:foreach`, etc.). If that conflicts with another system, change it:
 
 ```php
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 
 $config = SugarConfig::withPrefix('v');
 // Now use v:if, v:foreach, v:cache, etc.
@@ -212,14 +212,14 @@ Sugar recognizes HTML void elements automatically. Add custom self-closing tags:
 
 ::: code-group
 ```php [Replace list]
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 
 $config = (new SugarConfig())
     ->withSelfClosingTags(['meta', 'link', 'custom']);
 ```
 
 ```php [Add to defaults]
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 
 $config = (new SugarConfig())
     ->withSelfClosingTags([
@@ -234,7 +234,7 @@ $config = (new SugarConfig())
 Expose helper methods to every template via `$this`. Keep context lightweight and stateless.
 
 ```php
-use Sugar\Engine;
+use Sugar\Core\Engine;
 
 $context = new class {
     public function url(string $path): string {
@@ -270,17 +270,17 @@ When to use template context
 
 ### Fragment Caching (s:cache)
 
-Cache expensive fragments using a PSR-16 store (Redis, Memcached, etc.). Optional but powerful for dynamic pages.
+Cache expensive fragments using a PSR-16 store (Redis, Memcached, etc.) through the optional FragmentCache extension.
 
 ```php
-use Psr\SimpleCache\CacheInterface;
-use Sugar\Engine;
+use Sugar\Core\Engine;
+use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 
 $fragmentCache = getYourCacheStore();
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withFragmentCache($fragmentCache, ttl: 300)
+    ->withExtension(new FragmentCacheExtension($fragmentCache, defaultTtl: 300))
     ->build();
 ```
 
@@ -332,9 +332,9 @@ Enable in development, disable in production.
 Start from scratch and register only the directives you want:
 
 ```php
-use Sugar\Extension\DirectiveRegistry;
-use Sugar\Directive\IfDirective;
-use Sugar\Directive\ForeachDirective;
+use Sugar\Core\Directive\ForeachDirective;
+use Sugar\Core\Directive\IfDirective;
+use Sugar\Core\Extension\DirectiveRegistry;
 
 $registry = DirectiveRegistry::empty();
 $registry->register('if', IfDirective::class);
@@ -355,7 +355,7 @@ For directive authoring, see [Custom Directives](/guide/development/custom-direc
 Bundle directives, compiler passes, and hooks into reusable packages:
 
 ```php
-use Sugar\Engine;
+use Sugar\Core\Engine;
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
@@ -377,7 +377,7 @@ See [Creating Extensions](/guide/development/creating-extensions) for the full w
 | `withTemplateContext()` | Helpers available as `$this` in templates |
 | `withExceptionRenderer()` | Custom exception rendering |
 | `withHtmlExceptionRenderer()` | Built-in HTML exception renderer |
-| `withFragmentCache()` | Enable `s:cache` with a PSR-16 store |
+| `withExtension(new FragmentCacheExtension(...))` | Enable `s:cache` via optional extension |
 | `withDirectiveRegistry()` | Override available directives |
 | `withExtension()` | Register reusable directive/pass bundles |
 

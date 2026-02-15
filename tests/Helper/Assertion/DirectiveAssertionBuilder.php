@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Assertion;
 
 use PHPUnit\Framework\Assert;
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\TextNode;
+use Sugar\Core\Ast\DirectiveNode;
+use Sugar\Core\Ast\TextNode;
 
 /**
  * Fluent builder for directive-specific assertions

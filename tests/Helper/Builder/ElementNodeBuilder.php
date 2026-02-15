@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Builder;
 
-use Sugar\Ast\AttributeNode;
-use Sugar\Ast\AttributeValue;
-use Sugar\Ast\ElementNode;
-use Sugar\Ast\Node;
+use Sugar\Core\Ast\AttributeNode;
+use Sugar\Core\Ast\AttributeValue;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\Node;
 
 /**
  * Fluent builder for creating ElementNode instances in tests

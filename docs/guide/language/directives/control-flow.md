@@ -162,22 +162,23 @@ Repeat the element a fixed number of times.
 
 Cache a fragment's rendered output using a configured PSR-16 cache store.
 
-`s:cache` is opt-in at engine setup time. Register a cache store with `withFragmentCache()`:
+`s:cache` is opt-in at engine setup time. Register the optional FragmentCache extension:
 
 ```php
-use Sugar\Engine;
+use Sugar\Core\Engine;
+use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 
 $cache = new YourPsr16CacheStore(); // must implement Psr\SimpleCache\CacheInterface
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withFragmentCache($cache, ttl: 300)
+    ->withExtension(new FragmentCacheExtension($cache, defaultTtl: 300))
     ->build();
 ```
 
 Directive forms:
 
-- `s:cache` - auto key, default TTL from `withFragmentCache(..., ttl: ...)`
+- `s:cache` - auto key, default TTL from `new FragmentCacheExtension(..., defaultTtl: ...)`
 - `s:cache="'users-' . $userId"` - explicit key, default TTL
 - `s:cache="['key' => 'users-' . $userId, 'ttl' => 60]"` - explicit key + per-fragment TTL override
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Config\SugarConfig;
-use Sugar\Engine;
-use Sugar\Loader\StringTemplateLoader;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\StringTemplateLoader;
 
 /**
  * Integration test: StringTemplateLoader with full compilation pipeline

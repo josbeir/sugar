@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Ast\DocumentNode;
+use Sugar\Core\Ast\DocumentNode;
 use Sugar\Tests\Helper\Assertion\AstAssertionBuilder;
 
 /**
@@ -14,7 +14,7 @@ trait AstAssertionsTrait
     /**
      * Create a fluent AST assertion builder
      *
-     * @param array<\Sugar\Ast\Node>|DocumentNode $ast
+     * @param array<\Sugar\Core\Ast\Node>|DocumentNode $ast
      */
     protected function assertAst(array|DocumentNode $ast): AstAssertionBuilder
     {

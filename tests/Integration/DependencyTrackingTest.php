@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Test\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Cache\DependencyTracker;
-use Sugar\Config\SugarConfig;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**

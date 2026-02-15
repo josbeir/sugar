@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Trait;
 
 use RuntimeException;
-use Sugar\Compiler\CompilationContext;
-use Sugar\Config\SugarConfig;
-use Sugar\Loader\FileTemplateLoader;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Loader\FileTemplateLoader;
 
 /**
  * Test helper trait for loading template fixtures
@@ -97,7 +97,7 @@ trait TemplateTestHelperTrait
      * Create a FileTemplateLoader with given path
      *
      * @param string $path Template directory path
-     * @return \Sugar\Loader\FileTemplateLoader Template loader instance
+     * @return \Sugar\Core\Loader\FileTemplateLoader Template loader instance
      */
     protected function createLoader(string $path): FileTemplateLoader
     {
@@ -110,7 +110,7 @@ trait TemplateTestHelperTrait
     /**
      * Create a FileTemplateLoader using fixture templates
      *
-     * @return \Sugar\Loader\FileTemplateLoader Template loader instance
+     * @return \Sugar\Core\Loader\FileTemplateLoader Template loader instance
      */
     protected function createFixtureLoader(): FileTemplateLoader
     {
@@ -120,7 +120,7 @@ trait TemplateTestHelperTrait
     /**
      * Create a FileTemplateLoader for component testing
      *
-     * @return \Sugar\Loader\FileTemplateLoader Template loader instance
+     * @return \Sugar\Core\Loader\FileTemplateLoader Template loader instance
      */
     protected function createComponentLoader(): FileTemplateLoader
     {

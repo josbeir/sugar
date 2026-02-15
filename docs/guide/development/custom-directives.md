@@ -16,8 +16,8 @@ Start with a small directive and register it locally before sharing it across te
 Register a directive by name and pass its class or an already constructed instance to the registry. The registry instance is then injected into the engine builder.
 
 ```php
-use Sugar\Extension\DirectiveRegistry;
-use Sugar\Engine;
+use Sugar\Core\Engine;
+use Sugar\Core\Extension\DirectiveRegistry;
 
 $registry = new DirectiveRegistry();
 $registry->register('badge', BadgeDirective::class);
@@ -33,9 +33,9 @@ $engine = Engine::builder()
 If you plan to reuse a directive across projects, package it as an extension. Extensions register directives (and optional compiler passes) through a `RegistrationContext` and are added to the engine builder.
 
 ```php
-use Sugar\Extension\ExtensionInterface;
-use Sugar\Extension\RegistrationContext;
-use Sugar\Engine;
+use Sugar\Core\Engine;
+use Sugar\Core\Extension\ExtensionInterface;
+use Sugar\Core\Extension\RegistrationContext;
 
 final class UiExtension implements ExtensionInterface
 {
@@ -65,11 +65,11 @@ Here are two common shapes for `DirectiveInterface` directives.
 
 ::: code-group
 ```php [Content directive]
-use Sugar\Ast\Node;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Compiler\CompilationContext;
-use Sugar\Directive\Interface\DirectiveInterface;
-use Sugar\Enum\DirectiveType;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Enum\DirectiveType;
 
 final class BadgeDirective implements DirectiveInterface
 {
@@ -92,11 +92,11 @@ final class BadgeDirective implements DirectiveInterface
 ```
 
 ```php [Attribute directive]
-use Sugar\Ast\Node;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Compiler\CompilationContext;
-use Sugar\Directive\Interface\DirectiveInterface;
-use Sugar\Enum\DirectiveType;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Enum\DirectiveType;
 
 final class DataTestDirective implements DirectiveInterface
 {
@@ -142,7 +142,7 @@ This is useful when your directive should:
 
 Without merge policy, extraction treats compiled attribute output as append-only and does not apply conflict/exclusion rules.
 
-Available modes (`Sugar\\Enum\\AttributeMergeMode`):
+Available modes (`Sugar\\Core\\Enum\\AttributeMergeMode`):
 - `MERGE_NAMED` - merge directive output into an existing named attribute.
 - `EXCLUDE_NAMED` - exclude explicit named attributes from a directive source payload.
 
@@ -157,14 +157,14 @@ Use these examples as a quick mental model for what extraction does after your d
 <!-- Existing class + directive-generated class are merged into one class attr -->
 <button class="btn" s:class="['btn-primary' => $primary]">Save</button>
 ```
-
-```html [Rendered]
-<!-- $primary = true -->
-<button class="btn btn-primary">Save</button>
-```
-:::
-
-::: code-group
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
+use Sugar\Core\Enum\AttributeMergeMode;
+use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Runtime\HtmlAttributeHelper;
+use Sugar\Core\Util\Hash;
 ```html [EXCLUDE_NAMED]
 <!-- Explicit attrs win; spread ignores keys already present on the element -->
 <button id="save" class="btn" s:spread="$attrs">Save</button>
@@ -237,7 +237,7 @@ Use `PairedDirectiveInterface` when a directive requires a paired sibling, such 
 - `getPairingDirective()` returns the directive name to pair with (without the prefix).
 
 ```php
-use Sugar\Directive\Interface\PairedDirectiveInterface;
+use Sugar\Core\Directive\Interface\PairedDirectiveInterface;
 
 final class TryDirective implements PairedDirectiveInterface
 {
@@ -277,12 +277,12 @@ Implement `ElementAwareDirectiveInterface` when you need to modify the element o
 - `extractFromElement()` lets you replace the element, emit prefix nodes, or wrap it in a fragment.
 
 ```php
-use Sugar\Ast\ElementNode;
-use Sugar\Ast\FragmentNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Directive\Interface\ElementAwareDirectiveInterface;
-use Sugar\Runtime\HtmlTagHelper;
-use Sugar\Util\Hash;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\FragmentNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Directive\Interface\ElementAwareDirectiveInterface;
+use Sugar\Core\Runtime\HtmlTagHelper;
+use Sugar\Core\Util\Hash;
 
 final class TagDirective implements ElementAwareDirectiveInterface
 {
@@ -342,7 +342,7 @@ Use `ContentWrappingDirectiveInterface` for modifiers like `s:nowrap` that chang
 - `shouldWrapContentElement()` returns `false` to drop the wrapper or `true` to keep it.
 
 ```php
-use Sugar\Directive\Interface\ContentWrappingDirectiveInterface;
+use Sugar\Core\Directive\Interface\ContentWrappingDirectiveInterface;
 
 final class NoWrapDirective implements ContentWrappingDirectiveInterface
 {

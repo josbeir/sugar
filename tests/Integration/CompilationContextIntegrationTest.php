@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Exception\SyntaxException;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 /**

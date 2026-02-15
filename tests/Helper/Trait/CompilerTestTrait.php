@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Compiler\Compiler;
-use Sugar\Config\SugarConfig;
-use Sugar\Escape\Escaper;
-use Sugar\Extension\DirectiveRegistry;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Loader\StringTemplateLoader;
-use Sugar\Loader\TemplateLoaderInterface;
-use Sugar\Parser\Parser;
+use Sugar\Core\Compiler\Compiler;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Escape\Escaper;
+use Sugar\Core\Extension\DirectiveRegistry;
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Loader\TemplateLoaderInterface;
+use Sugar\Core\Parser\Parser;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -81,7 +81,7 @@ trait CompilerTestTrait
      *
      * @param array<string, string> $templates
      * @param array<string, string> $components
-     * @param array<array{pass: \Sugar\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: int}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],

@@ -4,15 +4,15 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\CodeGen\CodeGenerator;
-use Sugar\Compiler\Pipeline\AstPipeline;
-use Sugar\Config\SugarConfig;
-use Sugar\Directive\IfContentDirective;
-use Sugar\Directive\TagDirective;
-use Sugar\Pass\Directive\DirectiveCompilationPass;
-use Sugar\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Pass\Directive\DirectivePairingPass;
-use Sugar\Runtime\HtmlTagHelper;
+use Sugar\Core\CodeGen\CodeGenerator;
+use Sugar\Core\Compiler\Pipeline\AstPipeline;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\IfContentDirective;
+use Sugar\Core\Directive\TagDirective;
+use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
+use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
+use Sugar\Core\Pass\Directive\DirectivePairingPass;
+use Sugar\Core\Runtime\HtmlTagHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 

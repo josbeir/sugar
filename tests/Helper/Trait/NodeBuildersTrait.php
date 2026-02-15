@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Ast\AttributeNode;
-use Sugar\Ast\AttributeValue;
-use Sugar\Ast\ComponentNode;
-use Sugar\Ast\FragmentNode;
-use Sugar\Ast\OutputNode;
-use Sugar\Ast\RawPhpNode;
-use Sugar\Ast\TextNode;
-use Sugar\Enum\OutputContext;
+use Sugar\Core\Ast\AttributeNode;
+use Sugar\Core\Ast\AttributeValue;
+use Sugar\Core\Ast\ComponentNode;
+use Sugar\Core\Ast\FragmentNode;
+use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Enum\OutputContext;
 use Sugar\Tests\Helper\Builder\DirectiveNodeBuilder;
 use Sugar\Tests\Helper\Builder\DocumentNodeBuilder;
 use Sugar\Tests\Helper\Builder\ElementNodeBuilder;
@@ -98,8 +98,8 @@ trait NodeBuildersTrait
     /**
      * Create a fragment node
      *
-     * @param array<\Sugar\Ast\AttributeNode> $attributes
-     * @param array<\Sugar\Ast\Node> $children
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Core\Ast\Node> $children
      */
     protected function fragment(
         array $attributes = [],
@@ -114,8 +114,8 @@ trait NodeBuildersTrait
     /**
      * Create a component node
      *
-     * @param array<\Sugar\Ast\AttributeNode> $attributes
-     * @param array<\Sugar\Ast\Node> $children
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Core\Ast\Node> $children
      */
     protected function component(
         string $name,

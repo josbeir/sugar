@@ -5,7 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 

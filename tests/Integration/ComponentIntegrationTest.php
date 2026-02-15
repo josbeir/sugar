@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Cache\FileCache;
-use Sugar\Config\SugarConfig;
-use Sugar\Engine;
-use Sugar\Escape\Escaper;
-use Sugar\Loader\StringTemplateLoader;
+use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Escape\Escaper;
+use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;

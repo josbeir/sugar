@@ -5,13 +5,13 @@ description: Package custom directives and compiler passes as reusable extension
 
 # Creating Extensions
 
-Extensions bundle custom directives and compiler passes into a reusable package. Each extension implements `ExtensionInterface` and registers features via a `RegistrationContext`.
+Extensions bundle custom directives, compiler passes, and runtime services into a reusable package. Extension internals now live under `Sugar\Core\...`, while optional extension packages live under `Sugar\Extension\...`.
 
 ## Basic Extension
 
 ```php
-use Sugar\Extension\ExtensionInterface;
-use Sugar\Extension\RegistrationContext;
+use Sugar\Core\Extension\ExtensionInterface;
+use Sugar\Core\Extension\RegistrationContext;
 
 final class AuditExtension implements ExtensionInterface
 {
@@ -26,11 +26,47 @@ final class AuditExtension implements ExtensionInterface
 Register the extension with the engine builder:
 
 ```php
-use Sugar\Engine;
+use Sugar\Core\Engine;
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
     ->withExtension(new AuditExtension())
+    ->build();
+```
+
+## Registering Runtime Services
+
+Extensions can provide runtime services that directives and generated runtime calls consume:
+
+```php
+use Sugar\Core\Extension\ExtensionInterface;
+use Sugar\Core\Extension\RegistrationContext;
+
+final class MetricsExtension implements ExtensionInterface
+{
+    public function __construct(private MetricsClient $metrics)
+    {
+    }
+
+    public function register(RegistrationContext $context): void
+    {
+        $context->runtimeService('metrics', $this->metrics);
+        $context->directive('track', TrackDirective::class);
+    }
+}
+```
+
+Runtime services are available through `RuntimeEnvironment` during template execution.
+
+For example, fragment caching is now registered as an optional extension:
+
+```php
+use Sugar\Core\Engine;
+use Sugar\Extension\FragmentCache\FragmentCacheExtension;
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withExtension(new FragmentCacheExtension($cache, defaultTtl: 300))
     ->build();
 ```
 
@@ -53,20 +89,20 @@ Each `before()`/`after()` hook returns a `NodeAction`. Most passes return `NodeA
 
 ::: code-group
 ```php [No changes]
-use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
 
 return NodeAction::none();
 ```
 
 ```php [Skip children]
-use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
 
 return NodeAction::skipChildren();
 ```
 
 ```php [Replace node]
-use Sugar\Ast\TextNode;
-use Sugar\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
 
 $replacement = new TextNode('replacement', $node->line, $node->column);
 
@@ -78,11 +114,11 @@ return NodeAction::replace([$replacement]);
 
 ::: code-group
 ```php [Transform text]
-use Sugar\Ast\Node;
-use Sugar\Ast\TextNode;
-use Sugar\Compiler\Pipeline\AstPassInterface;
-use Sugar\Compiler\Pipeline\NodeAction;
-use Sugar\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\PipelineContext;
 
 final class UppercaseTextPass implements AstPassInterface
 {
@@ -103,12 +139,12 @@ final class UppercaseTextPass implements AstPassInterface
 ```
 
 ```php [Reject inline styles]
-use Sugar\Ast\ElementNode;
-use Sugar\Ast\Node;
-use Sugar\Compiler\Pipeline\AstPassInterface;
-use Sugar\Compiler\Pipeline\NodeAction;
-use Sugar\Compiler\Pipeline\PipelineContext;
-use Sugar\Exception\CompilationException;
+use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Exception\CompilationException;
 
 final class NoInlineStylesPass implements AstPassInterface
 {
@@ -129,11 +165,11 @@ final class NoInlineStylesPass implements AstPassInterface
 ```
 
 ```php [Normalize whitespace]
-use Sugar\Ast\Node;
-use Sugar\Ast\TextNode;
-use Sugar\Compiler\Pipeline\AstPassInterface;
-use Sugar\Compiler\Pipeline\NodeAction;
-use Sugar\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\NodeAction;
+use Sugar\Core\Compiler\Pipeline\PipelineContext;
 
 final class NormalizeWhitespacePass implements AstPassInterface
 {

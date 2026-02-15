@@ -22,10 +22,10 @@ composer require josbeir/sugar
 The high-level `Engine` API provides caching, template loading, and context binding out of the box:
 
 ```php
-use Sugar\Engine;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Cache\FileCache;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\FileTemplateLoader;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
@@ -75,11 +75,11 @@ echo $engine->render('pages/home', [
 For advanced use cases where you need direct control over compilation:
 
 ```php
-use Sugar\Compiler;
-use Sugar\Parser\Parser;
-use Sugar\Escape\Escaper;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Config\SugarConfig;
+use Sugar\Core\Compiler\Compiler;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Escape\Escaper;
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Core\Parser\Parser;
 
 $loader = new FileTemplateLoader(
     config: new SugarConfig(),

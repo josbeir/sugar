@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Constraint;
 
 use PHPUnit\Framework\Constraint\Constraint;
-use Sugar\Ast\RawPhpNode;
+use Sugar\Core\Ast\RawPhpNode;
 
 /**
  * Constraint that asserts PHP code is present in node(s)

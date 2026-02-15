@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Builder;
 
-use Sugar\Ast\DirectiveNode;
-use Sugar\Ast\Node;
+use Sugar\Core\Ast\DirectiveNode;
+use Sugar\Core\Ast\Node;
 
 /**
  * Fluent builder for creating DirectiveNode instances in tests

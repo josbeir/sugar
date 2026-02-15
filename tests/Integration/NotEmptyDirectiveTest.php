@@ -5,7 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
-use Sugar\Runtime\EmptyHelper;
+use Sugar\Core\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 

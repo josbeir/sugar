@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
-use Sugar\Cache\TemplateCacheInterface;
-use Sugar\Config\SugarConfig;
-use Sugar\Engine;
-use Sugar\Loader\FileTemplateLoader;
-use Sugar\Loader\StringTemplateLoader;
+use Sugar\Core\Cache\TemplateCacheInterface;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Core\Loader\StringTemplateLoader;
 
 /**
  * Helper trait for creating Engine instances in tests
