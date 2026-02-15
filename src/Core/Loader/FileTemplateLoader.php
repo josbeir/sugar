@@ -137,12 +137,17 @@ class FileTemplateLoader extends AbstractTemplateLoader
         $paths = [];
 
         foreach ($this->templatePaths as $basePath) {
-            if (!is_dir($basePath)) {
+            $rootPath = realpath($basePath);
+            if ($rootPath === false) {
+                continue;
+            }
+
+            if (!is_dir($rootPath)) {
                 continue;
             }
 
             $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($basePath, RecursiveDirectoryIterator::SKIP_DOTS),
+                new RecursiveDirectoryIterator($rootPath, RecursiveDirectoryIterator::SKIP_DOTS),
                 RecursiveIteratorIterator::LEAVES_ONLY,
             );
 
@@ -156,11 +161,11 @@ class FileTemplateLoader extends AbstractTemplateLoader
                 }
 
                 $absolutePath = $file->getPathname();
-                if (!str_starts_with($absolutePath, $basePath . DIRECTORY_SEPARATOR)) {
+                if (!str_starts_with($absolutePath, $rootPath . DIRECTORY_SEPARATOR)) {
                     continue;
                 }
 
-                $relativePath = substr($absolutePath, strlen($basePath) + 1);
+                $relativePath = substr($absolutePath, strlen($rootPath) + 1);
                 if ($relativePath === '') {
                     continue;
                 }

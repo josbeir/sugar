@@ -8,8 +8,11 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Escape\Escaper;
+use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\ComponentExtension;
+use Sugar\Extension\FragmentCache\FragmentCacheExtension;
+use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -125,6 +128,123 @@ final class ComponentIntegrationTest extends TestCase
         $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
         $this->assertStringContainsString('return ob_get_clean();', $compiled);
         $this->assertStringContainsString("'slot' =>", $compiled);
+    }
+
+    public function testEngineResolvesComponentsWithAbsolutePathsOnlyAndInheritance(): void
+    {
+        $basePath = $this->createTempDir('sugar_templates_');
+        $cachePath = $this->createTempDir('sugar_cache_');
+
+        mkdir($basePath . '/layout', 0777, true);
+        mkdir($basePath . '/Pages', 0777, true);
+        mkdir($basePath . '/components', 0777, true);
+
+        file_put_contents(
+            $basePath . '/layout/default.sugar.php',
+            '<html><body><main s:block="content">Default</main></body></html>',
+        );
+
+        file_put_contents(
+            $basePath . '/components/s-button.sugar.php',
+            '<button class="btn" s:spread="$__sugar_attrs"><?= $slot ?></button>',
+        );
+
+        file_put_contents(
+            $basePath . '/Pages/home.sugar.php',
+            <<<'SUGAR'
+<s-template s:extends="layout/default" />
+<s-template s:extends="layout/default" />
+
+<s-template s:block="content">
+    <p>hello world</p>
+    <h1>Cool title</h1>
+    <div s:ifcontent>
+        <?= 'bla' ?>
+        <s-button s:class="['btn', 'btn-primary']">Click me!</s-button>
+    </div>
+    <s-button s:class="['btn', 'btn-primary']">Click me!</s-button>
+</s-template>
+SUGAR,
+        );
+
+        $loader = new FileTemplateLoader(
+            config: new SugarConfig(),
+            templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+            absolutePathsOnly: true,
+        );
+
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withCache(new FileCache($cachePath))
+            ->withTemplateContext($this)
+            ->withPhpSyntaxValidation(true)
+            ->withDebug(false)
+            ->withExtension(new ComponentExtension())
+            ->build();
+
+        $output = $engine->render('Pages/home.sugar.php');
+
+        $this->assertStringContainsString('Click me!', $output);
+        $this->assertStringContainsString('btn-primary', $output);
+        $this->assertStringContainsString('<p>hello world</p>', $output);
+        $this->assertStringContainsString('<h1>Cool title</h1>', $output);
+    }
+
+    public function testEngineResolvesComponentsWithFragmentCacheAndAbsolutePathsOnly(): void
+    {
+        $basePath = $this->createTempDir('sugar_templates_');
+        $cachePath = $this->createTempDir('sugar_cache_');
+
+        mkdir($basePath . '/layout', 0777, true);
+        mkdir($basePath . '/Pages', 0777, true);
+        mkdir($basePath . '/components', 0777, true);
+
+        file_put_contents(
+            $basePath . '/layout/default.sugar.php',
+            '<html><body><main s:block="content">Default</main></body></html>',
+        );
+
+        file_put_contents(
+            $basePath . '/components/s-button.sugar.php',
+            '<button class="btn" s:spread="$__sugar_attrs"><?= $slot ?></button>',
+        );
+
+        file_put_contents(
+            $basePath . '/Pages/home.sugar.php',
+            <<<'SUGAR'
+<s-template s:extends="layout/default" />
+
+<s-template s:block="content">
+    <div s:cache>
+        <s-button s:class="['btn', 'btn-primary']">Click me!</s-button>
+    </div>
+</s-template>
+SUGAR,
+        );
+
+        $loader = new FileTemplateLoader(
+            config: new SugarConfig(),
+            templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+            absolutePathsOnly: true,
+        );
+
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withCache(new FileCache($cachePath))
+            ->withTemplateContext($this)
+            ->withPhpSyntaxValidation(true)
+            ->withDebug(false)
+            ->withExtension(new FragmentCacheExtension(new ArraySimpleCache()))
+            ->withExtension(new ComponentExtension())
+            ->build();
+
+        $firstOutput = $engine->render('Pages/home.sugar.php');
+        $secondOutput = $engine->render('Pages/home.sugar.php');
+
+        $this->assertStringContainsString('Click me!', $firstOutput);
+        $this->assertStringContainsString('btn-primary', $firstOutput);
+        $this->assertStringContainsString('Click me!', $secondOutput);
+        $this->assertStringContainsString('btn-primary', $secondOutput);
     }
 
     public function testComponentsWorkWithDirectives(): void

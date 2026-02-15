@@ -310,4 +310,25 @@ final class FileTemplateLoaderTest extends TestCase
         unlink($tempDir . '/partials/header.sugar.php');
         $this->removeTempDir($tempDir);
     }
+
+    public function testListTemplatePathsHandlesTrailingBasePathSeparator(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        mkdir($tempDir . '/components', 0777, true);
+
+        file_put_contents($tempDir . '/components/s-button.sugar.php', '<button>OK</button>');
+
+        $loader = new FileTemplateLoader(
+            new SugarConfig(),
+            [rtrim($tempDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR],
+            true,
+        );
+
+        $this->assertSame([
+            'components/s-button.sugar.php',
+        ], $loader->listTemplatePaths('components'));
+
+        unlink($tempDir . '/components/s-button.sugar.php');
+        $this->removeTempDir($tempDir);
+    }
 }
