@@ -5,7 +5,9 @@ namespace Sugar\Extension\Component\Compiler;
 
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Compiler\CompilerInterface;
+use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Loader\TemplateLoaderInterface;
+use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 
@@ -42,8 +44,15 @@ final readonly class ComponentTemplateCompiler
         bool $debug = false,
         ?DependencyTracker $tracker = null,
     ): string {
-        $templateContent = $this->loader->loadComponent($componentName);
-        $componentPath = $this->loader->getComponentPath($componentName);
+        try {
+            $templateContent = $this->loader->loadComponent($componentName);
+            $componentPath = $this->loader->getComponentPath($componentName);
+        } catch (TemplateRuntimeException $templateRuntimeException) {
+            throw new ComponentNotFoundException(
+                $templateRuntimeException->getRawMessage(),
+                previous: $templateRuntimeException,
+            );
+        }
 
         $tracker?->addComponent($this->loader->getComponentFilePath($componentName));
 

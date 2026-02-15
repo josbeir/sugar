@@ -9,10 +9,11 @@ use Sugar\Core\Cache\CachedTemplate;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Exception\CompilationException;
-use Sugar\Core\Exception\ComponentNotFoundException;
+use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Util\ValueNormalizer;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 
 /**
  * Renders components at runtime for dynamic component calls.
@@ -77,8 +78,16 @@ final class ComponentRenderer
      */
     private function getCompiledComponent(string $name, array $slotNames): string
     {
-        $componentPath = $this->loader->getComponentPath($name);
-        $componentSourcePath = $this->loader->getComponentFilePath($name);
+        try {
+            $componentPath = $this->loader->getComponentPath($name);
+            $componentSourcePath = $this->loader->getComponentFilePath($name);
+        } catch (TemplateRuntimeException $templateRuntimeException) {
+            throw new ComponentNotFoundException(
+                $templateRuntimeException->getRawMessage(),
+                previous: $templateRuntimeException,
+            );
+        }
+
         $cacheKey = $componentPath . '::slots:' . implode('|', $slotNames);
 
         $cached = $this->cache->get($cacheKey, $this->debug);

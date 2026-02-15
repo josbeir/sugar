@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Runtime;
+namespace Sugar\Tests\Unit\Extension\Component\Runtime;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Cache\CachedTemplate;
@@ -11,14 +11,17 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
+use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
+/**
+ * Tests for the extension-owned component renderer.
+ */
 final class ComponentRendererTest extends TestCase
 {
     use CompilerTestTrait;

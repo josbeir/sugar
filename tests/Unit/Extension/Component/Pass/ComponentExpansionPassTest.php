@@ -28,6 +28,7 @@ use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
+use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -430,7 +431,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertInstanceOf(RuntimeCallNode::class, $call);
         $this->assertSame(
             RuntimeEnvironment::class
-                . '::requireService(' . RuntimeEnvironment::class . '::RENDERER_SERVICE_ID)->renderComponent',
+                . '::requireService(' . ComponentRuntimeServiceIds::class . '::RENDERER)->renderComponent',
             $call->callableExpression,
         );
         $this->assertSame('$component', $call->arguments[0]);

@@ -18,8 +18,8 @@ use Sugar\Core\Enum\DirectiveType;
  * DirectiveExtractionPass knows to pass them through without processing.
  *
  * Used for:
- * - s:slot - handled by ComponentExpansionPass
- * - s:bind - handled by ComponentExpansionPass
+ * - s:slot - handled by extension-specific passes
+ * - s:bind - handled by extension-specific passes
  * - Future pseudo-directives that need similar treatment
  */
 final class PassThroughDirective implements DirectiveInterface

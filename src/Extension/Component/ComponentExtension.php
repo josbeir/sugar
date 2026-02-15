@@ -12,12 +12,12 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
-use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Pass\ComponentPassPriority;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
+use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 
 /**
  * Registers component expansion behavior and runtime services.
@@ -38,7 +38,7 @@ final class ComponentExtension implements ExtensionInterface
         );
 
         $context->runtimeService(
-            RuntimeEnvironment::RENDERER_SERVICE_ID,
+            ComponentRuntimeServiceIds::RENDERER,
             static function (RegistrationContext $runtimeContext): ComponentRenderer {
                 $compiler = $runtimeContext->getCompiler();
                 $loader = $runtimeContext->getTemplateLoader();

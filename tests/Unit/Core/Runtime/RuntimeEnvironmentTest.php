@@ -4,86 +4,64 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Runtime;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Config\SugarConfig;
+use stdClass;
 use Sugar\Core\Exception\TemplateRuntimeException;
-use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Extension\Component\Compiler\ComponentTemplateCompiler;
-use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
-use Sugar\Tests\Helper\Trait\CompilerTestTrait;
-use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class RuntimeEnvironmentTest extends TestCase
 {
-    use CompilerTestTrait;
-    use TempDirectoryTrait;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->setUpCompiler(
-            config: new SugarConfig(),
-            withTemplateLoader: true,
-            templatePaths: [SUGAR_TEST_TEMPLATES_PATH],
-            componentPaths: ['components'],
-        );
-    }
-
     protected function tearDown(): void
     {
         RuntimeEnvironment::clear();
-        $this->cleanupTempDirs();
         parent::tearDown();
     }
 
-    public function testGetRendererThrowsWhenUnset(): void
+    public function testRequireServiceThrowsWhenMissing(): void
     {
         RuntimeEnvironment::clear();
 
         $this->expectException(TemplateRuntimeException::class);
-        $this->expectExceptionMessage('Runtime service "renderer.component" is not initialized.');
+        $this->expectExceptionMessage('Runtime service "my.service" is not initialized.');
 
-        RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID);
+        RuntimeEnvironment::requireService('my.service');
     }
 
-    public function testSetAndClearRendererService(): void
+    public function testSetAndClearNamedService(): void
     {
-        $renderer = $this->createRenderer();
+        $service = new stdClass();
 
-        RuntimeEnvironment::setService(RuntimeEnvironment::RENDERER_SERVICE_ID, $renderer);
+        RuntimeEnvironment::setService('test.service', $service);
 
-        $this->assertSame($renderer, RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID));
+        $this->assertSame($service, RuntimeEnvironment::requireService('test.service'));
 
-        RuntimeEnvironment::clearService(RuntimeEnvironment::RENDERER_SERVICE_ID);
+        RuntimeEnvironment::clearService('test.service');
 
         $this->expectException(TemplateRuntimeException::class);
-        RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID);
+        RuntimeEnvironment::requireService('test.service');
     }
 
-    public function testSetAndClearRuntimeEnvironment(): void
+    public function testSetAndClearAllServices(): void
     {
-        $renderer = $this->createRenderer();
+        $serviceA = new stdClass();
         $fragmentCache = new ArraySimpleCache();
 
         RuntimeEnvironment::set([
-            RuntimeEnvironment::RENDERER_SERVICE_ID => $renderer,
+            'service.a' => $serviceA,
             'cache.fragment' => $fragmentCache,
         ]);
 
-        $this->assertSame($renderer, RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID));
+        $this->assertSame($serviceA, RuntimeEnvironment::requireService('service.a'));
         $this->assertSame($fragmentCache, RuntimeEnvironment::getService('cache.fragment'));
 
         RuntimeEnvironment::clear();
 
         $this->assertNull(RuntimeEnvironment::getService('cache.fragment'));
         $this->expectException(TemplateRuntimeException::class);
-        RuntimeEnvironment::requireService(RuntimeEnvironment::RENDERER_SERVICE_ID);
+        RuntimeEnvironment::requireService('service.a');
     }
 
-    public function testSetAndClearService(): void
+    public function testHasAndGetService(): void
     {
         $fragmentCache = new ArraySimpleCache();
 
@@ -94,23 +72,5 @@ final class RuntimeEnvironmentTest extends TestCase
         RuntimeEnvironment::clearService('cache.fragment');
         $this->assertFalse(RuntimeEnvironment::hasService('cache.fragment'));
         $this->assertNull(RuntimeEnvironment::getService('cache.fragment'));
-    }
-
-    private function createRenderer(): ComponentRenderer
-    {
-        $cacheDir = $this->createTempDir('sugar_cache_');
-        $cache = new FileCache($cacheDir);
-
-        $loader = $this->templateLoader;
-        $this->assertInstanceOf(FileTemplateLoader::class, $loader);
-
-        return new ComponentRenderer(
-            componentCompiler: new ComponentTemplateCompiler(
-                compiler: $this->compiler,
-                loader: $loader,
-            ),
-            loader: $loader,
-            cache: $cache,
-        );
     }
 }

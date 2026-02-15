@@ -11,7 +11,7 @@ use Sugar\Core\Ast\Trait\SiblingNavigationTrait;
  *
  * Example: <s-button type="primary" class="btn-large">Save</s-button>
  *
- * ComponentNode is replaced by ComponentExpansionPass with the component's
+ * ComponentNode is replaced by extension-provided compilation passes with the component's
  * template content, with slots filled in.
  */
 final class ComponentNode extends Node implements SiblingNavigationInterface

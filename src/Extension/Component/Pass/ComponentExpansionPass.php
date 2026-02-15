@@ -22,8 +22,8 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\ComponentNotFoundException;
 use Sugar\Core\Exception\SyntaxException;
+use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
@@ -32,6 +32,7 @@ use Sugar\Core\Pass\Trait\ScopeIsolationTrait;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Helper\ComponentSlots;
 use Sugar\Extension\Component\Helper\SlotResolver;
+use Sugar\Extension\Component\Runtime\ComponentRuntimeServiceIds;
 
 /**
  * Expands component invocations into their template content
@@ -127,8 +128,8 @@ final class ComponentExpansionPass implements AstPassInterface
         // Load component template
         try {
             $templateContent = $this->loader->loadComponent($component->name);
-        } catch (ComponentNotFoundException $componentNotFoundException) {
-            $message = $componentNotFoundException->getRawMessage();
+        } catch (TemplateRuntimeException $templateRuntimeException) {
+            $message = $templateRuntimeException->getRawMessage();
             if ($context instanceof CompilationContext) {
                 throw $context->createSyntaxExceptionForNode($message, $component);
             }
@@ -404,7 +405,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
         return new RuntimeCallNode(
             callableExpression: RuntimeEnvironment::class
-                . '::requireService(' . RuntimeEnvironment::class . '::RENDERER_SERVICE_ID)->renderComponent',
+                . '::requireService(' . ComponentRuntimeServiceIds::class . '::RENDERER)->renderComponent',
             arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
             line: $line,
             column: $column,
