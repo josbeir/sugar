@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Template;
+namespace Sugar\Tests\Unit\Core\Pass\Template;
 
 use ReflectionMethod;
 use Sugar\Core\Ast\AttributeNode;
@@ -19,7 +19,7 @@ use Sugar\Core\Exception\TemplateNotFoundException;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\Template\TemplateInheritancePass;
-use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
+use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
 final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 {

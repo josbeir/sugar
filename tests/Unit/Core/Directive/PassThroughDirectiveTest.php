@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Directive;
+namespace Sugar\Tests\Unit\Core\Directive;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;

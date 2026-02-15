@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Directive;
+namespace Sugar\Tests\Unit\Core\Pass\Directive;
 
 use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
@@ -20,7 +20,7 @@ use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Extension\FragmentCache\Directive\FragmentCacheDirective;
-use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
+use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
 /**
  * Edge case tests for DirectiveExtractionPass to improve code coverage

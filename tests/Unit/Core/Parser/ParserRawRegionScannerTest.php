@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Parser;
+namespace Sugar\Tests\Unit\Core\Parser;
 
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;

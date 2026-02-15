@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Util;
+namespace Sugar\Tests\Unit\Core\Util;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Util\Hash;

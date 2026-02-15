@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Runtime;
+namespace Sugar\Tests\Unit\Core\Runtime;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Trait;
+namespace Sugar\Tests\Unit\Core\Pass\Trait;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DocumentNode;

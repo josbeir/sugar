@@ -33,6 +33,20 @@ final class ComponentExtension implements ExtensionInterface
      */
     public const SERVICE_RENDERER = 'renderer.component';
 
+    private ?ComponentLoaderInterface $componentLoader = null;
+
+    private ?TemplateLoaderInterface $componentTemplateLoader = null;
+
+    private ?SugarConfig $componentLoaderConfig = null;
+
+    /**
+     * @param array<string> $componentDirectories Directories used to resolve component templates
+     */
+    public function __construct(
+        private readonly array $componentDirectories = ['components'],
+    ) {
+    }
+
     /**
      * @inheritDoc
      */
@@ -45,7 +59,7 @@ final class ComponentExtension implements ExtensionInterface
 
         $context->runtimeService(
             self::SERVICE_RENDERER,
-            static function (RegistrationContext $runtimeContext): ComponentRenderer {
+            function (RegistrationContext $runtimeContext): ComponentRenderer {
                 $compiler = $runtimeContext->getCompiler();
                 $loader = $runtimeContext->getTemplateLoader();
                 $cache = $runtimeContext->getTemplateCache();
@@ -60,7 +74,7 @@ final class ComponentExtension implements ExtensionInterface
                     throw new TemplateRuntimeException('Component renderer runtime dependencies are not initialized.');
                 }
 
-                $componentLoader = self::buildComponentLoader($loader, $config);
+                $componentLoader = $this->getOrCreateComponentLoader($loader, $config);
 
                 return new ComponentRenderer(
                     componentCompiler: new ComponentCompiler(
@@ -98,7 +112,7 @@ final class ComponentExtension implements ExtensionInterface
             throw new TemplateRuntimeException('Component extension registration dependencies are not initialized.');
         }
 
-        $componentLoader = self::buildComponentLoader($loader, $config);
+        $componentLoader = $this->getOrCreateComponentLoader($loader, $config);
 
         $passFactory = new ComponentPassFactory(
             templateLoader: $loader,
@@ -113,16 +127,29 @@ final class ComponentExtension implements ExtensionInterface
     }
 
     /**
-     * Build component loader backed by core resource locator.
+     * Build and cache a component loader for a loader/config pair.
      */
-    private static function buildComponentLoader(
+    private function getOrCreateComponentLoader(
         TemplateLoaderInterface $loader,
         SugarConfig $config,
     ): ComponentLoaderInterface {
-        return ResourceLocatorLoader::forTemplateLoader(
+        if (
+            $this->componentLoader instanceof ComponentLoaderInterface
+            && $this->componentTemplateLoader === $loader
+            && $this->componentLoaderConfig === $config
+        ) {
+            return $this->componentLoader;
+        }
+
+        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $loader,
             config: $config,
-            directories: ['components'],
+            directories: $this->componentDirectories,
         );
+
+        $this->componentTemplateLoader = $loader;
+        $this->componentLoaderConfig = $config;
+
+        return $this->componentLoader;
     }
 }

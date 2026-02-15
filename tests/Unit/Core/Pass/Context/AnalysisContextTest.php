@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Context;
+namespace Sugar\Tests\Unit\Core\Pass\Context;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Enum\OutputContext;

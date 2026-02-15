@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Ast\Helper;
+namespace Sugar\Tests\Unit\Core\Ast\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeNode;

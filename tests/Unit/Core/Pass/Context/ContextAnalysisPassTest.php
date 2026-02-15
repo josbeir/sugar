@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Context;
+namespace Sugar\Tests\Unit\Core\Pass\Context;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\ElementNode;
@@ -9,7 +9,7 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Pass\Context\ContextAnalysisPass;
-use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
+use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
 /**
  * Test context analysis pass

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Ast\Helper;
+namespace Sugar\Tests\Unit\Core\Ast\Helper;
 
 use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;

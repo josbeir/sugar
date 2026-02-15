@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Compiler\Pipeline;
+namespace Sugar\Tests\Unit\Core\Compiler\Pipeline;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\Node;

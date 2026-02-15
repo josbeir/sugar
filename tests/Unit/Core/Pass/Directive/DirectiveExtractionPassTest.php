@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Directive;
+namespace Sugar\Tests\Unit\Core\Pass\Directive;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
@@ -35,7 +35,7 @@ use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
-use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
+use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
 final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 {

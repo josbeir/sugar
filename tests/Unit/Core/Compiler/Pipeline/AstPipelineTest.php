@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Compiler\Pipeline;
+namespace Sugar\Tests\Unit\Core\Compiler\Pipeline;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Exception\Renderer;
+namespace Sugar\Tests\Unit\Core\Exception\Renderer;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Exception\Renderer\TemplateHighlightFormatter;

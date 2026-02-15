@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Escape;
+namespace Sugar\Tests\Unit\Core\Escape;
 
 use InvalidArgumentException;
 use Iterator;

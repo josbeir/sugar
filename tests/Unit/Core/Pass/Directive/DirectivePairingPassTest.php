@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Pass\Directive;
+namespace Sugar\Tests\Unit\Core\Pass\Directive;
 
 use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\Node;
@@ -14,7 +14,7 @@ use Sugar\Core\Directive\SwitchDirective;
 use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Tests\Unit\Pass\MiddlewarePassTestCase;
+use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
 final class DirectivePairingPassTest extends MiddlewarePassTestCase
 {

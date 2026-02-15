@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Extension;
+namespace Sugar\Tests\Unit\Core\Extension;
 
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;

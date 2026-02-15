@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\TemplateInheritance;
+namespace Sugar\Tests\Unit\Core\TemplateInheritance;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;

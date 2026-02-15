@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Exception;
+namespace Sugar\Tests\Unit\Core\Exception;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Exception\CompilationException;

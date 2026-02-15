@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Loader;
+namespace Sugar\Tests\Unit\Core\Loader;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;

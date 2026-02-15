@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Ast;
+namespace Sugar\Tests\Unit\Core\Ast;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DocumentNode;

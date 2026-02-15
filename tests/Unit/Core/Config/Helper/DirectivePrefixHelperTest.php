@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Config\Helper;
+namespace Sugar\Tests\Unit\Core\Config\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
