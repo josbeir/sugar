@@ -101,4 +101,73 @@ final class TemplateContextTest extends TestCase
         $this->assertStringContainsString('Context inherited by component!', $output);
         $this->assertStringContainsString('<h2>Welcome</h2>', $output);
     }
+
+    public function testConsecutiveEmptyFetchOutputsFollowNativePhpCloseTagBehavior(): void
+    {
+        $viewContext = new class {
+            public object $Html;
+
+            public function __construct()
+            {
+                $this->Html = new class {
+                    public function charset(): string
+                    {
+                        return '<meta charset="utf-8">';
+                    }
+
+                    /**
+                     * @param array<int, string> $files
+                     */
+                    public function css(array $files): string
+                    {
+                        return '<link rel="stylesheet" href="/app.css">';
+                    }
+                };
+            }
+
+            public function fetch(string $name): string
+            {
+                return '';
+            }
+        };
+
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout/default.sugar.php' => <<<'SUGAR'
+<head>
+    <?= $this->Html->charset() |> raw() ?>
+    <?= $this->Html->css(['app']) |> raw() ?>
+    <?= $this->fetch('meta') ?>
+    <?= $this->fetch('css') ?>
+    <?= $this->fetch('script') ?>
+</head>
+<body>
+    <main s:block="content">Default</main>
+</body>
+SUGAR,
+                'Pages/home.sugar.php' => <<<'SUGAR'
+<s-template s:extends="/layout/default" />
+<s-template s:block="content">
+    <p>Home</p>
+</s-template>
+SUGAR,
+            ],
+            context: $viewContext,
+        );
+
+        $output = $engine->render('Pages/home.sugar.php');
+        $normalizedOutput = str_replace("\r", '', $output);
+
+        $expected = implode("\n", [
+            '<head>',
+            '    <meta charset="utf-8">    <link rel="stylesheet" href="/app.css">' . str_repeat(' ', 12) . '</head>',
+            '<body>',
+            '    <main>',
+            '    <p>Home</p>',
+            '</main>',
+            '</body>',
+        ]);
+
+        $this->assertSame($expected, $normalizedOutput);
+    }
 }

@@ -241,9 +241,15 @@ final class TemplateInheritancePass implements AstPassInterface
      */
     private function validateExtendsPlacement(DocumentNode $document, CompilationContext $context): void
     {
+        $rootExtendsElements = [];
+
         foreach ($document->children as $child) {
             if (!($child instanceof ElementNode) && !($child instanceof FragmentNode)) {
                 continue;
+            }
+
+            if (AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('extends'))) {
+                $rootExtendsElements[] = $child;
             }
 
             $nested = $this->findNestedExtendsInChildren($child->children);
@@ -263,6 +269,24 @@ final class TemplateInheritancePass implements AstPassInterface
 
             throw $context->createSyntaxExceptionForNode($message, $nested);
         }
+
+        if (count($rootExtendsElements) <= 1) {
+            return;
+        }
+
+        $duplicateExtendsNode = $rootExtendsElements[1];
+        $extendsAttribute = AttributeHelper::findAttribute(
+            $duplicateExtendsNode->attributes,
+            $this->prefixHelper->buildName('extends'),
+        );
+
+        $message = 'Only one s:extends directive is allowed per template.';
+
+        if ($extendsAttribute instanceof AttributeNode) {
+            throw $context->createSyntaxExceptionForAttribute($message, $extendsAttribute);
+        }
+
+        throw $context->createSyntaxExceptionForNode($message, $duplicateExtendsNode);
     }
 
     /**

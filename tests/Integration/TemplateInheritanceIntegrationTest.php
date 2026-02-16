@@ -5,6 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -188,5 +189,31 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertStringContainsString('<div class="alert">included message</div>', $output);
         // Verify parent variable not overwritten
         $this->assertStringContainsString('<p>parent message</p>', $output);
+    }
+
+    public function testThrowsExceptionWhenTemplateHasMultipleExtendsDirectives(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'layout/default.sugar.php' => '<html><body><main s:block="content">Default</main></body></html>',
+                'pages/home.sugar.php' => <<<'SUGAR'
+<s-template s:extends="layout/default" />
+<s-template s:extends="layout/default" />
+
+<s-template s:block="content">
+    <p>hello world</p>
+</s-template>
+SUGAR,
+            ],
+            config: new SugarConfig(),
+        );
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Only one s:extends directive is allowed per template.');
+
+        $this->compiler->compile(
+            $this->templateLoader->load('pages/home.sugar.php'),
+            'pages/home.sugar.php',
+        );
     }
 }

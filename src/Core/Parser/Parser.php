@@ -409,6 +409,7 @@ final readonly class Parser
                 }
 
                 $state->addNode($outputNode);
+
                 continue;
             }
 
@@ -416,6 +417,7 @@ final readonly class Parser
                 $column = $state->columnFromOffset($token->pos);
                 $code = $state->consumePhpBlock();
                 $state->addNode($this->nodeFactory->rawPhp($code, $token->line, $column));
+
                 continue;
             }
 

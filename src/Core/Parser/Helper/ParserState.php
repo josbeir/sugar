@@ -131,7 +131,9 @@ final class ParserState
      */
     public function consumeExpression(): string
     {
-        return trim($this->stream->consumeUntilCloseTag());
+        $result = $this->consumePhpUntilCloseTag();
+
+        return trim($result);
     }
 
     /**
@@ -139,6 +141,28 @@ final class ParserState
      */
     public function consumePhpBlock(): string
     {
-        return trim($this->stream->consumeUntilCloseTag());
+        $result = $this->consumePhpUntilCloseTag();
+
+        return trim($result);
+    }
+
+    /**
+     * Consume tokens until a close tag.
+     */
+    private function consumePhpUntilCloseTag(): string
+    {
+        $code = '';
+
+        while (($token = $this->stream->peek()) instanceof Token) {
+            if ($token->isCloseTag()) {
+                $this->stream->next();
+
+                break;
+            }
+
+            $code .= $this->stream->next()?->content() ?? '';
+        }
+
+        return $code;
     }
 }

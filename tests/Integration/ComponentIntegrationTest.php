@@ -153,7 +153,6 @@ final class ComponentIntegrationTest extends TestCase
             $basePath . '/Pages/home.sugar.php',
             <<<'SUGAR'
 <s-template s:extends="layout/default" />
-<s-template s:extends="layout/default" />
 
 <s-template s:block="content">
     <p>hello world</p>
@@ -188,6 +187,8 @@ SUGAR,
         $this->assertStringContainsString('<button class="btn btn-primary">', $output);
         $this->assertStringContainsString('<p>hello world</p>', $output);
         $this->assertStringContainsString('<h1>Cool title</h1>', $output);
+        $this->assertStringContainsString('<div>        bla        <button class="btn btn-primary">Click me!</button>', $output);
+        $this->assertStringContainsString('</div>    <button class="btn btn-primary">Click me!</button>', $output);
     }
 
     public function testEngineResolvesComponentsWithFragmentCacheAndAbsolutePathsOnly(): void

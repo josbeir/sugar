@@ -75,10 +75,7 @@ final class CodeGenerator
         $buffer->writeln('        extract((array)$__data, EXTR_SKIP);');
         $buffer->write('        ?>');
 
-        // Generate code for each node
-        foreach ($ast->children as $node) {
-            $this->generateNode($node, $buffer);
-        }
+        $this->generateNodeList($ast->children, $buffer);
 
         $buffer->write('<?php');
         $buffer->writeln('');
@@ -126,13 +123,25 @@ final class CodeGenerator
      */
     private function generateText(TextNode $node, OutputBuffer $buffer): void
     {
-        if (str_contains($node->content, '<?')) {
-            $buffer->write(sprintf('<?php echo %s; ?>', var_export($node->content, true)));
+        $this->generateTextContent($node->content, $buffer);
+    }
+
+    /**
+     * Generate static text content.
+     */
+    private function generateTextContent(string $content, OutputBuffer $buffer): void
+    {
+        if ($content === '') {
+            return;
+        }
+
+        if (str_contains($content, '<?')) {
+            $buffer->write(sprintf('<?php echo %s; ?>', var_export($content, true)));
 
             return;
         }
 
-        $buffer->write($node->content);
+        $buffer->write($content);
     }
 
     /**
@@ -223,9 +232,7 @@ final class CodeGenerator
             $buffer->write('>');
 
             // Children
-            foreach ($node->children as $child) {
-                $this->generateNode($child, $buffer);
-            }
+            $this->generateNodeList($node->children, $buffer);
 
             // Closing tag
             if ($node->dynamicTag !== null) {
@@ -310,9 +317,7 @@ final class CodeGenerator
     private function generateFragment(FragmentNode $node, OutputBuffer $buffer): void
     {
         // Fragments don't render themselves - only their children
-        foreach ($node->children as $child) {
-            $this->generateNode($child, $buffer);
-        }
+        $this->generateNodeList($node->children, $buffer);
     }
 
     /**
@@ -337,6 +342,18 @@ final class CodeGenerator
     {
         // For now, output as comment - full directive support comes in next phase
         $buffer->write('<!-- Directive: ' . $node->name . ' = ' . Escaper::html($node->expression) . ' -->');
+    }
+
+    /**
+     * Generate code for a list of nodes.
+     *
+     * @param array<\Sugar\Core\Ast\Node> $nodes
+     */
+    private function generateNodeList(array $nodes, OutputBuffer $buffer): void
+    {
+        foreach ($nodes as $node) {
+            $this->generateNode($node, $buffer);
+        }
     }
 
     /**
