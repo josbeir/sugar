@@ -113,9 +113,15 @@ final class Lexer
                 continue;
             }
 
-            // Short open tag <?
-            if ($this->lookingAt('<?')) {
+            // Short open tag <? (but NOT processing instructions like <?xml)
+            if ($this->lookingAt('<?') && !$this->isProcessingInstruction()) {
                 $this->scanPhpBlock();
+                continue;
+            }
+
+            // XML/SGML processing instruction (e.g. xml, xsl declarations)
+            if ($this->lookingAt('<?')) {
+                $this->scanProcessingInstruction();
                 continue;
             }
 
@@ -588,6 +594,82 @@ final class Lexer
 
                 $this->advance();
             }
+        }
+
+        $this->tokens[] = new Token(
+            TokenType::SpecialTag,
+            substr($this->source, $start, $this->pos - $start),
+            $startLine,
+            $startCol,
+        );
+    }
+
+    /**
+     * Check if the current position is at an XML/SGML processing instruction.
+     *
+     * Processing instructions start with `<?` followed by a letter (e.g. `<?xml`, `<?xsl`),
+     * but are NOT `<?php` or `<?=`. This is used to distinguish them from PHP short open tags.
+     *
+     * @return bool True if the current position is at a processing instruction.
+     */
+    private function isProcessingInstruction(): bool
+    {
+        // Must start with <?
+        if (!$this->lookingAt('<?')) {
+            return false;
+        }
+
+        $afterOpen = $this->pos + 2;
+        if ($afterOpen >= $this->length) {
+            return false;
+        }
+
+        $nextChar = $this->charAt($afterOpen);
+
+        // Processing instructions start with <? followed by a letter (e.g. <?xml, <?xsl)
+        // but NOT <?php or <?= (those are PHP tags handled elsewhere)
+        if (!ctype_alpha($nextChar)) {
+            return false;
+        }
+
+        // Extract the keyword after <?
+        $keywordStart = $afterOpen;
+        $keywordEnd = $afterOpen;
+        while ($keywordEnd < $this->length && ctype_alpha($this->charAt($keywordEnd))) {
+            $keywordEnd++;
+        }
+
+        $keyword = strtolower(substr($this->source, $keywordStart, $keywordEnd - $keywordStart));
+
+        // <?php is a PHP tag, not a processing instruction
+        return $keyword !== 'php';
+    }
+
+    /**
+     * Scan an XML/SGML processing instruction: `<?xml ... ?>`, `<?xsl ... ?>`, etc.
+     *
+     * Emits the entire processing instruction (from `<?` to `?>`) as a SpecialTag token
+     * so it passes through unchanged in the compiled output.
+     */
+    private function scanProcessingInstruction(): void
+    {
+        $start = $this->pos;
+        $startLine = $this->line;
+        $startCol = $this->column;
+
+        // Advance past <?
+        $this->advance();
+        $this->advance();
+
+        // Find the closing PI terminator
+        while ($this->pos < $this->length) {
+            if ($this->lookingAt('?>')) {
+                $this->advance();
+                $this->advance();
+                break;
+            }
+
+            $this->advance();
         }
 
         $this->tokens[] = new Token(

@@ -619,6 +619,29 @@ final class ParserTest extends TestCase
         $this->assertSame('<![CDATA[Hello]]>', $doc->children[0]->content);
     }
 
+    public function testParseXmlProcessingInstructionAsTextNode(): void
+    {
+        $template = '<?xml version="1.0" encoding="utf-8"?>' . "\n" . '<div>ok</div>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertCount(3, $doc->children);
+        $this->assertInstanceOf(TextNode::class, $doc->children[0]);
+        $this->assertSame('<?xml version="1.0" encoding="utf-8"?>', $doc->children[0]->content);
+        $this->assertInstanceOf(TextNode::class, $doc->children[1]);
+        $this->assertSame("\n", $doc->children[1]->content);
+        $this->assertInstanceOf(ElementNode::class, $doc->children[2]);
+        $this->assertSame('div', $doc->children[2]->tag);
+    }
+
+    public function testParseXslProcessingInstructionAsTextNode(): void
+    {
+        $template = '<?xsl-stylesheet type="text/xsl" href="style.xsl"?>' . "\n" . '<root/>';
+        $doc = $this->parser->parse($template);
+
+        $this->assertInstanceOf(TextNode::class, $doc->children[0]);
+        $this->assertSame('<?xsl-stylesheet type="text/xsl" href="style.xsl"?>', $doc->children[0]->content);
+    }
+
     public function testParseSpecialTagWithoutClosingBracket(): void
     {
         $template = '<!DOCTYPE html';
