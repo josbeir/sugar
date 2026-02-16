@@ -7,7 +7,7 @@ namespace Sugar\Core\Parser\Helper;
  * Utility for parsing pipe operator syntax
  *
  * Provides DRY parsing of PHP 8.5 pipe operators (|>) that can be used by:
- * - Parser (when parsing <?= ?> output tags)
+ * - Parser (when parsing short echo output tags)
  * - Directive compilers (when creating OutputNodes from directive expressions)
  *
  * Example:
