@@ -190,6 +190,55 @@ SUGAR,
         $this->assertStringContainsString('<h1>Cool title</h1>', $output);
     }
 
+    public function testEnginePreservesClassAttributesForIfContentComponent(): void
+    {
+        $basePath = $this->createTempDir('sugar_templates_');
+        $cachePath = $this->createTempDir('sugar_cache_');
+
+        mkdir($basePath . '/Pages', 0777, true);
+        mkdir($basePath . '/components', 0777, true);
+
+        file_put_contents(
+            $basePath . '/components/s-button.sugar.php',
+            <<<'SUGAR'
+<button class="button" s:class="['bla']" s:ifcontent>
+    <?= 'bla' ?>
+</button>
+SUGAR,
+        );
+
+        file_put_contents(
+            $basePath . '/Pages/home.sugar.php',
+            <<<'SUGAR'
+<s-button s:class="['btn', 'btn-primary']">Click me!</s-button>
+SUGAR,
+        );
+
+        $loader = new FileTemplateLoader(
+            config: new SugarConfig(),
+            templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+            absolutePathsOnly: true,
+        );
+
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withCache(new FileCache($cachePath))
+            ->withTemplateContext($this)
+            ->withPhpSyntaxValidation(true)
+            ->withDebug(false)
+            ->withExtension(new ComponentExtension())
+            ->build();
+
+        $output = $engine->render('Pages/home.sugar.php');
+
+        $this->assertStringContainsString('<button class="', $output);
+        $this->assertStringContainsString('button', $output);
+        $this->assertStringContainsString('bla', $output);
+        $this->assertStringContainsString('btn', $output);
+        $this->assertStringContainsString('btn-primary', $output);
+        $this->assertStringContainsString('>    bla</button>', $output);
+    }
+
     public function testEngineResolvesComponentsWithFragmentCacheAndAbsolutePathsOnly(): void
     {
         $basePath = $this->createTempDir('sugar_templates_');

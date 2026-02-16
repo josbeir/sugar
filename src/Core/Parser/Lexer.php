@@ -1181,6 +1181,7 @@ final class Lexer
         if ($this->isAlpha($next)) {
             return true;
         }
+
         return $next === '/';
     }
 
@@ -1299,15 +1300,19 @@ final class Lexer
         if ($this->isAlphanumeric($ch)) {
             return true;
         }
+
         if ($ch === '-') {
             return true;
         }
+
         if ($ch === '_') {
             return true;
         }
+
         if ($ch === ':') {
             return true;
         }
+
         return $ch === '.';
     }
 
@@ -1319,18 +1324,23 @@ final class Lexer
         if ($this->isAlphanumeric($ch)) {
             return true;
         }
+
         if ($ch === '-') {
             return true;
         }
+
         if ($ch === '_') {
             return true;
         }
+
         if ($ch === ':') {
             return true;
         }
+
         if ($ch === '.') {
             return true;
         }
+
         return $ch === '@';
     }
 

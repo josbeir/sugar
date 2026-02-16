@@ -147,6 +147,23 @@ final class ComponentExpansionPass implements AstPassInterface
 
         $templateAst = $this->componentAstCache[$component->name];
 
+        // Categorize attributes: control flow, attribute directives, bindings, merge
+        $categorized = $this->categorizeComponentAttributes($component->attributes);
+
+        // Find root element in component template for attribute merging
+        // This must run before directive extraction/compilation so directives
+        // like s:ifcontent capture merged attributes in their element metadata.
+        $rootElement = NodeTraverser::findRootElement($templateAst);
+
+        // Merge non-binding attributes to root element
+        if ($rootElement instanceof ElementNode) {
+            $this->mergeAttributesToRoot(
+                $rootElement,
+                $categorized['merge'],
+                $categorized['attributeDirectives'],
+            );
+        }
+
         // Process template inheritance (s:extends, s:include) in component template
         // Use resolved component path for proper relative path resolution
         $componentPath = $this->loader->getComponentPath($component->name);
@@ -159,21 +176,6 @@ final class ComponentExpansionPass implements AstPassInterface
         $inheritanceContext->stampTemplatePath($templateAst);
         // Process template inheritance and directives in component template
         $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
-
-        // Categorize attributes: control flow, attribute directives, bindings, merge
-        $categorized = $this->categorizeComponentAttributes($component->attributes);
-
-        // Find root element in component template for attribute merging
-        $rootElement = NodeTraverser::findRootElement($templateAst);
-
-        // Merge non-binding attributes to root element
-        if ($rootElement instanceof ElementNode) {
-            $this->mergeAttributesToRoot(
-                $rootElement,
-                $categorized['merge'],
-                $categorized['attributeDirectives'],
-            );
-        }
 
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
         $slots = $this->slotResolver->extract($component->children);

@@ -1013,6 +1013,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $this->assertCount(1, $elem->attributes);
         $attr = $elem->attributes[0];
         $this->assertSame('disabled', $attr->name);
@@ -1025,6 +1026,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $this->assertCount(3, $elem->attributes);
     }
 
@@ -1035,6 +1037,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $attr = $elem->attributes[0];
         $this->assertSame('data-id', $attr->name);
     }
@@ -1046,6 +1049,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $attr = $elem->attributes[0];
         $this->assertSame('data-info', $attr->name);
     }
@@ -1057,6 +1061,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $this->assertCount(1, $elem->attributes);
         $this->assertSame('data-value', $elem->attributes[0]->name);
     }
@@ -1068,6 +1073,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $this->assertCount(2, $elem->attributes);
     }
 
@@ -1181,6 +1187,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $elem = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $elem);
         $this->assertGreaterThanOrEqual(6, count($elem->attributes));
     }
 
@@ -1398,6 +1405,7 @@ EOT;
         $doc = $this->parser->parse($template);
 
         $article = $doc->children[0];
+        $this->assertInstanceOf(ElementNode::class, $article);
         $section = $article->children[0];
         $this->assertInstanceOf(ElementNode::class, $section);
         $this->assertCount(1, $section->children); // Raw body
