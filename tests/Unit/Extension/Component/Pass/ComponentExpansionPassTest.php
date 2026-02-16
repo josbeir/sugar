@@ -267,7 +267,9 @@ final class ComponentExpansionPassTest extends TestCase
         $result = $this->executePipeline($ast, $this->createContext());
         $code = $this->astToString($result);
 
-        $this->assertStringContainsString('s:class', $code);
+        $this->assertStringContainsString('class="<?=', $code);
+        $this->assertStringContainsString('classNames', $code);
+        $this->assertStringContainsString("'active' => true", $code);
     }
 
     public function testNestedComponentDirectiveExpandsInTemplate(): void

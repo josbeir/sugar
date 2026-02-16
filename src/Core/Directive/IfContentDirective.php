@@ -8,6 +8,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
@@ -78,37 +79,99 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
         // Get element metadata to recreate opening and closing tags
         $element = $node->getElementNode();
         if ($element !== null) {
-            // Build attributes string
-            $attributes = '';
-            foreach ($element->attributes as $attr) {
-                if (!$this->isIfContentAttribute($attr->name)) {
-                    if ($attr->value->isBoolean()) {
-                        $attributes .= ' ' . $attr->name;
-                    } elseif ($attr->value->isStatic()) {
-                        // Static string value
-                        $attributes .= sprintf(' %s="%s"', $attr->name, $attr->value->static ?? '');
-                    }
-
-                    // Note: Dynamic attributes (OutputNode) are not supported in s:ifcontent context
-                    // They would have been transformed by previous passes
-                }
-            }
-
             // Build opening tag
             if ($element->dynamicTag !== null) {
-                // Dynamic tag - output using variable
                 $parts[] = $this->rawNode(
-                    sprintf("echo '<' . %s . %s . '>';", $element->dynamicTag, var_export($attributes, true)),
+                    sprintf("echo '<' . %s;", $element->dynamicTag),
                     $node,
                 );
             } else {
-                // Static tag
-                $openingTag = '<' . $element->tag . $attributes . '>';
                 $parts[] = $this->rawNode(
-                    sprintf('echo %s;', var_export($openingTag, true)),
+                    sprintf('echo %s;', var_export('<' . $element->tag, true)),
                     $node,
                 );
             }
+
+            foreach ($element->attributes as $attr) {
+                if ($this->isIfContentAttribute($attr->name)) {
+                    continue;
+                }
+
+                if ($attr->name === '' && $attr->value->isOutput()) {
+                    $spreadOutput = $attr->value->output;
+                    if ($spreadOutput instanceof OutputNode) {
+                        $spreadExpression = sprintf(
+                            '\$__ifcontent_attr = %s;',
+                            $spreadOutput->expression,
+                        ) . " if (\$__ifcontent_attr !== '') { echo ' ' . \$__ifcontent_attr; }";
+
+                        $parts[] = $this->rawNode(
+                            $spreadExpression,
+                            $node,
+                        );
+                    }
+
+                    continue;
+                }
+
+                if ($attr->value->isBoolean()) {
+                    $parts[] = $this->rawNode(
+                        sprintf('echo %s;', var_export(' ' . $attr->name, true)),
+                        $node,
+                    );
+
+                    continue;
+                }
+
+                if ($attr->value->isStatic()) {
+                    $staticAttribute = sprintf(
+                        ' %s="%s"',
+                        $attr->name,
+                        $attr->value->static ?? '',
+                    );
+
+                    $parts[] = $this->rawNode(
+                        sprintf('echo %s;', var_export($staticAttribute, true)),
+                        $node,
+                    );
+
+                    continue;
+                }
+
+                if ($attr->value->isOutput()) {
+                    $output = $attr->value->output;
+                    if (!$output instanceof OutputNode) {
+                        continue;
+                    }
+
+                    $parts[] = $this->rawNode(
+                        sprintf('echo %s;', var_export(' ' . $attr->name . '="', true)),
+                        $node,
+                    );
+
+                    if ($output->escape) {
+                        $parts[] = $this->rawNode(
+                            sprintf(
+                                'echo htmlspecialchars((string) (%s), ENT_QUOTES, \"UTF-8\");',
+                                $output->expression,
+                            ),
+                            $node,
+                        );
+                    } else {
+                        $parts[] = $this->rawNode(
+                            sprintf('echo %s;', $output->expression),
+                            $node,
+                        );
+                    }
+
+                    $parts[] = $this->rawNode(
+                        sprintf('echo %s;', var_export('"', true)),
+                        $node,
+                    );
+                }
+            }
+
+            $parts[] = $this->rawNode("echo '>';", $node);
 
             // Output the captured content
             $parts[] = $this->rawNode('echo ' . $varName . ';', $node);
