@@ -32,23 +32,20 @@ use Sugar\Core\Parser\Helper\PipeParser;
  *                  OutputNode / RawPhpNode / RawBodyNode.
  *
  * Example:
- *   $parser = new Parser();
+ *   $parser = new Parser(new SugarConfig());
  *   $doc = $parser->parse('<div s:if="$show">...</div>');
  */
 final readonly class Parser
 {
-    private SugarConfig $config;
-
     private DirectivePrefixHelper $prefixHelper;
 
     private Lexer $lexer;
 
     /**
-     * @param \Sugar\Core\Config\SugarConfig|null $config Configuration (optional, creates default if null)
+     * @param \Sugar\Core\Config\SugarConfig $config Parser configuration
      */
-    public function __construct(?SugarConfig $config = null)
+    public function __construct(private SugarConfig $config)
     {
-        $this->config = $config ?? new SugarConfig();
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
         $this->lexer = new Lexer($this->config);
     }

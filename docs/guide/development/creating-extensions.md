@@ -90,12 +90,12 @@ Available getters:
 - `getConfig()`
 - `getTemplateLoader()`
 - `getTemplateCache()`
-- `getTemplateContext()`
+- `getTemplateContext()` (may be `null` when no template context is configured)
 - `isDebug()`
 - `getParser()`
 - `getDirectiveRegistry()`
 
-These registration dependencies are non-null.
+All registration dependencies listed above are non-null, except `getTemplateContext()`, which may return `null`.
 
 ### RuntimeContext (render time)
 

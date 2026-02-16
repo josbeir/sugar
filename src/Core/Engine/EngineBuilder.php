@@ -220,7 +220,7 @@ final class EngineBuilder
         }
 
         // Create compiler dependencies
-        $parser = new Parser();
+        $parser = new Parser($this->config);
         $escaper = new Escaper();
 
         // Use provided registry or create new one with defaults
