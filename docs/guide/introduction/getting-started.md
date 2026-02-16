@@ -50,25 +50,91 @@ By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths rela
 For a complete overview of all builder methods and configuration options, see [Engine Configuration](/guide/development/index).
 :::
 
-## Example Template
+## First Template (Simple)
 
 ::: code-group
 ```html [pages/home.sugar.php]
-<h1 s:text="$title"></h1>
-
-<s-card s:bind="$userCard">
-    <div s:slot="header">Welcome back</div>
-    <p>Hello, <?= $user->name ?></p>
-</s-card>
+<h1><?= $title ?></h1>
+<p>Hello, <?= $user->name ?></p>
+<p s:if="$showHint">This line is controlled by a Sugar directive.</p>
 ```
 
 ```php [Render]
 echo $engine->render('pages/home', [
-    'title' => 'Welcome',
+    'title' => 'Welcome <Sugar>',
     'user' => $currentUser,
-    'userCard' => ['class' => 'card'],
+    'showHint' => true,
 ]);
 ```
+
+```html [Rendered output]
+<h1>Welcome &lt;Sugar&gt;</h1>
+<p>Hello, Alex &amp; Co.</p>
+<p>This line is controlled by a Sugar directive.</p>
+```
+:::
+
+## Next Step: Components with slots
+
+Once the basic flow is clear, add reusable components:
+
+::: code-group
+```html [pages/home.sugar.php]
+<h1><?= $title ?></h1>
+<p s:if="$showHint">This line is controlled by a Sugar directive.</p>
+
+<s-user-panel class="shadow-lg">
+    <h3 s:slot="header">Profile</h3>
+    <p>Hello, <?= $user->name ?></p>
+    <p s:slot="footer">Profile ready</p>
+</s-user-panel>
+```
+
+```php [Render]
+echo $engine->render('pages/home', [
+    'title' => 'Welcome <Sugar>',
+    'user' => $currentUser,
+    'showHint' => true,
+]);
+```
+
+```html [components/s-user-panel.sugar.php]
+<article class="card">
+    <header><?= $header ?? '' ?></header>
+    <section><?= $slot ?></section>
+    <footer><?= $footer ?? '' ?></footer>
+</article>
+```
+
+```html [Rendered output]
+<h1>Welcome &lt;Sugar&gt;</h1>
+<p>This line is controlled by a Sugar directive.</p>
+<article class="card shadow-lg">
+    <header><h3>Profile</h3></header>
+    <p>Hello, Alex &amp; Co.</p>
+    <footer><p>Profile ready</p></footer>
+</article>
+```
+:::
+
+In this example:
+
+- Named slots (`s:slot="header"`, `s:slot="footer"`) handle structured component content.
+- `class="shadow-lg"` is a regular HTML attribute merged onto the component root.
+- The default slot is the inner content (`<p>Hello, ...</p>`).
+
+Use `s:bind` when you need optional component variables, for example:
+
+```html
+<s-user-panel s:bind="['compact' => true]">...</s-user-panel>
+```
+
+::: tip
+Continue with:
+
+- [Components](/guide/templates/components)
+- [Template Inheritance](/guide/templates/inheritance)
+- [Directives](/guide/language/directives)
 :::
 
 ## Low-Level Compiler API

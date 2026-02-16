@@ -45,6 +45,20 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 	<s-template s:if="$nope">Not parsed</s-template>
 </div>
 ```
+
+```html [Rendered]
+<!-- $isReady = true, $isActive = true, $userName = 'Jasper' -->
+<div>Ready</div>
+<div class="active"></div>
+<div>Jasper</div>
+<s-card>
+	<div s:slot="header">Title</div>
+</s-card>
+<div>
+	{{ this-is-left-untouched }}
+	<s-template s:if="$nope">Not parsed</s-template>
+</div>
+```
 :::
 
 ::: details

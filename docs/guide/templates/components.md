@@ -50,6 +50,11 @@ You can customize component directories when needed:
 <s-button>Click Me</s-button>
 ```
 
+**Rendered output**:
+```html
+<button class="btn" type="button">Click Me</button>
+```
+
 ::: tip
 Component tags use the `s-` prefix, and component filenames should include the same prefix (for example, `components/s-button.sugar.php`).
 :::
@@ -96,6 +101,34 @@ templates/
     └── s-alert.sugar.php // [!code focus]
 ```
 
+## Named Slots
+
+::: code-group
+```html [Usage]
+<s-user-panel>
+    <h3 s:slot="header">User Profile</h3>
+    <p>Main content here</p>
+    <p s:slot="footer">Last updated just now</p>
+</s-user-panel>
+```
+
+```html [components/s-user-panel.sugar.php]
+<article class="card">
+    <header><?= $header ?? '' ?></header>
+    <section><?= $slot ?></section>
+    <footer><?= $footer ?? '' ?></footer>
+</article>
+```
+
+```html [Rendered output]
+<article class="card">
+    <header><h3>User Profile</h3></header>
+    <section><p>Main content here</p></section>
+    <footer><p>Last updated just now</p></footer>
+</article>
+```
+:::
+
 ## Props and Defaults
 
 Components receive props as variables. Define defaults at the top of the component:
@@ -122,6 +155,22 @@ $elevated ??= false;
 
 ## Dynamic Component Invocation (`s:component`)
 
+Use `s:component` when the component name must be decided at runtime.
+
+### Normal vs Dynamic
+
+| Mode | Example | Component name known | Typical use |
+| --- | --- | --- | --- |
+| Normal component tag | `<s-button>...</s-button>` | Compile time | Most cases (preferred when name is fixed) |
+| Dynamic component directive | `<div s:component="$componentName">...</div>` | Runtime | Feature flags, role-based UI, configurable widgets |
+
+How they differ:
+
+- Normal tags are resolved directly from the tag name (for example `s-button` -> `components/s-button.sugar.php`).
+- Dynamic components resolve the name from an expression at render time.
+- Both support slots and `s:bind` props.
+- For dynamic rendering, the expression must evaluate to a valid component name.
+
 ::: code-group
 ```html [Static]
 <div s:component="button">Click Me</div>
@@ -136,23 +185,53 @@ $elevated ??= false;
 ```
 :::
 
+::: tip
+If the component name is known up front, use the normal component tag (`<s-button>`) for clearer templates. Use `s:component` only when the name must be dynamic.
+:::
+
 ## Component Props with `s:bind`
 
 ::: code-group
 ```html [Literal]
-<s-alert s:bind="['class' => 'alert alert-success', 'title' => 'Well done!']">
+<s-card s:bind="['title' => 'Well done!', 'elevated' => true]">
     Your changes have been saved.
-</s-alert>
+</s-card>
 ```
 
 ```html [Variable]
-<s-alert s:bind="$alertProps">Your changes have been saved.</s-alert>
+<s-card s:bind="$cardProps">Your changes have been saved.</s-card>
 ```
 :::
+
+### What `s:bind` Does
+
+`s:bind` maps array keys to variables inside the component template.
+
+Example:
+
+```html
+<s-card s:bind="['title' => 'Well done!', 'elevated' => true]">
+    Saved.
+</s-card>
+```
+
+Inside `components/s-card.sugar.php`, those become:
+
+- `$title` = `'Well done!'`
+- `$elevated` = `true`
+- `$slot` = `'Saved.'`
 
 ::: warning
 Only props passed through `s:bind` become component variables. Regular attributes are merged onto the root element.
 :::
+
+For example, pass classes and IDs as regular attributes:
+
+```html
+<s-card s:bind="['title' => 'Well done!']" class="shadow-lg" id="notice-card">
+    Saved.
+</s-card>
+```
 
 ## Attribute Merging
 
@@ -163,33 +242,6 @@ Attributes not consumed as props are merged onto the component root element:
     Profile content here
 </s-card>
 ```
-
-## Named Slots
-
-::: code-group
-```html [Named]
-<s-card>
-    <h3 s:slot="header">User Profile</h3>
-    <s-template s:slot="footer">
-        <button>Cancel</button>
-        <button>Save</button>
-    </s-template>
-    <p>Main content here</p>
-</s-card>
-```
-
-```html [Component template]
-<article class="card">
-    <header><?= $header ?? '' ?></header>
-    <section><?= $slot ?></section>
-    <footer><?= $footer ?? '' ?></footer>
-</article>
-```
-:::
-
-::: tip
-Named slots are available as `$header`, `$footer`, or any `s:slot` name you provide.
-:::
 
 ## Slot Fallbacks
 

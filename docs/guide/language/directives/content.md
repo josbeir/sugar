@@ -26,6 +26,11 @@ Output escaped text from a value.
 ```html [Fallback]
 <div s:text="$userName ?? 'Guest'"></div>
 ```
+
+```html [Rendered]
+<!-- $userName = '<Jasper>' -->
+<div>&lt;Jasper&gt;</div>
+```
 :::
 
 ### s:html
@@ -44,6 +49,11 @@ Only use `s:html` with trusted content.
 ```html [Snippet]
 <div s:html="$snippet"></div>
 ```
+
+```html [Rendered]
+<!-- $snippet = '<strong>Hello</strong>' -->
+<div><strong>Hello</strong></div>
+```
 :::
 
 ## Related Pass-through Directive
@@ -58,4 +68,9 @@ Add `s:nowrap` to render content without the surrounding element:
 
 ```html
 <div s:text="$headline" s:nowrap></div>
+```
+
+```html
+<!-- $headline = 'News' -->
+News
 ```

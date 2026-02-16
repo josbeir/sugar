@@ -39,6 +39,11 @@ Render the element only when the expression evaluates to true.
 ```html [Negated]
 <div s:if="!$isReady">Loading...</div>
 ```
+
+```html [Rendered]
+<!-- $isReady = true -->
+<div>Ready</div>
+```
 :::
 
 ### s:unless
@@ -51,12 +56,22 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 <div s:unless="$isReady">Loading...</div>
 ```
 
+```html
+<!-- $isReady = false -->
+<div>Loading...</div>
+```
+
 ### s:isset
 
 Render the element when the variable is set (not null and defined).
 
 ```html
 <div s:isset="$user">Welcome, <?= $user->name ?></div>
+```
+
+```html
+<!-- $user->name = 'Jasper' -->
+<div>Welcome, Jasper</div>
 ```
 
 ### s:empty
@@ -69,6 +84,11 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 <div s:empty="$items">No items found</div>
 ```
 
+```html
+<!-- $items = [] -->
+<div>No items found</div>
+```
+
 ### s:notempty
 
 Render the element when the value is not empty.
@@ -77,6 +97,11 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 
 ```html
 <div s:notempty="$items">Items available</div>
+```
+
+```html
+<!-- $items = ['A'] -->
+<div>Items available</div>
 ```
 
 ### s:foreach
@@ -106,6 +131,16 @@ For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadat
     </li>
 </ul>
 ```
+
+```html [Rendered]
+<!-- $items = ['A', 'B'] -->
+<ul>
+    <li>A</li>
+</ul>
+<ul>
+    <li>B</li>
+</ul>
+```
 :::
 
 ### s:forelse
@@ -131,6 +166,11 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
     </li>
 </ul>
 <div s:empty>No items found</div>
+```
+
+```html [Rendered when empty]
+<!-- $items = [] -->
+<div>No items found</div>
 ```
 :::
 

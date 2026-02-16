@@ -29,63 +29,27 @@ features:
     details: Props, slots, and attribute merging with zero runtime cost.
 ---
 
-::: warning
-Don't worry: This **Sugar** is **safe** for diabetics. :drum:
-:::
-
 ## A Taste of the Syntax
 
-Here's what a real template looks like with Sugar. Click each tab to see the full picture:
+Here is a small, beginner-friendly example. Click each tab to see how layout inheritance and components fit together:
 
 ::: code-group
 
 ```php [Child Template]
-<!-- pages/orders.sugar.php -->
+<!-- pages/home.sugar.php -->
 <s-template s:extends="layouts/app.sugar.php"></s-template>
 
-<title s:block="title">Orders</title>
+<title s:block="title">Home</title>
 
-<div s:block="content">
-  <h1>Your Orders</h1>
-  <p class="rating" aria-label="Priority">
-    <span s:times="3">★</span>
-  </p>
+<s-template s:block="content">
+  <h1>Welcome, <?= $user->name ?></h1>
 
-  <p s:if="$showFilters" class="muted">Refine results using the filters below.</p>
-  <p s:else class="muted">Showing all orders.</p>
+  <s-button class="btn-dark" s:class="['btn-active' => $isActive]">
+    Click me
+  </s-button>
 
-  <!-- Include reusable partials -->
-  <s-template s:include="partials/filter-bar"></s-template>
-
-  <div s:cache="['key' => 'orders:summary:' . $user->id, 'ttl' => 300]"
-    s:class="['summary', 'summary--empty' => empty($orders)]">
-    <strong><?= count($orders) ?></strong> orders found
-    <span class="muted">(<?= $user->name |> trim(...) |> strtoupper(...) ?>)</span>
-  </div>
-
-  <?php
-    // PHP is still available, just like you expect
-    $visibleOrders = array_values(array_filter(
-      $orders,
-      static fn($order) => $order->isVisible,
-    ));
-    $topOrder = $visibleOrders[0] ?? null;
-  ?>
-  <p s:if="$topOrder" class="muted">Top visible order: <?= $topOrder->id ?></p>
-
-  <!-- Use a component with props and slots -->
-  <s-orders-table s:bind="['orders' => $orders, 'pagination' => $pagination]">
-    <h2>Order Summary</h2>
-    <p>View and manage all your orders below.</p>
-
-    <div s:slot="empty">
-      <p>No orders found. <a href="/orders/new">Create one</a>.</p>
-    </div>
-  </s-orders-table>
-
-  <!-- Another include -->
-  <s-template s:include="partials/pagination" s:with="['pagination' => $pagination]"></s-template>
-</div>
+  <p s:if="$showHint">You can hide this hint with s:if.</p>
+</s-template>
 ```
 
 ```php [Parent Layout]
@@ -94,70 +58,41 @@ Here's what a real template looks like with Sugar. Click each tab to see the ful
 <html>
 <head>
   <meta charset="UTF-8">
-  <title s:block="title">My App</title>
+  <title s:block="title">Sugar App</title>
 </head>
 <body>
-  <header>
-    <nav>
-      <a href="/">Home</a>
-      <a href="/orders">Orders</a>
-      <a href="/settings">Settings</a>
-    </nav>
-  </header>
-
-  <main>
-    <div s:block="content">
-      <!-- Child pages replace this block -->
-    </div>
-  </main>
-
-  <footer>
-    <p>&copy; 2024. All rights reserved.</p>
-  </footer>
+  <main s:block="content">Default content</main>
 </body>
 </html>
 ```
 
-```php [Component: OrdersTable]
-<!-- components/s-orders-table.sugar.php -->
-<div class="orders-table">
-  <!-- Main slot content (if needed) -->
-  <div class="header">
-    <?= $slot ?>
-  </div>
+```php [Component: Button]
+<!-- components/s-button.sugar.php -->
+<button class="btn">
+  <?= $slot ?>
+</button>
+```
 
-  <table>
-    <thead>
-      <tr>
-        <th>Order #</th>
-        <th>Customer</th>
-        <th>Status</th>
-        <th>Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr s:forelse="$orders as $order"
-        s:class="['paid' => $order->isPaid, 'pending' => !$order->isPaid]"
-      >
-        <td>#<?= $order->id ?></td>
-        <td><?= $order->customerName ?></td>
-        <td>
-          <span s:class="['badge-success' => $order->isPaid, 'badge-warning' => !$order->isPaid]">
-            <?= $order->isPaid ? 'Paid' : 'Pending' ?>
-          </span>
-        </td>
-        <td>$<?= number_format($order->total, 2) ?></td>
-      </tr>
-
-      <!-- Empty state named slot -->
-      <tr s:empty>
-        <td colspan="4"><?= $empty ?? 'No orders found' ?></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+```html [Rendered output]
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Home</title>
+</head>
+<body>
+  <main>
+    <h1>Welcome, Jasper</h1>
+    <button class="btn btn-dark btn-active">Click me</button>
+    <small class="hint">Press to continue</small>
+    <p>You can hide this hint with s:if.</p>
+  </main>
+</body>
+</html>
 ```
 
 :::
 
-
+::: tip
+New to Sugar? Start with [Getting Started](/guide/introduction/getting-started), then move to [Template Inheritance](/guide/templates/inheritance) and [Components](/guide/templates/components).
+:::
