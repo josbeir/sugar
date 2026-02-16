@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 use Sugar\Core\Parser\Lexer;
 use Sugar\Core\Parser\Parser;
-use Sugar\Core\Parser\TokenStream;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -33,7 +32,6 @@ final class ParserBenchmark
         $effectiveComparePath = $comparePath ?? $jsonPath;
 
         $parser = new Parser();
-        $lexer = new Lexer();
         $cases = $this->cases();
         $results = [];
 
@@ -211,8 +209,7 @@ final class ParserBenchmark
 
             // Measure parsing (Parser phase)
             $phaseStart = hrtime(true);
-            $stream = new TokenStream($tokens);
-            $doc = $parser->parse($template);
+            $parser->parseTokens($tokens);
             $parseNanoseconds += hrtime(true) - $phaseStart;
 
             $totalNanoseconds += hrtime(true) - $totalStart;

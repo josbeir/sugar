@@ -824,16 +824,19 @@ final class Lexer
         // Parse attributes from the raw tag source (skip the raw attribute)
         $attrRegion = substr($tagSource, $nameEnd);
         $attrRegion = rtrim($attrRegion, " \t\n\r/>");
-        $this->emitAttributesFromString($attrRegion, $rawAttribute, $tagLine);
+        $this->emitAttributesFromString($attrRegion, $rawAttribute, $absoluteOffset + $nameEnd);
 
         // Determine self-closing
         $trimmed = rtrim($tagSource);
         $closeStr = str_ends_with($trimmed, '/>') ? '/>' : '>';
-        $closeCol = $tagCol + strlen($tagSource) - strlen($closeStr);
+
+        $closeOffset = $absoluteOffset + strlen($tagSource) - strlen($closeStr);
+        [$closeLine, $closeCol] = $this->lineColumnAt($closeOffset);
+
         $this->tokens[] = new Token(
             TokenType::TagClose,
             $closeStr,
-            $tagLine,
+            $closeLine,
             $closeCol,
         );
     }
@@ -841,7 +844,7 @@ final class Lexer
     /**
      * Parse and emit attribute tokens from a raw string, skipping a specific attribute name.
      */
-    private function emitAttributesFromString(string $attrString, string $skipAttribute, int $baseLine): void
+    private function emitAttributesFromString(string $attrString, string $skipAttribute, int $baseOffset): void
     {
         $pos = 0;
         $len = strlen($attrString);
@@ -901,7 +904,8 @@ final class Lexer
                 continue;
             }
 
-            $this->tokens[] = new Token(TokenType::AttributeName, $name, $baseLine, 0);
+            [$nameLine, $nameColumn] = $this->lineColumnAt($baseOffset + $nameStart);
+            $this->tokens[] = new Token(TokenType::AttributeName, $name, $nameLine, $nameColumn);
 
             // Skip whitespace
             while ($pos < $len && $this->isWhitespaceChar($attrString[$pos])) {
@@ -910,7 +914,8 @@ final class Lexer
 
             // Check for =
             if ($pos < $len && $attrString[$pos] === '=') {
-                $this->tokens[] = new Token(TokenType::Equals, '=', $baseLine, 0);
+                [$equalsLine, $equalsColumn] = $this->lineColumnAt($baseOffset + $pos);
+                $this->tokens[] = new Token(TokenType::Equals, '=', $equalsLine, $equalsColumn);
                 $pos++;
 
                 while ($pos < $len && $this->isWhitespaceChar($attrString[$pos])) {
@@ -920,7 +925,8 @@ final class Lexer
                 // Read value
                 if ($pos < $len && ($attrString[$pos] === '"' || $attrString[$pos] === "'")) {
                     $q = $attrString[$pos];
-                    $this->tokens[] = new Token(TokenType::QuoteOpen, $q, $baseLine, 0);
+                    [$quoteOpenLine, $quoteOpenColumn] = $this->lineColumnAt($baseOffset + $pos);
+                    $this->tokens[] = new Token(TokenType::QuoteOpen, $q, $quoteOpenLine, $quoteOpenColumn);
                     $pos++;
                     $valStart = $pos;
                     while ($pos < $len && $attrString[$pos] !== $q) {
@@ -934,10 +940,15 @@ final class Lexer
 
                     $val = substr($attrString, $valStart, $pos - $valStart);
                     if ($val !== '') {
-                        $this->tokens[] = new Token(TokenType::AttributeText, $val, $baseLine, 0);
+                        [$valueLine, $valueColumn] = $this->lineColumnAt($baseOffset + $valStart);
+                        $this->tokens[] = new Token(TokenType::AttributeText, $val, $valueLine, $valueColumn);
                     }
 
-                    $this->tokens[] = new Token(TokenType::QuoteClose, $q, $baseLine, 0);
+                    if ($pos < $len) {
+                        [$quoteCloseLine, $quoteCloseColumn] = $this->lineColumnAt($baseOffset + $pos);
+                        $this->tokens[] = new Token(TokenType::QuoteClose, $q, $quoteCloseLine, $quoteCloseColumn);
+                    }
+
                     if ($pos < $len) {
                         $pos++;
                     }
@@ -949,7 +960,8 @@ final class Lexer
 
                     $val = substr($attrString, $valStart, $pos - $valStart);
                     if ($val !== '') {
-                        $this->tokens[] = new Token(TokenType::AttributeValueUnquoted, $val, $baseLine, 0);
+                        [$valueLine, $valueColumn] = $this->lineColumnAt($baseOffset + $valStart);
+                        $this->tokens[] = new Token(TokenType::AttributeValueUnquoted, $val, $valueLine, $valueColumn);
                     }
                 }
             }

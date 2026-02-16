@@ -62,6 +62,18 @@ final readonly class Parser
     public function parse(string $source): DocumentNode
     {
         $tokens = $this->lexer->tokenize($source);
+
+        return $this->parseTokens($tokens);
+    }
+
+    /**
+     * Parse pre-tokenized input into an AST.
+     *
+     * @param array<\Sugar\Core\Parser\Token> $tokens Tokenized template source
+     * @return \Sugar\Core\Ast\DocumentNode The parsed document
+     */
+    public function parseTokens(array $tokens): DocumentNode
+    {
         $stream = new TokenStream($tokens);
 
         $children = $this->parseChildren($stream, null);
