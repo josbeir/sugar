@@ -52,6 +52,15 @@ final class Lexer
     private array $tokens;
 
     /**
+     * Cached line start offsets for O(log n) line/column lookup.
+     *
+     * Built once per tokenize() call. Each entry is the byte offset where that line starts.
+     *
+     * @var array<int>|null
+     */
+    private ?array $lineOffsets = null;
+
+    /**
      * @param \Sugar\Core\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(?SugarConfig $config = null)
@@ -74,6 +83,10 @@ final class Lexer
         $this->line = 1;
         $this->column = 1;
         $this->tokens = [];
+        $this->lineOffsets = null;
+
+        // Build line offset map once for fast O(log n) line/column lookups
+        $this->buildLineOffsets();
 
         // Pre-scan raw regions so we can skip their inner content
         $rawRegions = $this->scanRawRegions();
@@ -418,7 +431,7 @@ final class Lexer
 
         while ($this->pos < $this->length) {
             $ch = $this->charAt($this->pos);
-            if (in_array($ch, [' ', "\t", "\n", "\r", '>'], true) || $this->lookingAt('/>')) {
+            if ($this->isWhitespaceChar($ch) || $ch === '>' || $this->lookingAt('/>')) {
                 break;
             }
 
@@ -628,14 +641,14 @@ final class Lexer
 
         // Processing instructions start with <? followed by a letter (e.g. <?xml, <?xsl)
         // but NOT <?php or <?= (those are PHP tags handled elsewhere)
-        if (!ctype_alpha($nextChar)) {
+        if (!$this->isAlpha($nextChar)) {
             return false;
         }
 
         // Extract the keyword after <?
         $keywordStart = $afterOpen;
         $keywordEnd = $afterOpen;
-        while ($keywordEnd < $this->length && ctype_alpha($this->charAt($keywordEnd))) {
+        while ($keywordEnd < $this->length && $this->isAlpha($this->charAt($keywordEnd))) {
             $keywordEnd++;
         }
 
@@ -685,6 +698,7 @@ final class Lexer
     /**
      * Pre-scan the source for s:raw regions.
      *
+     * Optimized single-pass scan with inlined logic to avoid additional method call overhead.
      * Returns an array of raw region descriptors with byte offsets.
      * The lexer uses these to emit RawBody tokens and skip inner content.
      *
@@ -693,6 +707,8 @@ final class Lexer
     private function scanRawRegions(): array
     {
         $rawAttribute = $this->prefixHelper->buildName('raw');
+
+        // Quick early exit: if the raw attribute doesn't exist anywhere, no raw regions
         if (!str_contains($this->source, $rawAttribute)) {
             return [];
         }
@@ -700,21 +716,7 @@ final class Lexer
         $regions = [];
         $offset = 0;
 
-        while (($region = $this->findNextRawRegion($offset, $rawAttribute)) !== null) {
-            $regions[] = $region;
-            $offset = $region['closeEnd'];
-        }
-
-        return $regions;
-    }
-
-    /**
-     * Find the next raw region starting from `$offset`.
-     *
-     * @return array{openStart: int, openEnd: int, innerStart: int, innerEnd: int, closeStart: int, closeEnd: int, tagName: string}|null
-     */
-    private function findNextRawRegion(int $offset, string $rawAttribute): ?array
-    {
+        // Single pass: find tags, check for raw attribute, track regions
         while (($tagStart = strpos($this->source, '<', $offset)) !== false) {
             $tag = $this->extractSimpleTag($tagStart);
             if ($tag === null || $tag['type'] !== 'open') {
@@ -724,14 +726,17 @@ final class Lexer
 
             $offset = $tag['end'];
 
+            // Skip self-closing tags
             if ($tag['selfClosing']) {
                 continue;
             }
 
+            // Does this tag have the raw attribute?
             if (!$this->tagHasRawAttribute($tag['raw'], $rawAttribute)) {
                 continue;
             }
 
+            // Found a raw region, find its matching close tag
             $closeStart = $this->findMatchingCloseTag($tag['name'], $tag['end']);
             if ($closeStart === null) {
                 continue;
@@ -746,7 +751,8 @@ final class Lexer
                 continue;
             }
 
-            return [
+            // Store the region and continue from after the close tag
+            $regions[] = [
                 'openStart' => $tag['start'],
                 'openEnd' => $tag['end'],
                 'innerStart' => $tag['end'],
@@ -755,9 +761,11 @@ final class Lexer
                 'closeEnd' => $closeTag['end'],
                 'tagName' => $tag['name'],
             ];
+
+            $offset = $closeTag['end'];
         }
 
-        return null;
+        return $regions;
     }
 
     /**
@@ -1001,7 +1009,7 @@ final class Lexer
             ];
         }
 
-        if (!ctype_alpha($next)) {
+        if (!$this->isAlpha($next)) {
             return null;
         }
 
@@ -1036,13 +1044,8 @@ final class Lexer
      */
     private function readSimpleTagNameEnd(int $pos): int
     {
-        while ($pos < $this->length) {
-            $ch = $this->source[$pos];
-            if (ctype_alnum($ch) || $ch === '-' || $ch === '_' || $ch === ':' || $ch === '.') {
-                $pos++;
-            } else {
-                break;
-            }
+        while ($pos < $this->length && $this->isTagNameChar($this->source[$pos])) {
+            $pos++;
         }
 
         return $pos;
@@ -1145,13 +1148,8 @@ final class Lexer
     private function readTagName(): string
     {
         $start = $this->pos;
-        while ($this->pos < $this->length) {
-            $ch = $this->charAt($this->pos);
-            if (ctype_alnum($ch) || $ch === '-' || $ch === '_' || $ch === ':' || $ch === '.') {
-                $this->advance();
-            } else {
-                break;
-            }
+        while ($this->pos < $this->length && $this->isTagNameChar($this->charAt($this->pos))) {
+            $this->advance();
         }
 
         return substr($this->source, $start, $this->pos - $start);
@@ -1163,14 +1161,8 @@ final class Lexer
     private function readAttributeName(): string
     {
         $start = $this->pos;
-        while ($this->pos < $this->length) {
-            $ch = $this->charAt($this->pos);
-            // Attribute names can contain: alphanumeric, -, _, :, .
-            if (ctype_alnum($ch) || $ch === '-' || $ch === '_' || $ch === ':' || $ch === '.' || $ch === '@') {
-                $this->advance();
-            } else {
-                break;
-            }
+        while ($this->pos < $this->length && $this->isAttributeNameChar($this->charAt($this->pos))) {
+            $this->advance();
         }
 
         return substr($this->source, $start, $this->pos - $start);
@@ -1186,16 +1178,34 @@ final class Lexer
         }
 
         $next = $this->charAt($this->pos + 1);
-
-        return ctype_alpha($next) || $next === '/';
+        if ($this->isAlpha($next)) {
+            return true;
+        }
+        return $next === '/';
     }
 
     /**
      * Check whether source at current position starts with the given string.
+     *
+     * Optimized with fast character-by-character comparison instead of substr_compare.
      */
     private function lookingAt(string $str): bool
     {
-        return substr_compare($this->source, $str, $this->pos, strlen($str)) === 0;
+        $len = strlen($str);
+
+        // Fast bounds check
+        if ($this->pos + $len > $this->length) {
+            return false;
+        }
+
+        // Direct character comparison for each position (faster than substr_compare)
+        for ($i = 0; $i < $len; $i++) {
+            if ($this->source[$this->pos + $i] !== $str[$i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -1211,7 +1221,7 @@ final class Lexer
      */
     private function isAlphanumAt(int $pos): bool
     {
-        return $pos < $this->length && ctype_alnum($this->source[$pos]);
+        return $pos < $this->length && $this->isAlphanumeric($this->source[$pos]);
     }
 
     /**
@@ -1253,6 +1263,8 @@ final class Lexer
 
     /**
      * Check if a character is whitespace.
+     *
+     * Optimized with direct comparison instead of in_array().
      */
     private function isWhitespaceChar(string $ch): bool
     {
@@ -1260,17 +1272,116 @@ final class Lexer
     }
 
     /**
+     * Check if a character is alphabetic (a-z, A-Z).
+     *
+     * Faster than ctype_alpha().
+     */
+    private function isAlpha(string $ch): bool
+    {
+        return ($ch >= 'a' && $ch <= 'z') || ($ch >= 'A' && $ch <= 'Z');
+    }
+
+    /**
+     * Check if a character is alphanumeric (a-z, A-Z, 0-9).
+     *
+     * Faster than ctype_alnum().
+     */
+    private function isAlphanumeric(string $ch): bool
+    {
+        return ($ch >= 'a' && $ch <= 'z') || ($ch >= 'A' && $ch <= 'Z') || ($ch >= '0' && $ch <= '9');
+    }
+
+    /**
+     * Check if a character is valid in a tag name: alphanumeric, -, _, :, .
+     */
+    private function isTagNameChar(string $ch): bool
+    {
+        if ($this->isAlphanumeric($ch)) {
+            return true;
+        }
+        if ($ch === '-') {
+            return true;
+        }
+        if ($ch === '_') {
+            return true;
+        }
+        if ($ch === ':') {
+            return true;
+        }
+        return $ch === '.';
+    }
+
+    /**
+     * Check if a character is valid in an attribute name: alphanumeric, -, _, :, ., @
+     */
+    private function isAttributeNameChar(string $ch): bool
+    {
+        if ($this->isAlphanumeric($ch)) {
+            return true;
+        }
+        if ($ch === '-') {
+            return true;
+        }
+        if ($ch === '_') {
+            return true;
+        }
+        if ($ch === ':') {
+            return true;
+        }
+        if ($ch === '.') {
+            return true;
+        }
+        return $ch === '@';
+    }
+
+    /**
      * Calculate 1-based line and column for an absolute byte offset.
+     *
+     * Uses pre-built line offset map for O(log n) lookup instead of O(n).
+     * Falls back to safe values if cache is unavailable.
      *
      * @return array{0: int, 1: int} [line, column]
      */
     private function lineColumnAt(int $offset): array
     {
-        $before = substr($this->source, 0, $offset);
-        $line = substr_count($before, "\n") + 1;
-        $lastNewline = strrpos($before, "\n");
-        $column = $lastNewline === false ? $offset + 1 : $offset - $lastNewline;
+        if ($this->lineOffsets === null || $offset < 0) {
+            return [1, 1];
+        }
+
+        // Binary search to find which line this offset is on
+        $left = 0;
+        $right = count($this->lineOffsets) - 1;
+
+        while ($left < $right) {
+            $mid = (int)(($left + $right + 1) / 2);
+            if ($this->lineOffsets[$mid] <= $offset) {
+                $left = $mid;
+            } else {
+                $right = $mid - 1;
+            }
+        }
+
+        $line = $left + 1;
+        $lineStartOffset = $this->lineOffsets[$left];
+        $column = $offset - $lineStartOffset + 1;
 
         return [$line, $column];
+    }
+
+    /**
+     * Build a cached map of line start offsets for fast line/column lookup.
+     *
+     * Called once per tokenize() call. Reduces lineColumnAt() complexity from O(n) to O(log n),
+     * improving overall lexer performance significantly.
+     */
+    private function buildLineOffsets(): void
+    {
+        $this->lineOffsets = [0]; // Line 1 starts at offset 0
+
+        for ($i = 0; $i < $this->length; $i++) {
+            if ($this->source[$i] === "\n") {
+                $this->lineOffsets[] = $i + 1;
+            }
+        }
     }
 }
