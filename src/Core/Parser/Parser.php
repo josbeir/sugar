@@ -3,536 +3,549 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Parser;
 
+use Sugar\Core\Ast\AttributeNode;
+use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\RawBodyNode;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\OutputContext;
-use Sugar\Core\Parser\Helper\AttributeContinuation;
-use Sugar\Core\Parser\Helper\ClosingTagMarker;
-use Sugar\Core\Parser\Helper\HtmlParser;
-use Sugar\Core\Parser\Helper\HtmlScanHelper;
-use Sugar\Core\Parser\Helper\NodeFactory;
-use Sugar\Core\Parser\Helper\ParserState;
 use Sugar\Core\Parser\Helper\PipeParser;
-use Sugar\Core\Parser\Helper\TokenStream;
-use Sugar\Core\Runtime\HtmlTagHelper;
 
+/**
+ * Recursive-descent parser that transforms a TokenStream into an AST.
+ *
+ * Works hand-in-hand with the state-machine Lexer:
+ *   1. Lexer tokenizes the template source into a flat Token array.
+ *   2. This parser consumes tokens via a TokenStream and builds the tree directly
+ *      (no flat-then-tree reconstruction, no ClosingTagMarker).
+ *
+ * The produced AST is identical to the previous parser's output:
+ *   DocumentNode → ElementNode / ComponentNode / FragmentNode / TextNode /
+ *                  OutputNode / RawPhpNode / RawBodyNode.
+ *
+ * Example:
+ *   $parser = new Parser();
+ *   $doc = $parser->parse('<div s:if="$show">...</div>');
+ */
 final readonly class Parser
 {
     private SugarConfig $config;
 
     private DirectivePrefixHelper $prefixHelper;
 
-    private HtmlScanHelper $htmlScanHelper;
-
-    private HtmlParser $htmlParser;
-
-    private NodeFactory $nodeFactory;
+    private Lexer $lexer;
 
     /**
-     * Constructor
-     *
      * @param \Sugar\Core\Config\SugarConfig|null $config Configuration (optional, creates default if null)
      */
     public function __construct(?SugarConfig $config = null)
     {
         $this->config = $config ?? new SugarConfig();
         $this->prefixHelper = new DirectivePrefixHelper($this->config->directivePrefix);
-        $this->htmlScanHelper = new HtmlScanHelper();
-        $this->nodeFactory = new NodeFactory();
-        $this->htmlParser = new HtmlParser(
-            $this->config,
-            $this->prefixHelper,
-            $this->nodeFactory,
-            $this->htmlScanHelper,
-        );
+        $this->lexer = new Lexer($this->config);
     }
 
     /**
-     * Parse a Sugar template into an AST
+     * Parse a Sugar template into an AST.
      *
      * @param string $source Template source code
      * @return \Sugar\Core\Ast\DocumentNode The parsed document
      */
     public function parse(string $source): DocumentNode
     {
-        $tokens = $this->tokenizeSource($source);
+        $tokens = $this->lexer->tokenize($source);
+
+        return $this->parseTokens($tokens);
+    }
+
+    /**
+     * Parse pre-tokenized input into an AST.
+     *
+     * @param array<\Sugar\Core\Parser\Token> $tokens Tokenized template source
+     * @return \Sugar\Core\Ast\DocumentNode The parsed document
+     */
+    public function parseTokens(array $tokens): DocumentNode
+    {
         $stream = new TokenStream($tokens);
-        $state = new ParserState($stream, $source);
-        $nodes = $this->parseTokens($state);
 
-        return new DocumentNode($nodes);
+        $children = $this->parseChildren($stream, null);
+
+        return new DocumentNode($children);
     }
 
     /**
-     * Tokenize source, preserving raw regions as dedicated raw-body tokens.
+     * Parse children until we encounter a closing tag for `$parentTag` or Eof.
      *
-     * @return array<\Sugar\Core\Parser\Token>
+     * @param \Sugar\Core\Parser\TokenStream $stream Token stream
+     * @param string|null $parentTag If non-null, stop when we see `</parentTag>`
+     * @return array<\Sugar\Core\Ast\Node>
      */
-    private function tokenizeSource(string $source): array
+    private function parseChildren(TokenStream $stream, ?string $parentTag): array
     {
-        if (!$this->hasRawRegions($source)) {
-            return Token::tokenize($source);
+        $children = [];
+
+        while (!$stream->isEof()) {
+            $token = $stream->current();
+
+            // Check for closing tag of parent
+            if ($parentTag !== null && $token->type === TokenType::TagOpen) {
+                $next = $stream->peek();
+                if ($next->type === TokenType::Slash) {
+                    // This is a closing tag — stop recursion, let parent consume it
+                    break;
+                }
+            }
+
+            $node = $this->parseNode($stream);
+            if ($node instanceof Node) {
+                $children[] = $node;
+            }
         }
 
-        $tokens = [];
-        $offset = 0;
-        $rawAttribute = $this->prefixHelper->buildName('raw');
-        $lineStarts = $this->htmlScanHelper->buildLineStarts($source);
-
-        while (($region = $this->findNextRawRegion($source, $offset, $rawAttribute)) !== null) {
-            $this->appendTokenizedChunk($tokens, $source, $offset, $region['openStart'], $lineStarts);
-            $this->appendInlineHtmlToken($tokens, $source, $region['openStart'], $region['openEnd'], $lineStarts);
-
-            $inner = substr($source, $region['innerStart'], $region['innerEnd'] - $region['innerStart']);
-            $tokens[] = new Token(
-                Token::T_RAW_BODY,
-                $inner,
-                $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $region['innerStart']),
-                $region['innerStart'],
-            );
-
-            $this->appendInlineHtmlToken($tokens, $source, $region['closeStart'], $region['closeEnd'], $lineStarts);
-            $offset = $region['closeEnd'];
-        }
-
-        $this->appendTokenizedChunk($tokens, $source, $offset, strlen($source), $lineStarts);
-
-        return $tokens;
+        return $children;
     }
 
     /**
-     * Determine whether the source may contain raw directive regions.
+     * Parse a single node from the stream.
      */
-    private function hasRawRegions(string $source): bool
+    private function parseNode(TokenStream $stream): ?Node
     {
-        return str_contains($source, $this->prefixHelper->buildName('raw'));
+        $token = $stream->current();
+
+        return match ($token->type) {
+            TokenType::Text => $this->parseText($stream),
+            TokenType::Comment => $this->parseComment($stream),
+            TokenType::SpecialTag => $this->parseSpecialTag($stream),
+            TokenType::TagOpen => $this->parseTag($stream),
+            TokenType::PhpOutputOpen => $this->parsePhpOutput($stream, false),
+            TokenType::PhpBlockOpen => $this->parsePhpBlock($stream),
+            TokenType::RawBody => $this->parseRawBody($stream),
+            default => $this->skipToken($stream),
+        };
     }
 
     /**
-     * Append tokenized source chunk with corrected absolute line/position metadata.
+     * Parse a text token into a TextNode.
+     */
+    private function parseText(TokenStream $stream): TextNode
+    {
+        $token = $stream->consume();
+
+        return new TextNode($token->value, $token->line, $token->column);
+    }
+
+    /**
+     * Parse an HTML comment into a TextNode (preserved as-is).
+     */
+    private function parseComment(TokenStream $stream): TextNode
+    {
+        $token = $stream->consume();
+
+        return new TextNode($token->value, $token->line, $token->column);
+    }
+
+    /**
+     * Parse a special tag (DOCTYPE, CDATA) into a TextNode.
+     */
+    private function parseSpecialTag(TokenStream $stream): TextNode
+    {
+        $token = $stream->consume();
+
+        return new TextNode($token->value, $token->line, $token->column);
+    }
+
+    /**
+     * Parse an HTML tag (open or close).
+     */
+    private function parseTag(TokenStream $stream): ?Node
+    {
+        $tagOpenToken = $stream->consume(); // TagOpen `<`
+
+        // Check for closing tag
+        if ($stream->current()->type === TokenType::Slash) {
+            // This is a closing tag — consume slash, tag name, close
+            $stream->consume(); // Slash
+            $stream->consumeIf(TokenType::TagName);
+            $stream->consumeIf(TokenType::TagClose);
+
+            // Return null — the parent's parseChildren already stopped
+            return null;
+        }
+
+        // Opening tag — read tag name
+        $tagNameToken = $stream->consumeIf(TokenType::TagName);
+        $tagName = $tagNameToken instanceof Token ? $tagNameToken->value : '';
+        $tagLine = $tagOpenToken->line;
+        $tagColumn = $tagOpenToken->column;
+
+        // Read attributes
+        $attributes = $this->parseAttributes($stream);
+
+        // Strip the raw directive attribute — for non-self-closing elements the Lexer's
+        // raw region pre-scanner already handles this, but self-closing/void tags bypass
+        // that path and still carry the attribute.
+        $attributes = $this->stripRawAttribute($attributes);
+
+        // Read tag close
+        $tagCloseToken = $stream->consumeIf(TokenType::TagClose);
+        $selfClosing = $tagCloseToken instanceof Token && $tagCloseToken->value === '/>';
+
+        // Determine node type: fragment, component, or element
+        $fragmentElement = $this->config->getFragmentElement();
+
+        if ($tagName === $fragmentElement) {
+            return $this->buildFragmentNode($stream, $attributes, $tagLine, $tagColumn, $selfClosing, $tagName);
+        }
+
+        if ($this->prefixHelper->hasElementPrefix($tagName)) {
+            $componentName = $this->prefixHelper->stripElementPrefix($tagName);
+
+            return $this->buildComponentNode($stream, $componentName, $attributes, $tagLine, $tagColumn, $tagName);
+        }
+
+        return $this->buildElementNode($stream, $tagName, $attributes, $tagLine, $tagColumn, $selfClosing);
+    }
+
+    /**
+     * Build a FragmentNode, parsing children if not self-closing.
      *
-     * @param array<\Sugar\Core\Parser\Token> $tokens
-     * @param array<int, int> $lineStarts
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
      */
-    private function appendTokenizedChunk(array &$tokens, string $source, int $start, int $end, array $lineStarts): void
-    {
-        if ($end <= $start) {
-            return;
+    private function buildFragmentNode(
+        TokenStream $stream,
+        array $attributes,
+        int $line,
+        int $column,
+        bool $selfClosing,
+        string $tagName,
+    ): FragmentNode {
+        $children = [];
+        if (!$selfClosing) {
+            $children = $this->parseChildren($stream, $tagName);
+            $this->consumeClosingTag($stream);
         }
 
-        $chunk = substr($source, $start, $end - $start);
-        if ($chunk === '') {
-            return;
-        }
-
-        if (!str_contains($chunk, '<?')) {
-            $tokens[] = new Token(
-                T_INLINE_HTML,
-                $chunk,
-                $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start),
-                $start,
-            );
-
-            return;
-        }
-
-        $baseLine = $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start);
-        foreach (Token::tokenize($chunk) as $token) {
-            $tokens[] = new Token(
-                $token->id,
-                $token->text,
-                $baseLine + $token->line - 1,
-                $start + $token->pos,
-            );
-        }
-    }
-
-    /**
-     * Append an HTML boundary token directly without PHP tokenization overhead.
-     *
-     * @param array<\Sugar\Core\Parser\Token> $tokens
-     * @param array<int, int> $lineStarts
-     */
-    private function appendInlineHtmlToken(
-        array &$tokens,
-        string $source,
-        int $start,
-        int $end,
-        array $lineStarts,
-    ): void {
-        if ($end <= $start) {
-            return;
-        }
-
-        $content = substr($source, $start, $end - $start);
-        if ($content === '') {
-            return;
-        }
-
-        $tokens[] = new Token(
-            T_INLINE_HTML,
-            $content,
-            $this->htmlScanHelper->findLineNumberFromStarts($lineStarts, $start),
-            $start,
+        return new FragmentNode(
+            attributes: $attributes,
+            children: $children,
+            line: $line,
+            column: $column,
+            selfClosing: $selfClosing,
         );
     }
 
     /**
-     * @return array{openStart: int, openEnd: int, innerStart: int, innerEnd: int, closeStart: int, closeEnd: int}|null
-     */
-    private function findNextRawRegion(string $source, int $offset, string $rawAttribute): ?array
-    {
-        while (($tagStart = strpos($source, '<', $offset)) !== false) {
-            $tag = $this->extractTagAt($source, $tagStart);
-            if ($tag === null || $tag['type'] !== 'open') {
-                $offset = $tagStart + 1;
-                continue;
-            }
-
-            $offset = $tag['end'];
-
-            if ($tag['selfClosing']) {
-                continue;
-            }
-
-            if (!$this->hasRawAttribute($tag['raw'], $rawAttribute)) {
-                continue;
-            }
-
-            $closeStart = $this->findMatchingClose($source, $tag['name'], $tag['end']);
-            if ($closeStart === null) {
-                continue;
-            }
-
-            $closeTag = $this->extractTagAt($source, $closeStart);
-            if ($closeTag === null) {
-                continue;
-            }
-
-            if ($closeTag['type'] !== 'close') {
-                continue;
-            }
-
-            return [
-                'openStart' => $tag['start'],
-                'openEnd' => $tag['end'],
-                'innerStart' => $tag['end'],
-                'innerEnd' => $closeStart,
-                'closeStart' => $closeStart,
-                'closeEnd' => $closeTag['end'],
-            ];
-        }
-
-        return null;
-    }
-
-    /**
-     * @return array{type: 'open'|'close', name: string, start: int, end: int, selfClosing: bool, raw: string}|null
-     */
-    private function extractTagAt(string $source, int $start): ?array
-    {
-        if (!isset($source[$start]) || $source[$start] !== '<') {
-            return null;
-        }
-
-        $next = $source[$start + 1] ?? null;
-        if (in_array($next, [null, '!', '?'], true)) {
-            return null;
-        }
-
-        if ($next === '/') {
-            $nameStart = $start + 2;
-            $nameEnd = $this->htmlScanHelper->readTagNameEnd($source, $nameStart);
-            if ($nameEnd === $nameStart) {
-                return null;
-            }
-
-            $end = $this->htmlScanHelper->findTagEnd($source, $nameEnd);
-            if ($end === null) {
-                return null;
-            }
-
-            return [
-                'type' => 'close',
-                'name' => substr($source, $nameStart, $nameEnd - $nameStart),
-                'start' => $start,
-                'end' => $end,
-                'selfClosing' => false,
-                'raw' => substr($source, $start, $end - $start),
-            ];
-        }
-
-        if (!ctype_alpha($next)) {
-            return null;
-        }
-
-        $nameStart = $start + 1;
-        $nameEnd = $this->htmlScanHelper->readTagNameEnd($source, $nameStart);
-        if ($nameEnd === $nameStart) {
-            return null;
-        }
-
-        $end = $this->htmlScanHelper->findTagEnd($source, $nameEnd);
-        if ($end === null) {
-            return null;
-        }
-
-        $name = substr($source, $nameStart, $nameEnd - $nameStart);
-        $rawTag = substr($source, $start, $end - $start);
-        $selfClosing = str_ends_with(rtrim($rawTag), '/>')
-            || HtmlTagHelper::isSelfClosing($name, $this->config->selfClosingTags);
-
-        return [
-            'type' => 'open',
-            'name' => $name,
-            'start' => $start,
-            'end' => $end,
-            'selfClosing' => $selfClosing,
-            'raw' => $rawTag,
-        ];
-    }
-
-    /**
-     * Find matching closing tag position for an opening tag offset.
-     */
-    private function findMatchingClose(string $source, string $tagName, int $offset): ?int
-    {
-        $depth = 1;
-
-        while (($tagStart = strpos($source, '<', $offset)) !== false) {
-            $tag = $this->extractTagAt($source, $tagStart);
-            if ($tag === null) {
-                $offset = $tagStart + 1;
-                continue;
-            }
-
-            $offset = $tag['end'];
-
-            if (strcasecmp($tag['name'], $tagName) !== 0) {
-                continue;
-            }
-
-            if ($tag['type'] === 'close') {
-                $depth--;
-                if ($depth === 0) {
-                    return $tag['start'];
-                }
-
-                continue;
-            }
-
-            if (!$tag['selfClosing']) {
-                $depth++;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Check whether an opening tag contains the configured raw directive attribute.
-     */
-    private function hasRawAttribute(string $tag, string $rawAttribute): bool
-    {
-        $pattern =
-            '/(?:\s|^)' .
-            preg_quote($rawAttribute, '/') .
-            '(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+))?(?=\s|\/?>)/';
-
-        return preg_match($pattern, $tag) === 1;
-    }
-
-    /**
-     * Parse tokens into AST nodes
+     * Build a ComponentNode, parsing children until its closing tag.
      *
-     * @param \Sugar\Core\Parser\Helper\ParserState $state Parser state
-     * @return array<\Sugar\Core\Ast\Node> AST nodes
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
      */
-    private function parseTokens(ParserState $state): array
-    {
-        $stream = $state->stream;
+    private function buildComponentNode(
+        TokenStream $stream,
+        string $componentName,
+        array $attributes,
+        int $line,
+        int $column,
+        string $tagName,
+    ): ComponentNode {
+        $children = $this->parseChildren($stream, $tagName);
+        $this->consumeClosingTag($stream);
 
-        while (!$stream->isEnd()) {
-            $token = $stream->next();
-            if (!$token instanceof Token) {
-                break;
-            }
-
-            if ($token->isOutput()) {
-                $column = $state->columnFromOffset($token->pos);
-                $expression = $state->consumeExpression();
-                $expression = $state->normalizeOutputExpression($expression);
-
-                // Parse pipe syntax if present
-                $pipes = PipeParser::parse($expression);
-                $finalExpression = $pipes['expression'];
-                $pipeChain = $pipes['pipes'];
-                $shouldEscape = !$pipes['raw'];
-                if ($pipes['raw']) {
-                    $outputContext = OutputContext::RAW;
-                } elseif ($pipes['json']) {
-                    $outputContext = $state->hasPendingAttribute()
-                        ? OutputContext::JSON_ATTRIBUTE
-                        : OutputContext::JSON;
-                } else {
-                    $outputContext = $state->hasPendingAttribute()
-                        ? OutputContext::HTML_ATTRIBUTE
-                        : OutputContext::HTML;
-                }
-
-                $outputNode = $this->nodeFactory->output(
-                    expression: $finalExpression,
-                    escape: $shouldEscape,
-                    context: $outputContext,
-                    line: $token->line,
-                    column: $column,
-                    pipes: $pipeChain,
-                );
-
-                if ($state->hasPendingAttribute()) {
-                    $pendingAttribute = $state->pendingAttribute();
-                    if ($pendingAttribute === null) {
-                        continue;
-                    }
-
-                    $element = $pendingAttribute['element'];
-                    $attrIndex = $pendingAttribute['attrIndex'];
-                    AttributeContinuation::appendAttributeValuePart(
-                        $element->attributes[$attrIndex],
-                        $outputNode,
-                    );
-                    continue;
-                }
-
-                $state->addNode($outputNode);
-                continue;
-            }
-
-            if ($token->isOpenTag()) {
-                $column = $state->columnFromOffset($token->pos);
-                $code = $state->consumePhpBlock();
-                $state->addNode($this->nodeFactory->rawPhp($code, $token->line, $column));
-                continue;
-            }
-
-            if ($token->isRawBody()) {
-                $column = $state->columnFromOffset($token->pos);
-                $state->addNode($this->nodeFactory->rawBody($token->content(), $token->line, $column));
-                continue;
-            }
-
-            if ($token->canIgnore()) {
-                continue;
-            }
-
-            if ($token->isHtml()) {
-                $column = $state->columnFromOffset($token->pos);
-                $html = $token->content();
-                if ($state->hasPendingAttribute()) {
-                    $pendingAttribute = $state->pendingAttribute();
-                    if ($pendingAttribute === null) {
-                        $state->setPendingAttribute(null);
-                        continue;
-                    }
-
-                    [$html, $pendingAttribute] = AttributeContinuation::consumeAttributeContinuation(
-                        $html,
-                        $pendingAttribute,
-                        $this->nodeFactory,
-                    );
-                    $state->setPendingAttribute($pendingAttribute);
-                    if ($html === '') {
-                        continue;
-                    }
-                }
-
-                if (str_contains($html, '<') || str_contains($html, '>')) {
-                    $htmlNodes = $this->htmlParser->parse($html, $token->line, $column);
-                    $this->stripRawDirectiveAttributes($htmlNodes);
-                    $state->addNodes($htmlNodes);
-                    if (!$state->hasPendingAttribute()) {
-                        $state->setPendingAttribute(
-                            AttributeContinuation::detectOpenAttribute($html, $htmlNodes),
-                        );
-                    }
-                } else {
-                    $state->addNode($this->nodeFactory->text($html, $token->line, $column));
-                }
-
-                continue;
-            }
-        }
-
-        return $this->buildTree($state->nodes());
+        return new ComponentNode(
+            name: $componentName,
+            attributes: $attributes,
+            children: $children,
+            line: $line,
+            column: $column,
+        );
     }
 
     /**
-     * @param array<\Sugar\Core\Ast\Node|\Sugar\Core\Parser\Helper\ClosingTagMarker> $nodes
-     */
-    private function stripRawDirectiveAttributes(array $nodes): void
-    {
-        $rawAttributeName = $this->prefixHelper->buildName('raw');
-
-        foreach ($nodes as $node) {
-            if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof ComponentNode) {
-                $remainingAttributes = [];
-                foreach ($node->attributes as $attribute) {
-                    if ($attribute->name === $rawAttributeName) {
-                        continue;
-                    }
-
-                    $remainingAttributes[] = $attribute;
-                }
-
-                $node->attributes = $remainingAttributes;
-            }
-        }
-    }
-
-    /**
-     * Build tree structure from flat node list
+     * Build an ElementNode, parsing children if not self-closing.
      *
-     * @param array<\Sugar\Core\Ast\Node|\Sugar\Core\Parser\Helper\ClosingTagMarker> $flatNodes Flat list
-     * @return array<\Sugar\Core\Ast\Node> Tree structure
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
      */
-    private function buildTree(array $flatNodes): array
-    {
-        $root = [];
-        $stack = [&$root]; // Start with root in stack
+    private function buildElementNode(
+        TokenStream $stream,
+        string $tagName,
+        array $attributes,
+        int $line,
+        int $column,
+        bool $selfClosing,
+    ): ElementNode {
+        $children = [];
+        if (!$selfClosing) {
+            $children = $this->parseChildren($stream, $tagName);
+            $this->consumeClosingTag($stream);
+        }
 
-        foreach ($flatNodes as $node) {
-            if ($node instanceof ElementNode && !$node->selfClosing) {
-                // Opening tag - add to current level
-                $stack[count($stack) - 1][] = $node;
-                // Push reference to this element's children array onto stack
-                $stack[] = &$node->children;
-            } elseif ($node instanceof FragmentNode && !$node->selfClosing) {
-                // Fragment node - treat like element when not self-closing
-                $stack[count($stack) - 1][] = $node;
-                // Push reference to this fragment's children array onto stack
-                $stack[] = &$node->children;
-            } elseif ($node instanceof FragmentNode) {
-                $stack[count($stack) - 1][] = $node;
-            } elseif ($node instanceof ComponentNode) {
-                // Component node - treat like element (non-self-closing)
-                $stack[count($stack) - 1][] = $node;
-                // Push reference to this component's children array onto stack
-                $stack[] = &$node->children;
-            } elseif ($node instanceof ClosingTagMarker) {
-                // Closing tag - pop from stack
-                if (count($stack) > 1) {
-                    array_pop($stack);
-                }
+        return new ElementNode(
+            tag: $tagName,
+            attributes: $attributes,
+            children: $children,
+            selfClosing: $selfClosing,
+            line: $line,
+            column: $column,
+        );
+    }
+
+    /**
+     * Consume a closing tag sequence: `< / tagName >`
+     */
+    private function consumeClosingTag(TokenStream $stream): void
+    {
+        if ($stream->current()->type !== TokenType::TagOpen) {
+            return;
+        }
+
+        $next = $stream->peek();
+        if ($next->type !== TokenType::Slash) {
+            return;
+        }
+
+        $stream->consume(); // TagOpen
+        $stream->consume(); // Slash
+        $stream->consumeIf(TokenType::TagName);
+        $stream->consumeIf(TokenType::TagClose);
+    }
+
+    /**
+     * Parse attributes from the token stream.
+     *
+     * @return array<\Sugar\Core\Ast\AttributeNode>
+     */
+    private function parseAttributes(TokenStream $stream): array
+    {
+        $attributes = [];
+
+        while ($stream->current()->type === TokenType::AttributeName) {
+            $nameToken = $stream->consume();
+            $name = $nameToken->value;
+            $line = $nameToken->line;
+            $column = $nameToken->column;
+
+            // Check for `=`
+            if ($stream->consumeIf(TokenType::Equals) instanceof Token) {
+                $value = $this->parseAttributeValue($stream);
             } else {
-                // TextNode, OutputNode, or self-closing element
-                $stack[count($stack) - 1][] = $node;
+                $value = AttributeValue::boolean();
+            }
+
+            $attributes[] = new AttributeNode($name, $value, $line, $column);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Parse an attribute value: quoted (possibly with embedded PHP), unquoted, or PHP expression.
+     */
+    private function parseAttributeValue(TokenStream $stream): AttributeValue
+    {
+        $current = $stream->current();
+
+        // Unquoted value
+        if ($current->type === TokenType::AttributeValueUnquoted) {
+            $token = $stream->consume();
+
+            return AttributeValue::static($token->value);
+        }
+
+        // PHP expression directly as value (unquoted)
+        if ($current->type === TokenType::PhpOutputOpen) {
+            $outputNode = $this->parsePhpOutput($stream, true);
+
+            return AttributeValue::output($outputNode);
+        }
+
+        // Quoted value
+        if ($current->type === TokenType::QuoteOpen) {
+            return $this->parseQuotedAttributeValue($stream);
+        }
+
+        // Empty value (e.g. data-empty=)
+        return AttributeValue::static('');
+    }
+
+    /**
+     * Parse a quoted attribute value, handling embedded PHP expressions.
+     *
+     * Produces one of:
+     *  - AttributeValue::static() when only text
+     *  - AttributeValue::output() when only one PHP expression
+     *  - AttributeValue::parts() when mixed text + PHP expressions
+     */
+    private function parseQuotedAttributeValue(TokenStream $stream): AttributeValue
+    {
+        $stream->consume(); // QuoteOpen
+
+        /** @var array<string|\Sugar\Core\Ast\OutputNode> $parts */
+        $parts = [];
+
+        while ($stream->current()->type !== TokenType::QuoteClose && !$stream->isEof()) {
+            if ($stream->current()->type === TokenType::AttributeText) {
+                $textToken = $stream->consume();
+                // Handle escaped quotes
+                $text = str_replace(['\"', "\'"], ['"', "'"], $textToken->value);
+                $parts[] = $text;
+            } elseif ($stream->current()->type === TokenType::PhpOutputOpen) {
+                $outputNode = $this->parsePhpOutput($stream, true);
+                $parts[] = $outputNode;
+            } else {
+                // Unexpected token inside quoted value, consume and skip
+                $stream->consume();
             }
         }
 
-        return $root;
+        $stream->consumeIf(TokenType::QuoteClose);
+
+        return $this->collapseAttributeParts($parts);
+    }
+
+    /**
+     * Collapse attribute parts into the simplest possible AttributeValue.
+     *
+     * @param array<string|\Sugar\Core\Ast\OutputNode> $parts
+     */
+    private function collapseAttributeParts(array $parts): AttributeValue
+    {
+        if ($parts === []) {
+            return AttributeValue::static('');
+        }
+
+        // Single static string
+        if (count($parts) === 1 && is_string($parts[0])) {
+            return AttributeValue::static($parts[0]);
+        }
+
+        // Single output expression
+        if (count($parts) === 1 && $parts[0] instanceof OutputNode) {
+            return AttributeValue::output($parts[0]);
+        }
+
+        // Mixed parts
+        return AttributeValue::parts(array_values($parts));
+    }
+
+    /**
+     * Parse a PHP short echo output expression.
+     *
+     * @param bool $inAttribute Whether this output is inside an attribute value
+     */
+    private function parsePhpOutput(TokenStream $stream, bool $inAttribute): OutputNode
+    {
+        $openToken = $stream->consume(); // PhpOutputOpen
+        $line = $openToken->line;
+        $column = $openToken->column;
+
+        $expression = '';
+        if ($stream->current()->type === TokenType::PhpExpression) {
+            $exprToken = $stream->consume();
+            $expression = $exprToken->value;
+        }
+
+        $stream->consumeIf(TokenType::PhpClose);
+
+        // Normalize: strip trailing semicolons
+        $expression = $this->normalizeExpression($expression);
+
+        // Parse pipe syntax
+        $pipes = PipeParser::parse($expression);
+        $finalExpression = $pipes['expression'];
+        $pipeChain = $pipes['pipes'];
+        $shouldEscape = !$pipes['raw'];
+
+        if ($pipes['raw']) {
+            $outputContext = OutputContext::RAW;
+        } elseif ($pipes['json']) {
+            $outputContext = $inAttribute ? OutputContext::JSON_ATTRIBUTE : OutputContext::JSON;
+        } else {
+            $outputContext = $inAttribute ? OutputContext::HTML_ATTRIBUTE : OutputContext::HTML;
+        }
+
+        return new OutputNode(
+            expression: $finalExpression,
+            escape: $shouldEscape,
+            context: $outputContext,
+            line: $line,
+            column: $column,
+            pipes: $pipeChain,
+        );
+    }
+
+    /**
+     * Parse a PHP code block (full open tag).
+     */
+    private function parsePhpBlock(TokenStream $stream): RawPhpNode
+    {
+        $openToken = $stream->consume(); // PhpBlockOpen
+        $line = $openToken->line;
+        $column = $openToken->column;
+
+        $code = '';
+        if ($stream->current()->type === TokenType::PhpCode) {
+            $codeToken = $stream->consume();
+            $code = $codeToken->value;
+        }
+
+        $stream->consumeIf(TokenType::PhpClose);
+
+        return new RawPhpNode(trim($code), $line, $column);
+    }
+
+    /**
+     * Parse a raw body token into a RawBodyNode.
+     */
+    private function parseRawBody(TokenStream $stream): RawBodyNode
+    {
+        $token = $stream->consume();
+
+        return new RawBodyNode($token->value, $token->line, $token->column);
+    }
+
+    /**
+     * Skip an unexpected token to avoid infinite loops.
+     */
+    private function skipToken(TokenStream $stream): null
+    {
+        $stream->consume();
+
+        return null;
+    }
+
+    /**
+     * Normalize an output expression: trim and strip trailing semicolons.
+     */
+    private function normalizeExpression(string $expression): string
+    {
+        $expression = trim($expression);
+        if ($expression !== '' && str_ends_with($expression, ';')) {
+            return rtrim($expression, " \t\n\r\0\x0B;");
+        }
+
+        return $expression;
+    }
+
+    /**
+     * Strip the configured raw directive attribute from an attribute list.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     * @return array<\Sugar\Core\Ast\AttributeNode>
+     */
+    private function stripRawAttribute(array $attributes): array
+    {
+        $rawName = $this->prefixHelper->buildName('raw');
+
+        return array_values(array_filter(
+            $attributes,
+            static fn(AttributeNode $attr): bool => $attr->name !== $rawName,
+        ));
     }
 }

@@ -7,6 +7,10 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+if (extension_loaded('apcu')) {
+    ini_set('apc.enable_cli', '1');
+}
+
 // Define fixture path constants
 define('SUGAR_TEST_FIXTURES_PATH', __DIR__ . '/fixtures');
 define('SUGAR_TEST_TEMPLATES_PATH', SUGAR_TEST_FIXTURES_PATH . '/templates');

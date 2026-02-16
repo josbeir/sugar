@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Sugar\Parser\Helper\ParserState;
-use Sugar\Parser\Helper\TokenStream;
-use Sugar\Parser\Parser;
+use Sugar\Core\Parser\Lexer;
+use Sugar\Core\Parser\Parser;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -18,10 +17,6 @@ require dirname(__DIR__) . '/vendor/autoload.php';
  */
 final class ParserBenchmark
 {
-    private ?Closure $tokenizeSource = null;
-
-    private ?Closure $parseTokens = null;
-
     /**
      * @param array<string> $arguments
      */
@@ -37,7 +32,6 @@ final class ParserBenchmark
         $effectiveComparePath = $comparePath ?? $jsonPath;
 
         $parser = new Parser();
-        $this->initializePhaseClosures($parser);
         $cases = $this->cases();
         $results = [];
 
@@ -203,27 +197,22 @@ final class ParserBenchmark
             $baselinePeak = memory_get_peak_usage(false);
         }
 
+        $lexer = new Lexer();
+
         for ($index = 0; $index < $iterations; $index++) {
-            if ($this->tokenizeSource instanceof Closure && $this->parseTokens instanceof Closure) {
-                $totalStart = hrtime(true);
+            $totalStart = hrtime(true);
 
-                $phaseStart = hrtime(true);
-                /** @var array<\Sugar\Parser\Token> $tokens */
-                $tokens = ($this->tokenizeSource)($template);
-                $tokenizeNanoseconds += hrtime(true) - $phaseStart;
+            // Measure tokenization (Lexer phase)
+            $phaseStart = hrtime(true);
+            $tokens = $lexer->tokenize($template);
+            $tokenizeNanoseconds += hrtime(true) - $phaseStart;
 
-                $phaseStart = hrtime(true);
-                $state = new ParserState(new TokenStream($tokens), $template);
-                ($this->parseTokens)($state);
-                $parseNanoseconds += hrtime(true) - $phaseStart;
+            // Measure parsing (Parser phase)
+            $phaseStart = hrtime(true);
+            $parser->parseTokens($tokens);
+            $parseNanoseconds += hrtime(true) - $phaseStart;
 
-                $totalNanoseconds += hrtime(true) - $totalStart;
-                continue;
-            }
-
-            $startTime = hrtime(true);
-            $parser->parse($template);
-            $totalNanoseconds += hrtime(true) - $startTime;
+            $totalNanoseconds += hrtime(true) - $totalStart;
         }
 
         $tokenizeUs = $iterations > 0 ? $tokenizeNanoseconds / 1000 / $iterations : 0.0;
@@ -839,21 +828,6 @@ final class ParserBenchmark
         }
 
         file_put_contents($path, $encoded . "\n");
-    }
-
-    private function initializePhaseClosures(Parser $parser): void
-    {
-        $reflection = new ReflectionClass($parser);
-
-        $tokenizeMethod = $reflection->getMethod('tokenizeSource');
-        $tokenizeMethod->setAccessible(true);
-
-        $this->tokenizeSource = $tokenizeMethod->getClosure($parser);
-
-        $parseTokensMethod = $reflection->getMethod('parseTokens');
-        $parseTokensMethod->setAccessible(true);
-
-        $this->parseTokens = $parseTokensMethod->getClosure($parser);
     }
 
     private function printProgress(string $message): void
