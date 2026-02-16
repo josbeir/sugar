@@ -236,10 +236,10 @@ final class EngineBuilder
                 config: $this->config,
                 templateLoader: $this->loader,
                 templateCache: $this->cache,
-                templateContext: $this->templateContext,
-                debug: $this->debug,
                 parser: $parser,
                 directiveRegistry: $registry,
+                templateContext: $this->templateContext,
+                debug: $this->debug,
             );
             $extension->register($context);
 
@@ -275,7 +275,6 @@ final class EngineBuilder
             debug: $this->debug,
             templateContext: $this->templateContext,
             exceptionRenderer: $this->exceptionRenderer,
-            config: $this->config,
             runtimeServices: $runtimeServices,
         );
     }

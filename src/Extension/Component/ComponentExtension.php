@@ -3,16 +3,12 @@ declare(strict_types=1);
 
 namespace Sugar\Extension\Component;
 
-use Sugar\Core\Cache\TemplateCacheInterface;
-use Sugar\Core\Compiler\CompilerInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\PassPriority;
-use Sugar\Core\Exception\TemplateRuntimeException;
-use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
-use Sugar\Core\Parser\Parser;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
@@ -53,6 +49,12 @@ final class ComponentExtension implements ExtensionInterface
      */
     public function register(RegistrationContext $context): void
     {
+        $loader = $context->getTemplateLoader();
+        $cache = $context->getTemplateCache();
+        $config = $context->getConfig();
+        $templateContext = $context->getTemplateContext();
+        $debug = $context->isDebug();
+
         $context->compilerPass(
             pass: $this->resolveComponentExpansionPass($context),
             priority: PassPriority::POST_DIRECTIVE_COMPILATION,
@@ -60,33 +62,28 @@ final class ComponentExtension implements ExtensionInterface
 
         $context->runtimeService(
             self::SERVICE_RENDERER,
-            function (RegistrationContext $runtimeContext): ComponentRenderer {
-                $compiler = $runtimeContext->getCompiler();
-                $loader = $runtimeContext->getTemplateLoader();
-                $cache = $runtimeContext->getTemplateCache();
-                $config = $runtimeContext->getConfig();
-
-                if (
-                    !$compiler instanceof CompilerInterface
-                    || !$loader instanceof TemplateLoaderInterface
-                    || !$cache instanceof TemplateCacheInterface
-                    || !$config instanceof SugarConfig
-                ) {
-                    throw new TemplateRuntimeException('Component renderer runtime dependencies are not initialized.');
-                }
-
-                $componentLoader = $this->getOrCreateComponentLoader($loader, $config);
+            function (RuntimeContext $runtimeContext) use (
+                $loader,
+                $cache,
+                $config,
+                $templateContext,
+                $debug,
+            ): ComponentRenderer {
+                $componentLoader = $this->getOrCreateComponentLoader(
+                    $loader,
+                    $config,
+                );
 
                 return new ComponentRenderer(
                     componentCompiler: new ComponentCompiler(
-                        compiler: $compiler,
+                        compiler: $runtimeContext->getCompiler(),
                         loader: $componentLoader,
                     ),
                     loader: $componentLoader,
                     cache: $cache,
                     tracker: $runtimeContext->getTracker(),
-                    debug: $runtimeContext->isDebug(),
-                    templateContext: $runtimeContext->getTemplateContext(),
+                    debug: $debug,
+                    templateContext: $templateContext,
                 );
             },
         );
@@ -103,15 +100,6 @@ final class ComponentExtension implements ExtensionInterface
         $parser = $context->getParser();
         $registry = $context->getDirectiveRegistry();
         $config = $context->getConfig();
-
-        if (
-            !$loader instanceof TemplateLoaderInterface
-            || !$parser instanceof Parser
-            || !$registry instanceof DirectiveRegistryInterface
-            || !$config instanceof SugarConfig
-        ) {
-            throw new TemplateRuntimeException('Component extension registration dependencies are not initialized.');
-        }
 
         $componentLoader = $this->getOrCreateComponentLoader($loader, $config);
 

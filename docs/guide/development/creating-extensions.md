@@ -61,42 +61,76 @@ final class MetricsExtension implements ExtensionInterface
 
 Runtime services are available through `RuntimeEnvironment` during template execution.
 
-`runtimeService()` also supports factories (closures) that receive a `RegistrationContext` at render time, so services can be built from runtime dependencies:
+`runtimeService()` also supports factories (closures) that receive a `RuntimeContext` at render time:
 
 ```php
-use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
 
-$context->runtimeService('metrics', function (RegistrationContext $runtimeContext): MetricsClient {
-        $cache = $runtimeContext->getTemplateCache();
+$context->runtimeService('metrics', function (RuntimeContext $runtimeContext): MetricsClient {
+    $compiler = $runtimeContext->getCompiler();
 
-        return new MetricsClient($cache);
+    return new MetricsClient($compiler);
 });
 ```
 
+For services that need both phases, capture registration-time dependencies from `RegistrationContext` and use `RuntimeContext` only for runtime-only dependencies.
+
 The renderer service id (`RuntimeEnvironment::RENDERER_SERVICE_ID`) is reserved by the engine. If multiple extensions register that id, the first registration wins.
 
-## RegistrationContext API
+## Contexts: Registration vs Runtime
 
-`RegistrationContext` now exposes engine dependencies to extensions through typed getters. Availability depends on when the context is used:
+Sugar uses two different context objects to avoid mixing extension phases.
 
-- **During extension registration** (`ExtensionInterface::register()`):
-    - `getConfig()`
-    - `getTemplateLoader()`
-    - `getTemplateCache()`
-    - `getTemplateContext()`
-    - `isDebug()`
-    - `getParser()`
-    - `getDirectiveRegistry()`
-- **During runtime service materialization** (closure passed to `runtimeService()`):
-    - `getConfig()`
-    - `getTemplateLoader()`
-    - `getTemplateCache()`
-    - `getTemplateContext()`
-    - `isDebug()`
-    - `getCompiler()`
-    - `getTracker()`
+### RegistrationContext (build time)
 
-Depending on phase, some getters can return `null`, so extensions should guard dependency assumptions when needed.
+`RegistrationContext` is passed to `ExtensionInterface::register()` and is used to register directives, compiler passes, and runtime services.
+
+Available getters:
+
+- `getConfig()`
+- `getTemplateLoader()`
+- `getTemplateCache()`
+- `getTemplateContext()`
+- `isDebug()`
+- `getParser()`
+- `getDirectiveRegistry()`
+
+These registration dependencies are non-null.
+
+### RuntimeContext (render time)
+
+`RuntimeContext` is passed only to runtime service factories registered via `runtimeService()`.
+
+Available getters:
+
+- `getCompiler()`
+- `getTracker()`
+
+`RuntimeContext` intentionally contains only runtime-only dependencies that are not part of `RegistrationContext`.
+
+### Pattern for Using Both
+
+Use `RegistrationContext` in `register()` for stable engine services, and capture what you need into the factory closure. Use `RuntimeContext` inside the closure only for runtime-only services.
+
+```php
+use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
+
+public function register(RegistrationContext $context): void
+{
+    $cache = $context->getTemplateCache();
+    $debug = $context->isDebug();
+
+    $context->runtimeService('metrics', function (RuntimeContext $runtimeContext) use ($cache, $debug): MetricsClient {
+        return new MetricsClient(
+            compiler: $runtimeContext->getCompiler(),
+            cache: $cache,
+            debug: $debug,
+            tracker: $runtimeContext->getTracker(),
+        );
+    });
+}
+```
 
 For example, fragment caching is now registered as an optional extension:
 
