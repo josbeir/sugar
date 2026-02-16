@@ -1350,7 +1350,7 @@ EOT;
     public function testParseComplexPageStructure(): void
     {
         // Complex realistic page with multiple code paths
-        $template = <<<EOT
+        $template = <<<'EOT'
 <?xml version="1.0"?>
 <!DOCTYPE html>
 <!-- Main page -->
