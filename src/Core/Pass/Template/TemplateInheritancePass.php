@@ -107,7 +107,7 @@ final class TemplateInheritancePass implements AstPassInterface
         $this->validateExtendsPlacement($document, $context);
 
         if ($context->blocks !== null) {
-            $document = $this->processIncludes($document, $context, $loadedTemplates);
+            $document = $this->processIncludes($document, $context, $loadedTemplates, [$context->templatePath]);
             $document = $this->extractBlocks($document, $context->blocks, $context);
 
             return $this->removeInheritanceAttributes($document);
@@ -162,7 +162,7 @@ final class TemplateInheritancePass implements AstPassInterface
             $document = $this->processExtends($extendsElement, $document, $context, $loadedTemplates);
         } else {
             // Process s:include directives
-            $document = $this->processIncludes($document, $context, $loadedTemplates);
+            $document = $this->processIncludes($document, $context, $loadedTemplates, [$context->templatePath]);
         }
 
         // Remove template inheritance attributes (s:block, s:append, s:prepend, s:extends, s:include, s:with)
@@ -369,7 +369,7 @@ final class TemplateInheritancePass implements AstPassInterface
         $parentContext->stampTemplatePath($parentDocument);
 
         // Resolve includes in child before merging so relative paths use the child template path
-        $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates);
+        $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates, [$context->templatePath]);
 
         // Collect blocks from child
         $childBlocks = $this->collectBlocks($childDocument, $context);
@@ -387,12 +387,14 @@ final class TemplateInheritancePass implements AstPassInterface
      * @param \Sugar\Core\Ast\DocumentNode $document Document to process
      * @param \Sugar\Core\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
+     * @param array<string> $includeStack Active include resolution stack
      * @return \Sugar\Core\Ast\DocumentNode Processed document
      */
     private function processIncludes(
         DocumentNode $document,
         CompilationContext $context,
         array &$loadedTemplates,
+        array $includeStack,
     ): DocumentNode {
         $newChildren = [];
 
@@ -408,6 +410,18 @@ final class TemplateInheritancePass implements AstPassInterface
                     $includeName,
                 );
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
+
+                if (in_array($resolvedPath, $includeStack, true)) {
+                    $includeAttribute = AttributeHelper::findAttribute($child->attributes, $includeName);
+                    $chain = [...$includeStack, $resolvedPath];
+                    $message = sprintf('Circular template include detected: %s', implode(' -> ', $chain));
+
+                    if ($includeAttribute instanceof AttributeNode) {
+                        throw $context->createSyntaxExceptionForAttribute($message, $includeAttribute);
+                    }
+
+                    throw $context->createSyntaxExceptionForNode($message, $child);
+                }
 
                 // Track included template as dependency
                 $context->tracker?->addDependency(
@@ -434,7 +448,12 @@ final class TemplateInheritancePass implements AstPassInterface
                 );
 
                 // Process includes recursively
-                $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
+                $includeDocument = $this->processIncludes(
+                    $includeDocument,
+                    $includeContext,
+                    $loadedTemplates,
+                    [...$includeStack, $resolvedPath],
+                );
 
                 $includeChildren = $includeDocument->children;
 
@@ -470,6 +489,7 @@ final class TemplateInheritancePass implements AstPassInterface
                     $child->children,
                     $context,
                     $loadedTemplates,
+                    $includeStack,
                 );
                 $processedChild = $child instanceof FragmentNode
                     ? NodeCloner::fragmentWithChildren($child, $processedChildren)
@@ -489,15 +509,17 @@ final class TemplateInheritancePass implements AstPassInterface
      * @param array<\Sugar\Core\Ast\Node> $children Children to process
      * @param \Sugar\Core\Compiler\CompilationContext $context Compilation context
      * @param array<string> $loadedTemplates Loaded templates stack
+     * @param array<string> $includeStack Active include resolution stack
      * @return array<\Sugar\Core\Ast\Node> Processed children
      */
     private function processChildrenIncludes(
         array $children,
         CompilationContext $context,
         array &$loadedTemplates,
+        array $includeStack,
     ): array {
         $doc = new DocumentNode($children);
-        $processed = $this->processIncludes($doc, $context, $loadedTemplates);
+        $processed = $this->processIncludes($doc, $context, $loadedTemplates, $includeStack);
 
         return $processed->children;
     }

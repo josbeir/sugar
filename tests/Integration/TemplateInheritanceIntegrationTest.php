@@ -216,4 +216,44 @@ SUGAR,
             'pages/home.sugar.php',
         );
     }
+
+    public function testThrowsExceptionOnSelfRecursiveInclude(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'pages/bla.sugar.php' => '<s-template s:include="/pages/bla.sugar.php" />',
+            ],
+            config: new SugarConfig(),
+        );
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Circular template include detected: pages/bla.sugar.php -> pages/bla.sugar.php');
+
+        $this->compiler->compile(
+            $this->templateLoader->load('pages/bla.sugar.php'),
+            'pages/bla.sugar.php',
+        );
+    }
+
+    public function testThrowsExceptionOnIndirectRecursiveInclude(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'pages/a.sugar.php' => '<s-template s:include="/pages/b.sugar.php" />',
+                'pages/b.sugar.php' => '<s-template s:include="/pages/c.sugar.php" />',
+                'pages/c.sugar.php' => '<s-template s:include="/pages/a.sugar.php" />',
+            ],
+            config: new SugarConfig(),
+        );
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage(
+            'Circular template include detected: pages/a.sugar.php -> pages/b.sugar.php -> pages/c.sugar.php -> pages/a.sugar.php',
+        );
+
+        $this->compiler->compile(
+            $this->templateLoader->load('pages/a.sugar.php'),
+            'pages/a.sugar.php',
+        );
+    }
 }
