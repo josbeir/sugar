@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Extension\Component\Pass;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\CompilationContext;
@@ -20,6 +18,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
+use Sugar\Tests\Helper\Trait\AstStringifyTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
@@ -27,6 +26,7 @@ use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
  */
 final class ComponentPassFactoryTest extends TestCase
 {
+    use AstStringifyTrait;
     use TemplateTestHelperTrait;
 
     public function testCreateExpansionPassReturnsCachedInstance(): void
@@ -148,26 +148,5 @@ final class ComponentPassFactoryTest extends TestCase
 
         $this->assertStringContainsString('hello', $this->astToString($result));
         $this->assertStringNotContainsString('helloX', $this->astToString($result));
-    }
-
-    private function astToString(DocumentNode $ast): string
-    {
-        $output = '';
-        foreach ($ast->children as $child) {
-            if ($child instanceof TextNode) {
-                $output .= $child->content;
-                continue;
-            }
-
-            if ($child instanceof ElementNode) {
-                foreach ($child->children as $nested) {
-                    if ($nested instanceof TextNode) {
-                        $output .= $nested->content;
-                    }
-                }
-            }
-        }
-
-        return $output;
     }
 }

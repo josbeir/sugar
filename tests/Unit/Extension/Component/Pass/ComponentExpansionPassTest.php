@@ -10,8 +10,6 @@ use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Node;
-use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\RuntimeCallNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\CompilationContext;
@@ -31,12 +29,14 @@ use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
+use Sugar\Tests\Helper\Trait\AstStringifyTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ComponentExpansionPassTest extends TestCase
 {
+    use AstStringifyTrait;
     use CompilerTestTrait;
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
@@ -800,83 +800,6 @@ final class ComponentExpansionPassTest extends TestCase
         }
 
         return false;
-    }
-
-    /**
-     * Helper to convert AST back to string for assertions
-     */
-    private function astToString(DocumentNode $ast): string
-    {
-        $output = '';
-        foreach ($ast->children as $child) {
-            $output .= $this->nodeToString($child);
-        }
-
-        return $output;
-    }
-
-    /**
-     * Helper to convert a single node to string for assertions
-     *
-     * @param \Sugar\Core\Ast\Node $node Node to convert
-     * @return string String representation
-     */
-    private function nodeToString(Node $node): string
-    {
-        if ($node instanceof TextNode) {
-            return $node->content;
-        }
-
-        if ($node instanceof RawPhpNode) {
-            return $node->code;
-        }
-
-        if ($node instanceof ElementNode) {
-            $html = '<' . $node->tag;
-            foreach ($node->attributes as $attr) {
-                $html .= ' ' . $attr->name;
-                if (!$attr->value->isBoolean()) {
-                    $parts = $attr->value->toParts() ?? [];
-                    if (count($parts) > 1) {
-                        $html .= '="';
-                        foreach ($parts as $part) {
-                            if ($part instanceof OutputNode) {
-                                $html .= '<?= ' . $part->expression . ' ?>';
-                                continue;
-                            }
-
-                            $html .= $part;
-                        }
-
-                        $html .= '"';
-                    } else {
-                        $part = $parts[0] ?? '';
-                        if ($part instanceof OutputNode) {
-                            $html .= '="<?= ' . $part->expression . ' ?>"';
-                        } else {
-                            $html .= '="' . $part . '"';
-                        }
-                    }
-                }
-            }
-
-            $html .= '>';
-            foreach ($node->children as $child) {
-                $html .= $this->nodeToString($child);
-            }
-
-            if (!$node->selfClosing) {
-                $html .= '</' . $node->tag . '>';
-            }
-
-            return $html;
-        }
-
-        if ($node instanceof OutputNode) {
-            return '<?= ' . $node->expression . ' ?>';
-        }
-
-        return '';
     }
 
     protected function createContext(
