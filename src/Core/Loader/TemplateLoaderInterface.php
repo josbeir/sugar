@@ -14,6 +14,13 @@ interface TemplateLoaderInterface
     public function registerNamespace(string $namespace, TemplateNamespaceDefinition $definition): void;
 
     /**
+     * Get all registered namespace names.
+     *
+     * @return array<string> Namespace names (e.g. ['app', 'auth-plugin', 'reports'])
+     */
+    public function getRegisteredNamespaces(): array;
+
+    /**
      * Load a template source by logical name.
      *
      * Names are canonicalized through resolve() before loading.

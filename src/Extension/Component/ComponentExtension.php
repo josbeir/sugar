@@ -49,11 +49,11 @@ final class ComponentExtension implements ExtensionInterface
         $templateContext = $context->getTemplateContext();
         $debug = $context->isDebug();
 
-        // Initialize component loader once
+        // Initialize component loader - it auto-detects namespaces from the template loader
         $this->componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: $config,
-            directories: $this->componentDirectories,
+            componentDirectories: $this->componentDirectories,
         );
 
         $context->compilerPass(

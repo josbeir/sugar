@@ -60,7 +60,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->loader = new ComponentLoader(
             templateLoader: $this->stringTemplateLoader,
             config: $this->config,
-            directories: ['components'],
+            componentDirectories: ['components'],
         );
 
         $this->parser = $this->createParser();

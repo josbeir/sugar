@@ -20,7 +20,7 @@ final class ComponentLoaderTest extends TestCase
         $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
-            directories: ['components'],
+            componentDirectories: ['components'],
         );
 
         $this->assertSame('<div class="card"><?= $slot ?></div>', $componentLoader->loadComponent('card'));
@@ -36,7 +36,7 @@ final class ComponentLoaderTest extends TestCase
         $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
-            directories: ['components'],
+            componentDirectories: ['components'],
         );
 
         $this->assertSame('@app/components/s-alert', $componentLoader->getComponentFilePath('alert'));
@@ -49,7 +49,7 @@ final class ComponentLoaderTest extends TestCase
         $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
-            directories: ['components'],
+            componentDirectories: ['components'],
         );
 
         $this->expectException(ComponentNotFoundException::class);

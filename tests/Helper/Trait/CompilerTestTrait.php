@@ -76,7 +76,7 @@ trait CompilerTestTrait
         $this->componentLoader = new ComponentLoader(
             templateLoader: $this->templateLoader,
             config: $loaderConfig,
-            directories: $componentPaths === [] ? ['components'] : $componentPaths,
+            componentDirectories: $componentPaths === [] ? ['components'] : $componentPaths,
         );
 
         $customPasses = $this->withDefaultComponentExpansion(
@@ -127,7 +127,7 @@ trait CompilerTestTrait
         $this->componentLoader = new ComponentLoader(
             templateLoader: $this->templateLoader,
             config: $loaderConfig,
-            directories: ['components'],
+            componentDirectories: ['components'],
         );
 
         $customPasses = $this->withDefaultComponentExpansion(

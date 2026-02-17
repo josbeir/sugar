@@ -29,11 +29,47 @@ $engine = Engine::builder()
     ->build();
 ```
 
-You can customize component directories when needed:
+The component extension automatically discovers components in the configured `components/` directory within all registered template namespaces.
+
+### Customizing Component Directories
+
+By default, components are loaded from a `components/` directory within each namespace. You can customize this:
 
 ```php
-->withExtension(new ComponentExtension(['components', 'ui/components']))
+->withExtension(new ComponentExtension(['components', 'ui/components', 'shared']))
 ```
+
+This searches for components in multiple subdirectories within each template namespace, in priority order. The first match is used.
+
+### Multi-Namespace Component Loading
+
+Components are resolved across all registered template namespaces. When registering multiple namespaces (like for plugins), the component loader searches each namespace's component directories in registration order.
+
+For example, with this setup:
+
+```php
+$loader = new FileTemplateLoader([__DIR__ . '/app/templates']);
+$loader->registerNamespace(
+    'plugin-auth',
+    new TemplateNamespaceDefinition([__DIR__ . '/plugins/auth/templates'])
+);
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withExtension(new ComponentExtension(['components']))
+    ->build();
+```
+
+The `<s-button>` component is resolved in this order:
+
+1. `app/templates/components/s-button.sugar.php`
+2. `plugins/auth/templates/components/s-button.sugar.php`
+
+The first match found is used. This allows plugins and namespaces to share the same component hierarchy while letting app components take priority.
+
+::: tip
+To control component resolution priority, adjust the order when you register template namespaces. Namespaces registered earlier are searched first, so app should be registered before plugins.
+:::
 
 ## Basic Component Usage
 
@@ -82,7 +118,9 @@ The fragment element filename (for example, `s-template.sugar.php`, `x-template.
 
 ## Components in the Templates Tree
 
-This is the typical place components live. The highlighted lines show the component directory and files.
+### Single Namespace (App Only)
+
+This is the typical place components live when your application uses only a single template namespace. The highlighted lines show the component directory and files.
 
 ```js
 templates/
@@ -99,6 +137,44 @@ templates/
     ├── s-card.sugar.php // [!code focus]
     └── s-alert.sugar.php // [!code focus]
 ```
+
+### Multi-Namespace Setup (With Plugins)
+
+When your application uses plugins or shared packages, each namespace can have its own component directory. Components are resolved in namespace registration order, with the `@app` namespace taking priority.
+
+```js
+app/
+└── templates/
+    ├── pages/
+    ├── layouts/
+    ├── partials/
+    └── components/
+        ├── s-button.sugar.php (priority: #1)
+        ├── s-card.sugar.php
+        └── s-dashboard.sugar.php
+
+plugins/
+└── auth/
+    └── templates/
+        └── components/
+            ├── s-button.sugar.php (overridden by @app)
+            ├── s-login-form.sugar.php (priority: #2)
+            └── s-auth-modal.sugar.php
+
+packages/
+└── shared-ui/
+    └── templates/
+        └── components/
+            ├── s-alert.sugar.php (priority: #3)
+            └── s-tooltip.sugar.php
+```
+
+With this structure:
+- `<s-button>` loads from `app/templates/components/` (first registered)
+- `<s-login-form>` loads from `plugins/auth/templates/components/` (second registered)
+- `<s-alert>` loads from `packages/shared-ui/templates/components/` (third registered)
+
+Once a component is found in any namespace, that version is used. If you need to prevent a plugin component from shadowing an app component, keep your component names unique or adjust the namespace registration order.
 
 ## Named Slots
 

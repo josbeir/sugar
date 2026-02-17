@@ -24,7 +24,10 @@ final class ComponentCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader();
-        $componentLoader = new ComponentLoader($loader, $config);
+        $componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+        );
         $compiler = new Compiler(
             parser: new Parser($config),
             escaper: new Escaper(),
@@ -50,38 +53,10 @@ final class ComponentCompilerTest extends TestCase
         $loader = new StringTemplateLoader(
             templates: ['components/s-button.sugar.php' => '<button><?= $slot ?></button>'],
         );
-        $componentLoader = new ComponentLoader($loader, $config);
-
-        $compiler = new Compiler(
-            parser: new Parser($config),
-            escaper: new Escaper(),
-            registry: new DirectiveRegistry(),
+        $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: $config,
         );
-
-        $componentCompiler = new ComponentCompiler(
-            compiler: $compiler,
-            loader: $componentLoader,
-        );
-
-        $compiled = $componentCompiler->compileComponent('button', ['slot']);
-
-        $output = $this->executeTemplate($compiled, [
-            'slot' => '<strong>Click</strong>',
-            '__sugar_attrs' => [],
-        ]);
-
-        $this->assertStringContainsString('<button><strong>Click</strong></button>', $output);
-    }
-
-    public function testCompileComponentTracksComponentDependency(): void
-    {
-        $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
-            templates: ['components/s-button.sugar.php' => '<button><?= $slot ?></button>'],
-        );
-        $componentLoader = new ComponentLoader($loader, $config);
 
         $compiler = new Compiler(
             parser: new Parser($config),

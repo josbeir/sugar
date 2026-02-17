@@ -16,12 +16,14 @@ final readonly class ComponentLoader implements ComponentLoaderInterface
     /**
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $templateLoader Core template loader
      * @param \Sugar\Core\Config\SugarConfig $config Sugar config used for component naming
-     * @param array<string> $directories Logical directories containing component templates
+     * @param array<string> $templateNamespaces Template namespaces in priority order. When empty, auto-detects from loader
+     * @param array<string> $componentDirectories Component subdirectories within namespaces (e.g. ['components', 'shared'])
      */
     public function __construct(
         private TemplateLoaderInterface $templateLoader,
         private SugarConfig $config,
-        private array $directories = ['components'],
+        private array $templateNamespaces = [],
+        private array $componentDirectories = ['components'],
     ) {
     }
 
@@ -61,7 +63,7 @@ final readonly class ComponentLoader implements ComponentLoaderInterface
     }
 
     /**
-     * Build the canonical component template name for the configured namespace.
+     * Build the canonical component template name for the configured namespaces.
      */
     private function componentTemplateName(string $name): string
     {
@@ -72,21 +74,32 @@ final readonly class ComponentLoader implements ComponentLoaderInterface
             ? $trimmed
             : $prefix . $trimmed;
 
-        foreach ($this->directories as $directory) {
-            $normalizedDirectory = trim($directory, '/');
-            $candidate = $normalizedDirectory === ''
-                ? '@app/' . $normalized
-                : '@app/' . $normalizedDirectory . '/' . $normalized;
+        // Auto-detect namespaces from loader if not explicitly configured
+        $namespaces = $this->templateNamespaces === []
+            ? $this->templateLoader->getRegisteredNamespaces()
+            : $this->templateNamespaces;
 
-            if ($this->templateLoader->exists($candidate)) {
-                return $candidate;
+        // Try each namespace in priority order
+        foreach ($namespaces as $namespace) {
+            // Then try each component directory within that namespace
+            foreach ($this->componentDirectories as $directory) {
+                $normalizedDirectory = trim($directory, '/');
+                $candidate = $normalizedDirectory === ''
+                    ? '@' . $namespace . '/' . $normalized
+                    : '@' . $namespace . '/' . $normalizedDirectory . '/' . $normalized;
+
+                if ($this->templateLoader->exists($candidate)) {
+                    return $candidate;
+                }
             }
         }
 
-        $fallbackDirectory = trim($this->directories[0] ?? 'components', '/');
+        // Fallback to first namespace and first directory
+        $fallbackNamespace = $namespaces[0] ?? 'app';
+        $fallbackDirectory = trim($this->componentDirectories[0] ?? 'components', '/');
 
         return $fallbackDirectory === ''
-            ? '@app/' . $normalized
-            : '@app/' . $fallbackDirectory . '/' . $normalized;
+            ? '@' . $fallbackNamespace . '/' . $normalized
+            : '@' . $fallbackNamespace . '/' . $fallbackDirectory . '/' . $normalized;
     }
 }

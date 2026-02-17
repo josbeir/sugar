@@ -45,6 +45,83 @@ By default, inheritance and include paths resolve relative to the current templa
 ```
 :::
 
+## Multi-Namespace Includes and Extends
+
+By default, templates without an explicit namespace prefix resolve from the `@app` namespace. You can load templates from other registered namespaces by prefixing the path with `@namespace/`.
+
+This is useful when your application uses plugins or shared packages that have their own template namespaces.
+
+### Default Namespace (App)
+
+When no namespace prefix is used, templates resolve from `@app`:
+
+```html
+<!-- Explicitly in @app namespace -->
+<s-template s:include="layouts/base.sugar.php" />
+
+<!-- Same as above (implicit) -->
+<s-template s:extends="partials/header" />
+```
+
+### Explicit Namespace Reference
+
+Use `@namespace/` prefix to load from a different registered namespace:
+
+```html
+<!-- Load from 'plugin-auth' namespace -->
+<s-template s:extends="@plugin-auth/layouts/dashboard.sugar.php" />
+
+<!-- Load from 'shared-ui' namespace -->
+<s-template s:include="@shared-ui/components/modal.sugar.php" />
+
+<!-- Load from 'reports' namespace -->
+<s-template s:include="@reports/partials/chart-legend" />
+```
+
+### Multi-Namespace Setup
+
+In your engine builder, register multiple template namespaces:
+
+```php
+use Sugar\Core\Loader\FileTemplateLoader;
+use Sugar\Core\Loader\TemplateNamespaceDefinition;
+
+$loader = new FileTemplateLoader([
+    __DIR__ . '/app/templates',
+]);
+
+// Register additional namespaces (e.g., plugins)
+$loader->registerNamespace(
+    'plugin-auth',
+    new TemplateNamespaceDefinition([
+        __DIR__ . '/plugins/auth/templates'
+    ])
+);
+
+$loader->registerNamespace(
+    'shared-ui',
+    new TemplateNamespaceDefinition([
+        __DIR__ . '/packages/shared-ui/templates'
+    ])
+);
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->build();
+```
+
+### Priority and Resolution
+
+When multiple namespaces are registered, the `@app` namespace is the default fallback. Explicit namespace prefixes always take priority:
+
+```html
+<!-- Uses @app namespace -->
+<s-template s:include="layouts/base" />
+
+<!-- Uses @shared-ui namespace, not @app -->
+<s-template s:include="@shared-ui/layouts/base" />
+```
+
 ## Dependency Safety
 
 Sugar tracks template dependencies during inheritance and includes. Circular dependencies are detected and rejected so a template cannot extend or include itself indirectly.

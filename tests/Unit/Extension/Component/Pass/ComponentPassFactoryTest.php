@@ -33,7 +33,10 @@ final class ComponentPassFactoryTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
-        $componentLoader = new ComponentLoader($loader, $config);
+        $componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+        );
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
@@ -55,7 +58,10 @@ final class ComponentPassFactoryTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
-        $componentLoader = new ComponentLoader($loader, $config);
+        $componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+        );
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
@@ -99,7 +105,10 @@ final class ComponentPassFactoryTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
-        $componentLoader = new ComponentLoader($loader, $config);
+        $componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+        );
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 

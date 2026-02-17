@@ -48,6 +48,14 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
     /**
      * @inheritDoc
      */
+    public function getRegisteredNamespaces(): array
+    {
+        return array_keys($this->namespaces);
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function resolve(string $name, string $referrer = ''): string
     {
         [$namespace, $path, $hasNamespace] = $this->splitLogicalName($name);
