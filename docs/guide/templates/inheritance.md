@@ -274,12 +274,6 @@ The example below shows relative vs absolute-only paths.
 
 Use `s:block` to replace a parent block. Inside that block, use `s:parent` to include parent content at the exact location you want. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
 
-When multiple elements target the same block name in one child template, Sugar applies them in source order:
-
-- `s:block` replaces the current block content at that point.
-- `s:append` adds content after the current block content.
-- `s:prepend` adds content before the current block content.
-
 ```sugar
 <!-- Invalid: multiple block directives on one element -->
 <section s:block="content" s:append="content">

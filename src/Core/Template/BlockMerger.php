@@ -389,7 +389,7 @@ final class BlockMerger
 
             if ($parent instanceof ElementNode) {
                 if ($hasDirectives) {
-                    $wrappedFragment = NodeCloner::fragmentWithChildren($childWithResolvedChildren, $resolvedChildren);
+                    $wrappedFragment = $childWithResolvedChildren;
                     $wrappedFragment = NodeCloner::fragmentWithAttributes($wrappedFragment, $cleanAttrs);
 
                     return NodeCloner::withChildren($parent, [$wrappedFragment]);
