@@ -61,7 +61,9 @@ final class DirectivePrefixHelperTest extends TestCase
         $helper = new DirectivePrefixHelper('v');
 
         $this->assertTrue($helper->isInheritanceAttribute('v:extends'));
+        $this->assertTrue($helper->isInheritanceAttribute('v:parent'));
         $this->assertTrue($helper->isInheritanceAttribute('extends'));
+        $this->assertTrue($helper->isInheritanceAttribute('parent'));
         $this->assertFalse($helper->isInheritanceAttribute('v:if'));
     }
 }
