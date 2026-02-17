@@ -21,6 +21,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Core\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
@@ -29,7 +30,6 @@ use Sugar\Core\Enum\AttributeMergeMode;
 use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
-use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
 
 /**
  * Extracts directive attributes from elements and creates DirectiveNodes
@@ -598,7 +598,7 @@ final class DirectiveExtractionPass implements AstPassInterface
             if ($this->prefixHelper->isDirective($attr->name)) {
                 $name = $this->prefixHelper->stripPrefix($attr->name);
 
-                // Skip inheritance attributes - they're processed by TemplateInheritancePass
+                // Skip inheritance attributes - they're processed by TemplateComposer
                 if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
                     continue;
                 }
@@ -653,7 +653,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 };
             } elseif (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
-                // These are processed by TemplateInheritancePass before DirectiveExtractionPass
+                // These are processed by TemplateComposer before DirectiveExtractionPass
                 throw $this->context->createSyntaxExceptionForAttribute(
                     sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
                         'Only s: directives and template inheritance attributes ' .

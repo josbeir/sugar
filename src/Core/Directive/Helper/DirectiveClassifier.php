@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Pass\Directive\Helper;
+namespace Sugar\Core\Directive\Helper;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\ComponentNode;

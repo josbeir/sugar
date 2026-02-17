@@ -88,14 +88,14 @@ $slotVars = $slotResolver->buildSlotVars($slots);
 
 Value object for default and named slot buckets. Useful when passing slot data between helpers.
 
-## Directive Pass Helpers
+## Directive Helpers
 
 ### DirectiveClassifier
 
 Classifies directive attribute names based on the registry and prefix.
 
 ```php
-use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
+use Sugar\Core\Directive\Helper\DirectiveClassifier;
 
 $isControlFlow = $classifier->isControlFlowDirectiveAttribute('s:if');
 ```

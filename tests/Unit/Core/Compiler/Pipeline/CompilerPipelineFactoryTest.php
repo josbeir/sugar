@@ -13,8 +13,6 @@ use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistry;
-use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Core\Parser\Parser;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -26,8 +24,6 @@ final class CompilerPipelineFactoryTest extends TestCase
     public function testCompilerPipelineAppliesCustomPasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
         $pass = new class implements AstPassInterface {
@@ -47,8 +43,6 @@ final class CompilerPipelineFactoryTest extends TestCase
         };
 
         $factory = new CompilerPipelineFactory(
-            $loader,
-            $parser,
             $registry,
             $config,
             [
@@ -56,7 +50,7 @@ final class CompilerPipelineFactoryTest extends TestCase
             ],
         );
 
-        $pipeline = $factory->buildCompilerPipeline(enableInheritance: false);
+        $pipeline = $factory->buildCompilerPipeline();
         $ast = $this->document()->withChild($this->text('hello', 1, 1))->build();
         $result = $pipeline->execute($ast, $this->createContext());
 
@@ -67,8 +61,6 @@ final class CompilerPipelineFactoryTest extends TestCase
     public function testCompilerPipelineAppliesAllCustomPassesByPriority(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
         $inRange = new class implements AstPassInterface {
@@ -104,8 +96,6 @@ final class CompilerPipelineFactoryTest extends TestCase
         };
 
         $factory = new CompilerPipelineFactory(
-            $loader,
-            $parser,
             $registry,
             $config,
             [
@@ -114,7 +104,7 @@ final class CompilerPipelineFactoryTest extends TestCase
             ],
         );
 
-        $pipeline = $factory->buildCompilerPipeline(enableInheritance: false);
+        $pipeline = $factory->buildCompilerPipeline();
         $ast = $this->document()->withChild($this->text('hello', 1, 1))->build();
         $result = $pipeline->execute($ast, $this->createContext());
 

@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Core\Pass\Directive\Helper;
+namespace Sugar\Tests\Unit\Core\Directive\Helper;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
+use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistry;
-use Sugar\Core\Pass\Directive\Helper\DirectiveClassifier;
 
 final class DirectiveClassifierTest extends TestCase
 {

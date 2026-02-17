@@ -12,13 +12,13 @@ use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser as TemplateParser;
+use Sugar\Core\Template\TemplateComposer;
 
 /**
  * Orchestrates template compilation pipeline.
  *
- * Pipeline: Parser -> TemplateInheritancePass (optional) -> DirectiveExtractionPass
- * -> DirectivePairingPass -> DirectiveCompilationPass -> ContextAnalysisPass
- * -> CodeGenerator
+ * Pipeline: Parser -> Template composition (optional) -> DirectiveExtractionPass
+ * -> DirectivePairingPass -> DirectiveCompilationPass -> ContextAnalysisPass -> CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
@@ -29,6 +29,8 @@ final class Compiler implements CompilerInterface
     private readonly TemplateLoaderInterface $templateLoader;
 
     private readonly CompilerPipelineFactory $pipelineFactory;
+
+    private readonly TemplateComposer $templateComposer;
 
     private readonly PhpSyntaxValidator $phpSyntaxValidator;
 
@@ -59,11 +61,15 @@ final class Compiler implements CompilerInterface
         $this->phpSyntaxValidationEnabled = $phpSyntaxValidationEnabled;
         $this->phpSyntaxValidator = new PhpSyntaxValidator();
         $this->pipelineFactory = new CompilerPipelineFactory(
+            $this->registry,
+            $config,
+            $customPasses,
+        );
+        $this->templateComposer = new TemplateComposer(
             $this->templateLoader,
             $this->parser,
             $this->registry,
             $config,
-            $customPasses,
         );
     }
 
@@ -132,10 +138,11 @@ final class Compiler implements CompilerInterface
         bool $enableInheritance,
         array $inlinePasses = [],
     ): string {
-        $pipeline = $this->pipelineFactory->buildCompilerPipeline(
-            enableInheritance: $enableInheritance,
-            inlinePasses: $inlinePasses,
-        );
+        if ($enableInheritance) {
+            $ast = $this->templateComposer->compose($ast, $context);
+        }
+
+        $pipeline = $this->pipelineFactory->buildCompilerPipeline(inlinePasses: $inlinePasses);
         $analyzedAst = $pipeline->execute($ast, $context);
 
         $generator = new CodeGenerator($this->escaper, $context);

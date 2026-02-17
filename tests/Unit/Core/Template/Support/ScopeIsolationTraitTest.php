@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Core\Pass\Trait;
+namespace Sugar\Tests\Unit\Core\Template\Support;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Pass\Trait\ScopeIsolationTrait;
+use Sugar\Core\Template\Support\ScopeIsolationTrait;
 
 final class ScopeIsolationTraitTest extends TestCase
 {
