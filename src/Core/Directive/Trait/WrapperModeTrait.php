@@ -5,6 +5,7 @@ namespace Sugar\Core\Directive\Trait;
 
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\TextNode;
 
 /**
  * Trait for directive wrapper mode detection
@@ -38,7 +39,8 @@ trait WrapperModeTrait
      * A directive uses wrapper mode when:
      * 1. It has exactly one child
      * 2. That child is an ElementNode
-     * 3. That ElementNode has at least one ElementNode child (not leaf)
+     * 3. That ElementNode has exactly one meaningful ElementNode child
+     * 4. Any TextNode children are whitespace-only
      *
      * @param \Sugar\Core\Ast\DirectiveNode $node Directive node
      * @return bool True if should use wrapper mode
@@ -57,15 +59,23 @@ trait WrapperModeTrait
             return false;
         }
 
-        // Count ElementNode children (not TextNodes or OutputNodes)
-        $elementChildrenCount = count(array_filter(
-            $child->children,
-            fn(Node $c): bool => $c instanceof ElementNode,
-        ));
+        $elementChildrenCount = 0;
 
-        // If has ANY element children, treat as wrapper
-        // Only repeat the element itself if it's a leaf (no element children)
-        return $elementChildrenCount > 0;
+        foreach ($child->children as $grandChild) {
+            if ($grandChild instanceof ElementNode) {
+                $elementChildrenCount++;
+
+                continue;
+            }
+
+            if ($grandChild instanceof TextNode && trim($grandChild->content) === '') {
+                continue;
+            }
+
+            return false;
+        }
+
+        return $elementChildrenCount === 1;
     }
 
     /**
