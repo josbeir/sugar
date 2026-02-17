@@ -8,7 +8,7 @@ description: Configure the engine, loaders, cache, and template context.
 Set up your engine once and focus on building templates. You need three things to get started: where templates live, a cache directory, and whether to reload during development. Beyond that, customize as needed.
 
 ::: tip
-Build from a single `SugarConfig` instance so loaders, parser, and compiler stay in sync.
+Build from a single `SugarConfig` instance so parser/compiler behavior stays in sync. Configure template suffixes on the loader instance.
 :::
 
 ## Quick Start: The Essentials
@@ -29,7 +29,6 @@ use Sugar\Core\Loader\FileTemplateLoader;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
-        config: new SugarConfig(),
         templatePaths: __DIR__ . '/templates'
     ))
     ->withCache(new FileCache(__DIR__ . '/cache/templates'))
@@ -72,11 +71,9 @@ Tell Sugar where to find templates.
 The standard choice: load templates from the filesystem.
 
 ```php
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Loader\FileTemplateLoader;
 
 $loader = new FileTemplateLoader(
-    config: new SugarConfig(),
     templatePaths: __DIR__ . '/templates'
 );
 ```
@@ -85,7 +82,6 @@ Multiple paths? Pass an array:
 
 ```php
 $loader = new FileTemplateLoader(
-    config: new SugarConfig(),
     templatePaths: [
         __DIR__ . '/templates',
         __DIR__ . '/vendor/package/templates',
@@ -98,7 +94,6 @@ Enable `absolutePathsOnly: true` to enforce root-relative paths and prevent `../
 
 ```php
 $loader = new FileTemplateLoader(
-    config: new SugarConfig(),
     templatePaths: __DIR__ . '/templates',
     absolutePathsOnly: true
 );
@@ -110,16 +105,12 @@ $loader = new FileTemplateLoader(
 Load templates from memory. Perfect for tests or dynamic content:
 
 ```php
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Loader\StringTemplateLoader;
 
 $loader = new StringTemplateLoader(
-    config: new SugarConfig(),
     templates: [
         'email/welcome' => '<h1>Welcome <?= $name ?>!</h1>',
-    ],
-    components: [
-        'button' => '<button class="btn"><?= $slot ?></button>',
+        'components/s-button.sugar.php' => '<button class="btn"><?= $slot ?></button>',
     ]
 );
 ```
@@ -181,13 +172,30 @@ $config = SugarConfig::withPrefix('v');
 // Now use v:if, v:foreach, v:cache, etc.
 ```
 
-#### Template File Suffix
+#### Template Loader Suffixes
 
-Custom file extension for templates:
+Template suffixes are configured on the loader instance:
 
 ```php
-$config = (new SugarConfig())
-    ->withFileSuffix('.sugar.tpl');
+use Sugar\Core\Loader\FileTemplateLoader;
+
+$loader = new FileTemplateLoader(
+    templatePaths: __DIR__ . '/templates',
+    suffixes: ['.sugar.tpl'],
+);
+```
+
+For in-memory templates:
+
+```php
+use Sugar\Core\Loader\StringTemplateLoader;
+
+$loader = new StringTemplateLoader(
+    templates: [
+        'pages/home.sugar.tpl' => '<h1><?= $title ?></h1>',
+    ],
+    suffixes: ['.sugar.tpl'],
+);
 ```
 
 #### Fragment Element Name

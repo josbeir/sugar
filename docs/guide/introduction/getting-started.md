@@ -30,7 +30,6 @@ use Sugar\Extension\Component\ComponentExtension;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
-        config: new SugarConfig(),
         templatePaths: __DIR__ . '/templates'
     ))
     ->withExtension(new ComponentExtension())
@@ -149,7 +148,6 @@ use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Parser\Parser;
 
 $loader = new FileTemplateLoader(
-    config: new SugarConfig(),
     templatePaths: __DIR__ . '/templates'
 );
 

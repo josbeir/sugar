@@ -14,7 +14,6 @@ use Sugar\Core\Loader\FileTemplateLoader;
 
 $config = new SugarConfig();
 $loader = new FileTemplateLoader(
-	config: $config,
 	templatePaths: [__DIR__ . '/templates'],
 );
 
