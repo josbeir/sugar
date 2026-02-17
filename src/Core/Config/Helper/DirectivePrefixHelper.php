@@ -122,7 +122,7 @@ final readonly class DirectivePrefixHelper
      * Check if attribute is a template inheritance attribute
      *
      * Inheritance attributes (block, append, prepend, extends, include, with) are processed
-     * by TemplateInheritancePass and should not be treated as regular directives.
+     * by TemplateComposer and should not be treated as regular directives.
      *
      * @param string $name Attribute name (with or without prefix)
      */

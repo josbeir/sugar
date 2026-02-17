@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Pass\Trait;
+namespace Sugar\Core\Template\Support;
 
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\RawPhpNode;

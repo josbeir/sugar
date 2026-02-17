@@ -6,21 +6,16 @@ namespace Sugar\Core\Compiler\Pipeline;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
-use Sugar\Core\Loader\TemplateLoaderInterface;
-use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Core\Pass\Template\TemplateInheritancePass;
 
 /**
  * Builds compiler pipelines with consistent pass ordering.
  */
 final class CompilerPipelineFactory
 {
-    private ?TemplateInheritancePass $inheritancePass = null;
-
     private ?DirectiveExtractionPass $directiveExtractionPass = null;
 
     private ?DirectivePairingPass $directivePairingPass = null;
@@ -33,8 +28,6 @@ final class CompilerPipelineFactory
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     public function __construct(
-        private readonly TemplateLoaderInterface $loader,
-        private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         private readonly SugarConfig $config,
         private readonly array $customPasses = [],
@@ -47,14 +40,9 @@ final class CompilerPipelineFactory
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      */
     public function buildCompilerPipeline(
-        bool $enableInheritance,
         array $inlinePasses = [],
     ): AstPipeline {
         $pipeline = new AstPipeline();
-
-        if ($enableInheritance) {
-            $pipeline->addPass($this->getInheritancePass(), PassPriority::TEMPLATE_INHERITANCE);
-        }
 
         $pipeline->addPass($this->getDirectiveExtractionPass(), PassPriority::DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getDirectivePairingPass(), PassPriority::DIRECTIVE_PAIRING);
@@ -68,25 +56,6 @@ final class CompilerPipelineFactory
         $this->addCustomPasses($pipeline);
 
         return $pipeline;
-    }
-
-    /**
-     * Get the template inheritance pass instance.
-     */
-    private function getInheritancePass(): TemplateInheritancePass
-    {
-        if ($this->inheritancePass instanceof TemplateInheritancePass) {
-            return $this->inheritancePass;
-        }
-
-        $this->inheritancePass = new TemplateInheritancePass(
-            $this->loader,
-            $this->parser,
-            $this->registry,
-            $this->config,
-        );
-
-        return $this->inheritancePass;
     }
 
     /**

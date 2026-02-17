@@ -694,8 +694,8 @@ final class ParserBenchmark
      */
     private function parseOptions(array $arguments): array
     {
-        $iterations = $this->parsePositiveInt($arguments[1] ?? null, 20000);
-        $warmup = $this->parsePositiveInt($arguments[2] ?? null, 2000);
+        $iterations = $this->parsePositiveInt($arguments[1] ?? null, 5000);
+        $warmup = $this->parsePositiveInt($arguments[2] ?? null, 1000);
         $samples = 7;
         $jsonPath = 'benchmark/latest.json';
         $comparePath = null;

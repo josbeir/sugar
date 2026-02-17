@@ -288,7 +288,6 @@ $context->compilerPass(new UppercaseTextPass(), PassPriority::POST_DIRECTIVE_COM
 
 Compiler passes now use enum priorities (`Sugar\Core\Enum\PassPriority`) instead of numeric values:
 
-- `TEMPLATE_INHERITANCE`
 - `PRE_DIRECTIVE_EXTRACTION`
 - `DIRECTIVE_EXTRACTION`
 - `DIRECTIVE_PAIRING`

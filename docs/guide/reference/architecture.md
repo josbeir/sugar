@@ -16,13 +16,18 @@ Compilation happens once per template change. Rendering is a cached PHP include.
 | Priority Enum | Stage | Purpose | Notes |
 | --- | --- | --- | --- |
 | — | Parser | Converts template source into a Sugar AST. | Uses `PhpToken` for PHP-aware tokenization and preserves line/column for error reporting. |
-| `TEMPLATE_INHERITANCE` | TemplateInheritancePass | Applies `s:extends` and merges blocks. | Optional, requires a template loader. |
+| — | TemplateComposer | Applies `s:extends`, resolves `s:include`, and merges blocks. | Optional, requires a template loader. |
 | `DIRECTIVE_EXTRACTION` | DirectiveExtractionPass | Pulls out `s:*` directives and validates placement. | Produces directive nodes from attributes. |
 | `DIRECTIVE_PAIRING` | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |
 | `DIRECTIVE_COMPILATION` | DirectiveCompilationPass | Rewrites directive nodes into executable AST nodes. | Produces control flow, attributes, and output nodes. |
 | `POST_DIRECTIVE_COMPILATION` | ComponentExpansionPass | Resolves component tags into their AST. | Registered by `ComponentExtension` (optional, requires a template loader). |
 | `CONTEXT_ANALYSIS` | ContextAnalysisPass | Determines output context for escaping decisions. | Tags output nodes with HTML/attribute/URL/JS/CSS contexts. |
 | — | CodeGenerator | Emits pure PHP from the final AST. | Output is ready for opcache. |
+
+`TemplateComposer` is an orchestration step outside the pass pipeline and internally delegates to:
+
+- `TemplateResolver` for `s:extends` / `s:include` graph resolution, cycle checks, and dependency tracking.
+- `BlockMerger` for `s:block` / `s:append` / `s:prepend` extraction and merge semantics.
 
 ::: tip
 If a template compiles, it will render deterministically. All runtime behavior is inside the generated PHP.

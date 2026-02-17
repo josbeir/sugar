@@ -12,7 +12,7 @@ use Sugar\Core\Parser\Parser;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Core\Pass\Template\TemplateInheritancePass;
+use Sugar\Core\Template\TemplateComposer;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 
 /**
@@ -54,6 +54,12 @@ final class ComponentPassFactory
             parser: $this->parser,
             registry: $this->registry,
             config: $this->config,
+            templateComposer: new TemplateComposer(
+                loader: $this->templateLoader,
+                parser: $this->parser,
+                registry: $this->registry,
+                config: $this->config,
+            ),
             componentTemplatePipeline: $this->buildComponentTemplatePipeline(),
         );
 
@@ -70,13 +76,6 @@ final class ComponentPassFactory
         }
 
         $pipeline = new AstPipeline();
-
-        $pipeline->addPass(new TemplateInheritancePass(
-            loader: $this->templateLoader,
-            parser: $this->parser,
-            registry: $this->registry,
-            config: $this->config,
-        ), PassPriority::TEMPLATE_INHERITANCE);
 
         $pipeline->addPass(new DirectiveExtractionPass(
             registry: $this->registry,

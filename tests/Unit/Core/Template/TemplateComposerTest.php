@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Core\Pass\Template;
+namespace Sugar\Tests\Unit\Core\Template;
 
+use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\DocumentNode;
@@ -11,27 +12,70 @@ use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Compiler\Pipeline\AstPassInterface;
-use Sugar\Core\Compiler\Pipeline\AstPipeline;
+use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Exception\TemplateNotFoundException;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Parser\Parser;
-use Sugar\Core\Pass\Template\TemplateInheritancePass;
-use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
+use Sugar\Core\Template\TemplateComposer;
+use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
+use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
-final class TemplateInheritancePassTest extends MiddlewarePassTestCase
+final class TemplateComposerTest extends TestCase
 {
+    use CompilerTestTrait;
+    use NodeBuildersTrait;
+    use TempDirectoryTrait;
+
     private string $inheritanceFixturesPath;
 
-    protected function getPass(): AstPassInterface
+    private TemplateComposer $composer;
+
+    protected function setUp(): void
     {
+        $this->setUpCompiler();
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
         $loader = new FileTemplateLoader([$this->inheritanceFixturesPath]);
         $parser = new Parser(new SugarConfig());
 
-        return new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
+        $this->composer = new TemplateComposer($loader, $parser, $this->registry, new SugarConfig());
+    }
+
+    protected function execute(DocumentNode $ast, ?CompilationContext $context = null): DocumentNode
+    {
+        return $this->composer->compose($ast, $context ?? $this->createTestContext());
+    }
+
+    /**
+     * @param array<string>|null $blocks
+     */
+    protected function createTestContext(
+        string $templatePath = 'test.sugar.php',
+        string $source = '',
+        bool $debug = false,
+        ?DependencyTracker $tracker = null,
+        ?array $blocks = null,
+    ): CompilationContext {
+        return new CompilationContext($templatePath, $source, $debug, $tracker, $blocks);
+    }
+
+    protected function createText(string $content): TextNode
+    {
+        return new TextNode($content, 1, 1);
+    }
+
+    protected function findElement(string $tagName, DocumentNode $ast): ?ElementNode
+    {
+        foreach ($ast->children as $child) {
+            if ($child instanceof ElementNode && $child->tag === $tagName) {
+                return $child;
+            }
+        }
+
+        return null;
     }
 
     public function testProcessesTemplateWithoutInheritance(): void
@@ -590,8 +634,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
 
         $loader = new FileTemplateLoader([$tempDir]);
         $parser = new Parser(new SugarConfig());
-        $pass = new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
-        $pipeline = new AstPipeline([$pass]);
+        $composer = new TemplateComposer($loader, $parser, $this->registry, new SugarConfig());
 
         try {
             $document = $this->document()
@@ -610,7 +653,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
                 ])
                 ->build();
 
-            $result = $pipeline->execute($document, $this->createTestContext('pages/home.sugar.php'));
+            $result = $composer->compose($document, $this->createTestContext('pages/home.sugar.php'));
 
             $this->assertInstanceOf(DocumentNode::class, $result);
 
@@ -987,12 +1030,12 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         $context = $this->createTestContext('home.sugar.php', '<div>Content</div>');
         $loadedTemplates = ['home.sugar.php'];
 
-        $method = new ReflectionMethod(TemplateInheritancePass::class, 'process');
+        $method = new ReflectionMethod(TemplateComposer::class, 'process');
 
         $this->expectException(SyntaxException::class);
         $this->expectExceptionMessage('Circular template inheritance detected');
 
-        $method->invokeArgs($this->pass, [$document, $context, &$loadedTemplates]);
+        $method->invokeArgs($this->composer, [$document, $context, &$loadedTemplates]);
     }
 
     public function testThrowsOnTemplateNotFound(): void

@@ -8,8 +8,6 @@ namespace Sugar\Core\Enum;
  */
 enum PassPriority: int
 {
-    case TEMPLATE_INHERITANCE = 0;
-
     case PRE_DIRECTIVE_EXTRACTION = 5;
 
     case DIRECTIVE_EXTRACTION = 10;

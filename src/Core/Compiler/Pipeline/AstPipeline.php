@@ -58,7 +58,7 @@ final class AstPipeline
      * @param \Sugar\Core\Enum\PassPriority $priority Ordering priority
      * @return $this
      */
-    public function addPass(AstPassInterface $pass, PassPriority $priority = PassPriority::TEMPLATE_INHERITANCE)
+    public function addPass(AstPassInterface $pass, PassPriority $priority = PassPriority::PRE_DIRECTIVE_EXTRACTION)
     {
         $this->passEntries[] = [
             'pass' => $pass,
