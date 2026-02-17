@@ -5,6 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -94,6 +95,119 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertNotFalse($basePos);
         $this->assertNotFalse($extraPos);
         $this->assertGreaterThan($extraPos, $basePos);
+    }
+
+    public function testBlockWithParentPlaceholderAppendsParentContent(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
+                    '<s-template s:block="content"><s-template s:parent /><p>Child content</p></s-template>',
+            ],
+        );
+
+        $compiled = $this->compiler->compile(
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<s-template s:block="content"><s-template s:parent /><p>Child content</p></s-template>',
+            'child.sugar.php',
+        );
+
+        $basePos = strpos($compiled, 'Base content');
+        $childPos = strpos($compiled, 'Child content');
+
+        $this->assertNotFalse($basePos);
+        $this->assertNotFalse($childPos);
+        $this->assertLessThan($childPos, $basePos);
+    }
+
+    public function testBlockWithParentPlaceholderPrependsParentContent(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
+                    '<s-template s:block="content"><p>Child content</p><s-template s:parent /></s-template>',
+            ],
+        );
+
+        $compiled = $this->compiler->compile(
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<s-template s:block="content"><p>Child content</p><s-template s:parent /></s-template>',
+            'child.sugar.php',
+        );
+
+        $basePos = strpos($compiled, 'Base content');
+        $childPos = strpos($compiled, 'Child content');
+
+        $this->assertNotFalse($basePos);
+        $this->assertNotFalse($childPos);
+        $this->assertLessThan($basePos, $childPos);
+    }
+
+    public function testBlockWithParentPlaceholderCanPlaceParentContentInMiddle(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
+                    '<s-template s:block="content"><p>Before</p><s-template s:parent /><p>After</p></s-template>',
+            ],
+        );
+
+        $compiled = $this->compiler->compile(
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<s-template s:block="content"><p>Before</p><s-template s:parent /><p>After</p></s-template>',
+            'child.sugar.php',
+        );
+
+        $beforePos = strpos($compiled, 'Before');
+        $basePos = strpos($compiled, 'Base content');
+        $afterPos = strpos($compiled, 'After');
+
+        $this->assertNotFalse($beforePos);
+        $this->assertNotFalse($basePos);
+        $this->assertNotFalse($afterPos);
+        $this->assertLessThan($basePos, $beforePos);
+        $this->assertLessThan($afterPos, $basePos);
+    }
+
+    public function testDuplicateChildBlockDefinitionsThrowSyntaxError(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
+            ],
+        );
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Block "content" is defined multiple times in the same child template.');
+
+        $this->compiler->compile(
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<s-template s:block="content"><p>Child content</p></s-template>' .
+            '<s-template s:append="content"><p>Extra content</p></s-template>',
+            'child.sugar.php',
+        );
+    }
+
+    public function testParentPlaceholderOutsideBlockThrowsSyntaxError(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
+            ],
+        );
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:parent is only allowed inside s:block.');
+
+        $this->compiler->compile(
+            '<s-template s:extends="base.sugar.php"></s-template>' .
+            '<s-template s:parent />' .
+            '<s-template s:block="content"><p>Child content</p></s-template>',
+            'child.sugar.php',
+        );
     }
 
     public function testIncludeWithOpenScope(): void

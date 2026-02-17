@@ -189,8 +189,10 @@ Notice how the parent's `<main>` wrapper is preserved and the child's `<div>` wr
 ## Limitations and Rules
 
 - Only one `s:extends` directive is allowed per template.
-- When a template uses `s:extends`, only `s:block`, `s:append`, and `s:prepend` content is kept. Any top-level markup or raw PHP outside those blocks is discarded, so variable assignments must live inside a block (or be passed via `s:with`) unless you render specific blocks via `Engine::render()` with the blocks option (see [Render Only Specific Blocks](#render-only-specific-blocks)).
+- When a template uses `s:extends`, only inheritance content (`s:block`, `s:append`, `s:prepend`) is kept. Any top-level markup or raw PHP outside those blocks is discarded, so variable assignments must live inside a block (or be passed via `s:with`) unless you render specific blocks via `Engine::render()` with the blocks option (see [Render Only Specific Blocks](#render-only-specific-blocks)).
 - `s:block`, `s:append`, and `s:prepend` are mutually exclusive on the same element.
+- Define each block name only once in a child template. To include parent block content, use `s:parent` inside that `s:block`.
+- `s:parent` is only valid inside an `s:block` and must be used on `<s-template>`.
 - `s:with` only scopes values to the immediate `s:include` and does not leak to parent scope.
 - `s:include` and `s:extends` paths resolve relative to the current template unless `absolutePathsOnly` is enabled.
 
@@ -264,12 +266,19 @@ The example below shows relative vs absolute-only paths.
 - `s:block` - Replace a named block in the parent template.
 - `s:append` - Add content after a parent block without replacing it.
 - `s:prepend` - Add content before a parent block without replacing it.
+- `s:parent` - Insert parent block content at the current position inside `s:block`.
 - `s:include` - Insert another template at this location.
 - `s:with` - Pass scoped variables to an `s:include`.
 
 ## Blocks
 
-Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend it. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
+Use `s:block` to replace a parent block. Inside that block, use `s:parent` to include parent content at the exact location you want. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
+
+When multiple elements target the same block name in one child template, Sugar applies them in source order:
+
+- `s:block` replaces the current block content at that point.
+- `s:append` adds content after the current block content.
+- `s:prepend` adds content before the current block content.
 
 ```sugar
 <!-- Invalid: multiple block directives on one element -->
@@ -279,14 +288,57 @@ Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend
 ```
 
 ```sugar
-<!-- Valid: multiple append elements targeting the same block -->
-<section s:append="content"><p>First</p></section>
-<section s:append="content"><p>Second</p></section>
+<!-- Valid: include parent content explicitly -->
+<section s:block="content">
+    <s-template s:parent />
+    <p>Extra content</p>
+</section>
 ```
+
+```sugar
+<!-- Invalid: duplicate definitions for the same block name -->
+<section s:block="content"><p>Child</p></section>
+<section s:append="content"><p>Extra</p></section>
+```
+
+```sugar
+<!-- Invalid: s:parent outside s:block -->
+<s-template s:parent />
+```
+
+### Parent Placeholder (`s:parent`)
+
+`s:parent` gives precise control over where parent block content appears.
+
+::: code-group
+```sugar [Append via s:parent]
+<s-template s:block="content">
+    <s-template s:parent />
+    <p>Appended content</p>
+</s-template>
+```
+
+```sugar [Prepend via s:parent]
+<s-template s:block="content">
+    <p>Prepended content</p>
+    <s-template s:parent />
+</s-template>
+```
+
+```sugar [Insert parent in middle]
+<s-template s:block="content">
+    <p>Before</p>
+    <s-template s:parent />
+    <p>After</p>
+</s-template>
+```
+:::
 
 ### Append and Prepend Blocks
 
-Use `s:append` or `s:prepend` in a child template to add content to a parent block instead of replacing it. When the parent block is an element, the appended/prepended element wrapper is stripped and its children are inserted into the parent block. When the parent block is a fragment, the wrapper is preserved.
+Use `s:append` or `s:prepend` in a child template to add content to a parent block instead of replacing it. Think of these directives as augmenting the parent block: the parent block remains the anchor, and child content is inserted before or after the parent's existing children.
+
+When the parent block is an element, the parent element wrapper remains authoritative and the wrapper of the node carrying `s:append`/`s:prepend` is stripped (only its children are inserted). Nested elements inside that node are kept. When the parent block is a fragment, the wrapper on the node carrying `s:append`/`s:prepend` is preserved.
 
 ::: code-group
 ```sugar [Append: before]

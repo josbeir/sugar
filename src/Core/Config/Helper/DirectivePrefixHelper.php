@@ -121,7 +121,7 @@ final readonly class DirectivePrefixHelper
     /**
      * Check if attribute is a template inheritance attribute
      *
-     * Inheritance attributes (block, append, prepend, extends, include, with) are processed
+     * Inheritance attributes (block, append, prepend, parent, extends, include, with) are processed
      * by TemplateComposer and should not be treated as regular directives.
      *
      * @param string $name Attribute name (with or without prefix)
@@ -140,6 +140,6 @@ final readonly class DirectivePrefixHelper
      */
     public function inheritanceDirectiveNames(): array
     {
-        return ['block', 'append', 'prepend', 'extends', 'include', 'with'];
+        return ['block', 'append', 'prepend', 'parent', 'extends', 'include', 'with'];
     }
 }
