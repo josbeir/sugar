@@ -7,7 +7,7 @@ use InvalidArgumentException;
 use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 

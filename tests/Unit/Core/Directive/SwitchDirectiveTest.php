@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Directive;
 
 use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\SwitchDirective;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Exception\SyntaxException;
 
 final class SwitchDirectiveTest extends DirectiveTestCase

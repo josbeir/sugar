@@ -7,6 +7,7 @@ use RuntimeException;
 use Sugar\Core\Directive\BooleanAttributeDirective;
 use Sugar\Core\Directive\ClassDirective;
 use Sugar\Core\Directive\EmptyDirective;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\FinallyDirective;
 use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\ForelseDirective;
@@ -26,7 +27,6 @@ use Sugar\Core\Directive\TimesDirective;
 use Sugar\Core\Directive\TryDirective;
 use Sugar\Core\Directive\UnlessDirective;
 use Sugar\Core\Directive\WhileDirective;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Exception\Helper\DidYouMean;
 use Sugar\Core\Exception\UnknownDirectiveException;
 
@@ -209,7 +209,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
     /**
      * Get directives of a specific type
      *
-     * @param \Sugar\Core\Enum\DirectiveType $type Directive type to filter by
+     * @param \Sugar\Core\Directive\Enum\DirectiveType $type Directive type to filter by
      * @return array<string, \Sugar\Core\Directive\Interface\DirectiveInterface> Filtered directives
      */
     public function getByType(DirectiveType $type): array

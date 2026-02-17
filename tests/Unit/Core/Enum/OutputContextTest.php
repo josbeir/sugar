@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Enum;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 final class OutputContextTest extends TestCase
 {

@@ -13,7 +13,7 @@ use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Analyzes the AST and assigns OutputContext to OutputNodes.

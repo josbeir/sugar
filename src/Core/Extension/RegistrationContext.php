@@ -5,9 +5,9 @@ namespace Sugar\Core\Extension;
 
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 
@@ -31,7 +31,7 @@ final class RegistrationContext
     private array $directives = [];
 
     /**
-     * @var array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
+     * @var array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}>
      */
     private array $passes = [];
 
@@ -77,7 +77,7 @@ final class RegistrationContext
      * Register a custom AST compiler pass
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass The compiler pass
-     * @param \Sugar\Core\Enum\PassPriority $priority Ordering priority
+     * @param \Sugar\Core\Compiler\Pipeline\Enum\PassPriority $priority Ordering priority
      */
     public function compilerPass(
         AstPassInterface $pass,
@@ -110,7 +110,7 @@ final class RegistrationContext
     /**
      * Get all registered compiler passes
      *
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}>
      */
     public function getPasses(): array
     {

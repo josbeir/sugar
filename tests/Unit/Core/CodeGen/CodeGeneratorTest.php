@@ -13,7 +13,7 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawBodyNode;
 use Sugar\Core\Ast\RuntimeCallNode;
 use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\UnsupportedNodeException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;

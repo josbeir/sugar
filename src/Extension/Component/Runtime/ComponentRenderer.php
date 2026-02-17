@@ -6,6 +6,7 @@ namespace Sugar\Extension\Component\Runtime;
 use Closure;
 use ParseError;
 use Sugar\Core\Cache\CachedTemplate;
+use Sugar\Core\Cache\CacheKey;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Exception\CompilationException;
@@ -88,7 +89,7 @@ final class ComponentRenderer
             );
         }
 
-        $cacheKey = $componentPath . '::slots:' . implode('|', $slotNames);
+        $cacheKey = CacheKey::fromTemplate($componentPath, $slotNames);
 
         $cached = $this->cache->get($cacheKey, $this->debug);
         if ($cached instanceof CachedTemplate) {

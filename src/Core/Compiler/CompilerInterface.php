@@ -18,7 +18,7 @@ interface CompilerInterface
      * @param bool $debug Enable debug mode with inline source comments (default: false)
      * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Dependency tracker
      * @param array<string>|null $blocks Restrict output to these block names
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      * @return string Compiled PHP code
      */
     public function compile(

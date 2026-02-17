@@ -6,8 +6,8 @@ namespace Sugar\Core\Directive;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 
 /**

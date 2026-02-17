@@ -10,7 +10,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Test ElementNode AST class

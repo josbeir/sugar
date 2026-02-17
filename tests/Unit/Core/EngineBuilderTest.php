@@ -10,7 +10,7 @@ use RuntimeException;
 use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
-use Sugar\Core\Engine\EngineBuilder;
+use Sugar\Core\EngineBuilder;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Core\Exception\SugarException;

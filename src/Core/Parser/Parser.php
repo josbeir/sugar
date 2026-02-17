@@ -16,7 +16,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Parser\Helper\PipeParser;
 
 /**

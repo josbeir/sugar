@@ -42,7 +42,7 @@ final class Compiler implements CompilerInterface
      * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Directive registry with registered compilers
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $templateLoader Template loader for inheritance
      * @param \Sugar\Core\Config\SugarConfig|null $config Configuration (optional, creates default if null)
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses Custom compiler passes with priorities
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses Custom compiler passes with priorities
      * @param bool $phpSyntaxValidationEnabled Enable nikic/php-parser syntax validation when available
      */
     public function __construct(
@@ -76,7 +76,7 @@ final class Compiler implements CompilerInterface
     /**
      * Compile template source to executable PHP code.
      *
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      */
     public function compile(
         string $source,
@@ -130,7 +130,7 @@ final class Compiler implements CompilerInterface
     /**
      * Execute the middleware pipeline and generate PHP code.
      *
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $inlinePasses
      */
     private function compileAst(
         DocumentNode $ast,

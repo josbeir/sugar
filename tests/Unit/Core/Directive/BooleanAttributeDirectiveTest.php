@@ -5,8 +5,8 @@ namespace Sugar\Tests\Unit\Core\Directive;
 
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Directive\BooleanAttributeDirective;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 
 final class BooleanAttributeDirectiveTest extends DirectiveTestCase

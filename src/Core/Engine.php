@@ -11,8 +11,6 @@ use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Engine\CompiledTemplateResult;
-use Sugar\Core\Engine\EngineBuilder;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Core\Extension\RuntimeContext;
@@ -52,7 +50,7 @@ final class Engine implements EngineInterface
      * Create a builder for fluent engine configuration
      *
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
-     * @return \Sugar\Core\Engine\EngineBuilder Builder instance
+     * @return \Sugar\Core\EngineBuilder Builder instance
      */
     public static function builder(SugarConfig $config = new SugarConfig()): EngineBuilder
     {
@@ -68,10 +66,10 @@ final class Engine implements EngineInterface
 
         try {
             // Get compiled PHP code
-            $compiled = $this->getCompiledTemplate($template, $blocks);
+            [$compiledPath, $tracker] = $this->getCompiledTemplate($template, $blocks);
 
             // Execute the compiled template
-            return $this->execute($compiled->path, $data, $compiled->tracker);
+            return $this->execute($compiledPath, $data, $tracker);
         } catch (CompilationException $compilationException) {
             if ($this->debug && $this->exceptionRenderer instanceof TemplateExceptionRendererInterface) {
                 return $this->exceptionRenderer->render($compilationException);
@@ -95,13 +93,10 @@ final class Engine implements EngineInterface
      * Get compiled template (from cache or compile fresh)
      *
      * @param string $template Template path
-     * @return \Sugar\Core\Engine\CompiledTemplateResult Compiled path and tracker
-     */
-
-    /**
      * @param array<string>|null $blocks
+     * @return array{0: string, 1: \Sugar\Core\Cache\DependencyTracker|null} Compiled path and tracker
      */
-    private function getCompiledTemplate(string $template, ?array $blocks): CompiledTemplateResult
+    private function getCompiledTemplate(string $template, ?array $blocks): array
     {
         $canonicalTemplate = $this->loader->resolve($template);
 
@@ -111,7 +106,7 @@ final class Engine implements EngineInterface
         // Try to get from cache
         $cached = $this->cache->get($cacheKey, $this->debug);
         if ($cached instanceof CachedTemplate) {
-            return new CompiledTemplateResult($cached->path, null);
+            return [$cached->path, null];
         }
 
         // Cache miss or stale - compile and cache
@@ -140,7 +135,7 @@ final class Engine implements EngineInterface
         // Store in cache
         $cachedPath = $this->cache->put($cacheKey, $compiled, $metadata);
 
-        return new CompiledTemplateResult($cachedPath, $tracker);
+        return [$cachedPath, $tracker];
     }
 
     /**

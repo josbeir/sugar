@@ -14,7 +14,7 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 use Sugar\Extension\Component\Helper\SlotResolver;
 

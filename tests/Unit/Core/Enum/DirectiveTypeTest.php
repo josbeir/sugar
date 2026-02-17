@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Enum;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Directive\Enum\DirectiveType;
 
 final class DirectiveTypeTest extends TestCase
 {

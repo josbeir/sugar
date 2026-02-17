@@ -11,9 +11,9 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
-use Sugar\Core\Enum\PassPriority;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 

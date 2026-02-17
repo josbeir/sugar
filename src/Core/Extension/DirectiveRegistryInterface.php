@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Extension;
 
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 
 /**
  * Interface for directive compiler registries
@@ -61,7 +61,7 @@ interface DirectiveRegistryInterface
     /**
      * Get directives of a specific type
      *
-     * @param \Sugar\Core\Enum\DirectiveType $type Directive type to filter by
+     * @param \Sugar\Core\Directive\Enum\DirectiveType $type Directive type to filter by
      * @return array<string, \Sugar\Core\Directive\Interface\DirectiveInterface> Filtered directives
      */
     public function getByType(DirectiveType $type): array;

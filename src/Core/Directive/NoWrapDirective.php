@@ -6,8 +6,8 @@ namespace Sugar\Core\Directive;
 use LogicException;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\ContentWrappingDirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 
 /**
  * Content wrapping modifier for s:nowrap.

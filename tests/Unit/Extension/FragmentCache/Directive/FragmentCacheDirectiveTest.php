@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Extension\FragmentCache\Directive;
 
 use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Extension\FragmentCache\Directive\FragmentCacheDirective;
 use Sugar\Tests\Unit\Core\Directive\DirectiveTestCase;
 

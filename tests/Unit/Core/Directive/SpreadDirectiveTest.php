@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Directive;
 
 use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Directive\Enum\AttributeMergeMode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\SpreadDirective;
-use Sugar\Core\Enum\AttributeMergeMode;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 
 final class SpreadDirectiveTest extends DirectiveTestCase

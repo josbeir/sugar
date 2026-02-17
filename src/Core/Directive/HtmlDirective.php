@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Directive;
 
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Compiler for the s:html directive.

@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Compiler\Pipeline;
 
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
@@ -25,7 +25,7 @@ final class CompilerPipelineFactory
     private ?ContextAnalysisPass $contextPass = null;
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses
      */
     public function __construct(
         private readonly DirectiveRegistryInterface $registry,
@@ -37,7 +37,7 @@ final class CompilerPipelineFactory
     /**
      * Build the main compiler pipeline.
      *
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      */
     public function buildCompilerPipeline(
         array $inlinePasses = [],

@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Core\Directive;
 
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\TryDirective;
-use Sugar\Core\Enum\DirectiveType;
 
 final class TryDirectiveTest extends DirectiveTestCase
 {

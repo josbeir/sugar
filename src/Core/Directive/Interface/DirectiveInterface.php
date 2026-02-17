@@ -5,7 +5,7 @@ namespace Sugar\Core\Directive\Interface;
 
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
-use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Directive\Enum\DirectiveType;
 
 /**
  * Interface for directive compilers
@@ -35,7 +35,7 @@ interface DirectiveInterface
      * - ATTRIBUTE: Modifies attributes (class, spread)
      * - CONTENT: Injects content (text, html)
      *
-     * @return \Sugar\Core\Enum\DirectiveType The directive type
+     * @return \Sugar\Core\Directive\Enum\DirectiveType The directive type
      */
     public function getType(): DirectiveType;
 }

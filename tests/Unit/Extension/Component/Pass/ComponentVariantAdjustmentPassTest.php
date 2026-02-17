@@ -8,7 +8,7 @@ use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;

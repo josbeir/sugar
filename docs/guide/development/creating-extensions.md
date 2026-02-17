@@ -20,7 +20,7 @@ final class AuditExtension implements ExtensionInterface
         $context->directive('audit', AuditDirective::class);
         $context->compilerPass(
             new AuditPass(),
-            \Sugar\Core\Enum\PassPriority::POST_DIRECTIVE_COMPILATION,
+            \Sugar\Core\Compiler\Pipeline\Enum\PassPriority::POST_DIRECTIVE_COMPILATION,
         );
     }
 }
@@ -267,7 +267,7 @@ final class NormalizeWhitespacePass implements AstPassInterface
 Register it with a semantic priority:
 
 ```php
-use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 
 $context->compilerPass(new UppercaseTextPass(), PassPriority::POST_DIRECTIVE_COMPILATION);
 ```
@@ -286,7 +286,7 @@ $context->compilerPass(new UppercaseTextPass(), PassPriority::POST_DIRECTIVE_COM
 
 ### Priorities
 
-Compiler passes now use enum priorities (`Sugar\Core\Enum\PassPriority`) instead of numeric values:
+Compiler passes now use enum priorities (`Sugar\Core\Compiler\Pipeline\Enum\PassPriority`) instead of numeric values:
 
 - `PRE_DIRECTIVE_EXTRACTION`
 - `DIRECTIVE_EXTRACTION`
@@ -296,7 +296,7 @@ Compiler passes now use enum priorities (`Sugar\Core\Enum\PassPriority`) instead
 - `CONTEXT_ANALYSIS`
 
 ```php
-use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 
 $context->compilerPass(new NormalizePass(), PassPriority::PRE_DIRECTIVE_EXTRACTION);
 $context->compilerPass(new OptimizePass(), PassPriority::POST_DIRECTIVE_COMPILATION);

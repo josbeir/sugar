@@ -5,7 +5,7 @@ namespace Sugar\Extension\Component\Compiler;
 
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Compiler\CompilerInterface;
-use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
@@ -69,7 +69,7 @@ final readonly class ComponentCompiler
      * Build inline passes needed for component variant compilation.
      *
      * @param array<string> $slotNames
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}>
      */
     private function buildInlinePasses(array $slotNames): array
     {

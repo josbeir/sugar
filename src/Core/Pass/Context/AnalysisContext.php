@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Pass\Context;
 
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Tracks context during AST traversal for context analysis

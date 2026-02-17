@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Directive\Interface;
 
-use Sugar\Core\Enum\AttributeMergeMode;
+use Sugar\Core\Directive\Enum\AttributeMergeMode;
 
 /**
  * Defines optional merge policy hooks for attribute directives.

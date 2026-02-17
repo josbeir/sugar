@@ -21,7 +21,7 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\PhpSyntaxValidator;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Parser\Parser;
 use Throwable;

@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Extension\Component\Runtime;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Cache\CachedTemplate;
+use Sugar\Core\Cache\CacheKey;
 use Sugar\Core\Cache\CacheMetadata;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\FileCache;
@@ -80,7 +81,7 @@ final class ComponentRendererTest extends TestCase
         $this->assertStringContainsString('Save', $output);
 
         $componentPath = $this->componentLoader->getComponentPath('alert');
-        $cacheKey = $componentPath . '::slots:footer|slot';
+        $cacheKey = CacheKey::fromTemplate($componentPath, ['footer', 'slot']);
 
         $cached = $cache->get($cacheKey);
 
@@ -302,7 +303,7 @@ PHP,
     private function createRendererWithCachedTemplate(string $compiledPhp): ComponentRenderer
     {
         $compiledPath = $this->writeCompiledTemplate($compiledPhp);
-        $cacheKey = $this->componentLoader->getComponentPath('alert') . '::slots:slot';
+        $cacheKey = CacheKey::fromTemplate($this->componentLoader->getComponentPath('alert'), ['slot']);
         $cached = new CachedTemplate($compiledPath, new CacheMetadata());
 
         $cache = new class ($cacheKey, $cached) implements TemplateCacheInterface {

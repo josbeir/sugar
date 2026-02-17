@@ -17,7 +17,7 @@ namespace Sugar\Core\Extension;
  *         public function register(RegistrationContext $context): void
  *         {
  *             $context->directive('custom', MyDirective::class);
- *             $context->compilerPass(new MyTransformPass(), \Sugar\Core\Enum\PassPriority::POST_DIRECTIVE_COMPILATION);
+ *             $context->compilerPass(new MyTransformPass(), \Sugar\Core\Compiler\Pipeline\Enum\PassPriority::POST_DIRECTIVE_COMPILATION);
  *         }
  *     }
  */

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Enum;
+namespace Sugar\Core\Escape\Enum;
 
 /**
  * Output context types for context-aware escaping
