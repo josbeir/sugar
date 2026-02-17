@@ -189,6 +189,12 @@ final class BlockMerger
         }
 
         if (count($found) > 1) {
+            $message = sprintf(
+                'Only one of %s, %s, or %s is allowed on a single element.',
+                $blockAttr,
+                $appendAttr,
+                $prependAttr,
+            );
             $attr = AttributeHelper::findAttribute($node->attributes, $found[1])
                 ?? AttributeHelper::findAttribute($node->attributes, $found[0]);
             $line = $attr instanceof AttributeNode ? $attr->line : $node->line;
@@ -196,7 +202,7 @@ final class BlockMerger
 
             if ($attr instanceof AttributeNode) {
                 throw $context->createSyntaxExceptionForAttribute(
-                    'Only one of s:block, s:append, or s:prepend is allowed on a single element.',
+                    $message,
                     $attr,
                     $line,
                     $column,
@@ -204,7 +210,7 @@ final class BlockMerger
             }
 
             throw $context->createSyntaxExceptionForNode(
-                'Only one of s:block, s:append, or s:prepend is allowed on a single element.',
+                $message,
                 $node,
                 $line,
                 $column,

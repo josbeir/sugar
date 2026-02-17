@@ -930,6 +930,33 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertGreaterThan(0, count($result->children));
     }
 
+    public function testCachedComponentAstDoesNotLeakMutationsBetweenExpansions(): void
+    {
+        $registry = $this->createRegistry();
+        $passFactory = new ComponentPassFactory(
+            templateLoader: $this->stringTemplateLoader,
+            componentLoader: $this->loader,
+            parser: $this->parser,
+            registry: $registry,
+            config: $this->config,
+        );
+        $pass = $passFactory->createExpansionPass();
+        $pipeline = new AstPipeline([$pass]);
+
+        $first = $this->parser->parse('<s-button class="first">A</s-button>');
+        $firstResult = $pipeline->execute($first, $this->createContext());
+        $firstOutput = $this->astToString($firstResult);
+        $this->assertStringContainsString('class="btn first"', $firstOutput);
+
+        $second = $this->parser->parse('<s-button class="second">B</s-button>');
+        $secondResult = $pipeline->execute($second, $this->createContext());
+        $secondOutput = $this->astToString($secondResult);
+
+        $this->assertStringContainsString('class="btn second"', $secondOutput);
+        $this->assertStringNotContainsString('class="btn first second"', $secondOutput);
+        $this->assertStringNotContainsString('class="btn first"', $secondOutput);
+    }
+
     public function testThrowsExceptionForInvalidBindExpression(): void
     {
         // Use existing button component - test that invalid s:bind throws error at compile time

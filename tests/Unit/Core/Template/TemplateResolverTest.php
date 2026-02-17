@@ -114,4 +114,82 @@ final class TemplateResolverTest extends TestCase
         $loadedTemplates = [];
         $resolver->resolve($document, $context, $loadedTemplates);
     }
+
+    public function testResolveRejectsNestedExtendsPlacementWithConfiguredPrefixInMessage(): void
+    {
+        $this->setUpCompiler();
+
+        $config = new SugarConfig(directivePrefix: 'x');
+        $prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $classifier = new DirectiveClassifier($this->registry, $prefixHelper);
+        $merger = new BlockMerger($prefixHelper);
+        $resolver = new TemplateResolver(
+            new FileTemplateLoader([SUGAR_TEST_TEMPLATE_INHERITANCE_PATH]),
+            new Parser($config),
+            $prefixHelper,
+            $classifier,
+            $merger,
+        );
+
+        $document = $this->document()
+            ->withChild(
+                $this->element('main')
+                    ->withChild(
+                        $this->element('div')
+                            ->attribute('x:extends', '../base.sugar.php')
+                            ->build(),
+                    )
+                    ->build(),
+            )
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('x:extends is only allowed on root-level template elements.');
+
+        $context = new CompilationContext('pages/home.sugar.php', '');
+        $loadedTemplates = [];
+        $resolver->resolve($document, $context, $loadedTemplates);
+    }
+
+    public function testResolveDetectsCircularIncludes(): void
+    {
+        $this->setUpCompiler();
+
+        $tempDir = $this->createTempDir('sugar_template_include_cycle_');
+        $partialsDir = $tempDir . '/partials';
+        mkdir($partialsDir, 0755, true);
+        file_put_contents($partialsDir . '/a.sugar.php', '<div s:include="b.sugar.php"></div>');
+        file_put_contents($partialsDir . '/b.sugar.php', '<div s:include="a.sugar.php"></div>');
+
+        $config = new SugarConfig();
+        $prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $classifier = new DirectiveClassifier($this->registry, $prefixHelper);
+        $merger = new BlockMerger($prefixHelper);
+        $resolver = new TemplateResolver(
+            new FileTemplateLoader([$tempDir]),
+            new Parser($config),
+            $prefixHelper,
+            $classifier,
+            $merger,
+        );
+
+        $document = $this->document()
+            ->withChild(
+                $this->element('div')
+                    ->attribute('s:include', 'partials/a.sugar.php')
+                    ->build(),
+            )
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Circular template include detected');
+
+        try {
+            $context = new CompilationContext('home.sugar.php', '');
+            $loadedTemplates = [];
+            $resolver->resolve($document, $context, $loadedTemplates);
+        } finally {
+            $this->removeTempDir($tempDir);
+        }
+    }
 }

@@ -60,7 +60,8 @@ final class TemplateResolver
         $this->validateExtendsPlacement($document, $context);
 
         if ($context->blocks !== null) {
-            $document = $this->processIncludes($document, $context, $loadedTemplates);
+            $includeStack = [$context->templatePath];
+            $document = $this->processIncludes($document, $context, $loadedTemplates, $includeStack);
 
             return $this->blockMerger->extractBlocks($document, $context->blocks, $context);
         }
@@ -110,7 +111,9 @@ final class TemplateResolver
             return $this->processExtends($extendsElement, $document, $context, $loadedTemplates);
         }
 
-        return $this->processIncludes($document, $context, $loadedTemplates);
+        $includeStack = [$context->templatePath];
+
+        return $this->processIncludes($document, $context, $loadedTemplates, $includeStack);
     }
 
     /**
@@ -150,7 +153,8 @@ final class TemplateResolver
                 $this->prefixHelper->buildName('extends'),
             );
 
-            $message = 's:extends is only allowed on root-level template elements.';
+            $extendsName = $this->prefixHelper->buildName('extends');
+            $message = sprintf('%s is only allowed on root-level template elements.', $extendsName);
             if ($extendsAttr instanceof AttributeNode) {
                 throw $context->createSyntaxExceptionForAttribute($message, $extendsAttr);
             }
@@ -191,7 +195,7 @@ final class TemplateResolver
             $this->templateAstCache[$resolvedPath] = $this->parser->parse($content);
         }
 
-        return $this->templateAstCache[$resolvedPath];
+        return NodeCloner::cloneDocument($this->templateAstCache[$resolvedPath]);
     }
 
     /**
@@ -223,7 +227,8 @@ final class TemplateResolver
         );
         $parentContext->stampTemplatePath($parentDocument);
 
-        $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates);
+        $includeStack = [$context->templatePath];
+        $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates, $includeStack);
         $childBlocks = $this->blockMerger->collectBlocks($childDocument, $context);
         $parentDocument = $this->blockMerger->replaceBlocks($parentDocument, $childBlocks);
 
@@ -232,11 +237,13 @@ final class TemplateResolver
 
     /**
      * @param array<string> $loadedTemplates
+     * @param array<string> $includeStack
      */
     private function processIncludes(
         DocumentNode $document,
         CompilationContext $context,
         array &$loadedTemplates,
+        array &$includeStack,
     ): DocumentNode {
         $newChildren = [];
 
@@ -253,6 +260,18 @@ final class TemplateResolver
                 );
                 $resolvedPath = $this->loader->resolve($includePath, $context->templatePath);
                 $dependencyPath = $this->loader->sourcePath($resolvedPath) ?? $this->loader->sourceId($resolvedPath);
+
+                if (in_array($resolvedPath, $includeStack, true)) {
+                    $chain = [...$includeStack, $resolvedPath];
+                    $message = sprintf('Circular template include detected: %s', implode(' -> ', $chain));
+                    $includeAttr = AttributeHelper::findAttribute($child->attributes, $includeName);
+
+                    if ($includeAttr instanceof AttributeNode) {
+                        throw $context->createSyntaxExceptionForAttribute($message, $includeAttr);
+                    }
+
+                    throw $context->createSyntaxExceptionForNode($message, $child);
+                }
 
                 $context->tracker?->addDependency($dependencyPath);
 
@@ -273,7 +292,14 @@ final class TemplateResolver
                     false,
                 );
 
-                $includeDocument = $this->processIncludes($includeDocument, $includeContext, $loadedTemplates);
+                $includeStack[] = $resolvedPath;
+                $includeDocument = $this->processIncludes(
+                    $includeDocument,
+                    $includeContext,
+                    $loadedTemplates,
+                    $includeStack,
+                );
+                array_pop($includeStack);
                 $includeChildren = $includeDocument->children;
 
                 if (AttributeHelper::hasAttribute($child, $this->prefixHelper->buildName('with'))) {
@@ -303,6 +329,7 @@ final class TemplateResolver
                     $child->children,
                     $context,
                     $loadedTemplates,
+                    $includeStack,
                 );
                 $processedChild = $child instanceof FragmentNode
                     ? NodeCloner::fragmentWithChildren($child, $processedChildren)
@@ -319,15 +346,17 @@ final class TemplateResolver
     /**
      * @param array<\Sugar\Core\Ast\Node> $children
      * @param array<string> $loadedTemplates
+     * @param array<string> $includeStack
      * @return array<\Sugar\Core\Ast\Node>
      */
     private function processChildrenIncludes(
         array $children,
         CompilationContext $context,
         array &$loadedTemplates,
+        array &$includeStack,
     ): array {
         $doc = new DocumentNode($children);
-        $processed = $this->processIncludes($doc, $context, $loadedTemplates);
+        $processed = $this->processIncludes($doc, $context, $loadedTemplates, $includeStack);
 
         return $processed->children;
     }

@@ -11,6 +11,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\AttributeHelper;
 use Sugar\Core\Ast\Helper\ExpressionValidator;
+use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\Helper\NodeTraverser;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
@@ -151,7 +152,7 @@ final class ComponentExpansionPass implements AstPassInterface
             $this->componentAstCache[$component->name] = $this->parser->parse($templateContent);
         }
 
-        $templateAst = $this->componentAstCache[$component->name];
+        $templateAst = NodeCloner::cloneDocument($this->componentAstCache[$component->name]);
 
         // Categorize attributes: control flow, attribute directives, bindings, merge
         $categorized = $this->categorizeComponentAttributes($component->attributes);
