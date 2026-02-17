@@ -14,7 +14,7 @@ use Sugar\Core\Engine\CompiledTemplateResult;
 use Sugar\Core\Engine\EngineBuilder;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
-use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Util\Hash;
@@ -44,7 +44,6 @@ final class Engine implements EngineInterface
         private readonly bool $debug = false,
         private readonly ?object $templateContext = null,
         private readonly ?TemplateExceptionRendererInterface $exceptionRenderer = null,
-        private readonly ?SugarConfig $config = null,
         private readonly array $runtimeServices = [],
     ) {
     }
@@ -153,12 +152,7 @@ final class Engine implements EngineInterface
      */
     private function execute(string $compiledPath, array $data, ?DependencyTracker $tracker): string
     {
-        $runtimeContext = new RegistrationContext(
-            config: $this->config,
-            templateLoader: $this->loader,
-            templateCache: $this->cache,
-            templateContext: $this->templateContext,
-            debug: $this->debug,
+        $runtimeContext = new RuntimeContext(
             compiler: $this->compiler,
             tracker: $tracker,
         );
@@ -198,12 +192,12 @@ final class Engine implements EngineInterface
      * Materialize runtime services for a single template execution.
      *
      * Services may be either concrete values or closures that accept
-     * RegistrationContext and return a concrete runtime service.
+     * RuntimeContext and return a concrete runtime service.
      *
-     * @param \Sugar\Core\Extension\RegistrationContext $runtimeContext Runtime registration context
+     * @param \Sugar\Core\Extension\RuntimeContext $runtimeContext Runtime materialization context
      * @return array<string, mixed>
      */
-    private function materializeRuntimeServices(RegistrationContext $runtimeContext): array
+    private function materializeRuntimeServices(RuntimeContext $runtimeContext): array
     {
         $services = [];
 

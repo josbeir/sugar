@@ -55,6 +55,21 @@ final class EngineBuilderTest extends TestCase
         $this->assertInstanceOf(Engine::class, $engine);
     }
 
+    public function testBuildUsesBuilderConfigForParser(): void
+    {
+        $config = SugarConfig::withPrefix('x');
+        $loader = new StringTemplateLoader($config, [
+            'custom-prefix.sugar.php' => '<div x:if="$show">Visible</div>',
+        ]);
+
+        $engine = (new EngineBuilder($config))
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->assertSame('<div>Visible</div>', $engine->render('custom-prefix.sugar.php', ['show' => true]));
+        $this->assertSame('', $engine->render('custom-prefix.sugar.php', ['show' => false]));
+    }
+
     public function testWithTemplateLoader(): void
     {
         $tempDir = $this->createTempDir();

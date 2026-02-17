@@ -12,6 +12,7 @@ use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\ComponentExtension;
@@ -34,6 +35,7 @@ final class ComponentExtensionTest extends TestCase
         $context = new RegistrationContext(
             config: $config,
             templateLoader: $loader,
+            templateCache: $this->createStub(TemplateCacheInterface::class),
             parser: $parser,
             directiveRegistry: $registry,
         );
@@ -65,9 +67,6 @@ final class ComponentExtensionTest extends TestCase
             config: $config,
             templateLoader: $loader,
             templateCache: $this->createStub(TemplateCacheInterface::class),
-            templateContext: null,
-            debug: true,
-            compiler: $compiler,
             parser: $parser,
             directiveRegistry: $registry,
         );
@@ -78,7 +77,12 @@ final class ComponentExtensionTest extends TestCase
         $this->assertArrayHasKey(ComponentExtension::SERVICE_RENDERER, $services);
         $this->assertInstanceOf(Closure::class, $services[ComponentExtension::SERVICE_RENDERER]);
 
-        $renderer = $services[ComponentExtension::SERVICE_RENDERER]($context);
+        $runtimeContext = new RuntimeContext(
+            compiler: $compiler,
+            tracker: null,
+        );
+
+        $renderer = $services[ComponentExtension::SERVICE_RENDERER]($runtimeContext);
         $this->assertInstanceOf(ComponentRenderer::class, $renderer);
     }
 }

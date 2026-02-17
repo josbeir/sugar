@@ -20,6 +20,7 @@ use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\PhpSyntaxValidator;
+use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Parser\Parser;
@@ -66,7 +67,7 @@ final class PhpSyntaxValidatorTest extends TestCase
             source: $source,
             debug: true,
         );
-        $document = (new Parser())->parse($source);
+        $document = (new Parser(new SugarConfig()))->parse($source);
         $context->stampTemplatePath($document);
 
         $validator = new PhpSyntaxValidator();
@@ -93,7 +94,7 @@ final class PhpSyntaxValidatorTest extends TestCase
             source: $source,
             debug: true,
         );
-        $document = (new Parser())->parse($source);
+        $document = (new Parser(new SugarConfig()))->parse($source);
         $context->stampTemplatePath($document);
 
         $validator = new PhpSyntaxValidator();

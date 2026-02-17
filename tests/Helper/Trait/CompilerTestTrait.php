@@ -58,7 +58,9 @@ trait CompilerTestTrait
         array $componentPaths = [],
         bool $absolutePathsOnly = false,
     ): void {
-        $this->parser = new Parser($config);
+        $loaderConfig = $config ?? new SugarConfig();
+
+        $this->parser = new Parser($loaderConfig);
         $this->escaper = new Escaper();
 
         // Create registry - either with defaults or empty for custom directives
@@ -68,14 +70,14 @@ trait CompilerTestTrait
         $this->registry = $registry;
 
         $this->templateLoader = new FileTemplateLoader(
-            $config ?? new SugarConfig(),
+            $loaderConfig,
             $templatePaths,
             $absolutePathsOnly,
         );
 
         $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
             templateLoader: $this->templateLoader,
-            config: $config ?? new SugarConfig(),
+            config: $loaderConfig,
             directories: $componentPaths,
         );
 
@@ -111,15 +113,15 @@ trait CompilerTestTrait
         bool $absolutePathsOnly = false,
         array $customPasses = [],
     ): void {
-        $this->parser = new Parser($config);
+        $loaderConfig = $config ?? new SugarConfig();
+
+        $this->parser = new Parser($loaderConfig);
         $this->escaper = new Escaper();
 
         $registry = $withDefaultDirectives
             ? new DirectiveRegistry()
             : DirectiveRegistry::empty();
         $this->registry = $registry;
-
-        $loaderConfig = $config ?? new SugarConfig();
 
         $this->templateLoader = new StringTemplateLoader(
             $loaderConfig,
@@ -157,7 +159,7 @@ trait CompilerTestTrait
      */
     protected function createParser(?SugarConfig $config = null): Parser
     {
-        return new Parser($config);
+        return new Parser($config ?? new SugarConfig());
     }
 
     /**

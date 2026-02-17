@@ -4,13 +4,19 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Extension;
 
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use Sugar\Core\Ast\Node;
+use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
+use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Parser\Parser;
 
 /**
  * Tests for RegistrationContext
@@ -21,7 +27,14 @@ final class RegistrationContextTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->context = new RegistrationContext();
+        $config = new SugarConfig();
+        $this->context = new RegistrationContext(
+            config: $config,
+            templateLoader: new StringTemplateLoader(config: $config, templates: []),
+            templateCache: $this->createStub(TemplateCacheInterface::class),
+            parser: new Parser($config),
+            directiveRegistry: new DirectiveRegistry(),
+        );
     }
 
     public function testDirectiveRegistration(): void
@@ -133,24 +146,28 @@ final class RegistrationContextTest extends TestCase
     {
         $directive = $this->createStub(DirectiveInterface::class);
         $pass = $this->createStubPass();
+        $service = (object)['enabled' => true];
 
         $this->context->directive('my-dir', $directive);
         $this->context->compilerPass($pass, PassPriority::CONTEXT_ANALYSIS);
-        $this->context->runtimeService('custom.service', ['enabled' => true]);
+        $this->context->runtimeService('custom.service', $service);
 
         $this->assertCount(1, $this->context->getDirectives());
         $this->assertCount(1, $this->context->getPasses());
-        $this->assertSame(['enabled' => true], $this->context->getRuntimeServices()['custom.service']);
+        $this->assertSame($service, $this->context->getRuntimeServices()['custom.service']);
     }
 
     public function testRuntimeServiceRegistrationOverwritesById(): void
     {
-        $this->context->runtimeService('custom.service', 1);
-        $this->context->runtimeService('custom.service', 2);
+        $first = new stdClass();
+        $second = new stdClass();
+
+        $this->context->runtimeService('custom.service', $first);
+        $this->context->runtimeService('custom.service', $second);
 
         $services = $this->context->getRuntimeServices();
         $this->assertCount(1, $services);
-        $this->assertSame(2, $services['custom.service']);
+        $this->assertSame($second, $services['custom.service']);
     }
 
     protected function createStubPass(): AstPassInterface

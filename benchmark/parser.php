@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Sugar\Core\Parser\Lexer;
 use Sugar\Core\Parser\Parser;
+use Sugar\Core\Config\SugarConfig;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -31,7 +32,7 @@ final class ParserBenchmark
         $referenceDom = $options['referenceDom'];
         $effectiveComparePath = $comparePath ?? $jsonPath;
 
-        $parser = new Parser();
+        $parser = new Parser(new SugarConfig());
         $cases = $this->cases();
         $results = [];
 
