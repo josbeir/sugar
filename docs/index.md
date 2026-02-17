@@ -19,17 +19,25 @@ hero:
 
 features:
   - title: Cleaner Control Flow
-    icon: "🧩"
-    details: Use `s:` attributes like `s:if` and `s:foreach` directly in HTML.
+    icon:
+      src: /icons/control-flow.svg
+    details: "Use s: attributes like s:if and s:foreach directly in HTML."
+    link: /guide/language/directives
   - title: Template Inheritance
-    icon: "🧬"
-    details: Compose layouts with s:extends, s:block, and s:include.
+    icon:
+      src: /icons/inheritance.svg
+    details: "Compose layouts with s:extends, s:block, and s:include."
+    link: /guide/templates/inheritance
   - title: Built-In Safe Output
-    icon: "🛡️"
+    icon:
+      src: /icons/safe-output.svg
     details: Auto-escapes HTML, attributes, URLs, JavaScript, and CSS by context.
+    link: /guide/language/escaping
   - title: Reusable Components
-    icon: "🧱"
+    icon:
+      src: /icons/components.svg
     details: Build UI with props, slots, and merged attributes in plain PHP templates.
+    link: /guide/templates/components
 
 ---
 
