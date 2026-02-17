@@ -50,7 +50,7 @@ final class ComponentExpansionPassTest extends TestCase
     protected function setUp(): void
     {
         $this->config = new SugarConfig();
-        $this->templateLoader = new StringTemplateLoader(config: $this->config);
+        $this->templateLoader = new StringTemplateLoader();
         $this->loader = new StringLoader(
             config: $this->config,
             components: [

@@ -168,7 +168,6 @@ SUGAR,
         );
 
         $loader = new FileTemplateLoader(
-            config: new SugarConfig(),
             templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
             absolutePathsOnly: true,
         );
@@ -215,7 +214,6 @@ SUGAR,
         );
 
         $loader = new FileTemplateLoader(
-            config: new SugarConfig(),
             templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
             absolutePathsOnly: true,
         );
@@ -272,7 +270,6 @@ SUGAR,
         );
 
         $loader = new FileTemplateLoader(
-            config: new SugarConfig(),
             templatePaths: rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
             absolutePathsOnly: true,
         );
@@ -931,10 +928,7 @@ SUGAR,
             $templates['components/s-' . $name . '.sugar.php'] = $source;
         }
 
-        $loader = new StringTemplateLoader(
-            config: $this->config,
-            templates: $templates,
-        );
+        $loader = new StringTemplateLoader(templates: $templates);
 
         $cacheDir = $this->createTempDir('sugar_cache_');
         $cache = new FileCache($cacheDir);

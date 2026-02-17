@@ -26,7 +26,7 @@ final class ComponentExtensionTest extends TestCase
     public function testRegistersComponentExpansionPassAtComponentPriority(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config, templates: [
+        $loader = new StringTemplateLoader(templates: [
             'components/s-card.sugar.php' => '<div><?= $slot ?></div>',
         ]);
         $parser = new Parser($config);
@@ -50,7 +50,7 @@ final class ComponentExtensionTest extends TestCase
     public function testRegistersRendererServiceInitializerClosure(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config, templates: [
+        $loader = new StringTemplateLoader(templates: [
             'components/s-card.sugar.php' => '<div><?= $slot ?></div>',
         ]);
         $parser = new Parser($config);

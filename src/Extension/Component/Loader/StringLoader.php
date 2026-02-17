@@ -13,22 +13,29 @@ final class StringLoader implements ComponentLoaderInterface
 {
     private readonly StringTemplateLoader $templateLoader;
 
-    private readonly ResourceLocatorLoader $delegate;
+    private readonly NamespacedComponentLoader $delegate;
+
+    private readonly string $primarySuffix;
 
     /**
      * @param array<string, string> $components
+     * @param array<string> $suffixes
      */
     public function __construct(
         private readonly SugarConfig $config = new SugarConfig(),
         array $components = [],
+        private readonly array $suffixes = ['.sugar.php'],
     ) {
+        $this->primarySuffix = $this->suffixes[0] ?? '.sugar.php';
+
         $templates = [];
         foreach ($components as $name => $source) {
-            $templates['components/s-' . $name . $this->config->fileSuffix] = $source;
+            $templates[$this->componentTemplateKey($name)] = $source;
         }
 
-        $this->templateLoader = new StringTemplateLoader(config: $this->config, templates: $templates);
-        $this->delegate = ResourceLocatorLoader::forTemplateLoader(
+        $this->templateLoader = new StringTemplateLoader(templates: $templates, suffixes: $this->suffixes);
+
+        $this->delegate = NamespacedComponentLoader::forTemplateLoader(
             templateLoader: $this->templateLoader,
             config: $this->config,
             directories: ['components'],
@@ -40,7 +47,7 @@ final class StringLoader implements ComponentLoaderInterface
      */
     public function addComponent(string $name, string $source): void
     {
-        $this->templateLoader->addTemplate('components/s-' . $name . $this->config->fileSuffix, $source);
+        $this->templateLoader->addTemplate($this->componentTemplateKey($name), $source);
     }
 
     /**
@@ -65,5 +72,13 @@ final class StringLoader implements ComponentLoaderInterface
     public function getComponentFilePath(string $name): string
     {
         return $this->delegate->getComponentFilePath($name);
+    }
+
+    /**
+     * Build the logical template key for a component.
+     */
+    private function componentTemplateKey(string $name): string
+    {
+        return 'components/' . $this->config->elementPrefix . $name . $this->primarySuffix;
     }
 }

@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Loader\TemplateNamespaceDefinition;
 use Sugar\Extension\Component\ComponentExtension;
 
 /**
@@ -17,7 +18,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersSimpleTemplateFromMemory(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'home' => '<h1><?= $title ?></h1><p><?= $content ?></p>',
             ],
@@ -37,7 +37,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersTemplateWithDirectives(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'users' => '<ul><li s:foreach="$users as $user"><?= $user ?></li></ul>',
             ],
@@ -58,7 +57,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersTemplateWithConditionals(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'conditional' => '<div s:if="$show">Visible</div><span><?php if (!($show ?? false)) { ?>Hidden<?php } ?></span>',
             ],
@@ -78,7 +76,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersComponentFromMemory(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'page' => '<s-button>Click Me</s-button>',
             ],
@@ -96,7 +93,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersComponentWithAttributes(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'alert-page' => '<s-alert s:bind="[\'title\' => \'Important\']">Message</s-alert>',
             ],
@@ -119,7 +115,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testRendersComponentWithNamedSlots(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'card-page' => '<s-card>' .
                     '<h2 s:slot="header">Card Title</h2>' .
@@ -146,7 +141,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
     public function testDynamicallyAddTemplateAndComponent(): void
     {
-        $loader = new StringTemplateLoader(config: new SugarConfig());
+        $loader = new StringTemplateLoader();
 
         // Add templates dynamically
         $loader->addTemplate('dynamic', '<h1>Dynamic <?= $name ?></h1>');
@@ -164,7 +159,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testContextAwareEscaping(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'escaping' => '<div><?= $html ?></div><script>var x = <?= $json ?>;</script>',
             ],
@@ -190,11 +184,9 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testSupportsExtensionFallback(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'exact' => '<div>Exact</div>',
                 'sugar.sugar.php' => '<div>Sugar</div>',
-                'plain.php' => '<div>Plain</div>',
             ],
         );
 
@@ -207,20 +199,17 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         // Should find with .sugar.php extension
         $this->assertStringContainsString('<div>Sugar</div>', $engine->render('sugar'));
-
-        // Should find with .php extension
-        $this->assertStringContainsString('<div>Plain</div>', $engine->render('plain'));
     }
 
     public function testSupportsCustomSuffix(): void
     {
-        $config = (new SugarConfig())->withFileSuffix('.sugar.tpl');
+        $config = new SugarConfig();
         $loader = new StringTemplateLoader(
-            config: $config,
             templates: [
                 'custom.sugar.tpl' => '<div>Custom</div>',
             ],
         );
+        $loader->registerNamespace('app', new TemplateNamespaceDefinition([''], ['.sugar.tpl']));
 
         $engine = Engine::builder($config)
             ->withTemplateLoader($loader)
@@ -232,7 +221,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testHandlesTemplateInheritance(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'layouts/base' => '<html><body><div s:block="content">Default</div></body></html>',
                 'pages/home' => '<div s:extends="../layouts/base">' .
@@ -254,7 +242,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testAbsoluteOnlyResolutionUsesTemplateRoot(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'layouts/base' => '<html><body><div s:block="content">Default</div></body></html>',
                 'pages/home' => '<div s:extends="layouts/base">' .
@@ -277,7 +264,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testHandlesTemplateIncludes(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'partials/header' => '<header><h1><?= $title ?></h1></header>',
                 'partials/footer' => '<footer><p><?= $year ?></p></footer>',
@@ -301,7 +287,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testIncludesWithRelativePaths(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'shared/nav' => '<nav><?= $links ?></nav>',
                 'pages/home-with-nav' => '<div s:include="../shared/nav" s:with="[\'links\' => \'Home | About\']"></div>',
@@ -320,7 +305,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     public function testCachesCompiledTemplates(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'cached' => '<div><?= $value ?></div>',
             ],
@@ -349,7 +333,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
     {
         // Real-world use case: testing custom components without filesystem
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'test-template' => '<s-custom-component s:bind="[\'data\' => $testData]">Test</s-custom-component>',
             ],
@@ -380,7 +363,6 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
         ];
 
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: $dbTemplates,
         );
 

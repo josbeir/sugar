@@ -30,7 +30,7 @@ final class RegistrationContextTest extends TestCase
         $config = new SugarConfig();
         $this->context = new RegistrationContext(
             config: $config,
-            templateLoader: new StringTemplateLoader(config: $config, templates: []),
+            templateLoader: new StringTemplateLoader(templates: []),
             templateCache: $this->createStub(TemplateCacheInterface::class),
             parser: new Parser($config),
             directiveRegistry: new DirectiveRegistry(),

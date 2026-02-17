@@ -6,40 +6,72 @@ namespace Sugar\Core\Loader;
 interface TemplateLoaderInterface
 {
     /**
-     * Load a template by its path.
+     * Register or replace a namespace definition.
      *
-     * @param string $path Template path
-     * @return string Template content
+     * @param string $namespace Namespace name (without leading @)
+     * @param \Sugar\Core\Loader\TemplateNamespaceDefinition $definition Namespace definition
+     */
+    public function registerNamespace(string $namespace, TemplateNamespaceDefinition $definition): void;
+
+    /**
+     * Load a template source by logical name.
+     *
+     * Names are canonicalized through resolve() before loading.
+     *
+     * @param string $name Logical template name (e.g. "@app/pages/home" or "pages/home")
+     * @return string Template source
      * @throws \Sugar\Core\Exception\TemplateNotFoundException If template is not found
      */
-    public function load(string $path): string;
+    public function load(string $name): string;
 
     /**
-     * Resolve a template path relative to a current template.
+     * Check whether a logical template exists.
      *
-     * @param string $path Path to resolve
-     * @param string $currentTemplate Current template path (for relative resolution)
-     * @return string Resolved path
+     * @param string $name Logical template name
+     * @return bool True when a source can be loaded
      */
-    public function resolve(string $path, string $currentTemplate = ''): string;
+    public function exists(string $name): bool;
 
     /**
-     * Resolve a template path to an absolute filesystem path.
+     * Resolve a name relative to a referring template into canonical form.
      *
-     * @param string $path Path to resolve
-     * @param string $currentTemplate Current template path (for relative resolution)
-     * @return string Absolute filesystem path when available
+     * Canonical names always include an explicit namespace, e.g. "@app/pages/home".
+     *
+     * @param string $name Logical name to resolve
+     * @param string $referrer Canonical or logical referring template name
+     * @return string Canonical template name
      */
-    public function resolveToFilePath(string $path, string $currentTemplate = ''): string;
+    public function resolve(string $name, string $referrer = ''): string;
 
     /**
-     * List known logical template paths.
+     * Return a stable source identity for caching and dependency graphs.
      *
-     * Returned paths are normalized and relative to the loader root namespace
-     * (e.g. "components/s-button.sugar.php").
+     * Implementations should return a deterministic identifier. For filesystem
+     * sources this is typically the absolute path.
      *
-     * @param string $pathPrefix Optional normalized prefix filter
+     * @param string $name Logical template name
+     * @return string Stable source identifier
+     */
+    public function sourceId(string $name): string;
+
+    /**
+     * Resolve to a physical source path when one exists.
+     *
+     * Returns null for non-filesystem backends.
+     *
+     * @param string $name Logical template name
+     * @return string|null Physical source path
+     */
+    public function sourcePath(string $name): ?string;
+
+    /**
+     * Discover templates in a namespace.
+     *
+     * Returned names are canonical (with "@namespace/").
+     *
+     * @param string $namespace Namespace name
+     * @param string $prefix Optional prefix within the namespace
      * @return array<string>
      */
-    public function listTemplatePaths(string $pathPrefix = ''): array;
+    public function discover(string $namespace, string $prefix = ''): array;
 }

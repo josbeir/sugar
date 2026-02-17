@@ -26,7 +26,7 @@ final class CompilerPipelineFactoryTest extends TestCase
     public function testCompilerPipelineAppliesCustomPasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
+        $loader = new StringTemplateLoader();
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
@@ -67,7 +67,7 @@ final class CompilerPipelineFactoryTest extends TestCase
     public function testCompilerPipelineAppliesAllCustomPassesByPriority(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
+        $loader = new StringTemplateLoader();
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 

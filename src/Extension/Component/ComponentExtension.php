@@ -12,7 +12,7 @@ use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
+use Sugar\Extension\Component\Loader\NamespacedComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
@@ -130,7 +130,7 @@ final class ComponentExtension implements ExtensionInterface
             return $this->componentLoader;
         }
 
-        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
+        $this->componentLoader = NamespacedComponentLoader::forTemplateLoader(
             templateLoader: $loader,
             config: $config,
             directories: $this->componentDirectories,

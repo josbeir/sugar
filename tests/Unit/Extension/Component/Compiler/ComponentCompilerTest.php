@@ -23,7 +23,7 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentThrowsWhenComponentMissing(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(config: $config);
         $compiler = new Compiler(
             parser: new Parser($config),
@@ -47,7 +47,7 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentMarksSlotVariablesAsRawViaInlinePasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(
             config: $config,
             components: ['button' => '<button><?= $slot ?></button>'],
@@ -79,7 +79,7 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentTracksComponentDependency(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(
             config: $config,
             components: ['button' => '<button><?= $slot ?></button>'],

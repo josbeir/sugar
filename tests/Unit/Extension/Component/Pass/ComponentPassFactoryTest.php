@@ -32,9 +32,7 @@ final class ComponentPassFactoryTest extends TestCase
     public function testCreateExpansionPassReturnsCachedInstance(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
-            config: $config,
-        );
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
@@ -59,9 +57,7 @@ final class ComponentPassFactoryTest extends TestCase
     public function testIncludesInRangeCustomPassesInComponentTemplatePipeline(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
-            config: $config,
-        );
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],
@@ -108,9 +104,7 @@ final class ComponentPassFactoryTest extends TestCase
     public function testExcludesOutOfRangeCustomPassesFromComponentTemplatePipeline(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(
-            config: $config,
-        );
+        $loader = new StringTemplateLoader();
         $componentLoader = new StringLoader(
             config: $config,
             components: ['plain' => '<div>hello</div>'],

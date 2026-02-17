@@ -8,6 +8,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Loader\TemplateNamespaceDefinition;
 
 /**
  * Helper trait for creating Engine instances in tests
@@ -32,7 +33,7 @@ trait EngineTestTrait
         bool $debug = false,
     ): Engine {
         $config = new SugarConfig();
-        $loader = new FileTemplateLoader($config, [$templatePath]);
+        $loader = new FileTemplateLoader([$templatePath]);
 
         $builder = Engine::builder($config)
             ->withTemplateLoader($loader)
@@ -90,13 +91,13 @@ trait EngineTestTrait
         $config = new SugarConfig();
         $resourceTemplates = $templates;
         foreach ($components as $name => $source) {
-            $resourceTemplates['components/s-' . $name . $config->fileSuffix] = $source;
+            $resourceTemplates['@components/' . $config->elementPrefix . $name . '.sugar.php'] = $source;
         }
 
         $loader = new StringTemplateLoader(
-            config: $config,
             templates: $resourceTemplates,
         );
+        $loader->registerNamespace('components', new TemplateNamespaceDefinition(['components'], ['.sugar.php']));
 
         $builder = Engine::builder($config)
             ->withTemplateLoader($loader)

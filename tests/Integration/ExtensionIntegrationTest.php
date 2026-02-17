@@ -11,7 +11,6 @@ use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Engine;
 use Sugar\Core\Enum\DirectiveType;
@@ -59,7 +58,6 @@ final class ExtensionIntegrationTest extends TestCase
         };
 
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'repeat' => '<span s:repeat="3">Hi </span>',
             ],
@@ -101,7 +99,6 @@ final class ExtensionIntegrationTest extends TestCase
         };
 
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'upper' => '<p>hello world</p>',
             ],
@@ -166,7 +163,6 @@ final class ExtensionIntegrationTest extends TestCase
         };
 
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'combined' => '<div s:repeat="2">item</div>',
             ],
@@ -232,7 +228,6 @@ final class ExtensionIntegrationTest extends TestCase
         };
 
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'multi' => '<p>[UPPER]hello</p><span>[TRIM]  spaced  </span>',
             ],
@@ -253,7 +248,6 @@ final class ExtensionIntegrationTest extends TestCase
     public function testEngineWithoutExtensionsStillWorks(): void
     {
         $loader = new StringTemplateLoader(
-            config: new SugarConfig(),
             templates: [
                 'no-ext-baseline' => '<div s:if="$show">Visible</div>',
             ],

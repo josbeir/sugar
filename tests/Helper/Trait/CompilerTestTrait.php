@@ -13,7 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
+use Sugar\Extension\Component\Loader\NamespacedComponentLoader;
 use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
@@ -70,15 +70,14 @@ trait CompilerTestTrait
         $this->registry = $registry;
 
         $this->templateLoader = new FileTemplateLoader(
-            $loaderConfig,
             $templatePaths,
             $absolutePathsOnly,
         );
 
-        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
+        $this->componentLoader = NamespacedComponentLoader::forTemplateLoader(
             templateLoader: $this->templateLoader,
             config: $loaderConfig,
-            directories: $componentPaths,
+            directories: $componentPaths === [] ? ['components'] : $componentPaths,
         );
 
         $customPasses = $this->withDefaultComponentExpansion(
@@ -124,9 +123,8 @@ trait CompilerTestTrait
         $this->registry = $registry;
 
         $this->templateLoader = new StringTemplateLoader(
-            $loaderConfig,
-            $templates,
-            $absolutePathsOnly,
+            templates: $templates,
+            absolutePathsOnly: $absolutePathsOnly,
         );
 
         $this->componentLoader = new StringLoader(

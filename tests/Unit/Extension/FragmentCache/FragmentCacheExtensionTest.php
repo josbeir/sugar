@@ -57,7 +57,7 @@ final class FragmentCacheExtensionTest extends TestCase
 
         return new RegistrationContext(
             config: $config,
-            templateLoader: new StringTemplateLoader(config: $config, templates: []),
+            templateLoader: new StringTemplateLoader(templates: []),
             templateCache: $this->createStub(TemplateCacheInterface::class),
             parser: new Parser($config),
             directiveRegistry: new DirectiveRegistry(),

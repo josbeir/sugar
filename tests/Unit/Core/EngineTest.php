@@ -68,7 +68,7 @@ final class EngineTest extends TestCase
         $this->assertStringContainsString('<p>Second</p>', $result2);
 
         // Verify cache was used (check with same key engine uses)
-        $cached = $cache->get('cached.sugar.php');
+        $cached = $cache->get('@app/cached.sugar.php');
         $this->assertInstanceOf(CachedTemplate::class, $cached);
     }
 
@@ -127,7 +127,7 @@ final class EngineTest extends TestCase
     public function testRenderCompilationExceptionUsesRenderer(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader($config, [
+        $loader = new StringTemplateLoader([
             'a.sugar.php' => '<s-template s:extends="b.sugar.php"></s-template>',
             'b.sugar.php' => '<s-template s:extends="a.sugar.php"></s-template>',
         ]);

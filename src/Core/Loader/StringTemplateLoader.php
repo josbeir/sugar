@@ -3,11 +3,10 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Loader;
 
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\TemplateNotFoundException;
 
 /**
- * Loads templates from in-memory strings
+ * Loads templates from in-memory string sources.
  *
  * Useful for testing or when templates are stored in a database/cache
  * instead of the filesystem.
@@ -22,80 +21,159 @@ class StringTemplateLoader extends AbstractTemplateLoader
     /**
      * Constructor.
      *
-     * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
-     * @param array<string, string> $templates Templates (path => source)
-     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
+     * @param array<string, string> $templates Templates (logical name => source)
+     * @param bool $absolutePathsOnly When true, resolve() ignores referrer-relative semantics
+     * @param array<string> $suffixes Default suffixes for namespace lookups
      */
     public function __construct(
-        SugarConfig $config = new SugarConfig(),
         array $templates = [],
         bool $absolutePathsOnly = false,
+        array $suffixes = ['.sugar.php'],
     ) {
-        parent::__construct($config, $absolutePathsOnly);
-        $this->templates = $templates;
+        parent::__construct($absolutePathsOnly, $suffixes);
+
+        foreach ($templates as $path => $source) {
+            $canonical = $this->resolve($path);
+            $this->templates[$canonical] = $source;
+        }
     }
 
     /**
      * Add a template to the loader
      *
-     * @param string $path Template path/name
+     * @param string $path Logical template name
      * @param string $source Template source code
      */
     public function addTemplate(string $path, string $source): void
     {
-        $this->templates[$path] = $source;
+        $this->templates[$this->resolve($path)] = $source;
     }
 
     /**
      * @inheritDoc
      */
-    public function load(string $path): string
+    public function load(string $name): string
     {
-        $normalized = $this->normalizePath($path);
+        $canonical = $this->resolve($name);
 
-        // Try exact match first
-        if (isset($this->templates[$normalized])) {
-            return $this->templates[$normalized];
+        // Try exact canonical match first
+        if (isset($this->templates[$canonical])) {
+            return $this->templates[$canonical];
         }
 
-        $suffix = $this->config->fileSuffix;
+        [$namespace, $logicalPath] = $this->splitReferrer($canonical);
+        $definition = $this->getNamespace($namespace);
 
-        // Try with configured suffix
-        if (isset($this->templates[$normalized . $suffix])) {
-            return $this->templates[$normalized . $suffix];
+        $basePaths = [$logicalPath];
+
+        if ($namespace !== 'app') {
+            foreach ($definition->roots as $root) {
+                $normalizedRoot = $this->normalizePath($root);
+                if ($normalizedRoot === '') {
+                    $basePaths[] = $logicalPath;
+                    continue;
+                }
+
+                $basePaths[] = $normalizedRoot . '/' . $logicalPath;
+            }
         }
 
-        // Try with .php extension
-        if (isset($this->templates[$normalized . '.php'])) {
-            return $this->templates[$normalized . '.php'];
+        $basePaths = array_values(array_unique($basePaths));
+
+        foreach ($basePaths as $basePath) {
+            $candidate = $this->formatCanonicalName($namespace, $basePath);
+            if (isset($this->templates[$candidate])) {
+                return $this->templates[$candidate];
+            }
+
+            if ($namespace !== 'app') {
+                $appCandidate = $this->formatCanonicalName('app', $basePath);
+                if (isset($this->templates[$appCandidate])) {
+                    return $this->templates[$appCandidate];
+                }
+            }
+        }
+
+        if ($this->pathHasAnySuffix($logicalPath, $definition->suffixes)) {
+            throw new TemplateNotFoundException(sprintf('Template "%s" not found', $name));
+        }
+
+        foreach ($basePaths as $basePath) {
+            foreach ($definition->suffixes as $suffix) {
+                $candidate = $this->formatCanonicalName($namespace, $basePath . $suffix);
+                if (isset($this->templates[$candidate])) {
+                    return $this->templates[$candidate];
+                }
+
+                if ($namespace !== 'app') {
+                    $appCandidate = $this->formatCanonicalName('app', $basePath . $suffix);
+                    if (isset($this->templates[$appCandidate])) {
+                        return $this->templates[$appCandidate];
+                    }
+                }
+            }
         }
 
         throw new TemplateNotFoundException(
-            sprintf('Template "%s" not found', $path),
+            sprintf('Template "%s" not found', $name),
         );
     }
 
     /**
      * @inheritDoc
      */
-    public function listTemplatePaths(string $pathPrefix = ''): array
+    public function exists(string $name): bool
     {
-        $normalizedPrefix = $pathPrefix !== '' ? $this->normalizePath($pathPrefix) : '';
-        $templates = array_keys($this->templates);
+        try {
+            $this->load($name);
 
-        if ($normalizedPrefix === '') {
-            sort($templates);
-
-            return $templates;
+            return true;
+        } catch (TemplateNotFoundException) {
+            return false;
         }
+    }
 
-        $prefix = rtrim($normalizedPrefix, '/') . '/';
+    /**
+     * @inheritDoc
+     */
+    public function sourceId(string $name): string
+    {
+        return $this->resolve($name);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function sourcePath(string $name): ?string
+    {
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function discover(string $namespace, string $prefix = ''): array
+    {
+        $normalizedNamespace = $this->normalizeNamespace($namespace);
+        $normalizedPrefix = $this->normalizePath($prefix);
+        $prefixPath = $normalizedPrefix !== '' ? rtrim($normalizedPrefix, '/') . '/' : '';
         $result = [];
 
-        foreach ($templates as $path) {
-            if ($path === $normalizedPrefix || str_starts_with($path, $prefix)) {
-                $result[] = $path;
+        foreach (array_keys($this->templates) as $canonical) {
+            [$templateNamespace, $templatePath] = $this->splitReferrer($canonical);
+            if ($templateNamespace !== $normalizedNamespace) {
+                continue;
             }
+
+            if (
+                $normalizedPrefix !== ''
+                && $templatePath !== $normalizedPrefix
+                && !str_starts_with($templatePath, $prefixPath)
+            ) {
+                continue;
+            }
+
+            $result[] = $canonical;
         }
 
         sort($result);

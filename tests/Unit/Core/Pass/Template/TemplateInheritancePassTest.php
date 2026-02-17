@@ -28,7 +28,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
     protected function getPass(): AstPassInterface
     {
         $this->inheritanceFixturesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $loader = new FileTemplateLoader(new SugarConfig(), [$this->inheritanceFixturesPath]);
+        $loader = new FileTemplateLoader([$this->inheritanceFixturesPath]);
         $parser = new Parser(new SugarConfig());
 
         return new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
@@ -588,7 +588,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
         file_put_contents($layoutsDir . '/temp-include-layout.sugar.php', '<main s:block="content">Base</main>');
         file_put_contents($pagesDir . '/temp-child-include.sugar.php', '<p>Included</p>');
 
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
         $parser = new Parser(new SugarConfig());
         $pass = new TemplateInheritancePass($loader, $parser, $this->registry, new SugarConfig());
         $pipeline = new AstPipeline([$pass]);
@@ -803,7 +803,7 @@ final class TemplateInheritancePassTest extends MiddlewarePassTestCase
                 );
                 $this->fail('Expected SyntaxException for unknown directive in included template.');
             } catch (SyntaxException $exception) {
-                $this->assertSame('partials/temp-include-unknown.sugar.php', $exception->templatePath);
+                $this->assertSame('@app/partials/temp-include-unknown.sugar.php', $exception->templatePath);
                 $this->assertSame(1, $exception->templateLine);
                 $this->assertNotNull($exception->templateColumn);
                 $this->assertGreaterThan(0, $exception->templateColumn ?? 0);
