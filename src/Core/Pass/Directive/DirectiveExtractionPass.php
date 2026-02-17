@@ -21,14 +21,14 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\Enum\AttributeMergeMode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
 use Sugar\Core\Directive\Interface\ContentWrappingDirectiveInterface;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\Interface\ElementAwareDirectiveInterface;
-use Sugar\Core\Enum\AttributeMergeMode;
-use Sugar\Core\Enum\DirectiveType;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 
 /**

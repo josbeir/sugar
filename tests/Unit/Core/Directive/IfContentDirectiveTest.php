@@ -9,10 +9,10 @@ use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\IfContentDirective;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 final class IfContentDirectiveTest extends DirectiveTestCase
 {

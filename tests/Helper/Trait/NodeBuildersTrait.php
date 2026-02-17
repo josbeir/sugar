@@ -10,7 +10,7 @@ use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Tests\Helper\Builder\DirectiveNodeBuilder;
 use Sugar\Tests\Helper\Builder\DocumentNodeBuilder;
 use Sugar\Tests\Helper\Builder\ElementNodeBuilder;

@@ -6,8 +6,8 @@ namespace Sugar\Tests\Unit\Core\Directive;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DirectiveNode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\PassThroughDirective;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class PassThroughDirectiveTest extends TestCase

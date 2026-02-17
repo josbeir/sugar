@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Engine;
+namespace Sugar\Core;
 
 use PhpParser\Error;
 use PhpParser\ParserFactory;
@@ -10,7 +10,6 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Engine;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;

@@ -9,7 +9,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Directive\ContentDirective;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 final class ContentDirectiveTest extends TestCase

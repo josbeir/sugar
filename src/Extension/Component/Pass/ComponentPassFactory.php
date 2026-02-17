@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
@@ -28,7 +28,7 @@ final class ComponentPassFactory
     private ?ComponentExpansionPass $componentExpansionPass = null;
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses
      */
     public function __construct(
         private readonly TemplateLoaderInterface $templateLoader,

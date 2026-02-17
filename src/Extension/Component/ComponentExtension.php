@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Extension\Component;
 
-use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;

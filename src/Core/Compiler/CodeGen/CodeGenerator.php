@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\CodeGen;
+namespace Sugar\Core\Compiler\CodeGen;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\DirectiveNode;
@@ -96,7 +96,7 @@ final class CodeGenerator
      * Generate code for a single node
      *
      * @param \Sugar\Core\Ast\Node $node AST node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateNode(Node $node, OutputBuffer $buffer): void
     {
@@ -122,7 +122,7 @@ final class CodeGenerator
      * Generate static text output
      *
      * @param \Sugar\Core\Ast\TextNode $node Text node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateText(TextNode $node, OutputBuffer $buffer): void
     {
@@ -139,7 +139,7 @@ final class CodeGenerator
      * Generate verbatim raw-body output.
      *
      * @param \Sugar\Core\Ast\RawBodyNode $node Raw body node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateRawBody(RawBodyNode $node, OutputBuffer $buffer): void
     {
@@ -150,7 +150,7 @@ final class CodeGenerator
      * Generate dynamic output with inline escaping
      *
      * @param \Sugar\Core\Ast\OutputNode $node Output node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateOutput(OutputNode $node, OutputBuffer $buffer): void
     {
@@ -174,7 +174,7 @@ final class CodeGenerator
      * Generate raw PHP code pass-through
      *
      * @param \Sugar\Core\Ast\RawPhpNode $node Raw PHP node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateRawPhp(RawPhpNode $node, OutputBuffer $buffer): void
     {
@@ -188,7 +188,7 @@ final class CodeGenerator
      * Generate HTML element output
      *
      * @param \Sugar\Core\Ast\ElementNode $node Element node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateElement(ElementNode $node, OutputBuffer $buffer): void
     {
@@ -244,7 +244,7 @@ final class CodeGenerator
      * Generate attribute output
      *
      * @param \Sugar\Core\Ast\AttributeNode $attribute Attribute node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateAttribute(AttributeNode $attribute, OutputBuffer $buffer): void
     {
@@ -305,7 +305,7 @@ final class CodeGenerator
      * Generate fragment output (renders only children, not the fragment element itself)
      *
      * @param \Sugar\Core\Ast\FragmentNode $node Fragment node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateFragment(FragmentNode $node, OutputBuffer $buffer): void
     {
@@ -319,7 +319,7 @@ final class CodeGenerator
      * Generate runtime call output
      *
      * @param \Sugar\Core\Ast\RuntimeCallNode $node Runtime call node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateRuntimeCall(RuntimeCallNode $node, OutputBuffer $buffer): void
     {
@@ -331,7 +331,7 @@ final class CodeGenerator
      * Generate directive control structure
      *
      * @param \Sugar\Core\Ast\DirectiveNode $node Directive node
-     * @param \Sugar\Core\CodeGen\OutputBuffer $buffer Output buffer
+     * @param \Sugar\Core\Compiler\CodeGen\OutputBuffer $buffer Output buffer
      */
     private function generateDirective(DirectiveNode $node, OutputBuffer $buffer): void
     {

@@ -15,7 +15,7 @@ use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\IfContentDirective;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Directive\NoWrapDirective;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;

@@ -8,8 +8,8 @@ use RuntimeException;
 use stdClass;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
 use Sugar\Core\Exception\UnknownDirectiveException;
 use Sugar\Core\Extension\DirectiveRegistry;
 

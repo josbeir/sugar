@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Sugar\Tests\Helper\Trait;
 
 use Sugar\Core\Compiler\Compiler;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\FileTemplateLoader;
@@ -100,7 +100,7 @@ trait CompilerTestTrait
      * Set up compiler dependencies using a StringTemplateLoader.
      *
      * @param array<string, string> $templates
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],
@@ -179,8 +179,8 @@ trait CompilerTestTrait
     }
 
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
-     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}>
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}>
      */
     private function withDefaultComponentExpansion(?SugarConfig $config, array $customPasses): array
     {

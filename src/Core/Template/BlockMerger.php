@@ -12,7 +12,7 @@ use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
-use Sugar\Core\Enum\BlockMergeMode;
+use Sugar\Core\Template\Enum\BlockMergeMode;
 
 /**
  * Handles extraction and merge semantics for template blocks.
@@ -47,7 +47,7 @@ final class BlockMerger
     /**
      * Collect s:block definitions from a document tree.
      *
-     * @return array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Enum\BlockMergeMode, attributeName: string}>
+     * @return array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Template\Enum\BlockMergeMode, attributeName: string}>
      */
     public function collectBlocks(DocumentNode $document, CompilationContext $context): array
     {
@@ -75,7 +75,7 @@ final class BlockMerger
     /**
      * Replace parent blocks using child block map.
      *
-     * @param array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Enum\BlockMergeMode, attributeName: string}> $childBlocks
+     * @param array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Template\Enum\BlockMergeMode, attributeName: string}> $childBlocks
      */
     public function replaceBlocks(DocumentNode $document, array $childBlocks): DocumentNode
     {
@@ -119,7 +119,7 @@ final class BlockMerger
 
     /**
      * @param array<\Sugar\Core\Ast\Node> $children
-     * @return array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Enum\BlockMergeMode, attributeName: string}>
+     * @return array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Template\Enum\BlockMergeMode, attributeName: string}>
      */
     private function collectBlocksFromChildren(array $children, CompilationContext $context): array
     {
@@ -129,7 +129,7 @@ final class BlockMerger
     }
 
     /**
-     * @param array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Enum\BlockMergeMode, attributeName: string}> $childBlocks
+     * @param array<string, array{node: \Sugar\Core\Ast\Node, mode: \Sugar\Core\Template\Enum\BlockMergeMode, attributeName: string}> $childBlocks
      */
     private function replaceBlocksInNode(Node $node, array $childBlocks): Node
     {
@@ -167,7 +167,7 @@ final class BlockMerger
     }
 
     /**
-     * @return array{name: string, mode: \Sugar\Core\Enum\BlockMergeMode, attributeName: string}|null
+     * @return array{name: string, mode: \Sugar\Core\Template\Enum\BlockMergeMode, attributeName: string}|null
      */
     private function getBlockDirective(ElementNode|FragmentNode $node, CompilationContext $context): ?array
     {

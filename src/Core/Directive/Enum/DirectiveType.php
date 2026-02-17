@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\Enum;
+namespace Sugar\Core\Directive\Enum;
 
 /**
  * Directive type classification

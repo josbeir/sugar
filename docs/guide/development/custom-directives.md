@@ -69,7 +69,7 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Directive\Enum\DirectiveType;
 
 final class BadgeDirective implements DirectiveInterface
 {
@@ -96,7 +96,7 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Directive\Enum\DirectiveType;
 
 final class DataTestDirective implements DirectiveInterface
 {
@@ -174,8 +174,8 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Interface\AttributeMergePolicyDirectiveInterface;
-use Sugar\Core\Enum\AttributeMergeMode;
-use Sugar\Core\Enum\DirectiveType;
+use Sugar\Core\Directive\Enum\AttributeMergeMode;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Runtime\HtmlAttributeHelper;
 
 final class ClassDirective implements AttributeMergePolicyDirectiveInterface

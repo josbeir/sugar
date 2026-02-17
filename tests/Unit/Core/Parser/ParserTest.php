@@ -11,7 +11,7 @@ use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawBodyNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 
 final class ParserTest extends TestCase

@@ -11,7 +11,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Compiler\CompilationContext;
-use Sugar\Core\Enum\PassPriority;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 
 /**
  * Executes compiler passes in a single AST traversal.
@@ -25,7 +25,7 @@ final class AstPipeline
     private const POSITION_AFTER = 1;
 
     /**
-     * @var array<int, array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority, position: int, sequence: int}>
+     * @var array<int, array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority, position: int, sequence: int}>
      */
     private array $passEntries = [];
 
@@ -55,7 +55,7 @@ final class AstPipeline
      * Lower priorities run first; equal priorities preserve insertion order.
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to add
-     * @param \Sugar\Core\Enum\PassPriority $priority Ordering priority
+     * @param \Sugar\Core\Compiler\Pipeline\Enum\PassPriority $priority Ordering priority
      * @return $this
      */
     public function addPass(AstPassInterface $pass, PassPriority $priority = PassPriority::PRE_DIRECTIVE_EXTRACTION)
@@ -76,7 +76,7 @@ final class AstPipeline
      * Insert a pass before an anchored priority.
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to insert
-     * @param \Sugar\Core\Enum\PassPriority $anchorPriority Anchor priority
+     * @param \Sugar\Core\Compiler\Pipeline\Enum\PassPriority $anchorPriority Anchor priority
      * @return $this
      */
     public function addPassBefore(AstPassInterface $pass, PassPriority $anchorPriority)
@@ -97,7 +97,7 @@ final class AstPipeline
      * Insert a pass after an anchored priority.
      *
      * @param \Sugar\Core\Compiler\Pipeline\AstPassInterface $pass Pass to insert
-     * @param \Sugar\Core\Enum\PassPriority $anchorPriority Anchor priority
+     * @param \Sugar\Core\Compiler\Pipeline\Enum\PassPriority $anchorPriority Anchor priority
      * @return $this
      */
     public function addPassAfter(AstPassInterface $pass, PassPriority $anchorPriority)

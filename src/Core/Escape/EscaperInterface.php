@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Escape;
 
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Interface for context-aware escaping
@@ -20,7 +20,7 @@ interface EscaperInterface
      * Returns a PHP expression that can be embedded directly in compiled templates
      *
      * @param string $expression PHP expression to escape
-     * @param \Sugar\Core\Enum\OutputContext $context Output context
+     * @param \Sugar\Core\Escape\Enum\OutputContext $context Output context
      * @return string PHP code expression
      */
     public function generateEscapeCode(string $expression, OutputContext $context): string;

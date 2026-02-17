@@ -8,9 +8,9 @@ use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
-use Sugar\Core\Enum\DirectiveType;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Parser\Helper\PipeParser;
 
 /**
@@ -36,7 +36,7 @@ readonly class ContentDirective implements DirectiveInterface
 {
     /**
      * @param bool $escape Whether to escape output (true for s:text, false for s:html)
-     * @param \Sugar\Core\Enum\OutputContext $context Output context for escaping
+     * @param \Sugar\Core\Escape\Enum\OutputContext $context Output context for escaping
      */
     public function __construct(
         private bool $escape = true,

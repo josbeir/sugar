@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Core\CodeGen;
+namespace Sugar\Tests\Unit\Core\Compiler\CodeGen;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeNode;
@@ -12,8 +12,8 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawBodyNode;
 use Sugar\Core\Ast\RuntimeCallNode;
-use Sugar\Core\CodeGen\CodeGenerator;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Compiler\CodeGen\CodeGenerator;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\UnsupportedNodeException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;

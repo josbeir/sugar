@@ -8,7 +8,7 @@ use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 
 /**
  * Test AttributeNode AST class

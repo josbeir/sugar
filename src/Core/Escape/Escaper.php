@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Core\Escape;
 
 use InvalidArgumentException;
-use Sugar\Core\Enum\OutputContext;
+use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Util\ValueNormalizer;
 
 /**

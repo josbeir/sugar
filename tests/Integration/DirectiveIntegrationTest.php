@@ -5,7 +5,7 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\CodeGen\CodeGenerator;
+use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\BooleanAttributeDirective;
