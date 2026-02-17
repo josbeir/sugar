@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Tests\Unit\Core\CodeGen;
+namespace Sugar\Tests\Unit\Core\Compiler\CodeGen;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Compiler\CodeGen\OutputBuffer;
