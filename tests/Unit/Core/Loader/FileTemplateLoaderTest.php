@@ -115,4 +115,29 @@ final class FileTemplateLoaderTest extends TestCase
         $this->removeTempDir($tempDir1);
         $this->removeTempDir($tempDir2);
     }
+
+    public function testGetRegisteredNamespacesReturnsAllRegisteredNamespaces(): void
+    {
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+
+        $this->assertSame(['app'], $loader->getRegisteredNamespaces());
+    }
+
+    public function testGetRegisteredNamespacesWithMultipleNamespacesReturnsAll(): void
+    {
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+        $loader->registerNamespace('plugin-auth', new TemplateNamespaceDefinition([
+            SUGAR_TEST_TEMPLATES_PATH . '/plugins/auth',
+        ]));
+        $loader->registerNamespace('shared-ui', new TemplateNamespaceDefinition([
+            SUGAR_TEST_TEMPLATES_PATH . '/shared',
+        ]));
+
+        $namespaces = $loader->getRegisteredNamespaces();
+
+        $this->assertContains('app', $namespaces);
+        $this->assertContains('plugin-auth', $namespaces);
+        $this->assertContains('shared-ui', $namespaces);
+        $this->assertCount(3, $namespaces);
+    }
 }
