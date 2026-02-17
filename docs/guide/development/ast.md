@@ -41,7 +41,7 @@ Represents an HTML element with `tag`, `attributes`, `children`, and `selfClosin
 
 Example:
 
-```html
+```sugar
 <div s:tag="$tagName">Content</div>
 ```
 
@@ -67,7 +67,7 @@ Wrapperless node used for `<s-template>` blocks. It renders only its children, a
 
 Example:
 
-```html
+```sugar
 <s-template s:if="$show">
 		<p>Visible</p>
 </s-template>
@@ -132,7 +132,7 @@ Verbatim content preserved from `s:raw` regions. The parser does not interpret t
 
 Example:
 
-```html
+```sugar
 <div s:raw>
 	<?php echo $notParsed; ?>
 	<span><?= $stillRaw ?></span>
@@ -149,7 +149,7 @@ Structural directives like `s:if`, `s:foreach`, or `s:while`. These nodes wrap c
 
 Example:
 
-```html
+```sugar
 <p s:if="$show">Hello</p>
 ```
 
@@ -165,7 +165,7 @@ Represents a component invocation, such as `<s-button>`. It holds component `att
 
 Example:
 
-```html
+```sugar
 <s-button class="primary">Save</s-button>
 ```
 

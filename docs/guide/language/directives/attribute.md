@@ -31,11 +31,11 @@ Build classes from an associative array of conditions.
 When an element already has a static `class` attribute, `s:class` merges into that same `class` output instead of creating a duplicate attribute.
 
 ::: code-group
-```html [Array map]
+```sugar [Array map]
 <div s:class="['active' => $isActive, 'disabled' => $isDisabled]"></div>
 ```
 
-```html [Merge]
+```sugar [Merge]
 <div class="card" s:class="['featured' => $isFeatured]"></div>
 ```
 
@@ -53,7 +53,7 @@ Spread an array of attributes onto the element. `s:attr` is a short alias.
 Explicitly defined attributes on the element are excluded from spread input, including merged attributes like `class`.
 
 ::: code-group
-```html [Simple]
+```sugar [Simple]
 <div s:spread="$attrs"></div>
 <div s:attr="$attrs"></div>
 ```
@@ -63,7 +63,7 @@ Explicitly defined attributes on the element are excluded from spread input, inc
 <div id="user-1" class="card" disabled></div>
 ```
 
-```html [Merged]
+```sugar [Merged]
 <button class="btn" s:spread="$extraAttrs">Save</button>
 ```
 
@@ -72,7 +72,7 @@ Explicitly defined attributes on the element are excluded from spread input, inc
 <button class="btn" type="submit" disabled>Save</button>
 ```
 
-```html [Exclusion behavior]
+```sugar [Exclusion behavior]
 <button id="save" class="btn" s:class="['primary' => true]" s:spread="$extraAttrs">Save</button>
 ```
 
@@ -87,7 +87,7 @@ Explicitly defined attributes on the element are excluded from spread input, inc
 Apply the `checked` attribute when the expression is truthy.
 
 ::: code-group
-```html [Input]
+```sugar [Input]
 <input type="checkbox" s:checked="$newsletter">
 ```
 
@@ -102,7 +102,7 @@ Apply the `checked` attribute when the expression is truthy.
 Apply the `selected` attribute when the expression is truthy.
 
 ::: code-group
-```html [Option]
+```sugar [Option]
 <option s:selected="$value === $selected"><?= $label ?></option>
 ```
 
@@ -117,7 +117,7 @@ Apply the `selected` attribute when the expression is truthy.
 Apply the `disabled` attribute when the expression is truthy.
 
 ::: code-group
-```html [Button]
+```sugar [Button]
 <button s:disabled="$isSaving">Save</button>
 ```
 
@@ -132,11 +132,11 @@ Apply the `disabled` attribute when the expression is truthy.
 Compute the element tag name at runtime.
 
 ::: code-group
-```html [Heading]
+```sugar [Heading]
 <div s:tag="$headingLevel">Page Title</div>
 ```
 
-```html [Component wrapper]
+```sugar [Component wrapper]
 <div s:tag="$wrapperTag" class="panel">Content</div>
 ```
 

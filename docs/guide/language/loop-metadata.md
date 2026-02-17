@@ -23,7 +23,7 @@ Sugar exposes loop metadata via the `$loop` variable inside `s:foreach` and `s:f
 ## Examples
 
 ::: code-group
-```html [List]
+```sugar [List]
 <ul s:foreach="$items as $item">
 	<li s:class="['first' => $loop->first, 'last' => $loop->last]">
 		<?= $loop->iteration ?>. <?= $item ?>
@@ -31,7 +31,7 @@ Sugar exposes loop metadata via the `$loop` variable inside `s:foreach` and `s:f
 </ul>
 ```
 
-```html [Table rows]
+```sugar [Table rows]
 <table>
 	<tr s:foreach="$rows as $row" s:class="['odd' => $loop->odd, 'even' => $loop->even]">
 		<td><?= $row['label'] ?></td>

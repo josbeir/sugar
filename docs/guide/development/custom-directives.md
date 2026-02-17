@@ -117,7 +117,7 @@ final class DataTestDirective implements DirectiveInterface
 
 Usage:
 
-```html
+```sugar
 <div s:datatest="$id"></div>
 ```
 
@@ -153,12 +153,12 @@ Default append behavior does not require `AttributeMergePolicyDirectiveInterface
 Use these examples as a quick mental model for what extraction does after your directive compiles.
 
 ::: code-group
-```html [MERGE_NAMED]
+```sugar [MERGE_NAMED]
 <!-- Existing class + directive-generated class are merged into one class attr -->
 <button class="btn" s:class="['btn-primary' => $primary]">Save</button>
 ```
 
-```html [EXCLUDE_NAMED]
+```sugar [EXCLUDE_NAMED]
 <!-- Explicit attrs win; spread ignores keys already present on the element -->
 <button id="save" class="btn" s:spread="$attrs">Save</button>
 ```

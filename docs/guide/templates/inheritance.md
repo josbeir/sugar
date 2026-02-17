@@ -34,12 +34,12 @@ templates/
 By default, inheritance and include paths resolve relative to the current template. To enforce root-style paths, enable the loader option documented in [Engine Configuration](../development/index.md#template-loaders).
 
 ::: code-group
-```html [Relative]
+```sugar [Relative]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <s-template s:include="partials/header"></s-template>
 ```
 
-```html [Absolute-only]
+```sugar [Absolute-only]
 <s-template s:extends="layouts/base.sugar.php"></s-template>
 <s-template s:include="partials/header"></s-template>
 ```
@@ -55,7 +55,7 @@ This is useful when your application uses plugins or shared packages that have t
 
 When no namespace prefix is used, templates resolve from `@app`:
 
-```html
+```sugar
 <!-- Explicitly in @app namespace -->
 <s-template s:extends="@app/layouts/base.sugar.php" />
 
@@ -67,7 +67,7 @@ When no namespace prefix is used, templates resolve from `@app`:
 
 Use `@namespace/` prefix to load from a different registered namespace:
 
-```html
+```sugar
 <!-- Load from 'plugin-auth' namespace -->
 <s-template s:extends="@plugin-auth/layouts/dashboard.sugar.php" />
 
@@ -114,7 +114,7 @@ $engine = Engine::builder()
 
 When multiple namespaces are registered, the `@app` namespace is the default fallback. Explicit namespace prefixes always take priority:
 
-```html
+```sugar
 <!-- Uses @app namespace -->
 <s-template s:include="layouts/base" />
 
@@ -145,7 +145,7 @@ Use `s:extends` to inherit a layout and replace its `s:block` regions. The `s:ex
 When a parent block is an element, that wrapper is preserved and the child's wrapper is discarded (only the child's children replace the parent's children). If the parent block is a fragment, the child's wrapper is preserved.
 
 ::: code-group
-```html [Parent layout]
+```sugar [Parent layout]
 <!-- layouts/base.sugar.php -->
 <!DOCTYPE html>
 <html>
@@ -158,7 +158,7 @@ When a parent block is an element, that wrapper is preserved and the child's wra
 </html>
 ```
 
-```html [Child template]
+```sugar [Child template]
 <!-- pages/home.sugar.php -->
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Home Page</title>
@@ -197,7 +197,7 @@ Notice how the parent's `<main>` wrapper is preserved and the child's `<div>` wr
 The example below focuses on the `s:extends` rule about top-level content being discarded.
 
 ::: code-group
-```html [Do]
+```sugar [Do]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 
 <s-template s:block="content">
@@ -207,7 +207,7 @@ The example below focuses on the `s:extends` rule about top-level content being 
 </s-template>
 ```
 
-```html [Don't]
+```sugar [Don't]
 <?php $var = 'I AM A VARIABLE'; ?>
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 
@@ -220,13 +220,13 @@ The example below focuses on the `s:extends` rule about top-level content being 
 The example below shows the mutual exclusivity of block directives on a single element.
 
 ::: code-group
-```html [Do]
+```sugar [Do]
 <section s:block="content">
     <p>Block content</p>
 </section>
 ```
 
-```html [Don't]
+```sugar [Don't]
 <section s:block="content" s:append="content">
     <p>Not allowed</p>
 </section>
@@ -236,7 +236,7 @@ The example below shows the mutual exclusivity of block directives on a single e
 The example below shows that `s:with` only scopes variables inside the included template, not the parent template.
 
 ::: code-group
-```html [Do]
+```sugar [Do]
 <s-template s:include="partials/card" s:with="['title' => 'Card']" />
 ```
 
@@ -249,11 +249,11 @@ The example below shows that `s:with` only scopes variables inside the included 
 The example below shows relative vs absolute-only paths.
 
 ::: code-group
-```html [Relative]
+```sugar [Relative]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 ```
 
-```html [Absolute-only]
+```sugar [Absolute-only]
 <s-template s:extends="layouts/base.sugar.php"></s-template>
 ```
 :::
@@ -271,14 +271,14 @@ The example below shows relative vs absolute-only paths.
 
 Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend it. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
 
-```html
+```sugar
 <!-- Invalid: multiple block directives on one element -->
 <section s:block="content" s:append="content">
     <p>Not allowed</p>
 </section>
 ```
 
-```html
+```sugar
 <!-- Valid: multiple append elements targeting the same block -->
 <section s:append="content"><p>First</p></section>
 <section s:append="content"><p>Second</p></section>
@@ -289,7 +289,7 @@ Use `s:block` to replace a parent block. Use `s:append` or `s:prepend` to extend
 Use `s:append` or `s:prepend` in a child template to add content to a parent block instead of replacing it. When the parent block is an element, the appended/prepended element wrapper is stripped and its children are inserted into the parent block. When the parent block is a fragment, the wrapper is preserved.
 
 ::: code-group
-```html [Append: before]
+```sugar [Append: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -311,7 +311,7 @@ Use `s:append` or `s:prepend` in a child template to add content to a parent blo
 :::
 
 ::: code-group
-```html [Prepend: before]
+```sugar [Prepend: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -333,7 +333,7 @@ Use `s:append` or `s:prepend` in a child template to add content to a parent blo
 :::
 
 ::: code-group
-```html [With wrapper: before]
+```sugar [With wrapper: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -359,7 +359,7 @@ Use `s:append` or `s:prepend` in a child template to add content to a parent blo
 :::
 
 ::: code-group
-```html [Parent fragment: before]
+```sugar [Parent fragment: before]
 <!-- layout: layouts/base.sugar.php -->
 <s-template s:block="content">
     <p>Base content</p>
@@ -385,7 +385,7 @@ Use `s:append` or `s:prepend` in a child template to add content to a parent blo
 Blocks keep their wrapper element by default. The wrapper that survives depends on the parent block type:
 
 ::: code-group
-```html [Parent element]
+```sugar [Parent element]
 <!-- Parent layout -->
 <main s:block="content">
     <p>Base content</p>
@@ -402,7 +402,7 @@ Blocks keep their wrapper element by default. The wrapper that survives depends 
 </main>
 ```
 
-```html [Parent fragment]
+```sugar [Parent fragment]
 <!-- Parent layout -->
 <s-template s:block="content">
     <p>Base content</p>
@@ -433,7 +433,7 @@ echo $engine->render(
 );
 ```
 
-```html
+```sugar
 <!-- pages/home.sugar.php -->
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <aside s:block="sidebar">...</aside>
@@ -450,22 +450,22 @@ echo $engine->render(
 Includes are great for shared fragments like headers, footers, or cards.
 
 ::: code-group
-```html [Basic]
+```sugar [Basic]
 <s-template s:include="partials/header"></s-template>
 ```
 
-```html [Element wrapper]
+```sugar [Element wrapper]
 <div class="card" s:include="partials/alert"></div>
 ```
 
-```html [Nested]
+```sugar [Nested]
 <s-template s:include="partials/header"></s-template>
 <section>
     <s-template s:include="partials/hero"></s-template>
 </section>
 ```
 
-```html [Scoped variables]
+```sugar [Scoped variables]
 <s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 :::
@@ -474,7 +474,7 @@ Includes are great for shared fragments like headers, footers, or cards.
 
 Use `s:with` only in combination with `s:include` on the same element. It does not create a standalone scoped block and does not apply to child includes.
 
-```html
+```sugar
 <s-template s:include="partials/user-card" s:with="['user' => $user]"></s-template>
 ```
 
@@ -483,7 +483,7 @@ Use `s:with` only in combination with `s:include` on the same element. It does n
 Combine layouts and partials for full pages:
 
 ::: code-group
-```html [Layout + header]
+```sugar [Layout + header]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Dashboard</title>
 <div s:block="content">
@@ -492,7 +492,7 @@ Combine layouts and partials for full pages:
 </div>
 ```
 
-```html [Layout + sidebar]
+```sugar [Layout + sidebar]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Settings</title>
 <div s:block="content">
@@ -505,7 +505,7 @@ Combine layouts and partials for full pages:
 </div>
 ```
 
-```html [Layout + scoped include]
+```sugar [Layout + scoped include]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Profile</title>
 <div s:block="content">
@@ -513,7 +513,7 @@ Combine layouts and partials for full pages:
 </div>
 ```
 
-```html [Nested blocks]
+```sugar [Nested blocks]
 <s-template s:extends="../layouts/base.sugar.php"></s-template>
 <title s:block="title">Reports</title>
 <div s:block="content">

@@ -69,7 +69,7 @@ For a complete overview of all builder methods and configuration options, see [E
 ## First Template (Simple)
 
 ::: code-group
-```html [pages/home.sugar.php]
+```sugar [pages/home.sugar.php]
 <h1><?= $title ?></h1>
 <p>Hello, <?= $user->name ?></p>
 <p s:if="$showHint">This line is controlled by a Sugar directive.</p>
@@ -95,7 +95,7 @@ echo $engine->render('pages/home', [
 Once the basic flow is clear, add reusable components:
 
 ::: code-group
-```html [pages/home.sugar.php]
+```sugar [pages/home.sugar.php]
 <h1><?= $title ?></h1>
 <p s:if="$showHint">This line is controlled by a Sugar directive.</p>
 
@@ -114,7 +114,7 @@ echo $engine->render('pages/home', [
 ]);
 ```
 
-```html [components/s-user-panel.sugar.php]
+```sugar [components/s-user-panel.sugar.php]
 <article class="card">
     <header><?= $header ?? '' ?></header>
     <section><?= $slot ?></section>
@@ -141,7 +141,7 @@ In this example:
 
 Use `s:bind` when you need optional component variables, for example:
 
-```html
+```sugar
 <s-user-panel s:bind="['compact' => true]">...</s-user-panel>
 ```
 

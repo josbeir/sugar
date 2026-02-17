@@ -207,7 +207,7 @@ $config = (new SugarConfig())
     ->withFragmentElement('s-fragment');
 ```
 
-```html
+```sugar
 <s-fragment s:if="$condition">...</s-fragment>
 ```
 
@@ -291,7 +291,7 @@ $engine = Engine::builder()
 
 In templates, wrap expensive content:
 
-```html
+```sugar
 <section s:cache="'homepage:hero'">
     <?= renderExpensiveHtml() ?>
 </section>
@@ -299,7 +299,7 @@ In templates, wrap expensive content:
 
 Override TTL per fragment:
 
-```html
+```sugar
 <section s:cache="['key' => 'users:list', 'ttl' => 60]">
     <?= renderUserList() ?>
 </section>

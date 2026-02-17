@@ -12,7 +12,7 @@ Sugar analyzes output context at compile time and applies the appropriate escape
 :::
 
 ::: code-group
-```html [Template]
+```sugar [Template]
 <div data-user="<?= $name ?>">
 <script>const user = <?= $userData ?>;</script>
 <style>.user::before { content: '<?= $prefix ?>'; }</style>
@@ -44,22 +44,22 @@ Escaping is context-aware, not string-aware. The same variable can be escaped di
 ## Common Patterns
 
 ::: code-group
-```html [Attributes]
+```sugar [Attributes]
 <button data-id="<?= $id ?>">Open</button>
 <input value="<?= $value ?>">
 ```
 
-```html [URL]
+```sugar [URL]
 <a href="/search?q=<?= $query ?>">Search</a>
 ```
 
-```html [Script]
+```sugar [Script]
 <script>
 	const payload = <?= $payload ?>;
 </script>
 ```
 
-```html [Style]
+```sugar [Style]
 <style>
 	.badge::before { content: '<?= $label ?>'; }
 </style>
@@ -76,7 +76,7 @@ Only bypass escaping for trusted, pre-sanitized content. Never pass user input t
 
 Use `|> raw()` for trusted HTML:
 
-```php
+```sugar
 <div><?= $article->renderedBody |> raw() ?></div>
 ```
 
@@ -86,7 +86,7 @@ Only use raw output for trusted content. Never pass user input to `|> raw()`.
 
 Use `|> json()` when you want JSON output with context-aware escaping. In HTML, it compiles to `Escaper::json()`. Inside attributes it compiles to `Escaper::attrJson()` so quotes stay safe.
 
-```html
+```sugar
 <script>
 	const payload = <?= $payload |> json() ?>;
 </script>

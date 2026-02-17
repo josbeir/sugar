@@ -7,7 +7,7 @@ description: Use <s-template> to avoid wrapper elements.
 
 `<s-template>` renders only its children and allows directives without adding a wrapper element.
 
-```html
+```sugar
 <s-template s:foreach="$items as $item">
     <span><?= $item ?></span>
 </s-template>
@@ -29,7 +29,7 @@ $config = (new SugarConfig())
     ->withFragmentElement('s-fragment');
 ```
 
-```html
+```sugar
 <s-fragment s:if="$hasSnacks">
     <p>Powered by snacks and mild ambition.</p>
 </s-fragment>

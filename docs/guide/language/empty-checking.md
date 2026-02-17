@@ -63,7 +63,7 @@ Convert generators to arrays before using them with `s:empty`, `s:notempty`, or 
 
 ## In Templates
 
-```html
+```sugar
 <ul s:forelse="$items as $item">
     <li><?= $item ?></li>
 </ul>

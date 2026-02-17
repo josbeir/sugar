@@ -1,9 +1,19 @@
 import { defineConfig } from 'vitepress'
 
+import fs from 'fs';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const sugarLang = JSON.parse(fs.readFileSync(`${__dirname}/sugar.tmLanguage.json`, 'utf8'))
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Sugar Templates",
   description: "A modern PHP templating engine that compiles to pure PHP",
+  markdown: {
+    languages: ['html', 'php', 'blade', sugarLang],
+  },
   head: [
     [
       'script',

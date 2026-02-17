@@ -19,11 +19,11 @@ Content directives replace the element contents with a single value.
 Output escaped text from a value.
 
 ::: code-group
-```html [Basic]
+```sugar [Basic]
 <div s:text="$userName"></div>
 ```
 
-```html [Fallback]
+```sugar [Fallback]
 <div s:text="$userName ?? 'Guest'"></div>
 ```
 
@@ -42,11 +42,11 @@ Only use `s:html` with trusted content.
 :::
 
 ::: code-group
-```html [Render HTML]
+```sugar [Render HTML]
 <div s:html="$article->renderedContent"></div>
 ```
 
-```html [Snippet]
+```sugar [Snippet]
 <div s:html="$snippet"></div>
 ```
 
@@ -66,7 +66,7 @@ Only use `s:html` with trusted content.
 
 Add `s:nowrap` to render content without the surrounding element:
 
-```html
+```sugar
 <div s:text="$headline" s:nowrap></div>
 ```
 

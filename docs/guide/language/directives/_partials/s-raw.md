@@ -4,7 +4,7 @@ Use `s:raw` when you need verbatim inner content. Sugar skips parsing directives
 
 `s:raw` is supported on attribute-bearing template nodes (elements, fragments, and components).
 
-```html
+```sugar
 <code s:raw>
     <s-template s:if="$debug">literal</s-template>
     {{ untouched_token }}

@@ -23,7 +23,7 @@ The best part? Zero runtime overhead. Sugar compiles once to pure PHP, then opca
 ## Before and After
 
 ::: code-group
-```html [Sugar template]
+```sugar [Sugar template]
 <div
     s:forelse="$users as $user"
     s:class="[

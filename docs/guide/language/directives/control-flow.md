@@ -32,11 +32,11 @@ Use `<s-template>` when you want control flow without adding a wrapper element.
 Render the element only when the expression evaluates to true.
 
 ::: code-group
-```html [Basic]
+```sugar [Basic]
 <div s:if="$isReady">Ready</div>
 ```
 
-```html [Negated]
+```sugar [Negated]
 <div s:if="!$isReady">Loading...</div>
 ```
 
@@ -52,7 +52,7 @@ Render the element only when the expression evaluates to false.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```html
+```sugar
 <div s:unless="$isReady">Loading...</div>
 ```
 
@@ -65,7 +65,7 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 
 Render the element when the variable is set (not null and defined).
 
-```html
+```sugar
 <div s:isset="$user">Welcome, <?= $user->name ?></div>
 ```
 
@@ -80,7 +80,7 @@ Render the element when the value is empty.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```html
+```sugar
 <div s:empty="$items">No items found</div>
 ```
 
@@ -95,7 +95,7 @@ Render the element when the value is not empty.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```html
+```sugar
 <div s:notempty="$items">Items available</div>
 ```
 
@@ -111,20 +111,20 @@ Repeat the element for every item in an iterable.
 For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadata).
 
 ::: code-group
-```html [List]
+```sugar [List]
 <ul s:foreach="$items as $item">
     <li><?= $item ?></li>
 </ul>
 ```
 
-```html [Keyed]
+```sugar [Keyed]
 <dl s:foreach="$stats as $label => $value">
     <dt><?= $label ?></dt>
     <dd><?= $value ?></dd>
 </dl>
 ```
 
-```html [Loop metadata]
+```sugar [Loop metadata]
 <ul s:foreach="$items as $item">
     <li s:class="['first' => $loop->first, 'last' => $loop->last, 'odd' => $loop->odd]">
         <?= $item ?> (<?= $loop->iteration ?> of <?= $loop->count ?>)
@@ -152,14 +152,14 @@ For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadat
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
 ::: code-group
-```html [Basic]
+```sugar [Basic]
 <ul s:forelse="$items as $item">
     <li><?= $item ?></li>
 </ul>
 <div s:empty>No items found</div>
 ```
 
-```html [Loop metadata]
+```sugar [Loop metadata]
 <ul s:forelse="$items as $item">
     <li s:class="['odd' => $loop->odd, 'even' => $loop->even]">
         <?= $item ?> (<?= $loop->iteration ?>)
@@ -178,7 +178,7 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 
 Repeat the element while a condition remains true.
 
-```html
+```sugar
 <div s:while="$poller->hasNext()">
     <?= $poller->next() ?>
 </div>
@@ -189,11 +189,11 @@ Repeat the element while a condition remains true.
 Repeat the element a fixed number of times.
 
 ::: code-group
-```html [Basic]
+```sugar [Basic]
 <span s:times="3">*</span>
 ```
 
-```html [With index]
+```sugar [With index]
 <span s:times="5 as $i">#<?= $i ?></span>
 ```
 :::
@@ -223,20 +223,20 @@ Directive forms:
 - `s:cache="['key' => 'users-' . $userId, 'ttl' => 60]"` - explicit key + per-fragment TTL override
 
 ::: code-group
-```html [Auto key]
+```sugar [Auto key]
 <section s:cache>
     <h2>Popular items</h2>
     <?= $expensiveHtml ?>
 </section>
 ```
 
-```html [Explicit key]
+```sugar [Explicit key]
 <section s:cache="'users-' . $userId">
     <?= $userCardHtml ?>
 </section>
 ```
 
-```html [Key + TTL override]
+```sugar [Key + TTL override]
 <section s:cache="['key' => 'users-' . $userId, 'ttl' => 120]">
     <?= $userCardHtml ?>
 </section>
@@ -250,14 +250,14 @@ If no fragment cache store is configured, `s:cache` is treated as a no-op wrappe
 Choose between `s:case` and `s:default` children based on a value.
 
 ::: code-group
-```html [Case]
+```sugar [Case]
 <div s:switch="$role">
     <span s:case="'admin'">Administrator</span>
     <span s:default>User</span>
 </div>
 ```
 
-```html [Multiple cases]
+```sugar [Multiple cases]
 <div s:switch="$status">
     <span s:case="'open'">Open</span>
     <span s:case="'closed'">Closed</span>
@@ -265,7 +265,7 @@ Choose between `s:case` and `s:default` children based on a value.
 </div>
 ```
 
-```html [Role switch]
+```sugar [Role switch]
 <div s:switch="$role">
     <span s:case="'admin'">Administrator</span>
     <span s:case="'moderator'">Moderator</span>
@@ -278,7 +278,7 @@ Choose between `s:case` and `s:default` children based on a value.
 
 Render the wrapper only when it would contain output.
 
-```html
+```sugar
 <div s:ifcontent class="card">
     <?php if ($showContent): ?>
         <p>Some content here</p>
@@ -290,7 +290,7 @@ Render the wrapper only when it would contain output.
 
 Wrap output in a `try` block with an optional `finally` sibling. There is no `s:catch` directive; if `s:finally` is omitted, Sugar emits a catch that returns `null` to keep the PHP valid and silently stop output on errors.
 
-```html
+```sugar
 <div s:try>
     <?= $content ?>
 </div>

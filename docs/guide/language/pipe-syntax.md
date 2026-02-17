@@ -14,7 +14,7 @@ Pipes keep templates readable by turning nested function calls into a left-to-ri
 :::
 
 ::: code-group
-```php [Template]
+```sugar [Template]
 <h1><?= $title |> strtoupper(...) |> substr(..., 0, 50) ?></h1>
 <p><?= $product->price |> number_format(..., 2) ?></p>
 ```
@@ -37,28 +37,28 @@ Pipes rewrite `value |> fn(...)` into `fn(value, ...)` at compile time. The plac
 ## Common Patterns
 
 ::: code-group
-```php [Formatting]
+```sugar [Formatting]
 <p><?= $price |> number_format(..., 2) ?></p>
 ```
 
-```php [Chaining]
+```sugar [Chaining]
 <span><?= $name |> trim(...) |> strtoupper(...) ?></span>
 ```
 
-```php [Named args]
+```sugar [Named args]
 <p><?= $price |> number_format(..., decimals: 2, thousands_separator: ',') ?></p>
 ```
 
-```php [Closures]
+```sugar [Closures]
 <p><?= $title |> (fn($s) => strtoupper($s))(...) ?></p>
 ```
 
-```php [Callable stages]
+```sugar [Callable stages]
 <p><?= $title |> "strtoupper" ?></p>
 <p><?= $title |> (fn($s) => strtoupper($s)) ?></p>
 ```
 
-```php [Method call]
+```sugar [Method call]
 <p><?= $user |> $formatter->displayName(...) ?></p>
 ```
 :::
@@ -67,7 +67,7 @@ Pipes rewrite `value |> fn(...)` into `fn(value, ...)` at compile time. The plac
 
 Pipes work inside directive expressions and preserve auto-escaping:
 
-```html
+```sugar
 <div s:text="$title |> strtoupper(...)"></div>
 <a href="/search?q=<?= $query |> rawurlencode(...) ?>">Search</a>
 ```
@@ -80,7 +80,7 @@ Sugar provides two special pipes that control output escaping and are not regula
 
 Use `|> json()` to force JSON encoding with context-aware escaping. In HTML contexts it compiles to `Escaper::json()`. In attribute contexts it compiles to `Escaper::attrJson()`.
 
-```html
+```sugar
 <!-- HTML context with variable -->
 <p><?= $metadata |> json() ?></p>
 
@@ -96,7 +96,7 @@ Only use `|> raw()` with trusted HTML. Never pass user input to raw output.
 
 For verbatim template regions (where inner directives/tags should not be parsed), use [`s:raw`](./directives/pass-through.md#sraw).
 
-```html
+```sugar
 <div><?= $article->renderedBody |> raw() ?></div>
 ```
 

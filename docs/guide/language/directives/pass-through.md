@@ -20,14 +20,14 @@ Pass-through directives look like normal directives, but they are handled by spe
 Assign element content to a named component slot.
 
 ::: code-group
-```html [Named slot]
+```sugar [Named slot]
 <s-card>
     <div s:slot="header">Title</div>
     <p>Body</p>
 </s-card>
 ```
 
-```html [Multiple slots]
+```sugar [Multiple slots]
 <s-layout>
     <div s:slot="sidebar">Filters</div>
     <div s:slot="content">Results</div>
@@ -40,11 +40,11 @@ Assign element content to a named component slot.
 Bind a set of attributes or props to a component element.
 
 ::: code-group
-```html [Props object]
+```sugar [Props object]
 <s-card s:bind="$cardProps"></s-card>
 ```
 
-```html [Merge attributes]
+```sugar [Merge attributes]
 <s-button s:bind="$buttonAttrs">Save</s-button>
 ```
 :::

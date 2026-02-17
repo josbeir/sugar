@@ -35,24 +35,23 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
 
 ::: code-group
 
-```php [Child Template]
+```sugar [Child Template]
 <!-- pages/home.sugar.php -->
 <s-template s:extends="layouts/app.sugar.php"></s-template>
 
 <title s:block="title">Home</title>
 
 <s-template s:block="content">
-  <h1>Welcome, <?= $user->name ?></h1>
+  <h1 class="title">Welcome, <?= $user->name ?></h1>
 
   <s-button class="btn-dark" s:class="['btn-active' => $isActive]">
     Click me
   </s-button>
-
   <p s:if="$showHint">You can hide this hint with s:if.</p>
 </s-template>
 ```
 
-```php [Parent Layout]
+```sugar [Parent Layout]
 <!-- layouts/app.sugar.php -->
 <!DOCTYPE html>
 <html>
@@ -66,14 +65,14 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
 </html>
 ```
 
-```php [Component: Button]
+```sugar [Component: Button]
 <!-- components/s-button.sugar.php -->
 <button class="btn">
   <?= $slot ?>
 </button>
 ```
 
-```html [Rendered output]
+```sugar [Rendered output]
 <!DOCTYPE html>
 <html>
 <head>

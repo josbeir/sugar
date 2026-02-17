@@ -21,32 +21,32 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 | Pass-through | Handled by other passes. | `s:slot`, `s:bind`, `s:raw` |
 
 ::: code-group
-```html [Control flow]
+```sugar [Control flow]
 <div s:if="$isReady">Ready</div>
 ```
 
-```html [Attribute]
+```sugar [Attribute]
 <div s:class="['active' => $isActive]"></div>
 ```
 
-```html [Content]
+```sugar [Content]
 <div s:text="$userName"></div>
 ```
 
-```html [Pass-through]
+```sugar [Pass-through]
 <s-card s:bind="$cardProps">
 	<div s:slot="header">Title</div>
 </s-card>
 ```
 
-```html [Raw block]
+```sugar [Raw block]
 <div s:raw>
 	{{ this-is-left-untouched }}
 	<s-template s:if="$nope">Not parsed</s-template>
 </div>
 ```
 
-```html [Rendered]
+```sugar [Rendered]
 <!-- $isReady = true, $isActive = true, $userName = 'Jasper' -->
 <div>Ready</div>
 <div class="active"></div>
@@ -76,7 +76,7 @@ Jump to the full pages
 
 Use it as a wrapper when you need directives or scoping without introducing a real DOM node. It is also used for template inheritance and includes.
 
-```html
+```sugar
 <s-template s:if="$show">
 	<h2>Only this output renders</h2>
 </s-template>

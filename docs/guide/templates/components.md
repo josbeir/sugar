@@ -81,7 +81,7 @@ By default, `@app` is registered first and therefore has priority over plugin na
 ```
 
 **Usage**:
-```html
+```sugar
 <s-button>Click Me</s-button>
 ```
 
@@ -179,7 +179,7 @@ Once a component is found in any namespace, that version is used. If you need to
 ## Named Slots
 
 ::: code-group
-```html [Usage]
+```sugar [Usage]
 <s-user-panel>
     <h3 s:slot="header">User Profile</h3>
     <p>Main content here</p>
@@ -209,7 +209,7 @@ Once a component is found in any namespace, that version is used. If you need to
 Components receive props as variables. Define defaults at the top of the component:
 
 ::: code-group
-```php [components/s-card.sugar.php]
+```sugar [components/s-card.sugar.php]
 <?php
 $title ??= 'Untitled';
 $elevated ??= false;
@@ -221,7 +221,7 @@ $elevated ??= false;
 </article>
 ```
 
-```html [Usage]
+```sugar [Usage]
 <s-card s:bind="['title' => 'Profile', 'elevated' => true]">
     <p>Profile content here</p>
 </s-card>
@@ -247,15 +247,15 @@ How they differ:
 - For dynamic rendering, the expression must evaluate to a valid component name.
 
 ::: code-group
-```html [Static]
+```sugar [Static]
 <div s:component="button">Click Me</div>
 ```
 
-```html [Dynamic]
+```sugar [Dynamic]
 <div s:component="$componentName">Click Me</div>
 ```
 
-```html [Template wrapper]
+```sugar [Template wrapper]
 <s-template s:component="alert" s:bind="['type' => 'info']">Hello</s-template>
 ```
 :::
@@ -267,13 +267,13 @@ If the component name is known up front, use the normal component tag (`<s-butto
 ## Component Props with `s:bind`
 
 ::: code-group
-```html [Literal]
+```sugar [Literal]
 <s-card s:bind="['title' => 'Well done!', 'elevated' => true]">
     Your changes have been saved.
 </s-card>
 ```
 
-```html [Variable]
+```sugar [Variable]
 <s-card s:bind="$cardProps">Your changes have been saved.</s-card>
 ```
 :::
@@ -284,7 +284,7 @@ If the component name is known up front, use the normal component tag (`<s-butto
 
 Example:
 
-```html
+```sugar
 <s-card s:bind="['title' => 'Well done!', 'elevated' => true]">
     Saved.
 </s-card>
@@ -302,7 +302,7 @@ Only props passed through `s:bind` become component variables. Regular attribute
 
 For example, pass classes and IDs as regular attributes:
 
-```html
+```sugar
 <s-card s:bind="['title' => 'Well done!']" class="shadow-lg" id="notice-card">
     Saved.
 </s-card>
@@ -312,7 +312,7 @@ For example, pass classes and IDs as regular attributes:
 
 Attributes not consumed as props are merged onto the component root element:
 
-```html
+```sugar
 <s-card class="shadow-lg" id="profile-card" @click="handleClick" x-data="{ open: false }">
     Profile content here
 </s-card>
