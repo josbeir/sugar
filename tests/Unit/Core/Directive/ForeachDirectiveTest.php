@@ -97,7 +97,11 @@ final class ForeachDirectiveTest extends DirectiveTestCase
     public function testCompileForeachUsesWrapperModeForSingleElementChild(): void
     {
         $list = $this->element('ul')
-            ->withChild($this->element('li')->withChild($this->text('Item'))->build())
+            ->withChildren([
+                $this->text("\n    "),
+                $this->element('li')->withChild($this->text('Item'))->build(),
+                $this->text("\n"),
+            ])
             ->build();
 
         $node = $this->directive('foreach')
