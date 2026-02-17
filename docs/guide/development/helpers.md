@@ -1,11 +1,11 @@
 ---
 title: Helper Reference
-description: Handy helpers for writing custom compiler passes.
+description: Handy helpers for writing custom extensions.
 ---
 
 # Helper Reference
 
-Sugar ships with a small set of helpers that make custom passes easier to implement. This page highlights the most useful ones and the patterns they support.
+Sugar ships with a small set of helpers that make custom extensions easier to implement. This page highlights the most useful ones and the patterns they support.
 
 ## AST Helpers
 
@@ -21,16 +21,24 @@ $hasDirective = AttributeHelper::hasAttributeWithPrefix($element, 's:');
 $value = AttributeHelper::getStringAttributeValue($element, 'id');
 ```
 
+Useful additional APIs:
+
+- `findAttributeWithIndex()` when you need both the node and its position.
+- `collectNamedAttributeNames()` when checking for duplicate/conflicting attributes.
+- `attributeValueToPhpExpression()` to turn `AttributeValue` into PHP expression code.
+- `normalizeCompiledPhpExpression()` to normalize short echo / echo snippets.
+
 ### NodeTraverser
 
 Tree walking helpers for transforms and inspections.
 
 ```php
 use Sugar\Core\Ast\Helper\NodeTraverser;
+use Sugar\Core\Ast\TextNode;
 
 $nodes = NodeTraverser::walk($nodes, function ($node, $recurse) {
-    if ($node instanceof ComponentNode) {
-        return $this->expandComponent($node);
+    if ($node instanceof TextNode) {
+        return new TextNode(strtoupper($node->content), $node->line, $node->column);
     }
 
     return $recurse($node);
@@ -38,6 +46,8 @@ $nodes = NodeTraverser::walk($nodes, function ($node, $recurse) {
 ```
 
 Use `walkRecursive()` when you only need to collect information without modifying the tree.
+
+For targeted queries, `findFirst()` and `findAll()` help search subtrees without writing custom recursion.
 
 ### NodeCloner
 
@@ -48,6 +58,8 @@ use Sugar\Core\Ast\Helper\NodeCloner;
 
 $newElement = NodeCloner::withAttributesAndChildren($element, $attrs, $children);
 ```
+
+Use `withChildren()`, `fragmentWithChildren()`, and `fragmentWithAttributes()` for immutable updates in transform passes.
 
 ### ExpressionValidator
 
@@ -73,20 +85,11 @@ $name = $prefix->stripPrefix('s:if'); // "if"
 $full = $prefix->buildName('foreach'); // "s:foreach"
 ```
 
-### SlotResolver
+Useful additional APIs:
 
-Extracts named and default slots and builds runtime slot expressions. Also exposes `disableEscaping()` for slot variables.
-
-```php
-use Sugar\Extension\Component\Helper\SlotResolver;
-
-$slots = $slotResolver->extract($component->children);
-$slotVars = $slotResolver->buildSlotVars($slots);
-```
-
-### ComponentSlots
-
-Value object for default and named slot buckets. Useful when passing slot data between helpers.
+- `isDirective()` for quick attribute filtering.
+- `isInheritanceAttribute()` and `inheritanceDirectiveNames()` when your extension must skip composition attributes.
+- `getDirectiveSeparator()` for dynamically building prefixed names.
 
 ## Directive Helpers
 
@@ -100,8 +103,15 @@ use Sugar\Core\Directive\Helper\DirectiveClassifier;
 $isControlFlow = $classifier->isControlFlowDirectiveAttribute('s:if');
 ```
 
+Useful additional APIs:
+
+- `directiveName()` to resolve and normalize a directive attribute name.
+- `compilerForAttribute()` to resolve the registered compiler instance.
+- `validateUnknownDirectivesInNodes()` to enforce strict directive validation in extension pipelines.
+
 ## Tips
 
 - Prefer `NodeTraverser::walk()` for transforms that may expand or replace nodes.
 - Use `NodeCloner` when you need to preserve original nodes for error reporting.
+- Use `DirectiveClassifier::validateUnknownDirectivesInNodes()` when your extension introduces strict validation boundaries.
 - Validate user expressions early with `ExpressionValidator` to surface better error messages.
