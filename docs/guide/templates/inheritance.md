@@ -272,54 +272,65 @@ The example below shows relative vs absolute-only paths.
 
 ## Blocks
 
-Use `s:block` to replace a parent block. Inside that block, use `s:parent` to include parent content at the exact location you want. Only one of `s:block`, `s:append`, or `s:prepend` is allowed on the same element.
+For newcomers, this is the easiest way to think about inheritance:
 
-```sugar
-<!-- Invalid: multiple block directives on one element -->
+1. A parent template declares a named region with `s:block`.
+2. A child template provides **one** `s:block` with the same name.
+3. Inside that child block, use `s:parent` to decide where parent content should appear.
+
+This keeps all block logic in one place and is the preferred pattern.
+
+### Rules at a glance
+
+- Use only one of `s:block`, `s:append`, or `s:prepend` on a single element.
+- Define each block name only once per child template.
+- `s:parent` is only valid inside `s:block`.
+- `s:parent` must be used on `<s-template>`.
+
+::: code-group
+```sugar [Valid]
+<s-template s:block="content">
+    <s-template s:parent />
+    <p>Extra content</p>
+</s-template>
+```
+
+```sugar [Invalid: multiple block directives]
 <section s:block="content" s:append="content">
     <p>Not allowed</p>
 </section>
 ```
 
-```sugar
-<!-- Valid: include parent content explicitly -->
-<section s:block="content">
-    <s-template s:parent />
-    <p>Extra content</p>
-</section>
-```
-
-```sugar
-<!-- Invalid: duplicate definitions for the same block name -->
+```sugar [Invalid: duplicate definitions]
 <section s:block="content"><p>Child</p></section>
 <section s:append="content"><p>Extra</p></section>
 ```
 
-```sugar
-<!-- Invalid: s:parent outside s:block -->
+```sugar [Invalid: s:parent outside s:block]
 <s-template s:parent />
 ```
+:::
 
 ### Parent Placeholder (`s:parent`)
 
-`s:parent` gives precise control over where parent block content appears.
+`s:parent` is the main inheritance tool. It inserts parent block content exactly where you place it inside a child `s:block`.
 
 ::: code-group
-```sugar [Append via s:parent]
+```sugar [Append parent content]
 <s-template s:block="content">
     <s-template s:parent />
     <p>Appended content</p>
 </s-template>
 ```
 
-```sugar [Prepend via s:parent]
+```sugar [Prepend parent content]
 <s-template s:block="content">
     <p>Prepended content</p>
     <s-template s:parent />
 </s-template>
 ```
 
-```sugar [Insert parent in middle]
+```sugar [Insert parent in the middle]
 <s-template s:block="content">
     <p>Before</p>
     <s-template s:parent />
@@ -330,12 +341,16 @@ Use `s:block` to replace a parent block. Inside that block, use `s:parent` to in
 
 ### Append and Prepend Blocks
 
-Use `s:append` or `s:prepend` in a child template to add content to a parent block instead of replacing it. Think of these directives as augmenting the parent block: the parent block remains the anchor, and child content is inserted before or after the parent's existing children.
+`s:append` and `s:prepend` are convenience helpers. They are shortcuts for simple "add before/after" cases where you do not need the full placement control of `s:parent`.
+
+- Use `s:append` to add content after parent block children.
+- Use `s:prepend` to add content before parent block children.
+- For complex placement, prefer `s:block` + `s:parent`.
 
 When the parent block is an element, the parent element wrapper remains authoritative and the wrapper of the node carrying `s:append`/`s:prepend` is stripped (only its children are inserted). Nested elements inside that node are kept. When the parent block is a fragment, the wrapper on the node carrying `s:append`/`s:prepend` is preserved.
 
 ::: code-group
-```sugar [Append: before]
+```sugar [Append helper: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -348,7 +363,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 </s-template>
 ```
 
-```html [Append: after]
+```html [Append helper: after]
 <main>
     <p>Base content</p>
     <p>Appended content</p>
@@ -357,7 +372,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 :::
 
 ::: code-group
-```sugar [Prepend: before]
+```sugar [Prepend helper: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -370,7 +385,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 </s-template>
 ```
 
-```html [Prepend: after]
+```html [Prepend helper: after]
 <main>
     <p>Prepended content</p>
     <p>Base content</p>
@@ -379,7 +394,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 :::
 
 ::: code-group
-```sugar [With wrapper: before]
+```sugar [Element parent wrapper behavior: before]
 <!-- layout: layouts/base.sugar.php -->
 <main s:block="content">
     <p>Base content</p>
@@ -394,7 +409,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 </s-template>
 ```
 
-```html [With wrapper: after]
+```html [Element parent wrapper behavior: after]
 <main>
     <p>Base content</p>
     <section class="alert">
@@ -405,7 +420,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 :::
 
 ::: code-group
-```sugar [Parent fragment: before]
+```sugar [Fragment parent wrapper behavior: before]
 <!-- layout: layouts/base.sugar.php -->
 <s-template s:block="content">
     <p>Base content</p>
@@ -418,7 +433,7 @@ When the parent block is an element, the parent element wrapper remains authorit
 </section>
 ```
 
-```html [Parent fragment: after]
+```html [Fragment parent wrapper behavior: after]
 <p>Base content</p>
 <section class="alert">
     <p>Wrapped content</p>
