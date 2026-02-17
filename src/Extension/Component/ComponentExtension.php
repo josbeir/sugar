@@ -9,8 +9,8 @@ use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Loader\NamespacedComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
@@ -50,7 +50,7 @@ final class ComponentExtension implements ExtensionInterface
         $debug = $context->isDebug();
 
         // Initialize component loader once
-        $this->componentLoader = NamespacedComponentLoader::forTemplateLoader(
+        $this->componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: $config,
             directories: $this->componentDirectories,

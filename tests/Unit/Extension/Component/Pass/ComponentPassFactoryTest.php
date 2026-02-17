@@ -18,7 +18,7 @@ use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
-use Sugar\Extension\Component\Loader\StringLoader;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -32,11 +32,8 @@ final class ComponentPassFactoryTest extends TestCase
     public function testCreateExpansionPassReturnsCachedInstance(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['plain' => '<div>hello</div>'],
-        );
+        $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
+        $componentLoader = new ComponentLoader($loader, $config);
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
@@ -57,11 +54,8 @@ final class ComponentPassFactoryTest extends TestCase
     public function testIncludesInRangeCustomPassesInComponentTemplatePipeline(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['plain' => '<div>hello</div>'],
-        );
+        $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
+        $componentLoader = new ComponentLoader($loader, $config);
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 
@@ -104,11 +98,8 @@ final class ComponentPassFactoryTest extends TestCase
     public function testExcludesOutOfRangeCustomPassesFromComponentTemplatePipeline(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['plain' => '<div>hello</div>'],
-        );
+        $loader = new StringTemplateLoader(templates: ['components/s-plain.sugar.php' => '<div>hello</div>']);
+        $componentLoader = new ComponentLoader($loader, $config);
         $parser = new Parser($config);
         $registry = new DirectiveRegistry();
 

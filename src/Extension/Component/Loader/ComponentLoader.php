@@ -11,7 +11,7 @@ use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 /**
  * Component loader backed directly by core template namespaces.
  */
-final readonly class NamespacedComponentLoader implements ComponentLoaderInterface
+final readonly class ComponentLoader implements ComponentLoaderInterface
 {
     /**
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $templateLoader Core template loader
@@ -23,19 +23,6 @@ final readonly class NamespacedComponentLoader implements ComponentLoaderInterfa
         private SugarConfig $config,
         private array $directories = ['components'],
     ) {
-    }
-
-    /**
-     * Factory helper for component extension wiring.
-     *
-     * @param array<string> $directories
-     */
-    public static function forTemplateLoader(
-        TemplateLoaderInterface $templateLoader,
-        SugarConfig $config,
-        array $directories = ['components'],
-    ): self {
-        return new self($templateLoader, $config, $directories);
     }
 
     /**

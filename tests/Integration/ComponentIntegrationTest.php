@@ -720,8 +720,8 @@ SUGAR,
         $componentTemplate = '<div class="container" s:spread="$attrs ?? []"><?= $slot ?></div>';
 
         $this->setUpCompilerWithStringLoader(
-            components: [
-                'container' => $componentTemplate,
+            templates: [
+                'components/s-container.sugar.php' => $componentTemplate,
             ],
             config: $this->config,
         );

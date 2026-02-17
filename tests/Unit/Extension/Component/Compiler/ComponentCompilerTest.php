@@ -13,7 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\StringLoader;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class ComponentCompilerTest extends TestCase
@@ -24,7 +24,7 @@ final class ComponentCompilerTest extends TestCase
     {
         $config = new SugarConfig();
         $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(config: $config);
+        $componentLoader = new ComponentLoader($loader, $config);
         $compiler = new Compiler(
             parser: new Parser($config),
             escaper: new Escaper(),
@@ -47,11 +47,10 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentMarksSlotVariablesAsRawViaInlinePasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['button' => '<button><?= $slot ?></button>'],
+        $loader = new StringTemplateLoader(
+            templates: ['components/s-button.sugar.php' => '<button><?= $slot ?></button>'],
         );
+        $componentLoader = new ComponentLoader($loader, $config);
 
         $compiler = new Compiler(
             parser: new Parser($config),
@@ -79,11 +78,10 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentTracksComponentDependency(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader();
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['button' => '<button><?= $slot ?></button>'],
+        $loader = new StringTemplateLoader(
+            templates: ['components/s-button.sugar.php' => '<button><?= $slot ?></button>'],
         );
+        $componentLoader = new ComponentLoader($loader, $config);
 
         $compiler = new Compiler(
             parser: new Parser($config),

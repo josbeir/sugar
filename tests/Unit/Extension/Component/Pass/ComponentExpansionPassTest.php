@@ -29,7 +29,7 @@ use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\ComponentExtension;
-use Sugar\Extension\Component\Loader\StringLoader;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -41,7 +41,9 @@ final class ComponentExpansionPassTest extends TestCase
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
-    private StringLoader $loader;
+    private ComponentLoader $loader;
+
+    private StringTemplateLoader $stringTemplateLoader;
 
     private AstPipeline $pipeline;
 
@@ -50,20 +52,21 @@ final class ComponentExpansionPassTest extends TestCase
     protected function setUp(): void
     {
         $this->config = new SugarConfig();
-        $this->templateLoader = new StringTemplateLoader();
-        $this->loader = new StringLoader(
+        $this->stringTemplateLoader = new StringTemplateLoader(templates: [
+            'components/s-alert.sugar.php' => $this->loadTemplate('components/s-alert.sugar.php'),
+            'components/s-button.sugar.php' => $this->loadTemplate('components/s-button.sugar.php'),
+            'components/s-card.sugar.php' => $this->loadTemplate('components/s-card.sugar.php'),
+        ]);
+        $this->loader = new ComponentLoader(
+            templateLoader: $this->stringTemplateLoader,
             config: $this->config,
-            components: [
-                'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
-                'button' => $this->loadTemplate('components/s-button.sugar.php'),
-                'card' => $this->loadTemplate('components/s-card.sugar.php'),
-            ],
+            directories: ['components'],
         );
 
         $this->parser = $this->createParser();
         $this->registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            templateLoader: $this->templateLoader,
+            templateLoader: $this->stringTemplateLoader,
             componentLoader: $this->loader,
             parser: $this->parser,
             registry: $this->registry,
@@ -113,7 +116,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testCustomPassesApplyToComponentTemplates(): void
     {
-        $this->loader->addComponent('plain', '<div>hello</div>');
+        $this->stringTemplateLoader->addTemplate('components/s-plain.sugar.php', '<div>hello</div>');
 
         $pass = new class implements AstPassInterface {
             public function before(Node $node, PipelineContext $context): NodeAction
@@ -132,7 +135,7 @@ final class ComponentExpansionPassTest extends TestCase
         };
 
         $passFactory = new ComponentPassFactory(
-            templateLoader: $this->templateLoader,
+            templateLoader: $this->stringTemplateLoader,
             componentLoader: $this->loader,
             parser: $this->parser,
             registry: $this->registry,
@@ -246,7 +249,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testComponentWithNoRootElementSkipsMerge(): void
     {
-        $this->loader->addComponent('plain', 'Plain <?= $slot ?>');
+        $this->stringTemplateLoader->addTemplate('components/s-plain.sugar.php', 'Plain <?= $slot ?>');
 
         $template = '<s-plain class="extra">Text</s-plain>';
         $ast = $this->parser->parse($template);
@@ -274,7 +277,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testNestedComponentDirectiveExpandsInTemplate(): void
     {
-        $this->loader->addComponent('wrapper', '<div s:component="button">Inner</div>');
+        $this->stringTemplateLoader->addTemplate('components/s-wrapper.sugar.php', '<div s:component="button">Inner</div>');
 
         $template = '<s-wrapper></s-wrapper>';
         $ast = $this->parser->parse($template);
@@ -288,8 +291,8 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testNestedComponentNamedSlotsExpand(): void
     {
-        $this->loader->addComponent(
-            'panel',
+        $this->stringTemplateLoader->addTemplate(
+            'components/s-panel.sugar.php',
             '<s-card><div s:slot="header">Head</div>Body</s-card>',
         );
 
@@ -394,7 +397,7 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testNestedTemplateWithDynamicComponentDirectiveCreatesRuntimeCall(): void
     {
-        $this->loader->addComponent('dynamic-panel', '<div s:component="$componentName"></div>');
+        $this->stringTemplateLoader->addTemplate('components/s-dynamic-panel.sugar.php', '<div s:component="$componentName"></div>');
 
         $ast = $this->parser->parse('<s-dynamic-panel></s-dynamic-panel>');
         $result = $this->executePipeline($ast, $this->createContext());
@@ -499,8 +502,8 @@ final class ComponentExpansionPassTest extends TestCase
 
     public function testExpandsNestedComponents(): void
     {
-        $this->loader->addComponent(
-            'panel',
+        $this->stringTemplateLoader->addTemplate(
+            'components/s-panel.sugar.php',
             '<div class="panel"><s-button><?= $slot ?></s-button></div>',
         );
 
@@ -852,7 +855,7 @@ final class ComponentExpansionPassTest extends TestCase
         // Create a tracking parser to count parse calls
         $registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            templateLoader: $this->templateLoader,
+            templateLoader: $this->stringTemplateLoader,
             componentLoader: $this->loader,
             parser: $this->parser,
             registry: $registry,
@@ -896,7 +899,7 @@ final class ComponentExpansionPassTest extends TestCase
     {
         $registry = $this->createRegistry();
         $passFactory = new ComponentPassFactory(
-            templateLoader: $this->templateLoader,
+            templateLoader: $this->stringTemplateLoader,
             componentLoader: $this->loader,
             parser: $this->parser,
             registry: $registry,

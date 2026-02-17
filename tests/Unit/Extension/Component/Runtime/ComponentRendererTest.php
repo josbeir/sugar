@@ -11,9 +11,9 @@ use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
+use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -33,9 +33,8 @@ final class ComponentRendererTest extends TestCase
         parent::setUp();
 
         $this->setUpCompilerWithStringLoader(
-            templates: [],
-            components: [
-                'alert' => $this->loadTemplate('components/s-alert.sugar.php'),
+            templates: [
+                'components/s-alert.sugar.php' => $this->loadTemplate('components/s-alert.sugar.php'),
             ],
             config: new SugarConfig(),
         );
@@ -90,9 +89,12 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesSlotValues(): void
     {
-        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
-        $this->componentLoader->addComponent(
-            'slot-test',
+        if (!$this->templateLoader instanceof StringTemplateLoader) {
+            $this->markTestSkipped('Test requires StringTemplateLoader');
+        }
+
+        $this->templateLoader->addTemplate(
+            'components/s-slot-test.sugar.php',
             '<div class="slot-test">'
             . '<div class="header"><?= $header ?></div>'
             . '<div class="body"><?= $slot ?></div>'
@@ -123,9 +125,12 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentNormalizesAttributes(): void
     {
-        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
-        $this->componentLoader->addComponent(
-            'attr-test',
+        if (!$this->templateLoader instanceof StringTemplateLoader) {
+            $this->markTestSkipped('Test requires StringTemplateLoader');
+        }
+
+        $this->templateLoader->addTemplate(
+            'components/s-attr-test.sugar.php',
             '<div class="box" s:spread="$__sugar_attrs"><?= $slot ?></div>',
         );
 
@@ -155,9 +160,12 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentBindsTemplateContext(): void
     {
-        $this->assertInstanceOf(StringLoader::class, $this->componentLoader);
-        $this->componentLoader->addComponent(
-            'context-test',
+        if (!$this->templateLoader instanceof StringTemplateLoader) {
+            $this->markTestSkipped('Test requires StringTemplateLoader');
+        }
+
+        $this->templateLoader->addTemplate(
+            'components/s-context-test.sugar.php',
             '<div><?= $this->greet() ?></div>',
         );
 

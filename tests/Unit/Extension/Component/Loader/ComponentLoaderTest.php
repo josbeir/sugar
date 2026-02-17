@@ -7,9 +7,9 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\NamespacedComponentLoader;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 
-final class NamespacedComponentLoaderTest extends TestCase
+final class ComponentLoaderTest extends TestCase
 {
     public function testLoadsComponentFromRegisteredNamespace(): void
     {
@@ -17,7 +17,7 @@ final class NamespacedComponentLoaderTest extends TestCase
             'components/s-card.sugar.php' => '<div class="card"><?= $slot ?></div>',
         ]);
 
-        $componentLoader = NamespacedComponentLoader::forTemplateLoader(
+        $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
             directories: ['components'],
@@ -33,7 +33,7 @@ final class NamespacedComponentLoaderTest extends TestCase
             'components/s-alert.sugar.php' => '<div>alert</div>',
         ]);
 
-        $componentLoader = NamespacedComponentLoader::forTemplateLoader(
+        $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
             directories: ['components'],
@@ -46,7 +46,7 @@ final class NamespacedComponentLoaderTest extends TestCase
     {
         $loader = new StringTemplateLoader();
 
-        $componentLoader = NamespacedComponentLoader::forTemplateLoader(
+        $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: new SugarConfig(),
             directories: ['components'],

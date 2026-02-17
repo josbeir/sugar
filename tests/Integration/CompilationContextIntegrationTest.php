@@ -98,8 +98,8 @@ final class CompilationContextIntegrationTest extends TestCase
     public function testComponentExceptionUsesComponentTemplatePath(): void
     {
         $this->setUpCompilerWithStringLoader(
-            components: [
-                'widget' => '<s-template s:class="\'oops\'"></s-template>',
+            templates: [
+                'components/s-widget.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
             ],
         );
 
