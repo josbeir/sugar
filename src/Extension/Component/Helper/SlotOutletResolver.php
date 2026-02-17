@@ -76,7 +76,7 @@ final readonly class SlotOutletResolver
             $fallbackChildren = $this->rewriteNodes($node->children, $slots, $context);
             $slotContent = $this->resolveSlotContent($slotName, $slots);
             $replacementChildren = $slotContent !== null
-                ? NodeCloner::cloneNodes($slotContent)
+                ? $this->rewriteNodes(NodeCloner::cloneNodes($slotContent), $slots, $context)
                 : $fallbackChildren;
 
             if ($node instanceof FragmentNode) {

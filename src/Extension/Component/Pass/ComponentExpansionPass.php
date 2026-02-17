@@ -197,7 +197,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $expandedSlots = $slotsExpanded ? $slots : $this->expandSlotContent($slots, $context);
 
         // Resolve slot outlets declared in component template before variable injection.
-        $templateAst = $this->slotOutletResolver->apply($templateAst, $expandedSlots, $context);
+        $templateAst = $this->slotOutletResolver->apply($templateAst, $expandedSlots, $inheritanceContext);
 
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
