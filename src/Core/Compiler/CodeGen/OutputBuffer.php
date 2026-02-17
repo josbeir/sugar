@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Sugar\Core\CodeGen;
+namespace Sugar\Core\Compiler\CodeGen;
 
 /**
  * Buffer for accumulating generated code

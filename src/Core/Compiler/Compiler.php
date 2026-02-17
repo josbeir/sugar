@@ -5,7 +5,7 @@ namespace Sugar\Core\Compiler;
 
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Cache\DependencyTracker;
-use Sugar\Core\CodeGen\CodeGenerator;
+use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Compiler\Pipeline\CompilerPipelineFactory;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Escaper;

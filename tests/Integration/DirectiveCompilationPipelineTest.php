@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\CodeGen\CodeGenerator;
+use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\IfContentDirective;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\CodeGen;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\CodeGen\OutputBuffer;
+use Sugar\Core\Compiler\CodeGen\OutputBuffer;
 
 final class OutputBufferTest extends TestCase
 {
