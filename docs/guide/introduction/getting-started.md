@@ -19,18 +19,34 @@ composer require josbeir/sugar
 
 ## Basic Usage
 
-The high-level `Engine` API provides caching, template loading, and context binding out of the box:
+Start with the smallest possible setup, then add optional features like components and file cache.
 
-```php
+::: code-group
+```php [Minimal]
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\FileTemplateLoader;
+
+$engine = Engine::builder()
+    ->withTemplateLoader(new FileTemplateLoader(
+        templatePaths: __DIR__ . '/templates',
+    ))
+    ->build();
+
+echo $engine->render('pages/home', [
+    'title' => 'Welcome',
+    'user' => $currentUser,
+]);
+```
+
+```php [With components + cache]
 use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Extension\Component\ComponentExtension;
 
 $engine = Engine::builder()
     ->withTemplateLoader(new FileTemplateLoader(
-        templatePaths: __DIR__ . '/templates'
+        templatePaths: __DIR__ . '/templates',
     ))
     ->withExtension(new ComponentExtension())
     ->withCache(new FileCache(__DIR__ . '/cache'))
@@ -42,6 +58,7 @@ echo $engine->render('pages/home', [
     'user' => $currentUser,
 ]);
 ```
+:::
 
 ::: tip
 By default, `FileTemplateLoader` resolves `s:extends` and `s:include` paths relative to the current template. To use components, register `ComponentExtension` on the builder. If you prefer absolute-only lookups, pass `absolutePathsOnly: true` and use root-style paths like `layouts/base.sugar.php`.

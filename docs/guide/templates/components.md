@@ -68,7 +68,7 @@ The `<s-button>` component is resolved in this order:
 The first match found is used. This allows plugins and namespaces to share the same component hierarchy while letting app components take priority.
 
 ::: tip
-To control component resolution priority, adjust the order when you register template namespaces. Namespaces registered earlier are searched first, so app should be registered before plugins.
+By default, `@app` is registered first and therefore has priority over plugin namespaces during component lookup. Additional namespaces are searched after `@app` in registration order.
 :::
 
 ## Basic Component Usage

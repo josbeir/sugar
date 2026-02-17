@@ -140,7 +140,7 @@ final class FileCacheTest extends TestCase
         unlink($sourcePath);
     }
 
-    public function testDebugModeSkipsCacheWhenSourcePathMissingOrUnavailable(): void
+    public function testDebugModeUsesCacheWhenSourcePathIsMissing(): void
     {
         $this->cache->put(
             '/templates/missing-source-path.sugar.php',
@@ -150,7 +150,10 @@ final class FileCacheTest extends TestCase
 
         $cached = $this->cache->get('/templates/missing-source-path.sugar.php', debug: true);
         $this->assertInstanceOf(CachedTemplate::class, $cached);
+    }
 
+    public function testDebugModeSkipsCacheWhenSourceFileIsMissing(): void
+    {
         $missingSourcePath = sys_get_temp_dir() . '/sugar_missing_source_' . uniqid() . '.php';
 
         $this->cache->put(

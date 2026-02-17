@@ -192,14 +192,14 @@ abstract class AbstractTemplateLoader implements TemplateLoaderInterface
     }
 
     /**
-     * Retrieve a namespace definition, creating an empty-root default when absent.
+     * Retrieve a namespace definition, creating an empty definition when absent.
      */
     protected function getNamespace(string $namespace): TemplateNamespaceDefinition
     {
         $normalized = $this->normalizeNamespace($namespace);
 
         if (!isset($this->namespaces[$normalized])) {
-            $this->namespaces[$normalized] = new TemplateNamespaceDefinition([''], $this->defaultSuffixes);
+            $this->namespaces[$normalized] = new TemplateNamespaceDefinition([], $this->defaultSuffixes);
         }
 
         return $this->namespaces[$normalized];

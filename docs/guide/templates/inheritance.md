@@ -57,10 +57,10 @@ When no namespace prefix is used, templates resolve from `@app`:
 
 ```html
 <!-- Explicitly in @app namespace -->
-<s-template s:include="layouts/base.sugar.php" />
+<s-template s:extends="@app/layouts/base.sugar.php" />
 
-<!-- Same as above (implicit) -->
-<s-template s:extends="partials/header" />
+<!-- Same as above (implicit @app) -->
+<s-template s:extends="layouts/base.sugar.php" />
 ```
 
 ### Explicit Namespace Reference

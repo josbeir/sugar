@@ -146,7 +146,7 @@ class FileTemplateLoader extends AbstractTemplateLoader
                     continue;
                 }
 
-                $relativePath = $this->normalizePath(str_replace('\\\\', '/', $relativePath));
+                $relativePath = $this->normalizePath($relativePath);
                 if (
                     $normalizedPrefix !== ''
                     && $relativePath !== $normalizedPrefix
