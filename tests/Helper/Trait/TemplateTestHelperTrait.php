@@ -5,7 +5,6 @@ namespace Sugar\Tests\Helper\Trait;
 
 use RuntimeException;
 use Sugar\Core\Compiler\CompilationContext;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Loader\FileTemplateLoader;
 
 /**
@@ -101,10 +100,7 @@ trait TemplateTestHelperTrait
      */
     protected function createLoader(string $path): FileTemplateLoader
     {
-        return new FileTemplateLoader(
-            new SugarConfig(),
-            [$path],
-        );
+        return new FileTemplateLoader([$path]);
     }
 
     /**

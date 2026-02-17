@@ -3,16 +3,14 @@ declare(strict_types=1);
 
 namespace Sugar\Extension\Component;
 
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Enum\PassPriority;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;
-use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
@@ -30,11 +28,7 @@ final class ComponentExtension implements ExtensionInterface
      */
     public const SERVICE_RENDERER = RuntimeEnvironment::RENDERER_SERVICE_ID;
 
-    private ?ComponentLoaderInterface $componentLoader = null;
-
-    private ?TemplateLoaderInterface $componentTemplateLoader = null;
-
-    private ?SugarConfig $componentLoaderConfig = null;
+    private ComponentLoaderInterface $componentLoader;
 
     /**
      * @param array<string> $componentDirectories Directories used to resolve component templates
@@ -55,6 +49,13 @@ final class ComponentExtension implements ExtensionInterface
         $templateContext = $context->getTemplateContext();
         $debug = $context->isDebug();
 
+        // Initialize component loader - it auto-detects namespaces from the template loader
+        $this->componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+            componentDirectories: $this->componentDirectories,
+        );
+
         $context->compilerPass(
             pass: $this->resolveComponentExpansionPass($context),
             priority: PassPriority::POST_DIRECTIVE_COMPILATION,
@@ -63,23 +64,16 @@ final class ComponentExtension implements ExtensionInterface
         $context->runtimeService(
             self::SERVICE_RENDERER,
             function (RuntimeContext $runtimeContext) use (
-                $loader,
                 $cache,
-                $config,
                 $templateContext,
                 $debug,
             ): ComponentRenderer {
-                $componentLoader = $this->getOrCreateComponentLoader(
-                    $loader,
-                    $config,
-                );
-
                 return new ComponentRenderer(
                     componentCompiler: new ComponentCompiler(
                         compiler: $runtimeContext->getCompiler(),
-                        loader: $componentLoader,
+                        loader: $this->componentLoader,
                     ),
-                    loader: $componentLoader,
+                    loader: $this->componentLoader,
                     cache: $cache,
                     tracker: $runtimeContext->getTracker(),
                     debug: $debug,
@@ -91,8 +85,6 @@ final class ComponentExtension implements ExtensionInterface
 
     /**
      * Resolve component expansion pass from registration context.
-     *
-     * @param \Sugar\Core\Extension\RegistrationContext $context Extension registration context
      */
     private function resolveComponentExpansionPass(RegistrationContext $context): ComponentExpansionPass
     {
@@ -101,11 +93,9 @@ final class ComponentExtension implements ExtensionInterface
         $registry = $context->getDirectiveRegistry();
         $config = $context->getConfig();
 
-        $componentLoader = $this->getOrCreateComponentLoader($loader, $config);
-
         $passFactory = new ComponentPassFactory(
             templateLoader: $loader,
-            componentLoader: $componentLoader,
+            componentLoader: $this->componentLoader,
             parser: $parser,
             registry: $registry,
             config: $config,
@@ -113,32 +103,5 @@ final class ComponentExtension implements ExtensionInterface
         );
 
         return $passFactory->createExpansionPass();
-    }
-
-    /**
-     * Build and cache a component loader for a loader/config pair.
-     */
-    private function getOrCreateComponentLoader(
-        TemplateLoaderInterface $loader,
-        SugarConfig $config,
-    ): ComponentLoaderInterface {
-        if (
-            $this->componentLoader instanceof ComponentLoaderInterface
-            && $this->componentTemplateLoader === $loader
-            && $this->componentLoaderConfig === $config
-        ) {
-            return $this->componentLoader;
-        }
-
-        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
-            templateLoader: $loader,
-            config: $config,
-            directories: $this->componentDirectories,
-        );
-
-        $this->componentTemplateLoader = $loader;
-        $this->componentLoaderConfig = $config;
-
-        return $this->componentLoader;
     }
 }

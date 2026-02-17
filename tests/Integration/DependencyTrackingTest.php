@@ -77,12 +77,12 @@ final class DependencyTrackingTest extends TestCase
 
         // Get metadata
         $metadata = $tracker->getMetadata(
-            $this->templateLoader->resolveToFilePath('simple-child.sugar.php'),
+            $this->templateLoader->sourcePath('simple-child.sugar.php') ?? '',
         );
 
         // Should track the parent layout
         $this->assertContains(
-            $this->templateLoader->resolveToFilePath('base.sugar.php'),
+            $this->templateLoader->sourcePath('base.sugar.php') ?? '',
             $metadata->dependencies,
         );
     }
@@ -105,12 +105,12 @@ final class DependencyTrackingTest extends TestCase
 
         // Get metadata
         $metadata = $tracker->getMetadata(
-            $this->templateLoader->resolveToFilePath('include-test.sugar.php'),
+            $this->templateLoader->sourcePath('include-test.sugar.php') ?? '',
         );
 
         // Should track the included partial
         $this->assertContains(
-            $this->templateLoader->resolveToFilePath('partials/header.sugar.php'),
+            $this->templateLoader->sourcePath('partials/header.sugar.php') ?? '',
             $metadata->dependencies,
         );
     }
@@ -238,7 +238,7 @@ SUGAR;
 
         // Should track all dependencies
         $this->assertContains(
-            $this->templateLoader->resolveToFilePath('template-inheritance/base.sugar.php'),
+            $this->templateLoader->sourcePath('template-inheritance/base.sugar.php') ?? '',
             $metadata->dependencies,
         );
         // The include path is resolved relative to the parent template

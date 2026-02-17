@@ -89,7 +89,7 @@ final class CompilationContextIntegrationTest extends TestCase
             );
         } catch (SyntaxException $syntaxException) {
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('template: partials/bad.sugar.php', $exceptionString);
+            $this->assertStringContainsString('template: @app/partials/bad.sugar.php', $exceptionString);
 
             throw $syntaxException;
         }
@@ -98,8 +98,8 @@ final class CompilationContextIntegrationTest extends TestCase
     public function testComponentExceptionUsesComponentTemplatePath(): void
     {
         $this->setUpCompilerWithStringLoader(
-            components: [
-                'widget' => '<s-template s:class="\'oops\'"></s-template>',
+            templates: [
+                'components/s-widget.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
             ],
         );
 
@@ -109,7 +109,7 @@ final class CompilationContextIntegrationTest extends TestCase
             $this->compiler->compile('<s-widget></s-widget>', 'pages/home.sugar.php');
         } catch (SyntaxException $syntaxException) {
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('template: components/s-widget.sugar.php', $exceptionString);
+            $this->assertStringContainsString('template: @app/components/s-widget', $exceptionString);
 
             throw $syntaxException;
         }

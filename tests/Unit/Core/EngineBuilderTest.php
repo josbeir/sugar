@@ -45,7 +45,7 @@ final class EngineBuilderTest extends TestCase
     public function testBuildWithMinimalConfiguration(): void
     {
         $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
 
         $builder = new EngineBuilder();
         $engine = $builder
@@ -58,7 +58,7 @@ final class EngineBuilderTest extends TestCase
     public function testBuildUsesBuilderConfigForParser(): void
     {
         $config = SugarConfig::withPrefix('x');
-        $loader = new StringTemplateLoader($config, [
+        $loader = new StringTemplateLoader([
             'custom-prefix.sugar.php' => '<div x:if="$show">Visible</div>',
         ]);
 
@@ -73,7 +73,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithTemplateLoader(): void
     {
         $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
 
         $builder = new EngineBuilder();
         $result = $builder->withTemplateLoader($loader);
@@ -85,11 +85,42 @@ final class EngineBuilderTest extends TestCase
         $this->assertInstanceOf(Engine::class, $engine);
     }
 
+    public function testWithTemplateLoaderUsesConfiguredFileSuffixes(): void
+    {
+        $tempDir = $this->createTempDir();
+        file_put_contents($tempDir . '/custom.sugar.tpl', '<div>Custom</div>');
+
+        $loader = new FileTemplateLoader(
+            templatePaths: [$tempDir],
+            suffixes: ['.sugar.tpl'],
+        );
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->assertStringContainsString('Custom', $engine->render('custom'));
+    }
+
+    public function testWithTemplateLoaderUsesConfiguredStringSuffixes(): void
+    {
+        $loader = new StringTemplateLoader(
+            templates: ['custom.sugar.tpl' => '<div>Custom</div>'],
+            suffixes: ['.sugar.tpl'],
+        );
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $this->assertStringContainsString('Custom', $engine->render('custom'));
+    }
+
     public function testWithCache(): void
     {
         $tempDir = $this->createTempDir();
         $cacheDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
         $cache = new FileCache($cacheDir);
 
         $builder = new EngineBuilder();
@@ -107,7 +138,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithDirectiveRegistry(): void
     {
         $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
         $registry = DirectiveRegistry::empty();
 
         $builder = new EngineBuilder();
@@ -125,7 +156,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithDebug(): void
     {
         $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
 
         $builder = new EngineBuilder();
         $result = $builder
@@ -147,7 +178,7 @@ final class EngineBuilderTest extends TestCase
             return;
         }
 
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'invalid-expression.sugar.php' => '<div><?= $value + ?></div>',
         ]);
 
@@ -171,7 +202,7 @@ final class EngineBuilderTest extends TestCase
             return;
         }
 
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'invalid-expression-no-debug.sugar.php' => '<div><?= $value + ?></div>',
         ]);
 
@@ -195,7 +226,7 @@ final class EngineBuilderTest extends TestCase
             return;
         }
 
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'invalid-expression-default.sugar.php' => '<div><?= $value + ?></div>',
         ]);
 
@@ -233,7 +264,7 @@ final class EngineBuilderTest extends TestCase
             return;
         }
 
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'invalid-expression.sugar.php' => '<div><?= $value + ?></div>',
         ]);
 
@@ -251,7 +282,7 @@ final class EngineBuilderTest extends TestCase
     public function testWithTemplateContext(): void
     {
         $tempDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
         $context = new class {
             public string $name = 'Test';
         };
@@ -270,7 +301,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testFragmentCacheExtensionCanBeRegistered(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
         $fragmentCache = new ArraySimpleCache();
 
         $builder = new EngineBuilder();
@@ -284,7 +315,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testFragmentCacheExtensionCachesRenderedFragments(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'cached.sugar.php' => '<div s:cache="\'users-list\'"><?= $value ?></div>',
         ]);
 
@@ -301,7 +332,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testFragmentCacheExtensionSupportsDefaultTtl(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'cached-ttl.sugar.php' => '<div s:cache="\'users\'">Cached</div>',
         ]);
 
@@ -318,7 +349,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testFragmentCacheExtensionWithoutStoreStillRendersFreshContent(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'cached.sugar.php' => '<div s:cache="\'users-list\'"><?= $value ?></div>',
         ]);
 
@@ -333,7 +364,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testComponentRendererServiceCannotBeOverriddenByLaterExtension(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig(), [
+        $loader = new StringTemplateLoader([
             'page.sugar.php' => '<s-button>Click</s-button>',
             'components/s-button.sugar.php' => '<button class="btn"><?= $slot ?></button>',
         ]);
@@ -373,7 +404,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testWithExceptionRenderer(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
         $renderer = new class implements TemplateExceptionRendererInterface {
             public function render(SugarException $exception): string
             {
@@ -402,7 +433,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testWithHtmlExceptionRendererUsesBuilderLoader(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
         $loader->addTemplate('broken.sugar.php', '<div s:unknown="true">Hello</div>');
 
         $builder = new EngineBuilder();
@@ -420,7 +451,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testWithHtmlExceptionRendererAcceptsRendererOptions(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
         $loader->addTemplate('broken-options.sugar.php', '<div s:unknown="true">Hello</div>');
 
         $builder = new EngineBuilder();
@@ -441,7 +472,7 @@ final class EngineBuilderTest extends TestCase
     {
         $tempDir = $this->createTempDir();
         $cacheDir = $this->createTempDir();
-        $loader = new FileTemplateLoader(new SugarConfig(), [$tempDir]);
+        $loader = new FileTemplateLoader([$tempDir]);
         $cache = new FileCache($cacheDir);
         $registry = new DirectiveRegistry();
         $context = new class {
@@ -462,7 +493,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testWithExtension(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
 
         $extension = new class implements ExtensionInterface {
             public function register(RegistrationContext $context): void
@@ -485,7 +516,7 @@ final class EngineBuilderTest extends TestCase
 
     public function testMultipleExtensions(): void
     {
-        $loader = new StringTemplateLoader(new SugarConfig());
+        $loader = new StringTemplateLoader();
 
         $ext1 = new class implements ExtensionInterface {
             public function register(RegistrationContext $context): void

@@ -6,55 +6,55 @@ namespace Sugar\Core\Loader;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\TemplateNotFoundException;
 
 /**
- * Loads templates from filesystem.
+ * Loads templates from filesystem namespaces.
  */
 class FileTemplateLoader extends AbstractTemplateLoader
 {
     /**
-     * @var array<string> Template paths to search
+     * @var array<string> App namespace template roots
      */
-    private array $templatePaths;
+    private array $appRoots;
 
     /**
      * Constructor.
      *
-     * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
-     * @param array<string>|string $templatePaths Paths to search for templates (searched in order)
-     * @param bool $absolutePathsOnly When true, resolve() ignores current template paths
+     * @param array<string>|string $templatePaths App namespace filesystem roots (searched in order)
+     * @param bool $absolutePathsOnly When true, resolve() ignores referrer-relative semantics
+     * @param array<string> $suffixes Default suffixes for namespace lookups
      */
     public function __construct(
-        SugarConfig $config = new SugarConfig(),
         string|array $templatePaths = [],
         bool $absolutePathsOnly = false,
+        array $suffixes = ['.sugar.php'],
     ) {
-        parent::__construct($config, $absolutePathsOnly);
+        parent::__construct($absolutePathsOnly, $suffixes);
 
         $templatePaths = is_string($templatePaths) ? [$templatePaths] : $templatePaths;
 
         if ($templatePaths === []) {
             $cwd = getcwd();
-            $this->templatePaths = [$cwd !== false ? $cwd : '.'];
+            $this->appRoots = [$cwd !== false ? $cwd : '.'];
         } else {
-            $this->templatePaths = $templatePaths;
+            $this->appRoots = $templatePaths;
         }
+
+        $this->registerNamespace('app', new TemplateNamespaceDefinition($this->appRoots, $suffixes));
     }
 
     /**
      * @inheritDoc
      */
-    public function load(string $path): string
+    public function load(string $name): string
     {
-        $resolvedPath = $this->resolve($path);
-        $fullPath = $this->findTemplateFilePath($resolvedPath, $path);
+        $fullPath = $this->findTemplateFilePath($name);
 
         $content = file_get_contents($fullPath);
         if ($content === false) {
             throw new TemplateNotFoundException(
-                sprintf('Failed to read template "%s" at path "%s"', $path, $fullPath),
+                sprintf('Failed to read template "%s" at path "%s"', $name, $fullPath),
             );
         }
 
@@ -64,80 +64,56 @@ class FileTemplateLoader extends AbstractTemplateLoader
     /**
      * @inheritDoc
      */
-    public function resolveToFilePath(string $path, string $currentTemplate = ''): string
+    public function exists(string $name): bool
     {
-        if ($this->isAbsolutePath($path)) {
-            $resolved = realpath($path);
-            if ($resolved !== false) {
-                return $resolved;
-            }
+        try {
+            $this->findTemplateFilePath($name);
 
-            $suffix = $this->config->fileSuffix;
-            if (!str_ends_with($path, $suffix)) {
-                $resolved = realpath($path . $suffix);
-                if ($resolved !== false) {
-                    return $resolved;
-                }
-            }
+            return true;
+        } catch (TemplateNotFoundException) {
+            return false;
         }
-
-        $resolvedPath = $this->resolve($path, $currentTemplate);
-        $fullPath = $this->findTemplateFilePath($resolvedPath, $path);
-
-        return realpath($fullPath) ?: $fullPath;
-    }
-
-    /**
-     * Determine whether a path is absolute (Unix, Windows drive, or UNC).
-     */
-    protected function isAbsolutePath(string $path): bool
-    {
-        return str_starts_with($path, '/')
-            || ($path[1] ?? '') === ':'
-            || str_starts_with($path, '\\\\');
-    }
-
-    /**
-     * Find the full template path in configured template roots.
-     */
-    private function findTemplateFilePath(string $resolvedPath, string $originalPath): string
-    {
-        foreach ($this->templatePaths as $basePath) {
-            $fullPath = $basePath . '/' . ltrim($resolvedPath, '/');
-
-            if (is_file($fullPath)) {
-                return $fullPath;
-            }
-
-            $suffix = $this->config->fileSuffix;
-            if (!str_ends_with($fullPath, $suffix)) {
-                $fullPathWithExtension = $fullPath . $suffix;
-                if (is_file($fullPathWithExtension)) {
-                    return $fullPathWithExtension;
-                }
-            }
-        }
-
-        throw new TemplateNotFoundException(
-            sprintf(
-                'Template "%s" not found in paths: %s',
-                $originalPath,
-                implode(', ', $this->templatePaths),
-            ),
-        );
     }
 
     /**
      * @inheritDoc
      */
-    public function listTemplatePaths(string $pathPrefix = ''): array
+    public function sourceId(string $name): string
     {
-        $normalizedPrefix = $pathPrefix !== '' ? $this->normalizePath($pathPrefix) : '';
-        $prefix = $normalizedPrefix !== '' ? rtrim($normalizedPrefix, '/') . '/' : '';
-        $paths = [];
+        $resolved = $this->sourcePath($name);
+        if ($resolved !== null) {
+            return $resolved;
+        }
 
-        foreach ($this->templatePaths as $basePath) {
-            $rootPath = realpath($basePath);
+        return $this->resolve($name);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function sourcePath(string $name): ?string
+    {
+        try {
+            $path = $this->findTemplateFilePath($name);
+
+            return realpath($path) ?: $path;
+        } catch (TemplateNotFoundException) {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function discover(string $namespace, string $prefix = ''): array
+    {
+        $definition = $this->getNamespace($namespace);
+        $normalizedPrefix = $this->normalizePath($prefix);
+        $prefixPath = $normalizedPrefix !== '' ? rtrim($normalizedPrefix, '/') . '/' : '';
+        $result = [];
+
+        foreach ($definition->roots as $root) {
+            $rootPath = realpath($root);
             if ($rootPath === false) {
                 continue;
             }
@@ -170,23 +146,71 @@ class FileTemplateLoader extends AbstractTemplateLoader
                     continue;
                 }
 
-                $logicalPath = str_replace('\\', '/', $relativePath);
-                $logicalPath = $this->normalizePath($logicalPath);
-
-                if ($normalizedPrefix === '') {
-                    $paths[$logicalPath] = true;
+                $relativePath = $this->normalizePath($relativePath);
+                if (
+                    $normalizedPrefix !== ''
+                    && $relativePath !== $normalizedPrefix
+                    && !str_starts_with($relativePath, $prefixPath)
+                ) {
                     continue;
                 }
 
-                if ($logicalPath === $normalizedPrefix || str_starts_with($logicalPath, $prefix)) {
-                    $paths[$logicalPath] = true;
+                $result[$this->formatCanonicalName($namespace, $relativePath)] = true;
+            }
+        }
+
+        $result = array_keys($result);
+        sort($result);
+
+        return $result;
+    }
+
+    /**
+     * Determine whether a path is absolute (Unix, Windows drive, or UNC).
+     */
+    private function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, '/')
+            || ($path[1] ?? '') === ':'
+            || str_starts_with($path, '\\\\');
+    }
+
+    /**
+     * Find the full template path in configured namespace roots.
+     */
+    private function findTemplateFilePath(string $name): string
+    {
+        $canonical = $this->resolve($name);
+        [$namespace, $logicalPath] = $this->splitReferrer($canonical);
+        $definition = $this->getNamespace($namespace);
+
+        if ($this->isAbsolutePath($logicalPath) && is_file($logicalPath)) {
+            return $logicalPath;
+        }
+
+        foreach ($definition->roots as $basePath) {
+            $fullPath = rtrim($basePath, DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR
+                . ltrim($logicalPath, DIRECTORY_SEPARATOR);
+
+            if (is_file($fullPath)) {
+                return $fullPath;
+            }
+
+            if ($this->pathHasAnySuffix($logicalPath, $definition->suffixes)) {
+                continue;
+            }
+
+            foreach ($definition->suffixes as $suffix) {
+                $fullPathWithExtension = $fullPath . $suffix;
+                if (is_file($fullPathWithExtension)) {
+                    return $fullPathWithExtension;
                 }
             }
         }
 
-        $result = array_keys($paths);
-        sort($result);
-
-        return $result;
+        throw new TemplateNotFoundException(
+            sprintf('Template "%s" not found in namespace "%s"', $name, $namespace),
+        );
     }
 }

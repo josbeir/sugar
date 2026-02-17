@@ -220,8 +220,10 @@ final class FileCache implements TemplateCacheInterface
     private function getCachePath(string $key): string
     {
         // Extract template name from key
-        $templateName = basename($key, '.sugar.php');
-        $templateName = basename($templateName, '.php');
+        $templateKey = CacheKey::baseTemplateKey($key);
+
+        $templateName = basename($templateKey);
+        $templateName = preg_replace('/\.[^.\/]+$/', '', $templateName) ?? $templateName;
 
         // Sanitize for filesystem
         $safeName = preg_replace('/[^a-z0-9_-]/i', '-', $templateName);
@@ -505,18 +507,15 @@ final class FileCache implements TemplateCacheInterface
             $this->statCacheCleared = true;
         }
 
-        // Check source timestamp
-        if ($metadata->sourcePath === '') {
-            return false;
-        }
+        if ($metadata->sourcePath !== '') {
+            $sourceTime = $this->getModTime($metadata->sourcePath);
+            if ($sourceTime === null) {
+                return false; // Source removed
+            }
 
-        $sourceTime = $this->getModTime($metadata->sourcePath);
-        if ($sourceTime === null) {
-            return false; // Source removed
-        }
-
-        if ($sourceTime > $metadata->sourceTimestamp) {
-            return false; // Source changed
+            if ($sourceTime > $metadata->sourceTimestamp) {
+                return false; // Source changed
+            }
         }
 
         if (!$this->areFilesFresh($metadata->dependencies, $metadata->compiledTimestamp)) {

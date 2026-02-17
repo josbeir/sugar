@@ -5,9 +5,9 @@ namespace Sugar\Test\Unit\Cache;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Cache\CachedTemplate;
+use Sugar\Core\Cache\CacheKey;
 use Sugar\Core\Cache\CacheMetadata;
 use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Util\Hash;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 /**
@@ -140,7 +140,7 @@ final class FileCacheTest extends TestCase
         unlink($sourcePath);
     }
 
-    public function testDebugModeSkipsCacheWhenSourcePathMissingOrUnavailable(): void
+    public function testDebugModeUsesCacheWhenSourcePathIsMissing(): void
     {
         $this->cache->put(
             '/templates/missing-source-path.sugar.php',
@@ -149,8 +149,11 @@ final class FileCacheTest extends TestCase
         );
 
         $cached = $this->cache->get('/templates/missing-source-path.sugar.php', debug: true);
-        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+    }
 
+    public function testDebugModeSkipsCacheWhenSourceFileIsMissing(): void
+    {
         $missingSourcePath = sys_get_temp_dir() . '/sugar_missing_source_' . uniqid() . '.php';
 
         $this->cache->put(
@@ -315,7 +318,7 @@ final class FileCacheTest extends TestCase
             sourceTimestamp: $sourceTime,
             debug: true,
         );
-        $cacheKey = $sourcePath . '::blocks:' . Hash::make('sidebar');
+        $cacheKey = CacheKey::fromTemplate($sourcePath, ['sidebar']);
 
         $this->cache->put($cacheKey, '<?php echo "cached v1";', $metadata);
         $cached = $this->cache->get($cacheKey, debug: true);

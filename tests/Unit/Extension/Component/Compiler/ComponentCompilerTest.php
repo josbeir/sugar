@@ -13,7 +13,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
-use Sugar\Extension\Component\Loader\StringLoader;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class ComponentCompilerTest extends TestCase
@@ -23,8 +23,11 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentThrowsWhenComponentMissing(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringLoader(config: $config);
+        $loader = new StringTemplateLoader();
+        $componentLoader = new ComponentLoader(
+            templateLoader: $loader,
+            config: $config,
+        );
         $compiler = new Compiler(
             parser: new Parser($config),
             escaper: new Escaper(),
@@ -47,42 +50,12 @@ final class ComponentCompilerTest extends TestCase
     public function testCompileComponentMarksSlotVariablesAsRawViaInlinePasses(): void
     {
         $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['button' => '<button><?= $slot ?></button>'],
+        $loader = new StringTemplateLoader(
+            templates: ['components/s-button.sugar.php' => '<button><?= $slot ?></button>'],
         );
-
-        $compiler = new Compiler(
-            parser: new Parser($config),
-            escaper: new Escaper(),
-            registry: new DirectiveRegistry(),
+        $componentLoader = new ComponentLoader(
             templateLoader: $loader,
             config: $config,
-        );
-
-        $componentCompiler = new ComponentCompiler(
-            compiler: $compiler,
-            loader: $componentLoader,
-        );
-
-        $compiled = $componentCompiler->compileComponent('button', ['slot']);
-
-        $output = $this->executeTemplate($compiled, [
-            'slot' => '<strong>Click</strong>',
-            '__sugar_attrs' => [],
-        ]);
-
-        $this->assertStringContainsString('<button><strong>Click</strong></button>', $output);
-    }
-
-    public function testCompileComponentTracksComponentDependency(): void
-    {
-        $config = new SugarConfig();
-        $loader = new StringTemplateLoader(config: $config);
-        $componentLoader = new StringLoader(
-            config: $config,
-            components: ['button' => '<button><?= $slot ?></button>'],
         );
 
         $compiler = new Compiler(

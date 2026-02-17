@@ -6,6 +6,7 @@ namespace Sugar\Core;
 use Closure;
 use ParseError;
 use Sugar\Core\Cache\CachedTemplate;
+use Sugar\Core\Cache\CacheKey;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Compiler;
@@ -17,7 +18,6 @@ use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
 use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Core\Util\Hash;
 use Sugar\Core\Util\ValueNormalizer;
 
 /**
@@ -103,11 +103,10 @@ final class Engine implements EngineInterface
      */
     private function getCompiledTemplate(string $template, ?array $blocks): CompiledTemplateResult
     {
+        $canonicalTemplate = $this->loader->resolve($template);
+
         // Use template as cache key
-        $cacheKey = $template;
-        if ($blocks !== null) {
-            $cacheKey .= '::blocks:' . Hash::make((string)json_encode($blocks));
-        }
+        $cacheKey = CacheKey::fromTemplate($canonicalTemplate, $blocks);
 
         // Try to get from cache
         $cached = $this->cache->get($cacheKey, $this->debug);
@@ -116,7 +115,7 @@ final class Engine implements EngineInterface
         }
 
         // Cache miss or stale - compile and cache
-        $source = $this->loader->load($template);
+        $source = $this->loader->load($canonicalTemplate);
 
         // Create dependency tracker
         $tracker = new DependencyTracker();
@@ -124,15 +123,17 @@ final class Engine implements EngineInterface
         // Compile with dependency tracking
         $compiled = $this->compiler->compile(
             $source,
-            $template,
+            $canonicalTemplate,
             $this->debug,
             $tracker,
             $blocks,
         );
 
+        $sourcePath = $this->loader->sourcePath($canonicalTemplate) ?? '';
+
         // Build metadata from tracker
         $metadata = $tracker->getMetadata(
-            $this->loader->resolveToFilePath($template),
+            $sourcePath,
             $this->debug,
         );
 

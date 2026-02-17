@@ -12,9 +12,8 @@ use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Loader\ResourceLocatorLoader;
-use Sugar\Extension\Component\Loader\StringLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
 use Sugar\Extension\Component\Pass\ComponentPassFactory;
 
@@ -70,15 +69,14 @@ trait CompilerTestTrait
         $this->registry = $registry;
 
         $this->templateLoader = new FileTemplateLoader(
-            $loaderConfig,
             $templatePaths,
             $absolutePathsOnly,
         );
 
-        $this->componentLoader = ResourceLocatorLoader::forTemplateLoader(
+        $this->componentLoader = new ComponentLoader(
             templateLoader: $this->templateLoader,
             config: $loaderConfig,
-            directories: $componentPaths,
+            componentDirectories: $componentPaths === [] ? ['components'] : $componentPaths,
         );
 
         $customPasses = $this->withDefaultComponentExpansion(
@@ -102,12 +100,10 @@ trait CompilerTestTrait
      * Set up compiler dependencies using a StringTemplateLoader.
      *
      * @param array<string, string> $templates
-     * @param array<string, string> $components
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Enum\PassPriority}> $customPasses
      */
     protected function setUpCompilerWithStringLoader(
         array $templates = [],
-        array $components = [],
         ?SugarConfig $config = null,
         bool $withDefaultDirectives = true,
         bool $absolutePathsOnly = false,
@@ -124,14 +120,14 @@ trait CompilerTestTrait
         $this->registry = $registry;
 
         $this->templateLoader = new StringTemplateLoader(
-            $loaderConfig,
-            $templates,
-            $absolutePathsOnly,
+            templates: $templates,
+            absolutePathsOnly: $absolutePathsOnly,
         );
 
-        $this->componentLoader = new StringLoader(
+        $this->componentLoader = new ComponentLoader(
+            templateLoader: $this->templateLoader,
             config: $loaderConfig,
-            components: $components,
+            componentDirectories: ['components'],
         );
 
         $customPasses = $this->withDefaultComponentExpansion(

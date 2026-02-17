@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Extension\Component\ComponentExtension;
@@ -86,10 +85,7 @@ final class TemplateContextTest extends TestCase
 
         $engine = Engine::builder()
             ->withTemplateLoader(
-                new FileTemplateLoader(
-                    new SugarConfig(),
-                    [$this->templatesPath],
-                ),
+                new FileTemplateLoader([$this->templatesPath]),
             )
             ->withTemplateContext($viewContext)
             ->withExtension(new ComponentExtension())
