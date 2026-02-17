@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "Sugar <span style=\"font-size: .65em; opacity: 0.4\">(template engine)</span>"
-  text: "Write PHP templates that compile into... PHP"
-  tagline: "Context-aware escaping, without the template noise."
+  name: "Sugar"
+  text: "A PHP template engine for cleaner templates"
+  tagline: "Keep writing PHP templates—Sugar adds directive attributes and context-aware escaping."
   image:
     src: /hero/sugar-cube.svg
     alt: Sugar cube
@@ -18,15 +18,19 @@ hero:
       link: /guide/introduction/what-is-sugar
 
 features:
-  - title: Directive Attributes
+  - title: Cleaner Control Flow
     icon: "🧩"
-    details: Use `s:` attributes for control flow without PHP noise.
-  - title: Context-Aware Escaping
+    details: Use `s:` attributes like `s:if` and `s:foreach` directly in HTML.
+  - title: Template Inheritance
+    icon: "🧬"
+    details: Compose layouts with s:extends, s:block, and s:include.
+  - title: Built-In Safe Output
     icon: "🛡️"
-    details: Auto-escapes HTML, attributes, URLs, JS, and CSS with no extra syntax.
-  - title: Component Composition
+    details: Auto-escapes HTML, attributes, URLs, JavaScript, and CSS by context.
+  - title: Reusable Components
     icon: "🧱"
-    details: Props, slots, and attribute merging with zero runtime cost.
+    details: Build UI with props, slots, and merged attributes in plain PHP templates.
+
 ---
 
 ## A Taste of the Syntax
@@ -48,6 +52,12 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
     Click me
   </s-button>
   <p s:if="$showHint">You can hide this hint with s:if.</p>
+
+  <ul>
+    <li s:foreach="$items as $item"><?= $item ?></li>
+  </ul>
+
+  <p s:unless="$isPremium">Upgrade to unlock more features.</p>
 </s-template>
 ```
 
@@ -85,6 +95,11 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
     <button class="btn btn-dark btn-active">Click me</button>
     <small class="hint">Press to continue</small>
     <p>You can hide this hint with s:if.</p>
+    <ul>
+      <li>Docs</li>
+      <li>API</li>
+    </ul>
+    <p>Upgrade to unlock more features.</p>
   </main>
 </body>
 </html>
