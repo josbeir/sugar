@@ -19,7 +19,7 @@ $loader = new FileTemplateLoader(
 
 $engine = Engine::builder($config)
 	->withTemplateLoader($loader)
-	->withHtmlExceptionRenderer(includeStyles: true, wrapDocument: false)
+	->withHtmlExceptionRenderer(includeStyles: true, wrapDocument: false) // [!code focus]
 	->withDebug(true)
 	->build();
 ```

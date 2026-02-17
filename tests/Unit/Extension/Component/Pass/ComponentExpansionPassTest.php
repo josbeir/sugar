@@ -697,6 +697,43 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString('Body', $output);
     }
 
+    public function testComponentTemplateSlotOutletUsesFallbackWhenSlotMissing(): void
+    {
+        $this->stringTemplateLoader->addTemplate(
+            'components/s-shell.sugar.php',
+            '<section><header s:slot="header"><h1>Fallback Header</h1></header>' .
+            '<main s:slot><p>Fallback Body</p></main></section>',
+        );
+
+        $ast = $this->parser->parse('<s-shell></s-shell>');
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('Fallback Header', $code);
+        $this->assertStringContainsString('Fallback Body', $code);
+        $this->assertStringNotContainsString('s:slot=', $code);
+    }
+
+    public function testComponentTemplateSlotOutletReplacesWithProvidedSlotContent(): void
+    {
+        $this->stringTemplateLoader->addTemplate(
+            'components/s-shell.sugar.php',
+            '<section><header s:slot="header"><h1>Fallback Header</h1></header>' .
+            '<main s:slot><p>Fallback Body</p></main></section>',
+        );
+
+        $template = '<s-shell><div s:slot="header">Custom Header</div><p>Custom Body</p></s-shell>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+        $code = $this->astToString($result);
+
+        $this->assertStringContainsString('Custom Header', $code);
+        $this->assertStringContainsString('Custom Body', $code);
+        $this->assertStringNotContainsString('Fallback Header', $code);
+        $this->assertStringNotContainsString('Fallback Body', $code);
+    }
+
     public function testRuntimeComponentSlotsConcatenateMultipleNodes(): void
     {
         $template = '<div s:component="$component">Hello <?= $name ?></div>';

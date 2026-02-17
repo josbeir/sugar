@@ -33,6 +33,7 @@ use Sugar\Core\Template\Support\ScopeIsolationTrait;
 use Sugar\Core\Template\TemplateComposer;
 use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Helper\ComponentSlots;
+use Sugar\Extension\Component\Helper\SlotOutletResolver;
 use Sugar\Extension\Component\Helper\SlotResolver;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 
@@ -57,6 +58,8 @@ final class ComponentExpansionPass implements AstPassInterface
     private readonly DirectiveClassifier $directiveClassifier;
 
     private readonly SlotResolver $slotResolver;
+
+    private readonly SlotOutletResolver $slotOutletResolver;
 
     /**
      * @var array<string, \Sugar\Core\Ast\DocumentNode> Cache of parsed component ASTs
@@ -87,6 +90,7 @@ final class ComponentExpansionPass implements AstPassInterface
         $this->componentTemplatePipeline = $componentTemplatePipeline;
         $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
+        $this->slotOutletResolver = new SlotOutletResolver($this->slotAttrName);
     }
 
     /**
@@ -191,6 +195,9 @@ final class ComponentExpansionPass implements AstPassInterface
         $slots = $this->slotResolver->extract($component->children);
 
         $expandedSlots = $slotsExpanded ? $slots : $this->expandSlotContent($slots, $context);
+
+        // Resolve slot outlets declared in component template before variable injection.
+        $templateAst = $this->slotOutletResolver->apply($templateAst, $expandedSlots, $context);
 
         // Wrap component template with variable injections (only s-bind: attributes become variables)
         $wrappedTemplate = $this->wrapWithVariables(
