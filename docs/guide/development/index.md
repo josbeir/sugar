@@ -5,25 +5,24 @@ description: Configure the engine, loaders, cache, and template context.
 
 # Engine Configuration
 
-Set up your engine once and focus on building templates. You need three things to get started: where templates live, a cache directory, and whether to reload during development. Beyond that, customize as needed.
+Set up your engine once and focus on building templates. You need three things to get started: where templates live, a cache directory, and whether to reload during development.
 
 ::: tip
-Build from a single `SugarConfig` instance so parser/compiler behavior stays in sync. Configure template suffixes on the loader instance.
+Build from a single `SugarConfig` instance so parser/compiler behavior stays in sync.
 :::
 
-## Quick Start: The Essentials
+## Quick Start
 
-These three things get you started:
+These three things get you running:
 
 1. **A template loader** — where Sugar finds your `.sugar.php` files
 2. **A cache directory** — speeds up renders by compiling once
-3. **(Optional) Debug mode** — auto-reload templates during development
+3. **Debug mode** — auto-reload templates during development
 
 Here's the minimal setup:
 
 ```php
 use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\FileTemplateLoader;
 
@@ -32,35 +31,16 @@ $engine = Engine::builder()
         templatePaths: __DIR__ . '/templates'
     ))
     ->withCache(new FileCache(__DIR__ . '/cache/templates'))
-    ->withDebug(false) // true during development
+    ->withDebug(true) // Enable during development
     ->build();
 
 // Now render
-echo $engine->render('home.sugar.php', ['title' => 'Welcome']);
+echo $engine->render('home', ['title' => 'Welcome']);
 ```
 
 That's it. Sugar compiles templates to pure PHP and caches them for you.
 
-## All Builder Methods at a Glance
-
-Here's every `with*` method for configuring the engine. Jump to any section for details:
-
-| Method | Purpose | See |
-| --- | --- | --- |
-| `withTemplateLoader()` | Where templates are loaded from | [Template Loaders](#template-loaders) |
-| `withCache()` | File-based compiled-template caching | [Caching](#caching) |
-| `withDebug()` | Development checks and auto-reload | [Caching > Development vs Production](#development-vs-production) |
-| `withPhpSyntaxValidation()` | Validate PHP syntax at compile time | [PHP Syntax Validation](#php-syntax-validation) |
-| `withTemplateContext()` | Helpers available as `$this` in templates | [Template Context](#template-context) |
-| `withExceptionRenderer()` | Custom exception rendering | [Exception Rendering](#exception-rendering) |
-| `withHtmlExceptionRenderer()` | Built-in HTML exception renderer | [Exception Rendering](#exception-rendering) |
-| `withExtension(new FragmentCacheExtension(...))` | Enable `s:cache` via optional extension | [Fragment Caching (s:cache)](#fragment-caching-scache) |
-| `withDirectiveRegistry()` | Override available directives | [Custom Directive Registry](#custom-directive-registry) |
-| `withExtension()` | Register reusable directive/pass bundles | [Extensions](#extensions) |
-
-## Configuration Options & Reference
-
-Customize behavior with these builder methods. Click any section to learn more.
+## Core Configuration
 
 ### Template Loaders
 
@@ -78,7 +58,7 @@ $loader = new FileTemplateLoader(
 );
 ```
 
-Multiple paths? Pass an array:
+**Multiple paths:**
 
 ```php
 $loader = new FileTemplateLoader(
@@ -89,15 +69,17 @@ $loader = new FileTemplateLoader(
 );
 ```
 
-::: tip
-Enable `absolutePathsOnly: true` to enforce root-relative paths and prevent `../` navigation for includes and extends:
+**Enforce absolute paths:**
 
 ```php
 $loader = new FileTemplateLoader(
     templatePaths: __DIR__ . '/templates',
-    absolutePathsOnly: true
+    absolutePathsOnly: true // Prevents ../ navigation
 );
 ```
+
+::: tip
+Enable `absolutePathsOnly: true` to enforce root-relative paths and prevent `../` navigation for includes and extends.
 :::
 
 #### StringTemplateLoader
@@ -117,11 +99,16 @@ $loader = new StringTemplateLoader(
 
 ### Caching
 
+Sugar compiles templates to pure PHP once and caches the result. Subsequent renders execute the cached code directly via `include`, leveraging PHP's opcache for maximum performance. No re-compilation happens until the source template changes (in debug mode) or the cache is cleared.
+
+::: tip
+See [File Caching Flow](/guide/reference/architecture#file-caching-flow) for details on how Sugar's compilation and caching pipeline works.
+:::
+
 Compile templates once, cache them, render fast.
 
 ```php
 use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Engine;
 
 $cache = new FileCache(__DIR__ . '/cache/templates');
 
@@ -159,24 +146,32 @@ $engine = Engine::builder()
 ```
 :::
 
-### Configuration: Prefix & Suffix
+## Customization
 
-#### Directive Prefix
+`SugarConfig` controls engine internals like directive prefixes, fragment element names, and parser behavior. Use it to adjust Sugar's syntax when the defaults don't fit your project or to avoid conflicts with other systems.
 
-Sugar uses `s:` by default (`s:if`, `s:foreach`, etc.). If that conflicts with another system, change it:
+### Directive Prefix
+
+Sugar uses `s:` by default (`s:if`, `s:foreach`, etc.). Change it if needed:
 
 ```php
 use Sugar\Core\Config\SugarConfig;
 
 $config = SugarConfig::withPrefix('v');
 // Now use v:if, v:foreach, v:cache, etc.
+
+$engine = Engine::builder()
+    ->withSugarConfig($config)
+    ->withTemplateLoader($loader)
+    ->build();
 ```
 
-#### Template Loader Suffixes
+### Template Suffixes
 
-Template suffixes are configured on the loader instance:
+Configure file extensions on the loader:
 
-```php
+::: code-group
+```php [FileTemplateLoader]
 use Sugar\Core\Loader\FileTemplateLoader;
 
 $loader = new FileTemplateLoader(
@@ -185,9 +180,7 @@ $loader = new FileTemplateLoader(
 );
 ```
 
-For in-memory templates:
-
-```php
+```php [StringTemplateLoader]
 use Sugar\Core\Loader\StringTemplateLoader;
 
 $loader = new StringTemplateLoader(
@@ -197,21 +190,31 @@ $loader = new StringTemplateLoader(
     suffixes: ['.sugar.tpl'],
 );
 ```
+:::
 
-#### Fragment Element Name
+### Fragment Element Name
 
 Override the wrapperless fragment tag (default `<s-template>`):
 
 ```php
+use Sugar\Core\Config\SugarConfig;
+
 $config = (new SugarConfig())
     ->withFragmentElement('s-fragment');
+
+$engine = Engine::builder()
+    ->withSugarConfig($config)
+    ->withTemplateLoader($loader)
+    ->build();
 ```
+
+Now use:
 
 ```sugar
 <s-fragment s:if="$condition">...</s-fragment>
 ```
 
-#### Self-Closing Tags
+### Self-Closing Tags
 
 Sugar recognizes HTML void elements automatically. Add custom self-closing tags:
 
@@ -234,6 +237,8 @@ $config = (new SugarConfig())
 ```
 :::
 
+## Template Helpers
+
 ### Template Context
 
 Expose helper methods to every template via `$this`. Keep context lightweight and stateless.
@@ -241,19 +246,19 @@ Expose helper methods to every template via `$this`. Keep context lightweight an
 ```php
 use Sugar\Core\Engine;
 
-$context = new class {
-    public function url(string $path): string {
-        return '/app' . $path;
-    }
-
-    public function asset(string $file): string {
-        return '/assets/' . ltrim($file, '/');
-    }
-};
+$context = new class { // [!code focus]
+    public function url(string $path): string { // [!code focus]
+        return '/app' . $path; // [!code focus]
+    } // [!code focus]
+// [!code focus]
+    public function asset(string $file): string { // [!code focus]
+        return '/assets/' . ltrim($file, '/'); // [!code focus]
+    } // [!code focus]
+}; // [!code focus]
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withTemplateContext($context)
+    ->withTemplateContext($context) // [!code focus]
     ->build();
 ```
 
@@ -264,14 +269,14 @@ In templates:
 <a href="<?= $this->url('/profile') ?>">Profile</a>
 ```
 
-::: details
-When to use template context
-
+::: tip When to use template context
 - URL builders and asset helpers shared across templates
 - Formatting helpers (dates, numbers, currency)
 - Framework integration points
 - Anything stateless templates frequently call
 :::
+
+## Advanced Features
 
 ### Fragment Caching (s:cache)
 
@@ -281,11 +286,11 @@ Cache expensive fragments using a PSR-16 store (Redis, Memcached, etc.) through 
 use Sugar\Core\Engine;
 use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 
-$fragmentCache = getYourCacheStore();
+$fragmentCache = getYourCacheStore(); // PSR-16 compatible  // [!code focus]
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withExtension(new FragmentCacheExtension($fragmentCache, defaultTtl: 300))
+    ->withExtension(new FragmentCacheExtension($fragmentCache, defaultTtl: 300)) // [!code focus]
     ->build();
 ```
 
@@ -305,7 +310,7 @@ Override TTL per fragment:
 </section>
 ```
 
-See [s:cache directive](/guide/language/directives/control-flow#scache) for full syntax.
+See [s:cache directive](/guide/language/directives/control-flow#s-cache) for full syntax.
 
 ### PHP Syntax Validation
 
@@ -315,11 +320,11 @@ Optionally validate PHP syntax during compilation for earlier error detection. R
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
     ->withDebug(true)
-    ->withPhpSyntaxValidation(true)
+    ->withPhpSyntaxValidation(true)  // [!code focus]
     ->build();
 ```
 
-Benefits:
+**Benefits:**
 - Catch PHP syntax errors at compile time
 - Faster feedback loop during development
 - Zero overhead when disabled
@@ -332,28 +337,7 @@ Enable in development, disable in production.
 
 <!-- @include: ./_partials/exception-renderer-preview.md -->
 
-### Custom Directive Registry
-
-Start from scratch and register only the directives you want:
-
-```php
-use Sugar\Core\Directive\ForeachDirective;
-use Sugar\Core\Directive\IfDirective;
-use Sugar\Core\Extension\DirectiveRegistry;
-
-$registry = DirectiveRegistry::empty();
-$registry->register('if', IfDirective::class);
-$registry->register('foreach', ForeachDirective::class);
-
-// Now only s:if and s:foreach are available
-```
-
-Use cases:
-- Sandboxed/untrusted templates (reduce attack surface)
-- Feature flags (swap registries by config)
-- Project-specific custom directives
-
-For directive authoring, see [Custom Directives](/guide/development/custom-directives).
+## Extending the Engine
 
 ### Extensions
 
@@ -364,29 +348,85 @@ use Sugar\Core\Engine;
 
 $engine = Engine::builder()
     ->withTemplateLoader($loader)
-    ->withExtension(new AnalyticsExtension())
-    ->withExtension(new UiComponentLibrary())
+    ->withExtension(new AnalyticsExtension()) // [!code focus]
+    ->withExtension(new UiComponentLibrary()) // [!code focus]
     ->build();
 ```
 
 See [Creating Extensions](/guide/development/creating-extensions) for the full workflow.
 
-## Builder Method Quick Lookup
+### Custom Directive Registry
+
+For quick, one-off custom directives without creating a full extension. **Extensions are preferred** for reusable or complex directive bundles.
+
+Add your custom directive to the existing registry:
+
+```php
+use Sugar\Core\Extension\DirectiveRegistry;
+
+$registry = DirectiveRegistry::default(); // [!code focus]
+$registry->register('custom', CustomDirective::class); // [!code focus]
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDirectiveRegistry($registry) // [!code focus]
+    ->build();
+
+// Now s:custom is available alongside built-in directives
+```
+
+**Use cases:**
+- Quick prototypes or experiments
+- Project-specific directives
+- Adding one or two custom directives without extension overhead
+
+::: tip
+For reusable directive bundles, create an [Extension](/guide/development/creating-extensions) instead. Extensions provide better organization and can include multiple directives, compiler passes, and hooks.
+:::
+
+::: details Advanced: Empty Registry
+Start from scratch and register only the directives you want. This removes all built-in directives:
+
+```php
+use Sugar\Core\Directive\ForeachDirective;
+use Sugar\Core\Directive\IfDirective;
+use Sugar\Core\Extension\DirectiveRegistry;
+
+$registry = DirectiveRegistry::empty();
+$registry->register('if', IfDirective::class);
+$registry->register('foreach', ForeachDirective::class);
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withDirectiveRegistry($registry)
+    ->build();
+
+// Now only s:if and s:foreach are available
+```
+
+Useful for sandboxed/untrusted templates or feature flags.
+:::
+
+For directive authoring, see [Custom Directives](/guide/development/custom-directives).
+
+## Complete Reference
+
+All builder methods at a glance:
 
 | Method | Purpose |
 | --- | --- |
 | `withTemplateLoader()` | Where templates are loaded from |
 | `withCache()` | File-based compiled-template caching |
 | `withDebug()` | Development checks and auto-reload |
-| `withPhpSyntaxValidation()` | Validate PHP syntax at compile time |
+| `withSugarConfig()` | Parser/compiler configuration (prefix, suffixes, etc.) |
 | `withTemplateContext()` | Helpers available as `$this` in templates |
+| `withPhpSyntaxValidation()` | Validate PHP syntax at compile time |
 | `withExceptionRenderer()` | Custom exception rendering |
 | `withHtmlExceptionRenderer()` | Built-in HTML exception renderer |
-| `withExtension(new FragmentCacheExtension(...))` | Enable `s:cache` via optional extension |
-| `withDirectiveRegistry()` | Override available directives |
 | `withExtension()` | Register reusable directive/pass bundles |
+| `withDirectiveRegistry()` | Override available directives |
 
-## Learning More
+## Next Steps
 
 - [AST Reference](/guide/development/ast) — understand Sugar's internal template representation
 - [Helper Reference](/guide/development/helpers) — utilities for custom compiler passes

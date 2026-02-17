@@ -9,7 +9,6 @@ use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
-use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Cache\DependencyTracker;
@@ -20,12 +19,14 @@ use Sugar\Core\Exception\TemplateNotFoundException;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Template\TemplateComposer;
+use Sugar\Tests\Helper\Trait\AstStringifyTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
 
 final class TemplateComposerTest extends TestCase
 {
+    use AstStringifyTrait;
     use CompilerTestTrait;
     use NodeBuildersTrait;
     use TempDirectoryTrait;
@@ -1288,51 +1289,6 @@ final class TemplateComposerTest extends TestCase
         } finally {
             unlink($layoutPath);
         }
-    }
-
-    private function documentToString(DocumentNode $document): string
-    {
-        $output = '';
-        foreach ($document->children as $child) {
-            $output .= $this->nodeToString($child);
-        }
-
-        return $output;
-    }
-
-    private function nodeToString(Node $node): string
-    {
-        if ($node instanceof TextNode) {
-            return $node->content;
-        }
-
-        if ($node instanceof ElementNode) {
-            $output = '<' . $node->tag;
-            foreach ($node->attributes as $attr) {
-                $output .= ' ' . $attr->name;
-                if ($attr->value->isStatic()) {
-                    $output .= '="' . ($attr->value->static ?? '') . '"';
-                }
-            }
-
-            $output .= '>';
-
-            foreach ($node->children as $child) {
-                $output .= $this->nodeToString($child);
-            }
-
-            if (!$node->selfClosing) {
-                $output .= '</' . $node->tag . '>';
-            }
-
-            return $output;
-        }
-
-        if ($node instanceof RawPhpNode) {
-            return '<?php ' . $node->code . ' ?>';
-        }
-
-        return '';
     }
 
     public function testCachesLayoutAsts(): void
