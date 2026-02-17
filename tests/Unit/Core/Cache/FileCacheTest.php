@@ -83,6 +83,34 @@ final class FileCacheTest extends TestCase
         $this->assertSame('', $cached->metadata->sourcePath);
     }
 
+    public function testGetNormalizesInvalidMetadataFieldTypes(): void
+    {
+        $compiled = '<?php echo "Test";';
+        $metadata = new CacheMetadata();
+
+        $path = $this->cache->put('/templates/test-invalid-meta-types.sugar.php', $compiled, $metadata);
+        $metaPath = $path . '.meta';
+
+        file_put_contents($metaPath, (string)json_encode([
+            'dependencies' => 'invalid',
+            'components' => 'invalid',
+            'sourcePath' => ['invalid'],
+            'sourceTimestamp' => 'invalid',
+            'compiledTimestamp' => 'invalid',
+            'debug' => 'invalid',
+        ]));
+
+        $cached = $this->cache->get('/templates/test-invalid-meta-types.sugar.php');
+
+        $this->assertInstanceOf(CachedTemplate::class, $cached);
+        $this->assertSame([], $cached->metadata->dependencies);
+        $this->assertSame([], $cached->metadata->components);
+        $this->assertSame('', $cached->metadata->sourcePath);
+        $this->assertSame(0, $cached->metadata->sourceTimestamp);
+        $this->assertSame(0, $cached->metadata->compiledTimestamp);
+        $this->assertFalse($cached->metadata->debug);
+    }
+
     public function testGetReturnsNullWhenCacheNotFound(): void
     {
         $cached = $this->cache->get('/templates/nonexistent.sugar.php');
@@ -110,6 +138,29 @@ final class FileCacheTest extends TestCase
         $this->assertInstanceOf(CachedTemplate::class, $cached);
 
         unlink($sourcePath);
+    }
+
+    public function testDebugModeSkipsCacheWhenSourcePathMissingOrUnavailable(): void
+    {
+        $this->cache->put(
+            '/templates/missing-source-path.sugar.php',
+            '<?php echo "cached";',
+            new CacheMetadata(sourcePath: '', sourceTimestamp: 0, debug: true),
+        );
+
+        $cached = $this->cache->get('/templates/missing-source-path.sugar.php', debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
+
+        $missingSourcePath = sys_get_temp_dir() . '/sugar_missing_source_' . uniqid() . '.php';
+
+        $this->cache->put(
+            '/templates/missing-source-file.sugar.php',
+            '<?php echo "cached";',
+            new CacheMetadata(sourcePath: $missingSourcePath, sourceTimestamp: time(), debug: true),
+        );
+
+        $cached = $this->cache->get('/templates/missing-source-file.sugar.php', debug: true);
+        $this->assertNotInstanceOf(CachedTemplate::class, $cached);
     }
 
     public function testPutSanitizesCacheFileName(): void
