@@ -32,28 +32,30 @@
 		}
 	],
 	"injections": {
-		"L:(text.html.sugar - (meta.embedded | meta.tag | comment.block))": {
+		"L:(meta.tag - (meta.embedded | comment.block))": {
 			"patterns": [
 				{
-					"name": "keyword.control.php",
-					"match": "<\\?="
+					"include": "#sugar-directive-attribute"
 				},
 				{
-					"name": "keyword.control.php",
-					"match": "<\\?(?:php)?|\\?>"
-				},
+					"include": "#sugar-directive-attribute-boolean"
+				}
+			]
+		},
+		"L:(text.html.sugar - (meta.embedded | meta.tag | comment.block))": {
+			"patterns": [
 				{
 					"begin": "<\\?(?:php|=)?",
 					"beginCaptures": {
 						"0": {
-							"name": "punctuation.section.embedded.begin.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"contentName": "source.php",
 					"end": "\\?>",
 					"endCaptures": {
 						"0": {
-							"name": "punctuation.section.embedded.end.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"patterns": [
@@ -70,25 +72,17 @@
 		"L:(text.html.basic - (meta.embedded | meta.tag | comment.block))": {
 			"patterns": [
 				{
-					"name": "keyword.control.php",
-					"match": "<\\?="
-				},
-				{
-					"name": "keyword.control.php",
-					"match": "<\\?(?:php)?|\\?>"
-				},
-				{
 					"begin": "<\\?(?:php|=)?",
 					"beginCaptures": {
 						"0": {
-							"name": "punctuation.section.embedded.begin.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"contentName": "source.php",
 					"end": "\\?>",
 					"endCaptures": {
 						"0": {
-							"name": "punctuation.section.embedded.end.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"patterns": [
@@ -111,14 +105,14 @@
 					"begin": "(<\\?=)",
 					"beginCaptures": {
 						"1": {
-							"name": "punctuation.section.embedded.begin.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"contentName": "source.php",
 					"end": "(\\?>)",
 					"endCaptures": {
 						"1": {
-							"name": "punctuation.section.embedded.end.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"patterns": [
@@ -135,14 +129,14 @@
 					"begin": "(<\\?(?:php)?)",
 					"beginCaptures": {
 						"1": {
-							"name": "punctuation.section.embedded.begin.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"contentName": "source.php",
 					"end": "(\\?>)",
 					"endCaptures": {
 						"1": {
-							"name": "punctuation.section.embedded.end.php"
+							"name": "keyword.control.php"
 						}
 					},
 					"patterns": [
@@ -163,12 +157,13 @@
 					"begin": "\\b(s:[A-Za-z_][A-Za-z0-9_:-]*)\\s*=\\s*(\")",
 					"beginCaptures": {
 						"1": {
-							"name": "entity.other.attribute-name.sugar.directive.html"
+							"name": "keyword.control.directive.sugar"
 						},
 						"2": {
 							"name": "punctuation.definition.string.begin.html"
 						}
 					},
+					"contentName": "source.php",
 					"end": "(\")",
 					"endCaptures": {
 						"1": {
@@ -181,6 +176,18 @@
 						},
 						{
 							"include": "source.php"
+						},
+						{
+							"name": "support.function.php",
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
+						},
+						{
+							"name": "support.function.php",
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
+						},
+						{
+							"name": "entity.name.function.php",
+							"match": "(?<=->)[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
 						},
 						{
 							"name": "variable.other.php",
@@ -205,12 +212,13 @@
 					"begin": "\\b(s:[A-Za-z_][A-Za-z0-9_:-]*)\\s*=\\s*(')",
 					"beginCaptures": {
 						"1": {
-							"name": "entity.other.attribute-name.sugar.directive.html"
+							"name": "keyword.control.directive.sugar"
 						},
 						"2": {
 							"name": "punctuation.definition.string.begin.html"
 						}
 					},
+					"contentName": "source.php",
 					"end": "(')",
 					"endCaptures": {
 						"1": {
@@ -223,6 +231,18 @@
 						},
 						{
 							"include": "source.php"
+						},
+						{
+							"name": "support.function.php",
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
+						},
+						{
+							"name": "support.function.php",
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
+						},
+						{
+							"name": "entity.name.function.php",
+							"match": "(?<=->)[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
 						},
 						{
 							"name": "variable.other.php",
@@ -247,7 +267,7 @@
 					"match": "\\b(s:[A-Za-z_][A-Za-z0-9_:-]*)\\s*=\\s*([^\\s\"'=<>`]+)",
 					"captures": {
 						"1": {
-							"name": "entity.other.attribute-name.sugar.directive.html"
+							"name": "keyword.control.directive.sugar"
 						},
 						"2": {
 							"name": "string.unquoted.sugar.expression"
@@ -259,7 +279,7 @@
 		"sugar-directive-attribute-boolean": {
 			"patterns": [
 				{
-					"name": "entity.other.attribute-name.sugar.directive.html",
+					"name": "keyword.control.directive.sugar",
 					"match": "\\b(s:[A-Za-z_][A-Za-z0-9_:-]*)(?=\\s|/?>)"
 				}
 			]
@@ -285,13 +305,13 @@
 					},
 					"patterns": [
 						{
-							"include": "text.html.basic#attribute"
-						},
-						{
 							"include": "#sugar-directive-attribute"
 						},
 						{
 							"include": "#sugar-directive-attribute-boolean"
+						},
+						{
+							"include": "text.html.basic#attribute"
 						}
 					]
 				}
