@@ -4,6 +4,9 @@
     processIsolation="false"
     stopOnFailure="false"
     bootstrap="tests/bootstrap.php"
+    cacheResult="true"
+    cacheDirectory="tmp/phpunit"
+    executionOrder="depends,defects"
     >
     <php>
         <ini name="memory_limit" value="-1"/>

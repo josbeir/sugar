@@ -18,6 +18,8 @@ use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\PhpImportNode;
+use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\PhpSyntaxValidator;
 use Sugar\Core\Config\SugarConfig;
@@ -430,6 +432,133 @@ final class PhpSyntaxValidatorTest extends TestCase
         $validator->templateSegments($document, $context);
 
         $this->assertSame(2, $spyParser->parseCalls);
+    }
+
+    public function testTemplateSegmentsAllowLeadingUseImportsInRawPhpBlock(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new RawPhpNode(
+                "use function Sugar\\Core\\Runtime\\json;\n\$value = json([1, 2, 3]);",
+                1,
+                1,
+            ),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsMapRawPhpLineAfterUseImportExtraction(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new RawPhpNode(
+                "use function Sugar\\Core\\Runtime\\json;\n\$value = ;",
+                5,
+                1,
+            ),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+
+        try {
+            $validator->templateSegments($document, $context);
+            $this->fail('Expected SyntaxException was not thrown.');
+        } catch (SyntaxException $syntaxException) {
+            $this->assertStringContainsString('Invalid PHP block', $syntaxException->getMessage());
+            $this->assertSame(6, $syntaxException->templateLine);
+        }
+    }
+
+    public function testTemplateSegmentsMapRawPhpLineWithStandaloneOpenTag(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $source = <<<'SUGAR'
+<?php
+echo 'bla';
+
+use Cake\Utility\Inflector;
+SUGAR;
+
+        $context = new CompilationContext(
+            templatePath: '@app/Pages/bla',
+            source: $source,
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new RawPhpNode("echo 'bla';\n\nuse Cake\\Utility\\Inflector;", 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+
+        try {
+            $validator->templateSegments($document, $context);
+            $this->fail('Expected SyntaxException was not thrown.');
+        } catch (SyntaxException $syntaxException) {
+            $this->assertStringContainsString('Invalid PHP block', $syntaxException->getMessage());
+            $this->assertSame(4, $syntaxException->templateLine);
+        }
+    }
+
+    public function testTemplateSegmentsValidateMalformedPhpImportNode(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/Pages/home.sugar.php',
+            source: '<?php use use Cake\\Utility\\Inflector; ?>',
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new PhpImportNode('use use Cake\\Utility\\Inflector;', 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+
+        try {
+            $validator->templateSegments($document, $context);
+            $this->fail('Expected SyntaxException was not thrown.');
+        } catch (SyntaxException $syntaxException) {
+            $this->assertStringContainsString('Invalid PHP import', $syntaxException->getMessage());
+            $this->assertSame(1, $syntaxException->templateLine);
+        }
     }
 
     /**

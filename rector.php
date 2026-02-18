@@ -22,6 +22,7 @@ return RectorConfig::configure()
         importShortClasses: false,
         removeUnusedImports: true,
     )
+    ->withCache(__DIR__ . '/tmp/rector')
     ->withParallel()
     ->withPreparedSets(
         deadCode: true,

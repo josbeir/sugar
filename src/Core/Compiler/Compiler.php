@@ -96,9 +96,6 @@ final class Compiler implements CompilerInterface
 
         $ast = $this->parser->parse($source);
         $context->stampTemplatePath($ast);
-        if ($this->phpSyntaxValidationEnabled) {
-            $this->phpSyntaxValidator->templateSegments($ast, $context);
-        }
 
         return $this->compileAst(
             $ast,
@@ -140,6 +137,10 @@ final class Compiler implements CompilerInterface
     ): string {
         if ($enableInheritance) {
             $ast = $this->templateComposer->compose($ast, $context);
+        }
+
+        if ($this->phpSyntaxValidationEnabled) {
+            $this->phpSyntaxValidator->templateSegments($ast, $context);
         }
 
         $pipeline = $this->pipelineFactory->buildCompilerPipeline(inlinePasses: $inlinePasses);

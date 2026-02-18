@@ -194,6 +194,32 @@ final class EngineBuilderTest extends TestCase
         $engine->render('invalid-expression.sugar.php', ['value' => 1]);
     }
 
+    public function testWithPhpSyntaxValidationEnabledReportsIncludedTemplatePathForInvalidRawPhp(): void
+    {
+        if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $loader = new StringTemplateLoader([
+            'pages/home.sugar.php' => '<div s:include="../partials/invalid-raw-php.sugar.php"></div>',
+            'partials/invalid-raw-php.sugar.php' => '<?php echo "ok"; use Cake\\Utility\\Inflector; ?>',
+        ]);
+
+        $engine = (new EngineBuilder())
+            ->withTemplateLoader($loader)
+            ->withDebug(true)
+            ->withPhpSyntaxValidation(true)
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Invalid PHP block');
+        $this->expectExceptionMessage('@app/partials/invalid-raw-php.sugar.php');
+
+        $engine->render('pages/home.sugar.php');
+    }
+
     public function testWithPhpSyntaxValidationEnabledButDebugDisabledUsesRuntimeParsePath(): void
     {
         if (!class_exists(ParserFactory::class) || !class_exists(Error::class)) {
