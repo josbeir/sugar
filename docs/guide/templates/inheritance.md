@@ -136,7 +136,7 @@ Use `s:extends` to inherit from a parent layout and replace its `s:block` region
 :::
 
 ::: info
-When a template uses `s:extends`, only inheritance content (`s:block`, `s:append`, `s:prepend`) is kept. Top-level markup or raw PHP outside those blocks is discarded.
+When a template uses `s:extends`, only inheritance content (`s:block`, `s:append`, `s:prepend`) is kept. Top-level markup or raw PHP outside those blocks is discarded, except leading import statements (`use`, `use function`, `use const`) which are preserved for compile-time hoisting.
 :::
 
 ## Working with Blocks
