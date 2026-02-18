@@ -199,14 +199,14 @@ final class PhpImportRegistryTest extends TestCase
         $this->assertSame(['use Ns\\A;'], $result);
     }
 
-    public function testCanonicalizeCommaSeperatedImports(): void
+    public function testCanonicalizeCommaSeparatedImports(): void
     {
         $result = PhpImportRegistry::canonicalize('use Foo\\A, Foo\\B;');
 
         $this->assertSame(['use Foo\\A;', 'use Foo\\B;'], $result);
     }
 
-    public function testCanonicalizeCommaSeperatedImportsDropsEmptyClauses(): void
+    public function testCanonicalizeCommaSeparatedImportsDropsEmptyClauses(): void
     {
         // Trailing comma produces empty clause
         $result = PhpImportRegistry::canonicalize('use Foo\\A, ;');

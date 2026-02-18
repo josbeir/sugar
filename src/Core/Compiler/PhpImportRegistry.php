@@ -15,7 +15,7 @@ use PhpToken;
  *   resolves implicit aliases. This is a pure, stateless transformation.
  *
  * - **Deduplication** (`add` / `all`, instance): accepts canonical import statements
- *   and stores them in a first-wins alias-keyed map so that identical or aliasconflicting
+ *   and stores them in a first-wins alias-keyed map so that identical or alias-conflicting
  *   imports added from multiple templates are emitted only once.
  *
  * Example usage (canonicalization only):

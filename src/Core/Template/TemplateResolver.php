@@ -69,7 +69,7 @@ final class TemplateResolver
             $resolved = $this->processIncludes($document, $context, $loadedTemplates, $includeStack);
             $extracted = $this->blockMerger->extractBlocks($resolved, $context->blocks, $context);
 
-            return $this->prependTopLevelImportRawPhpNodes($resolved, $extracted);
+            return $this->prependTopLevelPhpImportNodes($resolved, $extracted);
         }
 
         $currentTemplate = $context->templatePath;
@@ -379,7 +379,7 @@ final class TemplateResolver
      * top-level raw PHP blocks are hoisted into the extracted document so the
      * normalization pass can later emit them at file scope.
      */
-    private function prependTopLevelImportRawPhpNodes(DocumentNode $source, DocumentNode $extracted): DocumentNode
+    private function prependTopLevelPhpImportNodes(DocumentNode $source, DocumentNode $extracted): DocumentNode
     {
         $imports = $this->collectTopLevelPhpImportNodes($source);
 
