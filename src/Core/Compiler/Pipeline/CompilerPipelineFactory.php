@@ -10,6 +10,7 @@ use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
+use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
 
 /**
  * Builds compiler pipelines with consistent pass ordering.
@@ -21,6 +22,8 @@ final class CompilerPipelineFactory
     private ?DirectivePairingPass $directivePairingPass = null;
 
     private ?DirectiveCompilationPass $directiveCompilationPass = null;
+
+    private ?PhpNormalizationPass $phpNormalizationPass = null;
 
     private ?ContextAnalysisPass $contextPass = null;
 
@@ -52,6 +55,7 @@ final class CompilerPipelineFactory
             $pipeline->addPass($entry['pass'], $entry['priority']);
         }
 
+        $pipeline->addPass($this->getPhpNormalizationPass(), PassPriority::PHP_NORMALIZATION);
         $pipeline->addPass($this->getContextPass(), PassPriority::CONTEXT_ANALYSIS);
         $this->addCustomPasses($pipeline);
 
@@ -115,6 +119,20 @@ final class CompilerPipelineFactory
         $this->contextPass = new ContextAnalysisPass();
 
         return $this->contextPass;
+    }
+
+    /**
+     * Get the PHP normalization pass instance.
+     */
+    private function getPhpNormalizationPass(): PhpNormalizationPass
+    {
+        if ($this->phpNormalizationPass instanceof PhpNormalizationPass) {
+            return $this->phpNormalizationPass;
+        }
+
+        $this->phpNormalizationPass = new PhpNormalizationPass();
+
+        return $this->phpNormalizationPass;
     }
 
     /**

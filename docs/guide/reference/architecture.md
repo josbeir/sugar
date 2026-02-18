@@ -21,6 +21,7 @@ Compilation happens once per template change. Rendering is a cached PHP include.
 | `DIRECTIVE_PAIRING` | DirectivePairingPass | Pairs directives like `if/elseif/else` and `forelse/empty`. | Ensures correct sibling relationships. |
 | `DIRECTIVE_COMPILATION` | DirectiveCompilationPass | Rewrites directive nodes into executable AST nodes. | Produces control flow, attributes, and output nodes. |
 | `POST_DIRECTIVE_COMPILATION` | ComponentExpansionPass | Resolves component tags into their AST. | Registered by `ComponentExtension` (optional, requires a template loader). |
+| `PHP_NORMALIZATION` | PhpNormalizationPass | Normalizes raw PHP blocks before context analysis. | Hoists leading import statements to file scope and de-duplicates equivalent imports. |
 | `CONTEXT_ANALYSIS` | ContextAnalysisPass | Determines output context for escaping decisions. | Tags output nodes with HTML/attribute/URL/JS/CSS contexts. |
 | — | CodeGenerator | Emits pure PHP from the final AST. | Output is ready for opcache. |
 

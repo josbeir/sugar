@@ -18,5 +18,7 @@ enum PassPriority: int
 
     case POST_DIRECTIVE_COMPILATION = 35;
 
+    case PHP_NORMALIZATION = 40;
+
     case CONTEXT_ANALYSIS = 50;
 }

@@ -603,4 +603,30 @@ final class CodeGeneratorTest extends TestCase
 
         $this->generator->generate($ast);
     }
+
+    public function testGenerateElementStripsTrailingSpaceFromEmptyBooleanAttribute(): void
+    {
+        // An AttributeNode with empty name and boolean value writes only a single space
+        // to the buffer. The trailing-space cleanup in generateElement must remove it
+        // so the resulting tag does not have a double-space before '/>'.
+        $ast = $this->document()
+            ->withChild(
+                new ElementNode(
+                    tag: 'input',
+                    attributes: [new AttributeNode('', AttributeValue::boolean(), 1, 1)],
+                    children: [],
+                    selfClosing: true,
+                    line: 1,
+                    column: 1,
+                ),
+            )
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        // The trailing space from the empty attribute should be stripped before " />" is appended.
+        // Result must be '<input />' not '<input  />' (double space).
+        $this->assertStringContainsString('<input />', $code);
+        $this->assertStringNotContainsString('<input  />', $code);
+    }
 }

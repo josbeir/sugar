@@ -10,11 +10,13 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
+use Sugar\Core\Ast\PhpImportNode;
 use Sugar\Core\Ast\RawBodyNode;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Ast\RuntimeCallNode;
 use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Compiler\PhpImportRegistry;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\UnsupportedNodeException;
 
@@ -68,6 +70,20 @@ final class CodeGenerator
 
         $buffer->writeln(' */');
 
+        $registry = new PhpImportRegistry();
+        foreach ($this->collectImportNodes($ast) as $importNode) {
+            $registry->add($importNode->statement);
+        }
+
+        $imports = $registry->all();
+        if ($imports !== []) {
+            foreach ($imports as $import) {
+                $buffer->writeln($import);
+            }
+
+            $buffer->writeln('');
+        }
+
         $buffer->writeln('');
         $buffer->writeln('return function(array|object $__data = []): string {');
         $buffer->writeln('    ob_start();');
@@ -105,6 +121,7 @@ final class CodeGenerator
             RawBodyNode::class => $this->generateRawBody($node, $buffer),
             OutputNode::class => $this->generateOutput($node, $buffer),
             RawPhpNode::class => $this->generateRawPhp($node, $buffer),
+            PhpImportNode::class => null, // already hoisted to file scope; skip in body
             ElementNode::class => $this->generateElement($node, $buffer),
             FragmentNode::class => $this->generateFragment($node, $buffer),
             DirectiveNode::class => $this->generateDirective($node, $buffer),
@@ -337,6 +354,40 @@ final class CodeGenerator
     {
         // For now, output as comment - full directive support comes in next phase
         $buffer->write('<!-- Directive: ' . $node->name . ' = ' . Escaper::html($node->expression) . ' -->');
+    }
+
+    /**
+     * Recursively collect all {@see PhpImportNode} instances from a node tree.
+     *
+     * Import nodes may appear at any depth because the normalization pass traverses
+     * the full AST. The code generator calls this before generating body code so
+     * every import is hoisted and deduplicated at file scope.
+     *
+     * @return array<\Sugar\Core\Ast\PhpImportNode>
+     */
+    private function collectImportNodes(Node $node): array
+    {
+        if ($node instanceof PhpImportNode) {
+            return [$node];
+        }
+
+        $collected = [];
+
+        if ($node instanceof DocumentNode || $node instanceof ElementNode || $node instanceof FragmentNode) {
+            foreach ($node->children as $child) {
+                array_push($collected, ...$this->collectImportNodes($child));
+            }
+
+            return $collected;
+        }
+
+        if ($node instanceof DirectiveNode) {
+            foreach ($node->children as $child) {
+                array_push($collected, ...$this->collectImportNodes($child));
+            }
+        }
+
+        return $collected;
     }
 
     /**

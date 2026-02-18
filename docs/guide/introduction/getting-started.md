@@ -116,9 +116,9 @@ echo $engine->render('pages/home', [
 
 ```sugar [components/s-user-panel.sugar.php]
 <article class="card">
-    <header><?= $header ?? '' ?></header>
+    <header s:slot="header"></header>
     <section><?= $slot ?></section>
-    <footer><?= $footer ?? '' ?></footer>
+    <footer s:slot="footer"></footer>
 </article>
 ```
 

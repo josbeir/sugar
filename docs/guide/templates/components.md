@@ -146,9 +146,7 @@ Use `s:slot="name"` in your usage markup to send content to specific named slots
     <header s:slot="header">
         <h3>Default header</h3>
     </header>
-    <section s:slot>
-        <p>Empty state</p>
-    </section>
+    <section><?= $slot ?></section>
     <footer s:slot="footer"></footer>
 </article>
 ```

@@ -9,7 +9,9 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\AttributeHelper;
 use Sugar\Core\Ast\Helper\NodeCloner;
+use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Compiler\PhpImportExtractor;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Loader\TemplateLoaderInterface;
@@ -30,6 +32,8 @@ final class TemplateResolver
      */
     private array $templateAstCache = [];
 
+    private readonly PhpImportExtractor $phpImportExtractor;
+
     /**
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $loader Template loader
      * @param \Sugar\Core\Parser\Parser $parser Template parser
@@ -44,6 +48,7 @@ final class TemplateResolver
         private readonly DirectiveClassifier $directiveClassifier,
         private readonly BlockMerger $blockMerger,
     ) {
+        $this->phpImportExtractor = new PhpImportExtractor();
     }
 
     /**
@@ -61,9 +66,10 @@ final class TemplateResolver
 
         if ($context->blocks !== null) {
             $includeStack = [$context->templatePath];
-            $document = $this->processIncludes($document, $context, $loadedTemplates, $includeStack);
+            $resolved = $this->processIncludes($document, $context, $loadedTemplates, $includeStack);
+            $extracted = $this->blockMerger->extractBlocks($resolved, $context->blocks, $context);
 
-            return $this->blockMerger->extractBlocks($document, $context->blocks, $context);
+            return $this->prependTopLevelImportRawPhpNodes($resolved, $extracted);
         }
 
         $currentTemplate = $context->templatePath;
@@ -229,8 +235,13 @@ final class TemplateResolver
 
         $includeStack = [$context->templatePath];
         $childDocument = $this->processIncludes($childDocument, $context, $loadedTemplates, $includeStack);
+        $childImportNodes = $this->collectTopLevelPhpImportNodes($childDocument);
         $childBlocks = $this->blockMerger->collectBlocks($childDocument, $context);
         $parentDocument = $this->blockMerger->replaceBlocks($parentDocument, $childBlocks);
+
+        if ($childImportNodes !== []) {
+            $parentDocument = new DocumentNode([...$childImportNodes, ...$parentDocument->children]);
+        }
 
         return $this->resolve($parentDocument, $parentContext, $loadedTemplates);
     }
@@ -359,5 +370,47 @@ final class TemplateResolver
         $processed = $this->processIncludes($doc, $context, $loadedTemplates, $includeStack);
 
         return $processed->children;
+    }
+
+    /**
+     * Prepend top-level PHP import nodes from source to extracted block document.
+     *
+     * Used when rendering specific blocks: imports declared anywhere in the template's
+     * top-level raw PHP blocks are hoisted into the extracted document so the
+     * normalization pass can later emit them at file scope.
+     */
+    private function prependTopLevelImportRawPhpNodes(DocumentNode $source, DocumentNode $extracted): DocumentNode
+    {
+        $imports = $this->collectTopLevelPhpImportNodes($source);
+
+        if ($imports === []) {
+            return $extracted;
+        }
+
+        return new DocumentNode([...$imports, ...$extracted->children]);
+    }
+
+    /**
+     * Collect canonical {@see PhpImportNode} instances from top-level raw PHP blocks.
+     *
+     * Only leading import statements are extracted from each block; remaining
+     * executable code stays at its original location in the document.
+     *
+     * @return array<\Sugar\Core\Ast\PhpImportNode>
+     */
+    private function collectTopLevelPhpImportNodes(DocumentNode $source): array
+    {
+        $imports = [];
+
+        foreach ($source->children as $child) {
+            if (!($child instanceof RawPhpNode)) {
+                continue;
+            }
+
+            [$importNodes] = $this->phpImportExtractor->extractImportNodes($child);
+            array_push($imports, ...$importNodes);
+        }
+
+        return $imports;
     }
 }
