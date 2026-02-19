@@ -673,7 +673,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                 };
             } elseif (!$this->prefixHelper->isInheritanceAttribute($attr->name)) {
                 // Allow template inheritance attributes on fragments
-                // These are processed by TemplateComposer before DirectiveExtractionPass
+                // These are processed by InheritanceCompilationPass after DirectiveExtractionPass
                 throw $this->context->createSyntaxExceptionForAttribute(
                     sprintf('<s-template> cannot have regular HTML attributes. Found: %s. ', $attr->name) .
                         'Only s: directives and template inheritance attributes ' .

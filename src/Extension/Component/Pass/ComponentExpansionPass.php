@@ -30,7 +30,6 @@ use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Template\Support\ScopeIsolationTrait;
-use Sugar\Core\Template\TemplateComposer;
 use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Helper\ComponentSlots;
 use Sugar\Extension\Component\Helper\SlotOutletResolver;
@@ -53,8 +52,6 @@ final class ComponentExpansionPass implements AstPassInterface
 
     private readonly AstPipeline $componentTemplatePipeline;
 
-    private readonly TemplateComposer $templateComposer;
-
     private readonly DirectiveClassifier $directiveClassifier;
 
     private readonly SlotResolver $slotResolver;
@@ -73,7 +70,6 @@ final class ComponentExpansionPass implements AstPassInterface
      * @param \Sugar\Core\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Extension registry for directive type checking
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
-     * @param \Sugar\Core\Template\TemplateComposer $templateComposer Template composer for extends/includes
      * @param \Sugar\Core\Compiler\Pipeline\AstPipeline $componentTemplatePipeline Pipeline for component templates
      */
     public function __construct(
@@ -81,12 +77,10 @@ final class ComponentExpansionPass implements AstPassInterface
         private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
-        TemplateComposer $templateComposer,
         AstPipeline $componentTemplatePipeline,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
-        $this->templateComposer = $templateComposer;
         $this->componentTemplatePipeline = $componentTemplatePipeline;
         $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
@@ -175,8 +169,8 @@ final class ComponentExpansionPass implements AstPassInterface
             );
         }
 
-        // Process template inheritance (s:extends, s:include) in component template
-        // Use resolved component path for proper relative path resolution
+        // Set up compilation context for the component template.
+        // Uses the resolved component path for proper relative path resolution.
         $componentPath = $this->loader->getComponentPath($component->name);
         $inheritanceContext = new CompilationContext(
             $componentPath,
@@ -186,9 +180,9 @@ final class ComponentExpansionPass implements AstPassInterface
         );
         $inheritanceContext->stampTemplatePath($templateAst);
 
-        $templateAst = $this->templateComposer->compose($templateAst, $inheritanceContext);
-
-        // Process directives in composed component template
+        // Process directives and inheritance in component template.
+        // The InheritanceCompilationPass (part of the pipeline) transforms
+        // s:extends/s:block/s:include into runtime calls.
         $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
 
         // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)

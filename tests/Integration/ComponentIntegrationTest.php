@@ -783,12 +783,13 @@ SUGAR,
         $template = '<s-widget>Widget Content</s-widget>';
         $compiled = $this->compiler->compile($template);
 
-        // Should include the partial content
-        $this->assertStringContainsString('Powered by Sugar', $compiled);
-        $this->assertStringContainsString('text-muted', $compiled);
+        // Should generate a renderInclude call for the partial
+        $this->assertStringContainsString('renderInclude(', $compiled);
+        $this->assertStringContainsString('footer-text', $compiled);
 
-        // Execute and verify
-        $output = $this->executeTemplate($compiled);
+        // Execute via engine and verify rendered output
+        $engine = $this->createEngineForComponent($template, ['widget']);
+        $output = $engine->render('test');
         $this->assertStringContainsString('<div class="widget">', $output);
         $this->assertStringContainsString('Widget Content', $output);
         $this->assertStringContainsString('<small class="text-muted">Powered by Sugar</small>', $output);
@@ -800,17 +801,18 @@ SUGAR,
         $template = '<s-custom-panel s:bind="[\'title\' => \'My Panel\']">Panel Content</s-custom-panel>';
         $compiled = $this->compiler->compile($template);
 
-        // Should have base structure with overridden blocks
-        $this->assertStringContainsString('base-panel', $compiled);
-        $this->assertStringContainsString('panel-header', $compiled);
-        $this->assertStringContainsString('panel-body', $compiled);
+        // Should generate runtime inheritance calls
+        $this->assertStringContainsString('defineBlock(', $compiled);
+        $this->assertStringContainsString('renderExtends(', $compiled);
+        $this->assertStringContainsString('s-base-panel', $compiled);
 
-        // Should NOT have default content
-        $this->assertStringNotContainsString('Default Header', $compiled);
-        $this->assertStringNotContainsString('Default Body', $compiled);
+        // Child block definitions should be present
+        $this->assertStringContainsString("'header'", $compiled);
+        $this->assertStringContainsString("'body'", $compiled);
 
-        // Execute and verify
-        $output = $this->executeTemplate($compiled);
+        // Execute via engine and verify rendered output
+        $engine = $this->createEngineForComponent($template, ['custom-panel', 'base-panel']);
+        $output = $engine->render('test');
         $this->assertStringContainsString('<div class="base-panel">', $output);
         $this->assertStringContainsString('<h3>My Panel</h3>', $output);
         $this->assertStringContainsString('Panel Content', $output);
@@ -824,19 +826,18 @@ SUGAR,
         $template = '<s-custom-layout s:bind="[\'title\' => \'Page Title\']">Page Content</s-custom-layout>';
         $compiled = $this->compiler->compile($template);
 
-        // Should have base structure
-        $this->assertStringContainsString('class="container"', $compiled);
+        // Should generate runtime inheritance calls
+        $this->assertStringContainsString('defineBlock(', $compiled);
+        $this->assertStringContainsString('renderExtends(', $compiled);
+        $this->assertStringContainsString('s-base-layout', $compiled);
 
-        // Should have both blocks overridden
-        $this->assertStringContainsString('<header', $compiled);
-        $this->assertStringContainsString('<main', $compiled);
+        // Child block definitions should be present
+        $this->assertStringContainsString("'header'", $compiled);
+        $this->assertStringContainsString("'main'", $compiled);
 
-        // Should NOT have default content
-        $this->assertStringNotContainsString('Default Header', $compiled);
-        $this->assertStringNotContainsString('Default Main', $compiled);
-
-        // Execute and verify
-        $output = $this->executeTemplate($compiled);
+        // Execute via engine and verify rendered output
+        $engine = $this->createEngineForComponent($template, ['custom-layout', 'base-layout']);
+        $output = $engine->render('test');
         $this->assertStringContainsString('<div class="container">', $output);
         $this->assertStringContainsString('<h1>Page Title</h1>', $output);
         $this->assertStringContainsString('Page Content', $output);
@@ -906,6 +907,48 @@ SUGAR,
         $this->assertStringContainsString('class="alert alert-info"', $output);
         $this->assertStringContainsString('Default', $output);
         $this->assertStringContainsString('Conditional', $output);
+    }
+
+    /**
+     * Create an engine for testing a template that uses a specific set of components.
+     *
+     * @param string $template The template source
+     * @param array<string> $componentNames Component names to load (without 's-' prefix)
+     */
+    private function createEngineForComponent(string $template, array $componentNames): Engine
+    {
+        $components = $this->loadComponentSources($componentNames);
+
+        $templates = [
+            'test' => $template,
+        ];
+
+        foreach ($components as $name => $source) {
+            $templates['components/s-' . $name . '.sugar.php'] = $source;
+        }
+
+        // Also load any partials referenced by components
+        $partialsPath = SUGAR_TEST_TEMPLATES_PATH . '/components/partials';
+        if (is_dir($partialsPath)) {
+            $partialFiles = glob($partialsPath . '/*.sugar.php');
+            if (is_array($partialFiles)) {
+                foreach ($partialFiles as $partialFile) {
+                    $partialName = 'components/partials/' . basename($partialFile);
+                    $templates[$partialName] = (string)file_get_contents($partialFile);
+                }
+            }
+        }
+
+        $loader = new StringTemplateLoader(templates: $templates);
+
+        $cacheDir = $this->createTempDir('sugar_cache_');
+        $cache = new FileCache($cacheDir);
+
+        return Engine::builder($this->config)
+            ->withTemplateLoader($loader)
+            ->withCache($cache)
+            ->withExtension(new ComponentExtension())
+            ->build();
     }
 
     private function createEngineWithTemplate(string $template): Engine
