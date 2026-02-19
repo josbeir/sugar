@@ -4,42 +4,42 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
-use Sugar\Core\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 /**
- * Test template inheritance features on fragment elements
+ * Test template inheritance features on fragment elements.
+ *
+ * Fragment elements (s-template) support inheritance attributes (s:block,
+ * s:extends, etc.) rendering their children without a wrapper tag.
  */
 final class FragmentTemplateInheritanceTest extends TestCase
 {
     use CompilerTestTrait;
+    use EngineTestTrait;
     use ExecuteTemplateTrait;
 
+    /**
+     * Test that s:block on a fragment renders default content via the runtime.
+     */
     public function testFragmentWithBlockAttribute(): void
     {
-        // Test if s:block works on fragment elements
-        $template = '<s-template s:block="content">Default content</s-template>';
+        $engine = $this->createStringEngine(
+            templates: [
+                'test.sugar.php' => '<s-template s:block="content">Default content</s-template>',
+            ],
+        );
 
-        $config = new SugarConfig();
-        $this->setUpCompiler(config: $config);
-
-        try {
-            $compiled = $this->compiler->compile($template, 'test.sugar.php');
-
-            // If it compiles, test execution
-            $result = $this->executeTemplate($compiled);
-            $this->assertStringContainsString('Default content', $result);
-        } catch (RuntimeException $runtimeException) {
-            // Expected - fragments might not support s:block yet
-            $this->assertStringContainsString('s-template', $runtimeException->getMessage());
-        }
+        $result = $engine->render('test.sugar.php');
+        $this->assertStringContainsString('Default content', $result);
     }
 
+    /**
+     * Verify that regular directives work on fragments.
+     */
     public function testFragmentWithIfDirective(): void
     {
-        // Verify that regular directives work on fragments
         $template = '<s-template s:if="$show">Visible</s-template>';
 
         $this->setUpCompiler();
@@ -53,22 +53,19 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertStringNotContainsString('Visible', $result);
     }
 
+    /**
+     * Fragment block in child should replace element block in layout.
+     */
     public function testFragmentBlockReplacesElementBlock(): void
     {
-        // Fragment block should replace element block content without wrapper
-        $layout = '<div s:block="content">Default</div>';
-        $child = '<div s:extends="layout"><s-template s:block="content"><h1>Title</h1><p>Body</p></s-template></div>';
-
-        $config = new SugarConfig();
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
-                'layout.sugar.php' => $layout,
+                'layout.sugar.php' => '<div s:block="content">Default</div>',
+                'child.sugar.php' => '<div s:extends="layout.sugar.php"><s-template s:block="content"><h1>Title</h1><p>Body</p></s-template></div>',
             ],
-            config: $config,
         );
 
-        $compiled = $this->compiler->compile($child, 'child.sugar.php');
-        $result = $this->executeTemplate($compiled);
+        $result = $engine->render('child.sugar.php');
 
         // Should have div wrapper from parent, fragment children inserted
         $this->assertStringContainsString('<div>', $result);
@@ -79,51 +76,46 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertStringNotContainsString('s:block', $result);
     }
 
+    /**
+     * Fragment replacing fragment should render override content.
+     */
     public function testFragmentBlockReplacesFragmentBlock(): void
     {
-        // Fragment replacing fragment
-        $layout = '<s-template s:block="content">Default</s-template>';
-        $child = '<div s:extends="layout"><s-template s:block="content"><h1>Override</h1></s-template></div>';
-
-        $config = new SugarConfig();
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
-                'layout.sugar.php' => $layout,
+                'layout.sugar.php' => '<s-template s:block="content">Default</s-template>',
+                'child.sugar.php' => '<div s:extends="layout.sugar.php"><s-template s:block="content"><h1>Override</h1></s-template></div>',
             ],
-            config: $config,
         );
 
-        $compiled = $this->compiler->compile($child, 'child.sugar.php');
-        $result = $this->executeTemplate($compiled);
+        $result = $engine->render('child.sugar.php');
 
         $this->assertStringContainsString('<h1>Override</h1>', $result);
         $this->assertStringNotContainsString('Default', $result);
         $this->assertStringNotContainsString('s-template', $result);
     }
 
+    /**
+     * Fragment with both directive and inheritance works — directives process after inheritance.
+     */
     public function testFragmentWithMixedDirectivesAndInheritance(): void
     {
-        // Fragment with both directive and inheritance works - directives process AFTER inheritance
-        $layout = '<div s:block="list">Default list</div>';
-        $child = '<div s:extends="layout"><s-template s:block="list" s:foreach="$items as $item"><span><?= $item ?></span></s-template></div>';
-
-        $config = new SugarConfig();
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
-                'layout.sugar.php' => $layout,
+                'layout.sugar.php' => '<div s:block="list">Default list</div>',
+                'child.sugar.php' => '<div s:extends="layout.sugar.php"><s-template s:block="list" s:foreach="$items as $item"><span><?= $item ?></span></s-template></div>',
             ],
-            config: $config,
         );
 
-        $compiled = $this->compiler->compile($child, 'child.sugar.php');
-
-        // Test with items
-        $result = $this->executeTemplate($compiled, ['items' => ['X', 'Y']]);
+        $result = $engine->render('child.sugar.php', ['items' => ['X', 'Y']]);
         $this->assertStringContainsString('<span>X</span>', $result);
         $this->assertStringContainsString('<span>Y</span>', $result);
         $this->assertStringNotContainsString('Default list', $result);
     }
 
+    /**
+     * Fragment with s:raw should render children literally without wrapper.
+     */
     public function testFragmentWithRawDirectiveRendersChildrenWithoutFragmentWrapper(): void
     {
         $template = '<s-template s:raw><span s:if="$show">Literal</span>{{ token }}</s-template>';
@@ -137,6 +129,9 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertStringNotContainsString('s-template', $result);
     }
 
+    /**
+     * Fragment with s:raw preserves PHP tags as literal text.
+     */
     public function testFragmentWithRawDirectivePreservesPhpTagAsLiteralText(): void
     {
         $template = '<s-template s:raw><?= $value ?></s-template>';
@@ -149,22 +144,19 @@ final class FragmentTemplateInheritanceTest extends TestCase
         $this->assertSame('<?= $value ?>', $result);
     }
 
+    /**
+     * Fragment with only s:block (no other directives) replaces parent block.
+     */
     public function testFragmentBlockWithOnlyInheritanceAttribute(): void
     {
-        // Fragment with only s:block (no directives)
-        $layout = '<div s:block="sidebar">Default sidebar</div>';
-        $child = '<div s:extends="layout"><s-template s:block="sidebar">Custom sidebar</s-template></div>';
-
-        $config = new SugarConfig();
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
-                'layout.sugar.php' => $layout,
+                'layout.sugar.php' => '<div s:block="sidebar">Default sidebar</div>',
+                'child.sugar.php' => '<div s:extends="layout.sugar.php"><s-template s:block="sidebar">Custom sidebar</s-template></div>',
             ],
-            config: $config,
         );
 
-        $compiled = $this->compiler->compile($child, 'child.sugar.php');
-        $result = $this->executeTemplate($compiled);
+        $result = $engine->render('child.sugar.php');
 
         $this->assertStringContainsString('Custom sidebar', $result);
         $this->assertStringNotContainsString('Default sidebar', $result);

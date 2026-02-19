@@ -12,6 +12,8 @@ final class RuntimeEnvironment
 {
     public const RENDERER_SERVICE_ID = 'renderer.component';
 
+    public const TEMPLATE_RENDERER_SERVICE_ID = 'renderer.template';
+
     /**
      * @var array<string, mixed>
      */

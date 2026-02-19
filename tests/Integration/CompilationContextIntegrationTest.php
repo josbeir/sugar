@@ -6,6 +6,7 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 
 /**
  * Integration test: Verify CompilationContext creates exceptions with template metadata
@@ -13,6 +14,7 @@ use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 final class CompilationContextIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
+    use EngineTestTrait;
 
     protected function setUp(): void
     {
@@ -71,25 +73,26 @@ final class CompilationContextIntegrationTest extends TestCase
         }
     }
 
+    /**
+     * Verify that exceptions from included templates reference the included template path.
+     *
+     * With runtime includes, the included template is compiled at render time.
+     * The SyntaxException should still reference the included template's path.
+     */
     public function testIncludeExceptionUsesIncludedTemplatePath(): void
     {
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'pages/home.sugar.php' => '<div s:include="../partials/bad.sugar.php"></div>',
-                'partials/bad.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
-            ],
-        );
+        $engine = $this->createStringEngine([
+            'pages/home.sugar.php' => '<div s:include="../partials/bad.sugar.php"></div>',
+            'partials/bad.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
+        ]);
 
         $this->expectException(SyntaxException::class);
 
         try {
-            $this->compiler->compile(
-                $this->templateLoader->load('pages/home.sugar.php'),
-                'pages/home.sugar.php',
-            );
+            $engine->render('pages/home.sugar.php');
         } catch (SyntaxException $syntaxException) {
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('template: @app/partials/bad.sugar.php', $exceptionString);
+            $this->assertStringContainsString('partials/bad.sugar.php', $exceptionString);
 
             throw $syntaxException;
         }

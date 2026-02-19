@@ -243,6 +243,12 @@ final class DirectiveExtractionPass implements AstPassInterface
 
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isDirective($attr->name)) {
+                // Inheritance attributes are handled by InheritanceCompilationPass - skip them
+                if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
+                    $remainingAttrs[] = $attr;
+                    continue;
+                }
+
                 $name = $this->prefixHelper->stripPrefix($attr->name);
 
                 // Directive expressions must be static strings
@@ -587,9 +593,23 @@ final class DirectiveExtractionPass implements AstPassInterface
      * Transform FragmentNode with directive attribute into DirectiveNode.
      *
      * Fragments can only have directive attributes, not regular HTML attributes.
+     *
+     * When the fragment also carries inheritance attributes (s:block, s:append, etc.),
+     * the directive is wrapped in a new FragmentNode that preserves those attributes
+     * so InheritanceCompilationPass can process them later.
+     *
+     * @return \Sugar\Core\Ast\Node DirectiveNode or FragmentNode wrapping a DirectiveNode
      */
-    private function fragmentToDirective(FragmentNode $node): DirectiveNode
+    private function fragmentToDirective(FragmentNode $node): Node
     {
+        // Collect inheritance attributes to preserve them
+        $inheritanceAttrs = [];
+        foreach ($node->attributes as $attr) {
+            if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
+                $inheritanceAttrs[] = $attr;
+            }
+        }
+
         // Extract directives from fragment
         $controlFlowDirective = null;
         $contentDirective = null;
@@ -598,7 +618,7 @@ final class DirectiveExtractionPass implements AstPassInterface
             if ($this->prefixHelper->isDirective($attr->name)) {
                 $name = $this->prefixHelper->stripPrefix($attr->name);
 
-                // Skip inheritance attributes - they're processed by TemplateComposer
+                // Skip inheritance attributes - they're processed by InheritanceCompilationPass
                 if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
                     continue;
                 }
@@ -694,7 +714,7 @@ final class DirectiveExtractionPass implements AstPassInterface
 
             $controlNode->inheritTemplatePathFrom($node);
 
-            return $controlNode;
+            return $this->wrapDirectiveWithInheritanceAttributes($controlNode, $inheritanceAttrs, $node);
         }
 
         // Only content directive - return it directly
@@ -711,7 +731,39 @@ final class DirectiveExtractionPass implements AstPassInterface
 
         $contentNode->inheritTemplatePathFrom($node);
 
-        return $contentNode;
+        return $this->wrapDirectiveWithInheritanceAttributes($contentNode, $inheritanceAttrs, $node);
+    }
+
+    /**
+     * Wrap a directive in a FragmentNode when inheritance attributes need preserving.
+     *
+     * When a fragment carries both directives and inheritance attributes (e.g. s:block
+     * with s:foreach), the directive is wrapped in a FragmentNode so that
+     * InheritanceCompilationPass can still find and process the inheritance attributes.
+     *
+     * @param \Sugar\Core\Ast\Node $directiveNode The compiled directive node
+     * @param array<\Sugar\Core\Ast\AttributeNode> $inheritanceAttrs Preserved inheritance attributes
+     * @param \Sugar\Core\Ast\FragmentNode $originalNode Original fragment for metadata
+     * @return \Sugar\Core\Ast\Node DirectiveNode or wrapped FragmentNode
+     */
+    private function wrapDirectiveWithInheritanceAttributes(
+        Node $directiveNode,
+        array $inheritanceAttrs,
+        FragmentNode $originalNode,
+    ): Node {
+        if ($inheritanceAttrs === []) {
+            return $directiveNode;
+        }
+
+        $wrapper = new FragmentNode(
+            attributes: $inheritanceAttrs,
+            children: [$directiveNode],
+            line: $originalNode->line,
+            column: $originalNode->column,
+        );
+        $wrapper->inheritTemplatePathFrom($originalNode);
+
+        return $wrapper;
     }
 
     /**

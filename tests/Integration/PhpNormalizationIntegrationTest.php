@@ -8,11 +8,19 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
+/**
+ * Integration tests for PHP normalization and import hoisting.
+ *
+ * Verifies that `use` import statements are hoisted above the render closure
+ * in compiled output, and that templates render correctly with those imports.
+ */
 final class PhpNormalizationIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
+    use EngineTestTrait;
     use ExecuteTemplateTrait;
 
     public function testHoistsImportFromMixedRawPhpBlock(): void
@@ -45,27 +53,22 @@ SUGAR;
 
     public function testHoistsImportsWhenUsingTemplateInheritance(): void
     {
+        $childSource = '<s-template s:extends="base.sugar.php"></s-template>'
+            . '<s-template s:block="content">'
+            . '<?php use DateTimeImmutable as Clock; $year = (new Clock("2024-01-01"))->format("Y"); ?>'
+            . '<p><?= $year ?></p>'
+            . '</s-template>';
+
+        // Compile-time: verify import is hoisted above render closure
         $this->setUpCompilerWithStringLoader(
             templates: [
                 'base.sugar.php' => '<main s:block="content">Base</main>',
-                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>'
-                    . '<s-template s:block="content">'
-                    . '<?php use DateTimeImmutable as Clock; $year = (new Clock("2024-01-01"))->format("Y"); ?>'
-                    . '<p><?= $year ?></p>'
-                    . '</s-template>',
+                'child.sugar.php' => $childSource,
             ],
             config: new SugarConfig(),
         );
 
-        $compiled = $this->compiler->compile(
-            '<s-template s:extends="base.sugar.php"></s-template>'
-            . '<s-template s:block="content">'
-            . '<?php use DateTimeImmutable as Clock; $year = (new Clock("2024-01-01"))->format("Y"); ?>'
-            . '<p><?= $year ?></p>'
-            . '</s-template>',
-            'child.sugar.php',
-        );
-
+        $compiled = $this->compiler->compile($childSource, 'child.sugar.php');
         $renderClosurePosition = strpos($compiled, 'return function(array|object $__data = []): string {');
         $importPosition = strpos($compiled, 'use DateTimeImmutable as Clock;');
 
@@ -73,7 +76,13 @@ SUGAR;
         $this->assertNotFalse($importPosition);
         $this->assertLessThan($renderClosurePosition, $importPosition);
 
-        $output = $this->executeTemplate($compiled);
+        // Runtime: verify rendered output uses the import correctly
+        $engine = $this->createStringEngine([
+            'base.sugar.php' => '<main s:block="content">Base</main>',
+            'child.sugar.php' => $childSource,
+        ]);
+
+        $output = $engine->render('child.sugar.php');
         $this->assertStringContainsString('<p>2024</p>', $output);
     }
 
@@ -143,97 +152,93 @@ SUGAR;
 
     public function testKeepsTopLevelImportFromChildTemplateUsingExtends(): void
     {
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'base.sugar.php' => '<main s:block="content">Base</main>',
-                'child.sugar.php' => '<?php use DateTimeImmutable as Clock; ?>'
-                    . '<s-template s:extends="base.sugar.php"></s-template>'
-                    . '<s-template s:block="content">'
-                    . '<p><?= (new Clock("2024-01-01"))->format("Y") ?></p>'
-                    . '</s-template>',
-            ],
-            config: new SugarConfig(),
-        );
-
-        $compiled = $this->compiler->compile(
-            '<?php use DateTimeImmutable as Clock; ?>'
+        $childSource = '<?php use DateTimeImmutable as Clock; ?>'
             . '<s-template s:extends="base.sugar.php"></s-template>'
             . '<s-template s:block="content">'
             . '<p><?= (new Clock("2024-01-01"))->format("Y") ?></p>'
-            . '</s-template>',
-            'child.sugar.php',
-        );
+            . '</s-template>';
 
-        $this->assertSame(1, substr_count($compiled, 'use DateTimeImmutable as Clock;'));
-
-        $output = $this->executeTemplate($compiled);
-        $this->assertStringContainsString('<p>2024</p>', $output);
-    }
-
-    public function testKeepsTopLevelImportFromAncestorTemplateInExtendsChain(): void
-    {
+        // Compile-time: verify import appears exactly once in child's compiled output
         $this->setUpCompilerWithStringLoader(
             templates: [
-                'grand.sugar.php' => '<main s:block="content">Grand</main>',
-                'parent.sugar.php' => '<?php use DateTimeImmutable as Clock; ?>'
-                    . '<s-template s:extends="grand.sugar.php"></s-template>'
-                    . '<s-template s:block="content">'
-                    . '<s-template s:parent />'
-                    . '<p><?= (new Clock("2024-01-01"))->format("Y") ?></p>'
-                    . '</s-template>',
-                'child.sugar.php' => '<s-template s:extends="parent.sugar.php"></s-template>'
-                    . '<s-template s:block="content">'
-                    . '<s-template s:parent />'
-                    . '<p>Child</p>'
-                    . '</s-template>',
+                'base.sugar.php' => '<main s:block="content">Base</main>',
+                'child.sugar.php' => $childSource,
             ],
             config: new SugarConfig(),
         );
 
-        $compiled = $this->compiler->compile(
-            '<s-template s:extends="parent.sugar.php"></s-template>'
-            . '<s-template s:block="content">'
-            . '<s-template s:parent />'
-            . '<p>Child</p>'
-            . '</s-template>',
-            'child.sugar.php',
-        );
-
+        $compiled = $this->compiler->compile($childSource, 'child.sugar.php');
         $this->assertSame(1, substr_count($compiled, 'use DateTimeImmutable as Clock;'));
 
-        $output = $this->executeTemplate($compiled);
+        // Runtime: verify rendered output uses the import correctly
+        $engine = $this->createStringEngine([
+            'base.sugar.php' => '<main s:block="content">Base</main>',
+            'child.sugar.php' => $childSource,
+        ]);
+
+        $output = $engine->render('child.sugar.php');
+        $this->assertStringContainsString('<p>2024</p>', $output);
+    }
+
+    /**
+     * Verify that imports from an ancestor template are available at runtime.
+     *
+     * With runtime inheritance, ancestor templates are compiled separately.
+     * The import from the parent template is not merged into the child's
+     * compiled output; instead, it takes effect when the parent renders.
+     */
+    public function testKeepsTopLevelImportFromAncestorTemplateInExtendsChain(): void
+    {
+        $engine = $this->createStringEngine([
+            'grand.sugar.php' => '<main s:block="content">Grand</main>',
+            'parent.sugar.php' => '<?php use DateTimeImmutable as Clock; ?>'
+                . '<s-template s:extends="grand.sugar.php"></s-template>'
+                . '<s-template s:block="content">'
+                . '<s-template s:parent />'
+                . '<p><?= (new Clock("2024-01-01"))->format("Y") ?></p>'
+                . '</s-template>',
+            'child.sugar.php' => '<s-template s:extends="parent.sugar.php"></s-template>'
+                . '<s-template s:block="content">'
+                . '<s-template s:parent />'
+                . '<p>Child</p>'
+                . '</s-template>',
+        ]);
+
+        $output = $engine->render('child.sugar.php');
         $this->assertStringContainsString('<p>2024</p>', $output);
         $this->assertStringContainsString('<p>Child</p>', $output);
     }
 
     public function testDeduplicatesGroupedAndSingleFunctionImportsAcrossTemplates(): void
     {
+        $childSource = '<?php use function Sugar\\Core\\Runtime\\{raw, json}; ?>'
+            . '<s-template s:extends="layout/default.sugar.php"></s-template>'
+            . '<s-template s:block="content">'
+            . '<?= ["a", "b"] |> json() ?>'
+            . '</s-template>';
+
+        // Compile-time: verify child's own grouped imports are deduplicated
         $this->setUpCompilerWithStringLoader(
             templates: [
                 'layout/default.sugar.php' => '<?php use function Sugar\\Core\\Runtime\\json; ?>'
                     . '<main s:block="content"></main>',
-                'page.sugar.php' => '<?php use function Sugar\\Core\\Runtime\\{raw, json}; ?>'
-                    . '<s-template s:extends="layout/default.sugar.php"></s-template>'
-                    . '<s-template s:block="content">'
-                    . '<?= ["a", "b"] |> json() ?>'
-                    . '</s-template>',
+                'page.sugar.php' => $childSource,
             ],
             config: new SugarConfig(),
         );
 
-        $compiled = $this->compiler->compile(
-            '<?php use function Sugar\\Core\\Runtime\\{raw, json}; ?>'
-            . '<s-template s:extends="layout/default.sugar.php"></s-template>'
-            . '<s-template s:block="content">'
-            . '<?= ["a", "b"] |> json() ?>'
-            . '</s-template>',
-            'page.sugar.php',
-        );
-
+        $compiled = $this->compiler->compile($childSource, 'page.sugar.php');
         $this->assertSame(1, substr_count($compiled, 'use function Sugar\\Core\\Runtime\\json;'));
         $this->assertSame(1, substr_count($compiled, 'use function Sugar\\Core\\Runtime\\raw;'));
 
-        $output = $this->executeTemplate($compiled);
+        // Runtime: verify rendered output
+        $engine = $this->createStringEngine([
+            'layout/default.sugar.php' => '<?php use function Sugar\\Core\\Runtime\\json; ?>'
+                . '<main s:block="content"></main>',
+            'page.sugar.php' => $childSource,
+        ]);
+
+        $output = $engine->render('page.sugar.php');
         $this->assertStringContainsString('["a","b"]', $output);
     }
 }

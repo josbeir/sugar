@@ -17,9 +17,12 @@ use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
+use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
+use Sugar\Core\Runtime\BlockManager;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Core\Util\Hash;
 
 /**
@@ -266,6 +269,30 @@ final class EngineBuilder
             customPasses: $customPasses,
             phpSyntaxValidationEnabled: $this->phpSyntaxValidation,
         );
+
+        // Register core TemplateRenderer runtime service (always available)
+        $templateContext = $this->templateContext;
+        $debug = $this->debug;
+        $loader = $this->loader;
+        $cache = $this->cache;
+        $runtimeServices[RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID] = static function (
+            RuntimeContext $runtimeContext,
+        ) use (
+            $loader,
+            $cache,
+            $debug,
+            $templateContext,
+): TemplateRenderer {
+            return new TemplateRenderer(
+                compiler: $runtimeContext->getCompiler(),
+                loader: $loader,
+                cache: $cache,
+                blockManager: new BlockManager(),
+                tracker: $runtimeContext->getTracker(),
+                debug: $debug,
+                templateContext: $templateContext,
+            );
+        };
 
         return new Engine(
             compiler: $compiler,

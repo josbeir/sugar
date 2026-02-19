@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\StringTemplateLoader;
@@ -275,6 +276,7 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = Engine::builder(new SugarConfig())
             ->withTemplateLoader($loader)
+            ->withCache(new FileCache(sys_get_temp_dir() . '/sugar_test_' . bin2hex(random_bytes(8))))
             ->build();
 
         $result = $engine->render('includes-page', ['title' => 'Welcome']);

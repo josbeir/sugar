@@ -13,6 +13,7 @@ use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\TemplateExceptionRendererInterface;
+use Sugar\Core\Exception\SugarException;
 use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
@@ -70,12 +71,12 @@ final class Engine implements EngineInterface
 
             // Execute the compiled template
             return $this->execute($compiledPath, $data, $tracker);
-        } catch (CompilationException $compilationException) {
+        } catch (SugarException $sugarException) {
             if ($this->debug && $this->exceptionRenderer instanceof TemplateExceptionRendererInterface) {
-                return $this->exceptionRenderer->render($compilationException);
+                return $this->exceptionRenderer->render($sugarException);
             }
 
-            throw $compilationException;
+            throw $sugarException;
         }
     }
 
