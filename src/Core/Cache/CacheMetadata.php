@@ -12,7 +12,7 @@ namespace Sugar\Core\Cache;
 final readonly class CacheMetadata
 {
     /**
-     * @param array<string> $dependencies Template paths extended/included
+     * @param array<string> $dependencies Template and component paths (extended/included templates and component dependencies)
      * @param string $sourcePath Source template path used for freshness checks
      * @param int $sourceTimestamp Source template modification time
      * @param int $compiledTimestamp Compiled cache creation time
