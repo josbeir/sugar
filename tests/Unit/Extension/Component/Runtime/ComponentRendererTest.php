@@ -6,14 +6,13 @@ namespace Sugar\Tests\Unit\Extension\Component\Runtime;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Cache\CachedTemplate;
 use Sugar\Core\Cache\CacheKey;
-use Sugar\Core\Cache\CacheMetadata;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\FileCache;
-use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Extension\Component\Compiler\ComponentCompiler;
+use Sugar\Core\Runtime\BlockManager;
+use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
@@ -22,6 +21,10 @@ use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
 /**
  * Tests for the extension-owned component renderer.
+ *
+ * ComponentRenderer delegates compilation and execution to TemplateRenderer.
+ * These tests verify component-specific behavior: name resolution, slot
+ * normalization, attribute merging, variant cache keys, and dependency tracking.
  */
 final class ComponentRendererTest extends TestCase
 {
@@ -29,9 +32,15 @@ final class ComponentRendererTest extends TestCase
     use TempDirectoryTrait;
     use TemplateTestHelperTrait;
 
+    private FileCache $cache;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->cache = new FileCache(
+            cacheDir: $this->createTempDir('sugar_renderer_test_'),
+        );
 
         $this->setUpCompilerWithStringLoader(
             templates: [
@@ -39,6 +48,13 @@ final class ComponentRendererTest extends TestCase
             ],
             config: new SugarConfig(),
         );
+    }
+
+    protected function tearDown(): void
+    {
+        RuntimeEnvironment::clearService(TemplateRenderer::class);
+        $this->cleanupTempDirs();
+        parent::tearDown();
     }
 
     public function testRenderComponentThrowsForEmptyName(): void
@@ -70,8 +86,7 @@ final class ComponentRendererTest extends TestCase
 
     public function testRenderComponentCachesVariant(): void
     {
-        $cache = $this->createCache();
-        $renderer = $this->createRenderer(cache: $cache);
+        $renderer = $this->createRenderer();
 
         $output = $renderer->renderComponent(
             name: 'alert',
@@ -83,7 +98,7 @@ final class ComponentRendererTest extends TestCase
         $componentPath = $this->componentLoader->getComponentPath('alert');
         $cacheKey = CacheKey::fromTemplate($componentPath, ['footer', 'slot']);
 
-        $cached = $cache->get($cacheKey);
+        $cached = $this->cache->get($cacheKey, debug: true);
 
         $this->assertInstanceOf(CachedTemplate::class, $cached);
     }
@@ -197,170 +212,80 @@ final class ComponentRendererTest extends TestCase
         $this->assertContains($componentPath, $metadata->components);
     }
 
-    public function testRenderComponentReturnsScalarFromCompiledClosure(): void
+    public function testRenderComponentAlwaysIncludesDefaultSlot(): void
     {
-        $renderer = $this->createRendererWithCachedTemplate(
-            <<<'PHP'
-<?php
-return function (array $data): int {
-    return 123;
-};
-PHP,
-        );
-
-        $output = $renderer->renderComponent(name: 'alert');
-
-        $this->assertSame('123', $output);
-    }
-
-    public function testRenderComponentReturnsStringFromStringableObject(): void
-    {
-        $renderer = $this->createRendererWithCachedTemplate(
-            <<<'PHP'
-<?php
-return function (array $data) {
-    return new class {
-        public function __toString(): string
-        {
-            return 'stringable';
+        if (!$this->templateLoader instanceof StringTemplateLoader) {
+            $this->markTestSkipped('Test requires StringTemplateLoader');
         }
-    };
-};
-PHP,
+
+        $this->templateLoader->addTemplate(
+            'components/s-simple.sugar.php',
+            '<div><?= $slot ?></div>',
         );
 
-        $output = $renderer->renderComponent(name: 'alert');
+        $renderer = $this->createRenderer();
 
-        $this->assertSame('stringable', $output);
+        // No slots passed - default slot should still be empty string
+        $output = $renderer->renderComponent(name: 'simple');
+
+        $this->assertStringContainsString('<div></div>', $output);
     }
 
-    public function testRenderComponentReturnsEmptyStringForNonStringableResult(): void
+    public function testRenderComponentSortsSlotNamesForVariantKey(): void
     {
-        $renderer = $this->createRendererWithCachedTemplate(
-            <<<'PHP'
-<?php
-return function (array $data): array {
-    return ['nope'];
-};
-PHP,
+        if (!$this->templateLoader instanceof StringTemplateLoader) {
+            $this->markTestSkipped('Test requires StringTemplateLoader');
+        }
+
+        $this->templateLoader->addTemplate(
+            'components/s-multi-slot.sugar.php',
+            '<div><?= $slot ?> <?= $header ?> <?= $footer ?></div>',
         );
 
-        $output = $renderer->renderComponent(name: 'alert');
+        $renderer = $this->createRenderer();
 
-        $this->assertSame('', $output);
-    }
-
-    public function testRenderComponentReturnsEmptyStringWhenCompiledFileIsNotClosure(): void
-    {
-        $renderer = $this->createRendererWithCachedTemplate(
-            <<<'PHP'
-<?php
-return 'not-a-closure';
-PHP,
+        // Pass slots in non-alphabetical order
+        $output1 = $renderer->renderComponent(
+            name: 'multi-slot',
+            slots: ['footer' => 'F', 'header' => 'H', 'slot' => 'S'],
         );
 
-        $output = $renderer->renderComponent(name: 'alert');
-
-        $this->assertSame('', $output);
-    }
-
-    public function testRenderComponentWrapsParseErrorAsCompilationException(): void
-    {
-        $renderer = $this->createRendererWithCachedTemplate(
-            <<<'PHP'
-<?php
-return function (array $data): string {
-    if (
-};
-PHP,
+        $output2 = $renderer->renderComponent(
+            name: 'multi-slot',
+            slots: ['header' => 'H', 'slot' => 'S', 'footer' => 'F'],
         );
 
-        $this->expectException(CompilationException::class);
-        $this->expectExceptionMessage('Compiled component contains invalid PHP');
-
-        $renderer->renderComponent(name: 'alert');
+        // Both should produce same output since variant keys are sorted
+        $this->assertSame($output1, $output2);
     }
 
+    /**
+     * Create a ComponentRenderer with a TemplateRenderer registered in RuntimeEnvironment.
+     *
+     * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Optional dependency tracker
+     * @param object|null $context Optional template context for $this binding
+     */
     private function createRenderer(
-        ?object $context = null,
-        ?TemplateCacheInterface $cache = null,
         ?DependencyTracker $tracker = null,
+        ?object $context = null,
     ): ComponentRenderer {
-        $cache = $cache ?? $this->createCache();
-
-        return new ComponentRenderer(
-            componentCompiler: new ComponentCompiler(
-                compiler: $this->compiler,
-                loader: $this->componentLoader,
-            ),
-            loader: $this->componentLoader,
-            cache: $cache,
+        $templateRenderer = new TemplateRenderer(
+            compiler: $this->compiler,
+            loader: $this->templateLoader,
+            cache: $this->cache,
+            blockManager: new BlockManager(),
             tracker: $tracker,
+            debug: true,
             templateContext: $context,
         );
-    }
 
-    private function createRendererWithCachedTemplate(string $compiledPhp): ComponentRenderer
-    {
-        $compiledPath = $this->writeCompiledTemplate($compiledPhp);
-        $cacheKey = CacheKey::fromTemplate($this->componentLoader->getComponentPath('alert'), ['slot']);
-        $cached = new CachedTemplate($compiledPath, new CacheMetadata());
-
-        $cache = new class ($cacheKey, $cached) implements TemplateCacheInterface {
-            public function __construct(
-                private string $key,
-                private CachedTemplate $cached,
-            ) {
-            }
-
-            public function get(string $key, bool $debug = false): ?CachedTemplate
-            {
-                return $key === $this->key ? $this->cached : null;
-            }
-
-            public function put(string $key, string $compiled, CacheMetadata $metadata): string
-            {
-                return $this->cached->path;
-            }
-
-            public function invalidate(string $key): array
-            {
-                return [];
-            }
-
-            public function delete(string $key): bool
-            {
-                return false;
-            }
-
-            public function flush(): void
-            {
-            }
-        };
+        RuntimeEnvironment::setService(
+            TemplateRenderer::class,
+            $templateRenderer,
+        );
 
         return new ComponentRenderer(
-            componentCompiler: new ComponentCompiler(
-                compiler: $this->compiler,
-                loader: $this->componentLoader,
-            ),
             loader: $this->componentLoader,
-            cache: $cache,
         );
-    }
-
-    private function writeCompiledTemplate(string $compiledPhp): string
-    {
-        $cacheDir = $this->createTempDir('sugar_compiled_');
-        $path = $cacheDir . '/compiled.php';
-        file_put_contents($path, $compiledPhp);
-
-        return $path;
-    }
-
-    private function createCache(): FileCache
-    {
-        $cacheDir = $this->createTempDir('sugar_cache_');
-
-        return new FileCache($cacheDir);
     }
 }

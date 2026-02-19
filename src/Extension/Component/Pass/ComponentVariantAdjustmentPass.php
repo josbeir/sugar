@@ -5,6 +5,7 @@ namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
+use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\Helper\AttributeHelper;
@@ -21,17 +22,23 @@ use Sugar\Extension\Component\Helper\SlotResolver;
 /**
  * Applies component-specific adjustments during compilation.
  *
- * This pass runs after component expansion to:
- * - Disable escaping for slot variables so slot HTML is not double-escaped.
- * - Apply attribute overrides on the component root once merged props are known.
+ * This pass runs in two phases to handle different compilation stages:
+ * - **Directive phase** (DIRECTIVE_PAIRING priority): Intercepts root-level directive
+ *   nodes to apply attribute overrides to stored elements (e.g., s:ifcontent), before
+ *   directive compilation converts them to raw PHP.
+ * - **Main phase** (POST_DIRECTIVE_COMPILATION priority): Disables escaping for slot
+ *   variables and applies attribute overrides to direct root elements (including those
+ *   resolved by template inheritance).
  */
 final class ComponentVariantAdjustmentPass implements AstPassInterface
 {
     /**
-     * @param array<string> $slotVars
+     * @param array<string> $slotVars Slot variable names for escaping adjustment
+     * @param bool $directiveRootOnly When true, only processes directive-stored root elements
      */
     public function __construct(
         private readonly array $slotVars,
+        private readonly bool $directiveRootOnly = false,
     ) {
     }
 
@@ -40,8 +47,12 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
      */
     public function before(Node $node, PipelineContext $context): NodeAction
     {
-        if ($node instanceof DocumentNode) {
+        if (!$this->directiveRootOnly && $node instanceof DocumentNode) {
             SlotResolver::disableEscaping($node, $this->slotVars);
+        }
+
+        if ($this->directiveRootOnly && $node instanceof DirectiveNode && $context->parent instanceof DocumentNode) {
+            $this->applyDirectiveStoredElementOverrides($node, '$__sugar_attrs');
         }
 
         return NodeAction::none();
@@ -52,7 +63,7 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
      */
     public function after(Node $node, PipelineContext $context): NodeAction
     {
-        if ($node instanceof DocumentNode) {
+        if (!$this->directiveRootOnly && $node instanceof DocumentNode) {
             $this->applyRuntimeAttributeOverrides($node, '$__sugar_attrs');
         }
 
@@ -60,7 +71,27 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
     }
 
     /**
+     * Apply attribute overrides to a root element stored inside a directive node.
+     *
+     * This handles the case where directives like s:ifcontent store the element
+     * via setElementNode(). The element must be modified before directive compilation
+     * converts it to raw PHP statements.
+     */
+    private function applyDirectiveStoredElementOverrides(DirectiveNode $directive, string $attrsVar): void
+    {
+        $rootElement = $this->findStoredElementRecursive($directive);
+        if (!$rootElement instanceof ElementNode) {
+            return;
+        }
+
+        $this->applyOverridesToElement($rootElement, $attrsVar);
+    }
+
+    /**
      * Apply runtime attribute overrides to the first root element in a template.
+     *
+     * Uses NodeTraverser to find direct ElementNode children after inheritance
+     * compilation has resolved template extends/blocks.
      */
     private function applyRuntimeAttributeOverrides(DocumentNode $template, string $attrsVar): void
     {
@@ -69,6 +100,38 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
             return;
         }
 
+        $this->applyOverridesToElement($rootElement, $attrsVar);
+    }
+
+    /**
+     * Recursively search directive nodes for a stored element.
+     */
+    private function findStoredElementRecursive(DirectiveNode $directive): ?ElementNode
+    {
+        $storedElement = $directive->getElementNode();
+        if ($storedElement instanceof ElementNode) {
+            return $storedElement;
+        }
+
+        foreach ($directive->children as $child) {
+            if ($child instanceof DirectiveNode) {
+                return $this->findStoredElementRecursive($child);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Apply $__sugar_attrs overrides to an element's attributes.
+     *
+     * Merges runtime attribute overrides from the parent component invocation:
+     * - class: Wraps existing value in classNames() with the override
+     * - Other named attrs: Falls back to override if present
+     * - Spread: Adds remaining unmatched attrs as spread attributes
+     */
+    private function applyOverridesToElement(ElementNode $rootElement, string $attrsVar): void
+    {
         $existingNames = [];
         foreach ($rootElement->attributes as $attr) {
             if ($attr->name === '') {

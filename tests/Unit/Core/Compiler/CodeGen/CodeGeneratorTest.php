@@ -16,6 +16,10 @@ use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\UnsupportedNodeException;
+use Sugar\Core\Runtime\EmptyHelper;
+use Sugar\Core\Runtime\HtmlTagHelper;
+use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -63,7 +67,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString(Escaper::class . '::html($userName)', $code);
+        $this->assertStringContainsString('__SugarEscaper::html($userName)', $code);
         $this->assertStringNotContainsString('$escaper', $code); // Inline, not method call
     }
 
@@ -76,7 +80,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('echo $htmlContent', $code);
-        $this->assertStringNotContainsString('Escaper::html', $code);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $code);
     }
 
     public function testGenerateJavascriptContext(): void
@@ -87,8 +91,8 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString('Escaper::js($data', $code);
-        $this->assertStringContainsString('Escaper::js', $code);
+        $this->assertStringContainsString('__SugarEscaper::js($data', $code);
+        $this->assertStringContainsString('__SugarEscaper::js', $code);
     }
 
     public function testGenerateUrlContext(): void
@@ -99,7 +103,7 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        $this->assertStringContainsString(Escaper::class . '::url($url)', $code);
+        $this->assertStringContainsString('__SugarEscaper::url($url)', $code);
     }
 
     public function testGenerateMixedContent(): void
@@ -115,7 +119,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<div>', $code);
-        $this->assertStringContainsString(Escaper::class . '::html($title)', $code);
+        $this->assertStringContainsString('__SugarEscaper::html($title)', $code);
         $this->assertStringContainsString('</div>', $code);
     }
 
@@ -161,6 +165,30 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<?php $x = 42; ?>', $code);
+    }
+
+    public function testGenerateRawPhpNormalizesRuntimeFqcnReferences(): void
+    {
+        $ast = $this->document()
+            ->withChild($this->rawPhp(
+                'echo ' . EmptyHelper::class . '::isEmpty($value); '
+                . '$tag = ' . HtmlTagHelper::class . '::sanitizeTagName($name); '
+                . '$tpl = ' . RuntimeEnvironment::class . '::requireService('
+                . TemplateRenderer::class . '::class);',
+                1,
+                1,
+            ))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($value)', $code);
+        $this->assertStringContainsString('__SugarHtmlTagHelper::sanitizeTagName($name)', $code);
+        $this->assertStringContainsString('__SugarRuntimeEnvironment::requireService(__SugarTemplateRenderer::class)', $code);
+        $this->assertStringNotContainsString(EmptyHelper::class . '::', $code);
+        $this->assertStringNotContainsString(HtmlTagHelper::class . '::', $code);
+        $this->assertStringNotContainsString(RuntimeEnvironment::class . '::', $code);
+        $this->assertStringNotContainsString(TemplateRenderer::class . '::class', $code);
     }
 
     public function testGenerateRawPhpWithLogic(): void
@@ -216,7 +244,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<?php $greeting = "Hello"; ?>', $code);
-        $this->assertStringContainsString(Escaper::class . '::html($greeting)', $code);
+        $this->assertStringContainsString('__SugarEscaper::html($greeting)', $code);
     }
 
     public function testDebugModeAddsSourceInfo(): void
@@ -262,6 +290,25 @@ final class CodeGeneratorTest extends TestCase
         $output = $this->executeTemplate($code);
 
         $this->assertSame('4', $output);
+    }
+
+    public function testGenerateRuntimeCallNodeNormalizesCallableAndArguments(): void
+    {
+        $ast = $this->document()
+            ->withChild(new RuntimeCallNode(
+                HtmlTagHelper::class . '::sanitizeTagName',
+                [EmptyHelper::class . '::isEmpty($value) ? "span" : "div"'],
+                1,
+                1,
+            ))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('__SugarHtmlTagHelper::sanitizeTagName(', $code);
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($value)', $code);
+        $this->assertStringNotContainsString(HtmlTagHelper::class . '::', $code);
+        $this->assertStringNotContainsString(EmptyHelper::class . '::', $code);
     }
 
     public function testNoDebugCommentsWhenDisabled(): void
@@ -359,7 +406,7 @@ final class CodeGeneratorTest extends TestCase
         $code = $this->generator->generate($ast);
 
         $this->assertStringContainsString('<div title="', $code);
-        $this->assertStringContainsString('Escaper::attr', $code);
+        $this->assertStringContainsString('__SugarEscaper::attr', $code);
     }
 
     public function testGenerateDynamicTag(): void
@@ -404,7 +451,7 @@ final class CodeGeneratorTest extends TestCase
 
         $this->assertStringContainsString('$__attr =', $code);
         $this->assertStringContainsString('trim($attrs)', $code);
-        $this->assertStringContainsString('Escaper::attr', $code);
+        $this->assertStringContainsString('__SugarEscaper::attr', $code);
         $this->assertStringContainsString('echo \' \' . $__attr', $code);
     }
 
@@ -534,7 +581,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to upper($name)
         $this->assertStringContainsString('upper($name)', $code);
-        $this->assertStringContainsString('Escaper::html', $code);
+        $this->assertStringContainsString('__SugarEscaper::html', $code);
     }
 
     public function testGenerateMultiplePipes(): void
@@ -547,7 +594,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to truncate(upper($name), 20)
         $this->assertStringContainsString('truncate(upper($name), 20)', $code);
-        $this->assertStringContainsString('Escaper::html', $code);
+        $this->assertStringContainsString('__SugarEscaper::html', $code);
     }
 
     public function testGeneratePipeWithMultipleArguments(): void
@@ -572,7 +619,7 @@ final class CodeGeneratorTest extends TestCase
 
         // Should compile to upper($html) without escaping
         $this->assertStringContainsString('echo upper($html)', $code);
-        $this->assertStringNotContainsString('Escaper::html', $code);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $code);
     }
 
     public function testGeneratePipeInJavascriptContext(): void
@@ -583,8 +630,8 @@ final class CodeGeneratorTest extends TestCase
 
         $code = $this->generator->generate($ast);
 
-        // Should compile to Escaper::js(upper($data))
-        $this->assertStringContainsString('Escaper::js(upper($data)', $code);
+        // Should compile to __SugarEscaper::js(upper($data))
+        $this->assertStringContainsString('__SugarEscaper::js(upper($data)', $code);
     }
 
     public function testGenerateThrowsForUnsupportedNodeType(): void

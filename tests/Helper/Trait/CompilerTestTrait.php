@@ -15,7 +15,6 @@ use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
-use Sugar\Extension\Component\Pass\ComponentPassFactory;
 
 /**
  * Helper trait for setting up compiler-related objects in tests
@@ -190,17 +189,12 @@ trait CompilerTestTrait
             }
         }
 
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->templateLoader,
-            componentLoader: $this->componentLoader,
-            parser: $this->parser,
-            registry: $this->registry,
-            config: $config ?? new SugarConfig(),
-            customPasses: $customPasses,
-        );
-
         $customPasses[] = [
-            'pass' => $passFactory->createExpansionPass(),
+            'pass' => new ComponentExpansionPass(
+                loader: $this->componentLoader,
+                registry: $this->registry,
+                config: $config ?? new SugarConfig(),
+            ),
             'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
         ];
 

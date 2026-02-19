@@ -7,13 +7,19 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
-use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
+/**
+ * Integration tests for template inheritance via the runtime rendering system.
+ *
+ * Tests verify that s:extends, s:block, s:append, s:prepend, s:parent, and s:include
+ * produce the correct rendered output via BlockManager and TemplateRenderer.
+ */
 final class TemplateInheritanceIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
-    use ExecuteTemplateTrait;
+    use EngineTestTrait;
     use TemplateTestHelperTrait;
 
     private string $templatesPath;
@@ -21,63 +27,51 @@ final class TemplateInheritanceIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $this->templatesPath = SUGAR_TEST_TEMPLATE_INHERITANCE_PATH;
-        $config = new SugarConfig();
-
-        $this->setUpCompiler(
-            config: $config,
-            withTemplateLoader: true,
-            templatePaths: [$this->templatesPath],
-        );
     }
 
     public function testSimpleInheritanceWithBlockReplacement(): void
     {
-        $template = $this->loadTemplate('template-inheritance/simple-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'simple-child.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('simple-child.sugar.php');
 
-        // Verify compiled output contains the block content from child
-        $this->assertStringContainsString('My Page Title', $compiled);
-        $this->assertStringContainsString('Welcome', $compiled);
-        $this->assertStringContainsString('This is the page content', $compiled);
+        // Child blocks should replace parent blocks
+        $this->assertStringContainsString('My Page Title', $result);
+        $this->assertStringContainsString('Welcome', $result);
+        $this->assertStringContainsString('This is the page content', $result);
+        // Parent structure preserved
+        $this->assertStringContainsString('<html>', $result);
+        $this->assertStringContainsString('</html>', $result);
     }
 
     public function testAbsoluteOnlyResolutionUsesTemplateRoot(): void
     {
-        $config = new SugarConfig();
-        $this->setUpCompiler(
-            config: $config,
-            withTemplateLoader: true,
-            templatePaths: [$this->templatesPath],
-            absolutePathsOnly: true,
-        );
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('absolute-only-child.sugar.php');
 
-        $template = $this->loadTemplate('template-inheritance/absolute-only-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'absolute-only-child.sugar.php');
-
-        $this->assertStringContainsString('My Absolute Page Title', $compiled);
-        $this->assertStringContainsString('Absolute Welcome', $compiled);
-        $this->assertStringContainsString('Absolute content.', $compiled);
+        $this->assertStringContainsString('My Absolute Page Title', $result);
+        $this->assertStringContainsString('Absolute Welcome', $result);
+        $this->assertStringContainsString('Absolute content.', $result);
     }
 
     public function testMultiLevelInheritance(): void
     {
-        $template = $this->loadTemplate('template-inheritance/multilevel-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'multilevel-child.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('multilevel-child.sugar.php');
 
         // Should have grandparent structure with child's block content
-        $this->assertStringContainsString('<html>', $compiled);
-        $this->assertStringContainsString('Final Page', $compiled);
-        $this->assertStringContainsString('Master Body', $compiled); // Body block not overridden, so keeps grandparent content
-        $this->assertStringNotContainsString('App Layout', $compiled); // Parent's title was overridden
+        $this->assertStringContainsString('<html>', $result);
+        $this->assertStringContainsString('Final Page', $result);
+        $this->assertStringContainsString('Master Body', $result);
+        $this->assertStringNotContainsString('App Layout', $result);
     }
 
     public function testAppendBlockContent(): void
     {
-        $template = $this->loadTemplate('template-inheritance/append-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'append-child.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('append-child.sugar.php');
 
-        $basePos = strpos($compiled, 'Base content');
-        $extraPos = strpos($compiled, 'Extra');
+        $basePos = strpos($result, 'Base content');
+        $extraPos = strpos($result, 'Extra');
 
         $this->assertNotFalse($basePos);
         $this->assertNotFalse($extraPos);
@@ -86,11 +80,11 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testPrependBlockContent(): void
     {
-        $template = $this->loadTemplate('template-inheritance/prepend-child.sugar.php');
-        $compiled = $this->compiler->compile($template, 'prepend-child.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('prepend-child.sugar.php');
 
-        $basePos = strpos($compiled, 'Base content');
-        $extraPos = strpos($compiled, 'Extra');
+        $basePos = strpos($result, 'Base content');
+        $extraPos = strpos($result, 'Extra');
 
         $this->assertNotFalse($basePos);
         $this->assertNotFalse($extraPos);
@@ -99,7 +93,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testBlockWithParentPlaceholderAppendsParentContent(): void
     {
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
                 'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
                 'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
@@ -107,14 +101,10 @@ final class TemplateInheritanceIntegrationTest extends TestCase
             ],
         );
 
-        $compiled = $this->compiler->compile(
-            '<s-template s:extends="base.sugar.php"></s-template>' .
-            '<s-template s:block="content"><s-template s:parent /><p>Child content</p></s-template>',
-            'child.sugar.php',
-        );
+        $result = $engine->render('child.sugar.php');
 
-        $basePos = strpos($compiled, 'Base content');
-        $childPos = strpos($compiled, 'Child content');
+        $basePos = strpos($result, 'Base content');
+        $childPos = strpos($result, 'Child content');
 
         $this->assertNotFalse($basePos);
         $this->assertNotFalse($childPos);
@@ -123,7 +113,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testBlockWithParentPlaceholderPrependsParentContent(): void
     {
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
                 'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
                 'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
@@ -131,14 +121,10 @@ final class TemplateInheritanceIntegrationTest extends TestCase
             ],
         );
 
-        $compiled = $this->compiler->compile(
-            '<s-template s:extends="base.sugar.php"></s-template>' .
-            '<s-template s:block="content"><p>Child content</p><s-template s:parent /></s-template>',
-            'child.sugar.php',
-        );
+        $result = $engine->render('child.sugar.php');
 
-        $basePos = strpos($compiled, 'Base content');
-        $childPos = strpos($compiled, 'Child content');
+        $basePos = strpos($result, 'Base content');
+        $childPos = strpos($result, 'Child content');
 
         $this->assertNotFalse($basePos);
         $this->assertNotFalse($childPos);
@@ -147,7 +133,7 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testBlockWithParentPlaceholderCanPlaceParentContentInMiddle(): void
     {
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
                 'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
                 'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
@@ -155,15 +141,11 @@ final class TemplateInheritanceIntegrationTest extends TestCase
             ],
         );
 
-        $compiled = $this->compiler->compile(
-            '<s-template s:extends="base.sugar.php"></s-template>' .
-            '<s-template s:block="content"><p>Before</p><s-template s:parent /><p>After</p></s-template>',
-            'child.sugar.php',
-        );
+        $result = $engine->render('child.sugar.php');
 
-        $beforePos = strpos($compiled, 'Before');
-        $basePos = strpos($compiled, 'Base content');
-        $afterPos = strpos($compiled, 'After');
+        $beforePos = strpos($result, 'Before');
+        $basePos = strpos($result, 'Base content');
+        $afterPos = strpos($result, 'After');
 
         $this->assertNotFalse($beforePos);
         $this->assertNotFalse($basePos);
@@ -174,10 +156,12 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testDuplicateChildBlockDefinitionsThrowSyntaxError(): void
     {
+        $config = new SugarConfig();
         $this->setUpCompilerWithStringLoader(
             templates: [
                 'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
             ],
+            config: $config,
         );
 
         $this->expectException(SyntaxException::class);
@@ -193,10 +177,12 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testParentPlaceholderOutsideBlockThrowsSyntaxError(): void
     {
+        $config = new SugarConfig();
         $this->setUpCompilerWithStringLoader(
             templates: [
                 'base.sugar.php' => '<main s:block="content"><p>Base content</p></main>',
             ],
+            config: $config,
         );
 
         $this->expectException(SyntaxException::class);
@@ -212,53 +198,55 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testIncludeWithOpenScope(): void
     {
-        $template = $this->loadTemplate('template-inheritance/include-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'home.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('include-test.sugar.php');
 
-        // Variable should be accessible in included template (check for escaping, not specific format)
-        $this->assertStringContainsString('$title', $compiled);
-        $this->assertStringContainsString('Escaper::html', $compiled);
+        // Included partial should render with parent scope variables
+        $this->assertStringContainsString('<header>', $result);
+        $this->assertStringContainsString('My Site', $result);
     }
 
     public function testCombiningInheritanceWithDirectives(): void
     {
-        $template = $this->loadTemplate('template-inheritance/directive-combo.sugar.php');
-        $compiled = $this->compiler->compile($template, 'directive-combo.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('directive-combo.sugar.php', ['items' => ['foo', 'bar', 'baz']]);
 
-        // Should have foreach directive compiled
-        $this->assertStringContainsString('foreach', $compiled);
-        $this->assertStringContainsString('$items as $item', $compiled);
+        // Should render foreach inside inherited block
+        $this->assertStringContainsString('<li>foo</li>', $result);
+        $this->assertStringContainsString('<li>bar</li>', $result);
+        $this->assertStringContainsString('<li>baz</li>', $result);
     }
 
     public function testNestedIncludes(): void
     {
-        $template = $this->loadTemplate('template-inheritance/nested-include.sugar.php');
-        $compiled = $this->compiler->compile($template, 'home.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('nested-include.sugar.php', ['url' => '/home', 'label' => 'Home']);
 
-        // Both templates should be included
-        $this->assertStringContainsString('<nav>', $compiled);
-        $this->assertStringContainsString('$url', $compiled);
-        $this->assertStringContainsString('$label', $compiled);
+        // Navigation should include the nav-item partial
+        $this->assertStringContainsString('<nav>', $result);
+        $this->assertStringContainsString('/home', $result);
+        $this->assertStringContainsString('Home', $result);
     }
 
     public function testInheritancePreservesContextAwareEscaping(): void
     {
-        $template = $this->loadTemplate('template-inheritance/escaping-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'escaping-test.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('escaping-test.sugar.php', [
+            'pageTitle' => '<script>alert("XSS")</script>',
+            'heading' => '<b>Hello</b>',
+            'content' => 'Safe content',
+        ]);
 
-        // HTML context escaping should be applied
-        $this->assertStringContainsString('Escaper::html', $compiled);
-        $this->assertStringContainsString('$pageTitle', $compiled);
-        $this->assertStringContainsString('$heading', $compiled);
+        // HTML escaping should be applied in the rendered output
+        $this->assertStringContainsString('&lt;script&gt;', $result);
+        $this->assertStringContainsString('&lt;b&gt;Hello&lt;/b&gt;', $result);
+        $this->assertStringContainsString('Safe content', $result);
     }
 
     public function testExecuteCompiledInheritedTemplate(): void
     {
-        $template = $this->loadTemplate('template-inheritance/execution-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'execution-test.sugar.php');
-
-        // Execute the compiled template
-        $output = $this->executeTemplate($compiled, ['name' => 'World']);
+        $engine = $this->createEngine($this->templatesPath);
+        $output = $engine->render('execution-test.sugar.php', ['name' => 'World']);
 
         // Verify rendered output
         $this->assertStringContainsString('<title>Test Page</title>', $output);
@@ -267,40 +255,30 @@ final class TemplateInheritanceIntegrationTest extends TestCase
 
     public function testSupportsExtensionlessTemplatePaths(): void
     {
-        $template = $this->loadTemplate('template-inheritance/extensionless-test.sugar.php');
-        $compiled = $this->compiler->compile($template, 'extensionless-test.sugar.php');
+        $engine = $this->createEngine($this->templatesPath);
+        $result = $engine->render('extensionless-test.sugar.php', ['title' => 'Site Title']);
 
-        // Should successfully resolve "base" to "base.sugar.php" and "partials/header" to "partials/header.sugar.php"
-        $this->assertStringContainsString('Extension-less Test', $compiled);
-        $this->assertStringContainsString('This template uses extension-less includes', $compiled);
+        // Should resolve extension-less paths and render correctly
+        $this->assertStringContainsString('Extension-less Test', $result);
+        $this->assertStringContainsString('This template uses extension-less includes', $result);
     }
 
     public function testIncludeWithWithHasIsolatedScope(): void
     {
-        $this->setUpCompilerWithStringLoader(
+        $engine = $this->createStringEngine(
             templates: [
                 'partials/temp-isolated.sugar.php' => '<div class="alert"><?= $message ?></div>',
+                'home.sugar.php' => '<?php $message = "parent message"; ?>' .
+                    '<div s:include="partials/temp-isolated.sugar.php" s:with="[\'message\' => \'included message\']"></div>' .
+                    '<p><?= $message ?></p>',
             ],
-            config: new SugarConfig(),
         );
 
-        $template = '<?php $message = "parent message"; ?>' .
-            '<div s:include="partials/temp-isolated.sugar.php" s:with="[\'message\' => \'included message\']"></div>' .
-            '<p><?= $message ?></p>';
-
-        $compiled = $this->compiler->compile($template, 'home.sugar.php');
-
-        // Should contain closure for isolation with bindTo and type hints
-        $this->assertStringContainsString('(function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $compiled);
-        $this->assertStringContainsString('return ob_get_clean(); })->bindTo($this ?? null)', $compiled);
-        $this->assertStringContainsString("(['message' => 'included message']);", $compiled);
-
-        // Execute to verify isolation
-        $output = $this->executeTemplate($compiled, ['message' => 'parent message']);
+        $result = $engine->render('home.sugar.php');
 
         // Verify included template got isolated variable
-        $this->assertStringContainsString('<div class="alert">included message</div>', $output);
+        $this->assertStringContainsString('included message', $result);
         // Verify parent variable not overwritten
-        $this->assertStringContainsString('<p>parent message</p>', $output);
+        $this->assertStringContainsString('<p>parent message</p>', $result);
     }
 }

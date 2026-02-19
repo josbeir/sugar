@@ -14,11 +14,6 @@ use Throwable;
 final class FragmentCacheHelper
 {
     /**
-     * Runtime service id for PSR-16 fragment cache store.
-     */
-    public const SERVICE_ID = 'cache.fragment';
-
-    /**
      * Internal key namespace for fragment cache entries.
      */
     private const KEY_PREFIX = 'sugar_fragment:';
@@ -129,7 +124,7 @@ final class FragmentCacheHelper
      */
     private static function getStore(): ?CacheInterface
     {
-        $store = RuntimeEnvironment::getService(self::SERVICE_ID);
+        $store = RuntimeEnvironment::getService(CacheInterface::class);
 
         return $store instanceof CacheInterface ? $store : null;
     }

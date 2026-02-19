@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Helper\Trait;
 
+use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
@@ -107,9 +108,15 @@ trait EngineTestTrait
             $builder = $builder->withTemplateContext($context);
         }
 
-        if ($cache instanceof TemplateCacheInterface) {
-            $builder = $builder->withCache($cache);
+        // Use a unique cache directory per call to avoid stale cache collisions
+        // when different tests register templates under identical names
+        if (!$cache instanceof TemplateCacheInterface) {
+            $cache = new FileCache(
+                cacheDir: sys_get_temp_dir() . '/sugar_test_' . bin2hex(random_bytes(8)),
+            );
         }
+
+        $builder = $builder->withCache($cache);
 
         return $builder->build();
     }

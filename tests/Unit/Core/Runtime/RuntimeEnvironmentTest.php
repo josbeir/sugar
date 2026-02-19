@@ -22,23 +22,23 @@ final class RuntimeEnvironmentTest extends TestCase
         RuntimeEnvironment::clear();
 
         $this->expectException(TemplateRuntimeException::class);
-        $this->expectExceptionMessage('Runtime service "my.service" is not initialized.');
+        $this->expectExceptionMessage('Runtime service "stdClass" is not initialized.');
 
-        RuntimeEnvironment::requireService('my.service');
+        RuntimeEnvironment::requireService(stdClass::class);
     }
 
     public function testSetAndClearNamedService(): void
     {
         $service = new stdClass();
 
-        RuntimeEnvironment::setService('test.service', $service);
+        RuntimeEnvironment::setService(stdClass::class, $service);
 
-        $this->assertSame($service, RuntimeEnvironment::requireService('test.service'));
+        $this->assertSame($service, RuntimeEnvironment::requireService(stdClass::class));
 
-        RuntimeEnvironment::clearService('test.service');
+        RuntimeEnvironment::clearService(stdClass::class);
 
         $this->expectException(TemplateRuntimeException::class);
-        RuntimeEnvironment::requireService('test.service');
+        RuntimeEnvironment::requireService(stdClass::class);
     }
 
     public function testSetAndClearAllServices(): void
@@ -47,18 +47,18 @@ final class RuntimeEnvironmentTest extends TestCase
         $fragmentCache = new ArraySimpleCache();
 
         RuntimeEnvironment::set([
-            'service.a' => $serviceA,
-            'cache.fragment' => $fragmentCache,
+            stdClass::class => $serviceA,
+            ArraySimpleCache::class => $fragmentCache,
         ]);
 
-        $this->assertSame($serviceA, RuntimeEnvironment::requireService('service.a'));
-        $this->assertSame($fragmentCache, RuntimeEnvironment::getService('cache.fragment'));
+        $this->assertSame($serviceA, RuntimeEnvironment::requireService(stdClass::class));
+        $this->assertSame($fragmentCache, RuntimeEnvironment::getService(ArraySimpleCache::class));
 
         RuntimeEnvironment::clear();
 
-        $this->assertNull(RuntimeEnvironment::getService('cache.fragment'));
+        $this->assertNull(RuntimeEnvironment::getService(ArraySimpleCache::class));
         $this->expectException(TemplateRuntimeException::class);
-        RuntimeEnvironment::requireService('service.a');
+        RuntimeEnvironment::requireService(stdClass::class);
     }
 
     public function testHasAndGetService(): void

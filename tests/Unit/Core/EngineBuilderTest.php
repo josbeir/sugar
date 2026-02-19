@@ -21,6 +21,7 @@ use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\FileTemplateLoader;
 use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Extension\Component\ComponentExtension;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Extension\FragmentCache\FragmentCacheExtension;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 use Sugar\Tests\Helper\Trait\TempDirectoryTrait;
@@ -388,7 +389,7 @@ final class EngineBuilderTest extends TestCase
         $this->assertSame('<div>Second</div>', $engine->render('cached.sugar.php', ['value' => 'Second']));
     }
 
-    public function testComponentRendererServiceCannotBeOverriddenByLaterExtension(): void
+    public function testProtectedRuntimeServiceCannotBeOverriddenByLaterExtension(): void
     {
         $loader = new StringTemplateLoader([
             'page.sugar.php' => '<s-button>Click</s-button>',
@@ -398,7 +399,7 @@ final class EngineBuilderTest extends TestCase
         $overridingExtension = new class implements ExtensionInterface {
             public function register(RegistrationContext $context): void
             {
-                $context->runtimeService(ComponentExtension::SERVICE_RENDERER, new class {
+                $context->runtimeService(ComponentRenderer::class, new class {
                     /**
                      * @param array<string, mixed> $vars
                      * @param array<string, mixed> $slots

@@ -5,6 +5,8 @@ namespace Sugar\Test\Integration\Config;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
+use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
@@ -91,10 +93,12 @@ final class CustomPrefixIntegrationTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;', $result);
     }
 
+    /**
+     * Test that template inheritance works with a custom prefix (v:extends, v:block).
+     */
     public function testCustomPrefixWithTemplateInheritance(): void
     {
         $config = SugarConfig::withPrefix('v');
-        // Create parent template with v:block
         $parent = <<<'TEMPLATE'
 <!DOCTYPE html>
 <html>
@@ -106,7 +110,6 @@ final class CustomPrefixIntegrationTest extends TestCase
 </body>
 </html>
 TEMPLATE;
-        // Create child template with v:extends and v:block
         $child = <<<'TEMPLATE'
 <v-template v:extends="layout.sugar.php">
     <v-template v:block="title">Custom Title</v-template>
@@ -116,33 +119,31 @@ TEMPLATE;
 </v-template>
 TEMPLATE;
 
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'layout.sugar.php' => $parent,
-            ],
-            config: $config,
-        );
+        $loader = new StringTemplateLoader([
+            'layout.sugar.php' => $parent,
+            'child.sugar.php' => $child,
+        ]);
 
-        $compiled = $this->compiler->compile($child, 'child.sugar.php');
+        $engine = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->build();
 
-        // Verify inheritance worked
-        $result = $this->executeTemplate($compiled, ['show' => true, 'name' => 'World']);
+        $result = $engine->render('child.sugar.php', ['show' => true, 'name' => 'World']);
         $this->assertStringContainsString('Custom Title', $result);
         $this->assertStringContainsString('Hello World', $result);
         $this->assertStringNotContainsString('Default content', $result);
 
-        // Verify v:if directive works
-        $result = $this->executeTemplate($compiled, ['show' => false, 'name' => 'World']);
+        $result = $engine->render('child.sugar.php', ['show' => false, 'name' => 'World']);
         $this->assertStringNotContainsString('Hello', $result);
     }
 
+    /**
+     * Test that includes work with a custom prefix (x:include, x:with).
+     */
     public function testCustomPrefixWithInclude(): void
     {
         $config = SugarConfig::withPrefix('x');
-        // Create partial template
         $partial = '<p>User: <?= $username ?></p>';
-
-        // Create main template with x:include
         $template = <<<'TEMPLATE'
 <div>
     <h1>Users</h1>
@@ -152,15 +153,16 @@ TEMPLATE;
 </div>
 TEMPLATE;
 
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'user.sugar.php' => $partial,
-            ],
-            config: $config,
-        );
+        $loader = new StringTemplateLoader([
+            'user.sugar.php' => $partial,
+            'main.sugar.php' => $template,
+        ]);
 
-        $compiled = $this->compiler->compile($template, 'main.sugar.php');
-        $result = $this->executeTemplate($compiled, ['users' => ['Alice', 'Bob', 'Charlie']]);
+        $engine = Engine::builder($config)
+            ->withTemplateLoader($loader)
+            ->build();
+
+        $result = $engine->render('main.sugar.php', ['users' => ['Alice', 'Bob', 'Charlie']]);
 
         $this->assertStringContainsString('User: Alice', $result);
         $this->assertStringContainsString('User: Bob', $result);

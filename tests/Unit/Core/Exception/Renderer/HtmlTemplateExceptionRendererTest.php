@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace Sugar\Tests\Unit\Core\Exception\Renderer;
 
+use Closure;
 use Exception;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\Renderer\HtmlTemplateExceptionRenderer;
 use Sugar\Core\Exception\TemplateRuntimeException;
@@ -203,6 +205,54 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
 
         $this->assertStringContainsString('repeated', $output);
         $this->assertStringContainsString('times', $output);
+    }
+
+    public function testPrivateFormattingHelpersCoverEdgeBranches(): void
+    {
+        $renderer = new HtmlTemplateExceptionRenderer(loader: $this->createLoader());
+
+        $frameArgumentsSignature = Closure::bind(
+            fn(mixed $args): string => $this->frameArgumentsSignature($args),
+            $renderer,
+            $renderer::class,
+        );
+
+        $formatArguments = Closure::bind(
+            fn(array $args): string => $this->formatArguments($args),
+            $renderer,
+            $renderer::class,
+        );
+
+        $formatArgument = Closure::bind(
+            fn(mixed $arg): string => $this->formatArgument($arg),
+            $renderer,
+            $renderer::class,
+        );
+
+        $truncate = Closure::bind(
+            fn(string $value, int $maxLength): string => $this->truncate($value, $maxLength),
+            $renderer,
+            $renderer::class,
+        );
+
+        $this->assertSame('string', $frameArgumentsSignature('not-array'));
+        $this->assertStringContainsString('0=stdClass', $frameArgumentsSignature([new stdClass()]));
+        $this->assertSame('', $formatArguments([]));
+
+        $this->assertSame('null', $formatArgument(null));
+        $this->assertSame('true', $formatArgument(true));
+        $this->assertSame('3.5', $formatArgument(3.5));
+        $this->assertSame('array(2)', $formatArgument([1, 2]));
+        $this->assertStringContainsString('object(stdClass)', $formatArgument(new stdClass()));
+
+        $openResource = fopen('php://memory', 'r');
+        $this->assertIsResource($openResource);
+        $this->assertStringContainsString('resource(stream)', $formatArgument($openResource));
+        fclose($openResource);
+        $this->assertSame('resource (closed)', $formatArgument($openResource));
+
+        $this->assertSame('short', $truncate('short', 8));
+        $this->assertSame('…', $truncate('long', 1));
     }
 
     /**

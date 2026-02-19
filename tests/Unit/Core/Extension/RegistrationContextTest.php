@@ -16,6 +16,7 @@ use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 
 /**
@@ -168,6 +169,65 @@ final class RegistrationContextTest extends TestCase
         $services = $this->context->getRuntimeServices();
         $this->assertCount(1, $services);
         $this->assertSame($second, $services['custom.service']);
+    }
+
+    public function testProtectedRuntimeServiceMarksServiceIdAsProtected(): void
+    {
+        $service = new stdClass();
+
+        $this->context->protectedRuntimeService('secure.service', $service);
+
+        $this->assertSame($service, $this->context->getRuntimeServices()['secure.service']);
+        $this->assertSame(['secure.service' => true], $this->context->getProtectedServiceIds());
+    }
+
+    public function testContextGettersReturnConstructorDependencies(): void
+    {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader(templates: []);
+        $cache = $this->createStub(TemplateCacheInterface::class);
+        $parser = new Parser($config);
+        $registry = new DirectiveRegistry();
+
+        $context = new RegistrationContext(
+            config: $config,
+            templateLoader: $loader,
+            templateCache: $cache,
+            parser: $parser,
+            directiveRegistry: $registry,
+        );
+
+        $this->assertSame($config, $context->getConfig());
+        $this->assertSame($loader, $context->getTemplateLoader());
+        $this->assertSame($cache, $context->getTemplateCache());
+        $this->assertSame($parser, $context->getParser());
+        $this->assertSame($registry, $context->getDirectiveRegistry());
+        $this->assertNull($context->getTemplateContext());
+        $this->assertFalse($context->isDebug());
+    }
+
+    public function testContextGettersExposeTemplateContextAndDebugFlag(): void
+    {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader(templates: []);
+        $cache = $this->createStub(TemplateCacheInterface::class);
+        $parser = new Parser($config);
+        $registry = new DirectiveRegistry();
+        $templateContext = (object)['name' => 'ctx'];
+
+        $context = new RegistrationContext(
+            config: $config,
+            templateLoader: $loader,
+            templateCache: $cache,
+            parser: $parser,
+            directiveRegistry: $registry,
+            templateContext: $templateContext,
+            debug: true,
+        );
+
+        $this->assertInstanceOf(TemplateLoaderInterface::class, $context->getTemplateLoader());
+        $this->assertSame($templateContext, $context->getTemplateContext());
+        $this->assertTrue($context->isDebug());
     }
 
     protected function createStubPass(): AstPassInterface

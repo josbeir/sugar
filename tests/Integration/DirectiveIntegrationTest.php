@@ -15,10 +15,10 @@ use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Directive\SpreadDirective;
 use Sugar\Core\Directive\TryDirective;
+use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Core\Runtime\HtmlAttributeHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -150,7 +150,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Should output without escaping when using raw() pipe
         $this->assertStringContainsString('<?php echo $html; ?>', $code);
-        $this->assertStringNotContainsString('Escaper::html', $code);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $code);
         $this->assertStringNotContainsString('raw(', $code);
     }
 
@@ -165,7 +165,7 @@ final class DirectiveIntegrationTest extends TestCase
 
         // Should output without escaping after pipes
         $this->assertStringContainsString('<?php echo strtoupper($content); ?>', $code);
-        $this->assertStringNotContainsString('Escaper::html', $code);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $code);
         $this->assertStringNotContainsString('raw(', $code);
     }
 
@@ -178,8 +178,8 @@ final class DirectiveIntegrationTest extends TestCase
         $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        // Regular output should use Escaper::html
-        $this->assertStringContainsString('Escaper::html', $code);
+        // Regular output should use the Sugar escaper alias
+        $this->assertStringContainsString('__SugarEscaper::html', $code);
         $this->assertStringContainsString('$userInput', $code);
     }
 
@@ -298,7 +298,7 @@ final class DirectiveIntegrationTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         $this->assertStringContainsString('HtmlAttributeHelper::spreadAttrs(array_diff_key((array) ($attrs), [\'id\' => true, \'class\' => true]))', $code);
-        $this->assertStringContainsString('class="<?php echo ' . HtmlAttributeHelper::class . "::classNames(['card'", $code);
+        $this->assertStringContainsString('class="<?php echo __SugarHtmlAttributeHelper::classNames([\'card\'', $code);
     }
 
     public function testClassDirectiveRendersMergedOutput(): void

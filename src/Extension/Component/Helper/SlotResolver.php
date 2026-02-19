@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Extension\Component\Helper;
 
+use Sugar\Core\Ast\ComponentNode;
+use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
@@ -10,6 +12,7 @@ use Sugar\Core\Ast\Helper\AttributeHelper;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RawBodyNode;
+use Sugar\Core\Ast\RuntimeCallNode;
 use Sugar\Core\Ast\TextNode;
 
 /**
@@ -38,7 +41,13 @@ final class SlotResolver
             }
         }
 
-        if ($node instanceof ElementNode || $node instanceof FragmentNode || $node instanceof DocumentNode) {
+        if (
+            $node instanceof ElementNode
+            || $node instanceof FragmentNode
+            || $node instanceof DocumentNode
+            || $node instanceof DirectiveNode
+            || $node instanceof ComponentNode
+        ) {
             foreach ($node->children as $child) {
                 self::disableEscaping($child, $slotVars);
             }
@@ -222,6 +231,10 @@ final class SlotResolver
 
     /**
      * Convert a single node into a PHP expression string.
+     *
+     * For nodes containing dynamic children (OutputNode, RuntimeCallNode),
+     * builds a concatenated PHP expression rather than embedding PHP
+     * tags inside a string literal.
      */
     private function nodeToPhpExpression(Node $node): string
     {
@@ -229,11 +242,78 @@ final class SlotResolver
             return '(' . $node->expression . ')';
         }
 
+        if ($node instanceof RuntimeCallNode) {
+            return '(' . $node->callableExpression . '(' . implode(', ', $node->arguments) . '))';
+        }
+
+        if ($node instanceof ElementNode && $this->hasDynamicDescendants($node)) {
+            return $this->elementToConcatenatedExpression($node);
+        }
+
         return var_export($this->nodeToString($node), true);
     }
 
     /**
+     * Check if an element has any dynamic descendant nodes.
+     */
+    private function hasDynamicDescendants(ElementNode $node): bool
+    {
+        foreach ($node->children as $child) {
+            if ($child instanceof OutputNode || $child instanceof RuntimeCallNode) {
+                return true;
+            }
+
+            if ($child instanceof ElementNode && $this->hasDynamicDescendants($child)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Convert an element with dynamic children to a concatenated PHP expression.
+     *
+     * Builds an expression like: '<div>' . (dynamicExpr) . '</div>'
+     */
+    private function elementToConcatenatedExpression(ElementNode $node): string
+    {
+        $openTag = '<' . $node->tag;
+        foreach ($node->attributes as $attr) {
+            $openTag .= ' ' . $attr->name;
+            if (!$attr->value->isBoolean()) {
+                $parts = $attr->value->toParts() ?? [];
+                $attrValue = '';
+                foreach ($parts as $part) {
+                    $attrValue .= $part instanceof OutputNode
+                        ? $part->expression
+                        : (string)$part;
+                }
+
+                $openTag .= '="' . $attrValue . '"';
+            }
+        }
+
+        $openTag .= '>';
+
+        $expressions = [var_export($openTag, true)];
+
+        foreach ($node->children as $child) {
+            $expressions[] = $this->nodeToPhpExpression($child);
+        }
+
+        if (!$node->selfClosing) {
+            $expressions[] = var_export('</' . $node->tag . '>', true);
+        }
+
+        return implode(' . ', $expressions);
+    }
+
+    /**
      * Render a node to a simplified HTML string representation.
+     *
+     * Only works correctly for static nodes. Dynamic nodes (OutputNode,
+     * RuntimeCallNode) use placeholder syntax that won't execute in strings.
      */
     private function nodeToString(Node $node): string
     {
@@ -285,6 +365,10 @@ final class SlotResolver
 
         if ($node instanceof OutputNode) {
             return '<?= ' . $node->expression . ' ?>';
+        }
+
+        if ($node instanceof RuntimeCallNode) {
+            return '<?= ' . $node->callableExpression . '(' . implode(', ', $node->arguments) . ') ?>';
         }
 
         return '';

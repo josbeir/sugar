@@ -68,7 +68,7 @@ final class FragmentCacheHelperTest extends TestCase
     {
         $store = new ArraySimpleCache();
 
-        RuntimeEnvironment::setService(FragmentCacheHelper::SERVICE_ID, $store);
+        RuntimeEnvironment::setService(CacheInterface::class, $store);
 
         FragmentCacheHelper::set('users', '<p>cached</p>', 600);
 
@@ -81,7 +81,7 @@ final class FragmentCacheHelperTest extends TestCase
         $store = new ArraySimpleCache();
         $store->set('sugar_fragment:users', ['not-string']);
 
-        RuntimeEnvironment::setService(FragmentCacheHelper::SERVICE_ID, $store);
+        RuntimeEnvironment::setService(CacheInterface::class, $store);
 
         $this->assertNull(FragmentCacheHelper::get('users'));
     }
@@ -91,7 +91,7 @@ final class FragmentCacheHelperTest extends TestCase
         $store = $this->createStub(CacheInterface::class);
         $store->method('get')->willThrowException(new RuntimeException('boom'));
 
-        RuntimeEnvironment::setService(FragmentCacheHelper::SERVICE_ID, $store);
+        RuntimeEnvironment::setService(CacheInterface::class, $store);
 
         $this->assertNull(FragmentCacheHelper::get('users'));
     }
@@ -103,7 +103,7 @@ final class FragmentCacheHelperTest extends TestCase
         $store = $this->createStub(CacheInterface::class);
         $store->method('set')->willThrowException(new RuntimeException('boom'));
 
-        RuntimeEnvironment::setService(FragmentCacheHelper::SERVICE_ID, $store);
+        RuntimeEnvironment::setService(CacheInterface::class, $store);
 
         FragmentCacheHelper::set('users', '<p>cached</p>', 100);
     }

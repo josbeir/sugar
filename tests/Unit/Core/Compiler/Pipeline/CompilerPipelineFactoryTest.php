@@ -13,6 +13,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistry;
+use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -45,12 +46,13 @@ final class CompilerPipelineFactoryTest extends TestCase
         $factory = new CompilerPipelineFactory(
             $registry,
             $config,
+            new StringTemplateLoader(),
             [
                 ['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
             ],
         );
 
-        $pipeline = $factory->buildCompilerPipeline();
+        $pipeline = $factory->buildCompilerPipeline(enableInheritance: false);
         $ast = $this->document()->withChild($this->text('hello', 1, 1))->build();
         $result = $pipeline->execute($ast, $this->createContext());
 
@@ -98,13 +100,14 @@ final class CompilerPipelineFactoryTest extends TestCase
         $factory = new CompilerPipelineFactory(
             $registry,
             $config,
+            new StringTemplateLoader(),
             [
                 ['pass' => $inRange, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
                 ['pass' => $afterPass, 'priority' => PassPriority::CONTEXT_ANALYSIS],
             ],
         );
 
-        $pipeline = $factory->buildCompilerPipeline();
+        $pipeline = $factory->buildCompilerPipeline(enableInheritance: false);
         $ast = $this->document()->withChild($this->text('hello', 1, 1))->build();
         $result = $pipeline->execute($ast, $this->createContext());
 

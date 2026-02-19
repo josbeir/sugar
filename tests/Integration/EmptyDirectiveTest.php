@@ -6,7 +6,6 @@ namespace Sugar\Tests\Integration;
 use ArrayIterator;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
@@ -209,7 +208,7 @@ final class EmptyDirectiveTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use EmptyHelper::isEmpty()
-        $this->assertStringContainsString(EmptyHelper::class . '::isEmpty($items)', $compiled);
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($items)', $compiled);
     }
 
     public function testForelseCompiledOutput(): void
@@ -219,6 +218,6 @@ final class EmptyDirectiveTest extends TestCase
         $compiled = $this->compiler->compile($template);
 
         // Should use EmptyHelper::isEmpty()
-        $this->assertStringContainsString(EmptyHelper::class . '::isEmpty($items)', $compiled);
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($items)', $compiled);
     }
 }

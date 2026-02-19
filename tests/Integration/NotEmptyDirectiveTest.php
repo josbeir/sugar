@@ -5,7 +5,6 @@ namespace Sugar\Tests\Integration;
 
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
-use Sugar\Core\Runtime\EmptyHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
@@ -122,6 +121,6 @@ final class NotEmptyDirectiveTest extends TestCase
         $template = '<div s:notempty="$items">Has items</div>';
         $compiled = $this->compiler->compile($template);
 
-        $this->assertStringContainsString('!' . EmptyHelper::class . '::isEmpty($items)', $compiled);
+        $this->assertStringContainsString('!__SugarEmptyHelper::isEmpty($items)', $compiled);
     }
 }

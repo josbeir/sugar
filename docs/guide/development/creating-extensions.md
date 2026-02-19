@@ -73,9 +73,17 @@ $context->runtimeService('metrics', function (RuntimeContext $runtimeContext): M
 });
 ```
 
-For services that need both phases, capture registration-time dependencies from `RegistrationContext` and use `RuntimeContext` only for runtime-only dependencies.
+Service IDs are plain strings. Using class-string IDs (for example, `MetricsClient::class`) is recommended for type-safe lookups with `RuntimeEnvironment::requireService()`.
 
-The renderer service id (`RuntimeEnvironment::RENDERER_SERVICE_ID`) is reserved by the engine. If multiple extensions register that id, the first registration wins.
+Use `protectedRuntimeService()` for critical services that must not be overridden by later extensions:
+
+```php
+$context->protectedRuntimeService(MetricsClient::class, function (RuntimeContext $runtimeContext): MetricsClient {
+    return new MetricsClient($runtimeContext->getCompiler());
+});
+```
+
+For services that need both phases, capture registration-time dependencies from `RegistrationContext` and use `RuntimeContext` only for runtime-only dependencies.
 
 ## Contexts: Registration vs Runtime
 
@@ -99,7 +107,7 @@ All registration dependencies listed above are non-null, except `getTemplateCont
 
 ### RuntimeContext (render time)
 
-`RuntimeContext` is passed only to runtime service factories registered via `runtimeService()`.
+`RuntimeContext` is passed only to runtime service factories registered via `runtimeService()` / `protectedRuntimeService()`.
 
 Available getters:
 

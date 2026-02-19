@@ -7,33 +7,28 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\DocumentNode;
-use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\FragmentNode;
-use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RuntimeCallNode;
-use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\CompilationContext;
-use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\AstPipeline;
-use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
-use Sugar\Core\Compiler\Pipeline\NodeAction;
-use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Directive\ForeachDirective;
-use Sugar\Core\Directive\IfDirective;
-use Sugar\Core\Directive\WhileDirective;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Extension\Component\Loader\ComponentLoader;
-use Sugar\Extension\Component\Pass\ComponentPassFactory;
+use Sugar\Extension\Component\Pass\ComponentExpansionPass;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\AstStringifyTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
+/**
+ * Tests for ComponentExpansionPass.
+ *
+ * All component invocations (ComponentNode and s:component directives)
+ * are converted to RuntimeCallNode instances that delegate rendering
+ * to ComponentRenderer at runtime.
+ */
 final class ComponentExpansionPassTest extends TestCase
 {
     use AstStringifyTrait;
@@ -41,45 +36,38 @@ final class ComponentExpansionPassTest extends TestCase
     use NodeBuildersTrait;
     use TemplateTestHelperTrait;
 
-    private ComponentLoader $loader;
-
-    private StringTemplateLoader $stringTemplateLoader;
-
     private AstPipeline $pipeline;
 
-    private SugarConfig $config;
+    /**
+     * Expected callable expression for all component runtime calls.
+     */
+    private string $expectedCallable;
 
     protected function setUp(): void
     {
-        $this->config = new SugarConfig();
-        $this->stringTemplateLoader = new StringTemplateLoader(templates: [
+        $config = new SugarConfig();
+        $stringTemplateLoader = new StringTemplateLoader(templates: [
             'components/s-alert.sugar.php' => $this->loadTemplate('components/s-alert.sugar.php'),
             'components/s-button.sugar.php' => $this->loadTemplate('components/s-button.sugar.php'),
             'components/s-card.sugar.php' => $this->loadTemplate('components/s-card.sugar.php'),
         ]);
-        $this->loader = new ComponentLoader(
-            templateLoader: $this->stringTemplateLoader,
-            config: $this->config,
+        $loader = new ComponentLoader(
+            templateLoader: $stringTemplateLoader,
+            config: $config,
             componentDirectories: ['components'],
         );
 
         $this->parser = $this->createParser();
         $this->registry = $this->createRegistry();
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->stringTemplateLoader,
-            componentLoader: $this->loader,
-            parser: $this->parser,
+        $pass = new ComponentExpansionPass(
+            loader: $loader,
             registry: $this->registry,
-            config: $this->config,
+            config: $config,
         );
-
-        // Register standard directives for testing
-        $this->registry->register('if', IfDirective::class);
-        $this->registry->register('foreach', ForeachDirective::class);
-        $this->registry->register('while', WhileDirective::class);
-
-        $pass = $passFactory->createExpansionPass();
         $this->pipeline = new AstPipeline([$pass]);
+
+        $this->expectedCallable = '__SugarRuntimeEnvironment'
+            . '::requireService(' . ComponentRenderer::class . '::class)->renderComponent';
     }
 
     private function executePipeline(DocumentNode $ast, CompilationContext $context): DocumentNode
@@ -87,7 +75,14 @@ final class ComponentExpansionPassTest extends TestCase
         return $this->pipeline->execute($ast, $context);
     }
 
-    public function testExpandsSimpleComponent(): void
+    // ================================================================
+    // Basic Component → RuntimeCallNode conversion
+    // ================================================================
+
+    /**
+     * Test that a simple ComponentNode is converted to a RuntimeCallNode.
+     */
+    public function testExpandsSimpleComponentToRuntimeCall(): void
     {
         $ast = $this->document()
             ->withChild(
@@ -102,83 +97,75 @@ final class ComponentExpansionPassTest extends TestCase
 
         $result = $this->executePipeline($ast, $this->createContext());
 
-        // Component should be expanded to multiple nodes (RawPhpNode for variables + template content)
-        $this->assertGreaterThan(0, count($result->children));
-        // No ComponentNode should remain
-        foreach ($result->children as $child) {
-            $this->assertNotInstanceOf(ComponentNode::class, $child);
-        }
-
-        // The expanded output should contain the button element
-        $output = $this->astToString($result);
-        $this->assertStringContainsString('<button class="btn">', $output);
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame($this->expectedCallable, $call->callableExpression);
+        $this->assertSame("'button'", $call->arguments[0]);
     }
 
-    public function testCustomPassesApplyToComponentTemplates(): void
-    {
-        $this->stringTemplateLoader->addTemplate('components/s-plain.sugar.php', '<div>hello</div>');
-
-        $pass = new class implements AstPassInterface {
-            public function before(Node $node, PipelineContext $context): NodeAction
-            {
-                if ($node instanceof TextNode) {
-                    $node->content = strtoupper($node->content);
-                }
-
-                return NodeAction::none();
-            }
-
-            public function after(Node $node, PipelineContext $context): NodeAction
-            {
-                return NodeAction::none();
-            }
-        };
-
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->stringTemplateLoader,
-            componentLoader: $this->loader,
-            parser: $this->parser,
-            registry: $this->registry,
-            config: $this->config,
-            customPasses: [
-                ['pass' => $pass, 'priority' => PassPriority::POST_DIRECTIVE_COMPILATION],
-            ],
-        );
-        $componentPass = $passFactory->createExpansionPass();
-        $pipeline = new AstPipeline([$componentPass]);
-
-        $ast = $this->parser->parse('<s-plain></s-plain>');
-        $result = $pipeline->execute($ast, $this->createContext());
-
-        $output = $this->astToString($result);
-        $this->assertStringContainsString('HELLO', $output);
-    }
-
-    public function testInjectsDefaultSlotContent(): void
+    /**
+     * Test that component children are included in the slots expression.
+     */
+    public function testComponentWithChildrenGeneratesSlotExpression(): void
     {
         $template = '<s-button>Save</s-button>';
         $ast = $this->parser->parse($template);
 
         $result = $this->executePipeline($ast, $this->createContext());
 
-        $code = $this->astToString($result);
-
-        // The button component template wraps content in <button class="btn">
-        $this->assertStringContainsString('<button class="btn">', $code);
-        $this->assertStringContainsString('Save', $code);
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertStringContainsString("'slot' => 'Save'", $call->arguments[2]);
     }
 
-    public function testHandlesComponentWithoutChildren(): void
+    /**
+     * Test that empty components produce valid runtime calls.
+     */
+    public function testComponentWithoutChildrenProducesValidRuntimeCall(): void
     {
         $template = '<s-button></s-button>';
         $ast = $this->parser->parse($template);
 
         $result = $this->executePipeline($ast, $this->createContext());
 
-        $code = $this->astToString($result);
-        $this->assertStringContainsString('<button class="btn">', $code);
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame("'button'", $call->arguments[0]);
     }
 
+    /**
+     * Test that no ComponentNode instances remain after pipeline execution.
+     */
+    public function testNoComponentNodeRemainsAfterExpansion(): void
+    {
+        $ast = $this->document()
+            ->withChild(
+                $this->component(
+                    name: 'button',
+                    children: [$this->text('Click', 1, 0)],
+                    line: 1,
+                    column: 0,
+                ),
+            )
+            ->build();
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        foreach ($result->children as $child) {
+            $this->assertNotInstanceOf(ComponentNode::class, $child);
+        }
+    }
+
+    // ================================================================
+    // s:bind attribute handling
+    // ================================================================
+
+    /**
+     * Test that s:bind without a value throws SyntaxException.
+     */
     public function testComponentBindMissingValueThrows(): void
     {
         $template = '<s-button s:bind>Click</s-button>';
@@ -190,6 +177,9 @@ final class ComponentExpansionPassTest extends TestCase
         $this->executePipeline($ast, $this->createContext());
     }
 
+    /**
+     * Test that s:bind with an output expression passes it as binding argument.
+     */
     public function testComponentBindOutputExpressionUsesExpression(): void
     {
         $ast = $this->document()
@@ -212,11 +202,16 @@ final class ComponentExpansionPassTest extends TestCase
             ->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
 
-        $this->assertStringContainsString('...($bindings)', $code);
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame('$bindings', $call->arguments[1]);
     }
 
+    /**
+     * Test that s:bind with mixed output parts throws SyntaxException.
+     */
     public function testComponentBindMixedOutputPartsThrows(): void
     {
         $ast = $this->document()
@@ -247,211 +242,76 @@ final class ComponentExpansionPassTest extends TestCase
         $this->executePipeline($ast, $this->createContext());
     }
 
-    public function testComponentWithNoRootElementSkipsMerge(): void
+    /**
+     * Test that s:bind with a static array expression is included in runtime call.
+     */
+    public function testComponentBindStaticArrayExpression(): void
     {
-        $this->stringTemplateLoader->addTemplate('components/s-plain.sugar.php', 'Plain <?= $slot ?>');
-
-        $template = '<s-plain class="extra">Text</s-plain>';
+        $template = '<s-alert s:bind="[\'type\' => \'warning\']">Important</s-alert>';
         $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('Plain', $code);
-        $this->assertStringContainsString('Text', $code);
-        $this->assertStringNotContainsString('class="extra"', $code);
-    }
-
-    public function testComponentMergesAttributeDirectives(): void
-    {
-        $template = '<s-button s:class="[\'active\' => true]">Click</s-button>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('class="<?=', $code);
-        $this->assertStringContainsString('classNames', $code);
-        $this->assertStringContainsString("'active' => true", $code);
-    }
-
-    public function testNestedComponentDirectiveExpandsInTemplate(): void
-    {
-        $this->stringTemplateLoader->addTemplate('components/s-wrapper.sugar.php', '<div s:component="button">Inner</div>');
-
-        $template = '<s-wrapper></s-wrapper>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('<button class="btn">', $code);
-        $this->assertStringContainsString('Inner', $code);
-    }
-
-    public function testNestedComponentNamedSlotsExpand(): void
-    {
-        $this->stringTemplateLoader->addTemplate(
-            'components/s-panel.sugar.php',
-            '<s-card><div s:slot="header">Head</div>Body</s-card>',
-        );
-
-        $template = '<s-panel></s-panel>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('Head', $code);
-        $this->assertStringContainsString('Body', $code);
-    }
-
-    public function testMergesStringClassAttributesOnRootElement(): void
-    {
-        $template = '<s-button class="primary">Click</s-button>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('class="btn primary"', $code);
-    }
-
-    public function testOverridesClassAttributeWhenDynamicValueProvided(): void
-    {
-        $ast = $this->document()
-            ->withChild(
-                $this->component(
-                    name: 'button',
-                    attributes: [
-                        $this->attributeNode(
-                            'class',
-                            $this->outputNode('$class', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
-                            1,
-                            1,
-                        ),
-                    ],
-                    children: [$this->text('Click', 1, 1)],
-                    line: 1,
-                    column: 1,
-                ),
-            )
-            ->build();
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('class="<?= $class ?>"', $code);
-        $this->assertStringNotContainsString('class="btn"', $code);
-    }
-
-    public function testRuntimeComponentBindUsesOutputExpression(): void
-    {
-        $element = $this->element('div')
-            ->attribute('s:component', '$component')
-            ->attributeNode(
-                $this->attributeNode(
-                    's:bind',
-                    $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
-                    1,
-                    1,
-                ),
-            )
-            ->build();
-
-        $ast = $this->document()->withChild($element)->build();
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
-
-        $runtimeCall = $result->children[0];
-        $this->assertSame('$bindings', $runtimeCall->arguments[1]);
-        $this->assertSame('[]', $runtimeCall->arguments[3]);
-    }
-
-    public function testRuntimeComponentBindMixedOutputPartsThrows(): void
-    {
-        $element = $this->element('div')
-            ->attribute('s:component', '$component')
-            ->attributeNode(
-                $this->attributeNode(
-                    's:bind',
-                    AttributeValue::parts([
-                        '{',
-                        $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
-                    ]),
-                    1,
-                    1,
-                ),
-            )
-            ->build();
-
-        $ast = $this->document()->withChild($element)->build();
-
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('s:bind attribute cannot contain mixed output expressions');
-
-        $this->executePipeline($ast, $this->createContext());
-    }
-
-    public function testNestedTemplateWithDynamicComponentDirectiveCreatesRuntimeCall(): void
-    {
-        $this->stringTemplateLoader->addTemplate('components/s-dynamic-panel.sugar.php', '<div s:component="$componentName"></div>');
-
-        $ast = $this->parser->parse('<s-dynamic-panel></s-dynamic-panel>');
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertGreaterThan(0, count($result->children));
-
-        $hasRuntimeCall = false;
-        foreach ($result->children as $child) {
-            if ($child instanceof RuntimeCallNode) {
-                $hasRuntimeCall = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($hasRuntimeCall);
-    }
-
-    public function testCreatesRuntimeComponentCallForDynamicName(): void
-    {
-        $element = $this->element('div')
-            ->attribute('s:component', '$component')
-            ->attribute('class', 'panel')
-            ->attributeNode($this->attributeNode('disabled', null, 1, 1))
-            ->attributeNode(
-                $this->attributeNode(
-                    'data-id',
-                    $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
-                    1,
-                    1,
-                ),
-            )
-            ->withChild($this->text('Content', 1, 1))
-            ->build();
-
-        $ast = $this->document()->withChild($element)->build();
 
         $result = $this->executePipeline($ast, $this->createContext());
 
         $this->assertCount(1, $result->children);
         $call = $result->children[0];
         $this->assertInstanceOf(RuntimeCallNode::class, $call);
-        $this->assertSame(
-            RuntimeEnvironment::class
-                . '::requireService(' . ComponentExtension::class . '::SERVICE_RENDERER)->renderComponent',
-            $call->callableExpression,
-        );
-        $this->assertSame('$component', $call->arguments[0]);
-        $this->assertSame('[]', $call->arguments[1]);
-        $this->assertStringContainsString("'slot' => 'Content'", $call->arguments[2]);
-        $this->assertStringContainsString("'class' => 'panel'", $call->arguments[3]);
-        $this->assertStringContainsString("'disabled' => null", $call->arguments[3]);
-        $this->assertStringContainsString('\'data-id\' => $id', $call->arguments[3]);
+        $this->assertStringContainsString("'type' => 'warning'", $call->arguments[1]);
+        $this->assertStringContainsString("'slot' => 'Important'", $call->arguments[2]);
     }
 
+    /**
+     * Test that s:bind with an invalid expression throws SyntaxException.
+     */
+    public function testThrowsExceptionForInvalidBindExpression(): void
+    {
+        $ast = $this->parser->parse('<s-button s:bind="\'not an array\'">Click</s-button>');
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('must be an array expression');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    // ================================================================
+    // Attribute handling
+    // ================================================================
+
+    /**
+     * Test that regular attributes are passed as the attributes argument.
+     */
+    public function testRegularAttributesMergedIntoRuntimeAttributes(): void
+    {
+        $template = '<s-button class="primary">Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertStringContainsString("'class' => 'primary'", $call->arguments[3]);
+    }
+
+    /**
+     * Test that attribute directives (s:class, s:spread) are passed to runtime.
+     */
+    public function testAttributeDirectivesPassedToRuntime(): void
+    {
+        $template = '<s-button s:class="[\'active\' => true]">Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertStringContainsString("'s:class'", $call->arguments[3]);
+        $this->assertStringContainsString('active', $call->arguments[3]);
+    }
+
+    /**
+     * Test that mixed-part attribute values are concatenated in the expression.
+     */
     public function testRuntimeComponentAttributesConcatenateMixedParts(): void
     {
         $element = $this->element('div')
@@ -480,276 +340,9 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString("'class' => 'btn-' . (\$state) . '-lg'", $call->arguments[3]);
     }
 
-    public function testThrowsWhenComponentNameIsNotString(): void
-    {
-        $element = $this->element('div')
-            ->attributeNode(
-                $this->attributeNode(
-                    's:component',
-                    $this->outputNode('$name', true, OutputContext::HTML, 1, 1),
-                    1,
-                    1,
-                ),
-            )
-            ->build();
-
-        $ast = $this->document()->withChild($element)->build();
-
-        $this->expectException(SyntaxException::class);
-
-        $this->executePipeline($ast, $this->createContext());
-    }
-
-    public function testExpandsNestedComponents(): void
-    {
-        $this->stringTemplateLoader->addTemplate(
-            'components/s-panel.sugar.php',
-            '<div class="panel"><s-button><?= $slot ?></s-button></div>',
-        );
-
-        $template = '<s-panel>Submit</s-panel>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $code = $this->astToString($result);
-        $this->assertStringContainsString('<div class="panel">', $code);
-        $this->assertStringContainsString('<button class="btn">', $code);
-        $this->assertStringContainsString('Submit', $code);
-    }
-
-    public function testThrowsExceptionForUndiscoveredComponent(): void
-    {
-        $ast = $this->document()
-            ->withChild(
-                $this->component(
-                    name: 'nonexistent',
-                    children: [],
-                    line: 1,
-                    column: 0,
-                ),
-            )
-            ->build();
-
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Component "nonexistent" not found');
-
-        $this->executePipeline($ast, $this->createContext());
-    }
-
-    public function testPreservesComponentAttributes(): void
-    {
-        // Component with s:bind attributes should pass them as variables via closure
-        $template = '<s-alert s:bind="[\'type\' => \'warning\']">Important message</s-alert>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $code = $this->astToString($result);
-
-        // Should use closure with ob_start/ob_get_clean pattern (same as main templates)
-        $this->assertStringContainsString('echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $code);
-        $this->assertStringContainsString('return ob_get_clean();', $code);
-        $this->assertStringContainsString("'type' => 'warning'", $code);
-        $this->assertStringContainsString("'slot' => 'Important message'", $code);
-        // s-alert component has static "alert alert-info" class (parser limitation with dynamic attributes)
-        $this->assertStringContainsString('class="alert alert-info"', $code);
-        // Should have the message content
-        $this->assertStringContainsString('Important message', $code);
-    }
-
-    public function testSupportsNamedSlots(): void
-    {
-        // Component with named slots
-        $template = '<s-card>' .
-            '<div s:slot="header">Custom Header</div>' .
-            '<p>Body content</p>' .
-            '<div s:slot="footer">Custom Footer</div>' .
-            '</s-card>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $code = $this->astToString($result);
-
-        // Should use closure with ob_start/ob_get_clean pattern (same as main templates)
-        $this->assertStringContainsString('echo (function(array $__vars): string { ob_start(); extract($__vars, EXTR_SKIP);', $code);
-        $this->assertStringContainsString('return ob_get_clean();', $code);
-        // Should have named slots in array
-        $this->assertStringContainsString("'header' =>", $code);
-        $this->assertStringContainsString("'footer' =>", $code);
-        $this->assertStringContainsString("'slot' =>", $code); // Default slot
-
-        // Should contain the slot content
-        $this->assertStringContainsString('Custom Header', $code);
-        $this->assertStringContainsString('Custom Footer', $code);
-        $this->assertStringContainsString('Body content', $code);
-    }
-
-    public function testExpandsComponentDirectiveOnElement(): void
-    {
-        $template = '<div s:component="button">Click</div>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $code = $this->astToString($result);
-        $this->assertStringContainsString('<button class="btn">', $code);
-        $this->assertStringContainsString('Click', $code);
-    }
-
-    public function testExpandsComponentDirectiveOnFragment(): void
-    {
-        $template = '<s-template s:component="alert" s:bind="[\'type\' => \'info\']">Hello</s-template>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $code = $this->astToString($result);
-        $this->assertStringContainsString('class="alert alert-info"', $code);
-        $this->assertStringContainsString('Hello', $code);
-        $this->assertStringContainsString("'type' => 'info'", $code);
-    }
-
-    public function testComponentDirectiveThrowsForEmptyName(): void
-    {
-        $template = '<div s:component="">Content</div>';
-        $ast = $this->parser->parse($template);
-
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Component name must be a non-empty string.');
-
-        $this->executePipeline($ast, $this->createContext());
-    }
-
-    public function testComponentDirectiveNormalizesQuotedName(): void
-    {
-        $template = '<div s:component="\'button\'">Click</div>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
-
-        $runtimeCall = $result->children[0];
-        $this->assertStringContainsString('button', $runtimeCall->arguments[0]);
-    }
-
-    public function testCreatesRuntimeCallForInvalidLiteralComponentName(): void
-    {
-        $template = '<div s:component="123">Click</div>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
-    }
-
-    public function testCreatesRuntimeCallForDynamicComponentDirective(): void
-    {
-        $template = '<div s:component="$componentName">Click</div>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
-    }
-
-    public function testDynamicComponentBindMissingValueThrows(): void
-    {
-        $template = '<div s:component="$componentName" s:bind>Click</div>';
-        $ast = $this->parser->parse($template);
-
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('s:bind attribute must have a value');
-
-        $this->executePipeline($ast, $this->createContext());
-    }
-
-    public function testComponentWithControlFlowWrapsFragment(): void
-    {
-        $template = '<s-button s:if="$show">Save</s-button>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(FragmentNode::class, $result->children[0]);
-
-        $fragment = $result->children[0];
-        $this->assertTrue($this->containsElementTag($fragment->children, 'button'));
-    }
-
-    public function testSlotAttributeWithoutValueUsesDefaultSlot(): void
-    {
-        $template = '<s-card><div s:slot>Header</div>Body</s-card>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $output = $this->astToString($result);
-
-        $this->assertStringContainsString('Card Header', $output);
-        $this->assertStringContainsString('<div s:slot>Header</div>', $output);
-        $this->assertStringContainsString('Body', $output);
-    }
-
-    public function testComponentTemplateSlotOutletUsesFallbackWhenSlotMissing(): void
-    {
-        $this->stringTemplateLoader->addTemplate(
-            'components/s-shell.sugar.php',
-            '<section><header s:slot="header"><h1>Fallback Header</h1></header>' .
-            '<main s:slot><p>Fallback Body</p></main></section>',
-        );
-
-        $ast = $this->parser->parse('<s-shell></s-shell>');
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('Fallback Header', $code);
-        $this->assertStringContainsString('Fallback Body', $code);
-        $this->assertStringNotContainsString('s:slot=', $code);
-    }
-
-    public function testComponentTemplateSlotOutletReplacesWithProvidedSlotContent(): void
-    {
-        $this->stringTemplateLoader->addTemplate(
-            'components/s-shell.sugar.php',
-            '<section><header s:slot="header"><h1>Fallback Header</h1></header>' .
-            '<main s:slot><p>Fallback Body</p></main></section>',
-        );
-
-        $template = '<s-shell><div s:slot="header">Custom Header</div><p>Custom Body</p></s-shell>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-        $code = $this->astToString($result);
-
-        $this->assertStringContainsString('Custom Header', $code);
-        $this->assertStringContainsString('Custom Body', $code);
-        $this->assertStringNotContainsString('Fallback Header', $code);
-        $this->assertStringNotContainsString('Fallback Body', $code);
-    }
-
-    public function testRuntimeComponentSlotsConcatenateMultipleNodes(): void
-    {
-        $template = '<div s:component="$component">Hello <?= $name ?></div>';
-        $ast = $this->parser->parse($template);
-
-        $result = $this->executePipeline($ast, $this->createContext());
-
-        $this->assertCount(1, $result->children);
-        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
-
-        $runtimeCall = $result->children[0];
-        $this->assertStringContainsString("'slot' =>", $runtimeCall->arguments[2]);
-        $this->assertStringContainsString(' . ', $runtimeCall->arguments[2]);
-        $this->assertStringContainsString('$name', $runtimeCall->arguments[2]);
-    }
-
+    /**
+     * Test that boolean and output attributes are properly represented.
+     */
     public function testRuntimeComponentAttributesIncludeOutputAndNull(): void
     {
         $ast = $this->document()
@@ -780,152 +373,321 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertStringContainsString("'hidden' => null", $runtimeCall->arguments[3]);
     }
 
+    // ================================================================
+    // Named slots
+    // ================================================================
+
     /**
-     * @param array<\Sugar\Core\Ast\Node> $nodes
+     * Test that named slots are extracted and included in the slots expression.
      */
-    private function containsElementTag(array $nodes, string $tag): bool
+    public function testSupportsNamedSlots(): void
     {
-        foreach ($nodes as $node) {
-            if ($node instanceof ElementNode && $node->tag === $tag) {
-                return true;
-            }
+        $template = '<s-card>' .
+            '<div s:slot="header">Custom Header</div>' .
+            '<p>Body content</p>' .
+            '<div s:slot="footer">Custom Footer</div>' .
+            '</s-card>';
+        $ast = $this->parser->parse($template);
 
-            if ($node instanceof FragmentNode && $this->containsElementTag($node->children, $tag)) {
-                return true;
-            }
+        $result = $this->executePipeline($ast, $this->createContext());
 
-            if ($node instanceof ElementNode && $this->containsElementTag($node->children, $tag)) {
-                return true;
-            }
-        }
-
-        return false;
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertStringContainsString("'header' =>", $call->arguments[2]);
+        $this->assertStringContainsString("'footer' =>", $call->arguments[2]);
+        $this->assertStringContainsString("'slot' =>", $call->arguments[2]);
+        $this->assertStringContainsString('Custom Header', $call->arguments[2]);
+        $this->assertStringContainsString('Custom Footer', $call->arguments[2]);
+        $this->assertStringContainsString('Body content', $call->arguments[2]);
     }
 
+    /**
+     * Test that s:slot without a value puts content into the default slot.
+     */
+    public function testSlotAttributeWithoutValueUsesDefaultSlot(): void
+    {
+        $template = '<s-card><div s:slot>Header</div>Body</s-card>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+
+        // s:slot without value puts content in default slot
+        $this->assertStringContainsString("'slot' =>", $call->arguments[2]);
+    }
+
+    /**
+     * Test that multiple child nodes are concatenated into a single slot expression.
+     */
+    public function testRuntimeComponentSlotsConcatenateMultipleNodes(): void
+    {
+        $template = '<div s:component="$component">Hello <?= $name ?></div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertStringContainsString("'slot' =>", $runtimeCall->arguments[2]);
+        $this->assertStringContainsString(' . ', $runtimeCall->arguments[2]);
+        $this->assertStringContainsString('$name', $runtimeCall->arguments[2]);
+    }
+
+    // ================================================================
+    // s:component directive handling
+    // ================================================================
+
+    /**
+     * Test that s:component on an element with a literal name creates a RuntimeCallNode.
+     */
+    public function testExpandsComponentDirectiveOnElement(): void
+    {
+        $template = '<div s:component="button">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame("'button'", $call->arguments[0]);
+        $this->assertStringContainsString("'slot' => 'Click'", $call->arguments[2]);
+    }
+
+    /**
+     * Test that s:component on a fragment with s:bind creates a RuntimeCallNode.
+     */
+    public function testExpandsComponentDirectiveOnFragment(): void
+    {
+        $template = '<s-template s:component="alert" s:bind="[\'type\' => \'info\']">Hello</s-template>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame("'alert'", $call->arguments[0]);
+        $this->assertStringContainsString("'type' => 'info'", $call->arguments[1]);
+        $this->assertStringContainsString("'slot' => 'Hello'", $call->arguments[2]);
+    }
+
+    /**
+     * Test that s:component with empty name throws SyntaxException.
+     */
+    public function testComponentDirectiveThrowsForEmptyName(): void
+    {
+        $template = '<div s:component="">Content</div>';
+        $ast = $this->parser->parse($template);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Component name must be a non-empty string.');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    /**
+     * Test that quoted component names are normalized.
+     */
+    public function testComponentDirectiveNormalizesQuotedName(): void
+    {
+        $template = '<div s:component="\'button\'">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertSame("'button'", $runtimeCall->arguments[0]);
+    }
+
+    /**
+     * Test that invalid literal names (e.g., "123") are treated as dynamic expressions.
+     */
+    public function testCreatesRuntimeCallForInvalidLiteralComponentName(): void
+    {
+        $template = '<div s:component="123">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+    }
+
+    /**
+     * Test that a dynamic expression creates a RuntimeCallNode with the expression as name.
+     */
+    public function testCreatesRuntimeCallForDynamicComponentDirective(): void
+    {
+        $template = '<div s:component="$componentName">Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame('$componentName', $call->arguments[0]);
+    }
+
+    /**
+     * Test dynamic component with full attribute set.
+     */
+    public function testCreatesRuntimeComponentCallForDynamicName(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attribute('class', 'panel')
+            ->attributeNode($this->attributeNode('disabled', null, 1, 1))
+            ->attributeNode(
+                $this->attributeNode(
+                    'data-id',
+                    $this->outputNode('$id', true, OutputContext::HTML_ATTRIBUTE, 1, 1),
+                    1,
+                    1,
+                ),
+            )
+            ->withChild($this->text('Content', 1, 1))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertSame($this->expectedCallable, $call->callableExpression);
+        $this->assertSame('$component', $call->arguments[0]);
+        $this->assertSame('[]', $call->arguments[1]);
+        $this->assertStringContainsString("'slot' => 'Content'", $call->arguments[2]);
+        $this->assertStringContainsString("'class' => 'panel'", $call->arguments[3]);
+        $this->assertStringContainsString("'disabled' => null", $call->arguments[3]);
+        $this->assertStringContainsString('\'data-id\' => $id', $call->arguments[3]);
+    }
+
+    // ================================================================
+    // Dynamic s:component with s:bind
+    // ================================================================
+
+    /**
+     * Test that dynamic component with s:bind output expression passes it correctly.
+     */
+    public function testRuntimeComponentBindUsesOutputExpression(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attributeNode(
+                $this->attributeNode(
+                    's:bind',
+                    $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $this->assertCount(1, $result->children);
+        $this->assertInstanceOf(RuntimeCallNode::class, $result->children[0]);
+
+        $runtimeCall = $result->children[0];
+        $this->assertSame('$bindings', $runtimeCall->arguments[1]);
+        $this->assertSame('[]', $runtimeCall->arguments[3]);
+    }
+
+    /**
+     * Test that dynamic component with mixed s:bind parts throws.
+     */
+    public function testRuntimeComponentBindMixedOutputPartsThrows(): void
+    {
+        $element = $this->element('div')
+            ->attribute('s:component', '$component')
+            ->attributeNode(
+                $this->attributeNode(
+                    's:bind',
+                    AttributeValue::parts([
+                        '{',
+                        $this->outputNode('$bindings', true, OutputContext::HTML, 1, 1),
+                    ]),
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute cannot contain mixed output expressions');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    /**
+     * Test that dynamic component with boolean s:bind throws.
+     */
+    public function testDynamicComponentBindMissingValueThrows(): void
+    {
+        $template = '<div s:component="$componentName" s:bind>Click</div>';
+        $ast = $this->parser->parse($template);
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:bind attribute must have a value');
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    // ================================================================
+    // Error handling
+    // ================================================================
+
+    /**
+     * Test that output expression as s:component value throws.
+     */
+    public function testThrowsWhenComponentNameIsNotString(): void
+    {
+        $element = $this->element('div')
+            ->attributeNode(
+                $this->attributeNode(
+                    's:component',
+                    $this->outputNode('$name', true, OutputContext::HTML, 1, 1),
+                    1,
+                    1,
+                ),
+            )
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+
+        $this->executePipeline($ast, $this->createContext());
+    }
+
+    // ================================================================
+    // Helper
+    // ================================================================
+
+    /**
+     * Create a compilation context for tests.
+     */
     protected function createContext(
         string $source = '',
         string $templatePath = 'test.sugar.php',
         bool $debug = false,
     ): CompilationContext {
         return new CompilationContext($templatePath, $source, $debug);
-    }
-
-    public function testCachesComponentAsts(): void
-    {
-        // Create a tracking parser to count parse calls
-        $registry = $this->createRegistry();
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->stringTemplateLoader,
-            componentLoader: $this->loader,
-            parser: $this->parser,
-            registry: $registry,
-            config: $this->config,
-        );
-        $pass = $passFactory->createExpansionPass();
-
-        // Create AST with same component used 3 times
-        // Each button component will be loaded but should only be parsed once
-        $ast = $this->document()
-            ->withChildren([
-                 $this->component(name: 'button', children: [$this->text('First', 1, 0)], line: 1, column: 0),
-                 $this->component(name: 'button', children: [$this->text('Second', 2, 0)], line: 2, column: 0),
-                 $this->component(name: 'button', children: [$this->text('Third', 3, 0)], line: 3, column: 0),
-            ])
-            ->build();
-
-        $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
-
-        // All components should be expanded correctly
-        $output = $this->astToString($result);
-
-        // Should contain all three button instances
-        $this->assertStringContainsString('First', $output);
-        $this->assertStringContainsString('Second', $output);
-        $this->assertStringContainsString('Third', $output);
-
-        // Verify caching by executing again with same component
-        $ast2 = $this->document()
-            ->withChild(
-                $this->component(name: 'button', children: [$this->text('Fourth', 4, 0)], line: 4, column: 0),
-            )
-            ->build();
-
-        $result2 = (new AstPipeline([$pass]))->execute($ast2, $this->createContext());
-        $output2 = $this->astToString($result2);
-        $this->assertStringContainsString('Fourth', $output2);
-    }
-
-    public function testCachesSeparateComponentsSeparately(): void
-    {
-        $registry = $this->createRegistry();
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->stringTemplateLoader,
-            componentLoader: $this->loader,
-            parser: $this->parser,
-            registry: $registry,
-            config: $this->config,
-        );
-        $pass = $passFactory->createExpansionPass();
-
-        // Use different components multiple times each
-        $ast = $this->document()
-            ->withChildren([
-                $this->component(name: 'button', children: [$this->text('Button 1', 1, 0)], line: 1, column: 0),
-                $this->component(name: 'button', children: [$this->text('Button 2', 2, 0)], line: 2, column: 0),
-                $this->component(name: 'alert', children: [$this->text('Alert 1', 3, 0)], line: 3, column: 0),
-                $this->component(name: 'alert', children: [$this->text('Alert 2', 4, 0)], line: 4, column: 0),
-            ])
-            ->build();
-
-        $result = (new AstPipeline([$pass]))->execute($ast, $this->createContext());
-        $output = $this->astToString($result);
-
-        // Should successfully expand both component types multiple times
-        $this->assertStringContainsString('Button 1', $output);
-        $this->assertStringContainsString('Button 2', $output);
-        $this->assertStringContainsString('Alert 1', $output);
-        $this->assertStringContainsString('Alert 2', $output);
-
-        // Both component types should be properly expanded
-        $this->assertGreaterThan(0, count($result->children));
-    }
-
-    public function testCachedComponentAstDoesNotLeakMutationsBetweenExpansions(): void
-    {
-        $registry = $this->createRegistry();
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $this->stringTemplateLoader,
-            componentLoader: $this->loader,
-            parser: $this->parser,
-            registry: $registry,
-            config: $this->config,
-        );
-        $pass = $passFactory->createExpansionPass();
-        $pipeline = new AstPipeline([$pass]);
-
-        $first = $this->parser->parse('<s-button class="first">A</s-button>');
-        $firstResult = $pipeline->execute($first, $this->createContext());
-        $firstOutput = $this->astToString($firstResult);
-        $this->assertStringContainsString('class="btn first"', $firstOutput);
-
-        $second = $this->parser->parse('<s-button class="second">B</s-button>');
-        $secondResult = $pipeline->execute($second, $this->createContext());
-        $secondOutput = $this->astToString($secondResult);
-
-        $this->assertStringContainsString('class="btn second"', $secondOutput);
-        $this->assertStringNotContainsString('class="btn first second"', $secondOutput);
-        $this->assertStringNotContainsString('class="btn first"', $secondOutput);
-    }
-
-    public function testThrowsExceptionForInvalidBindExpression(): void
-    {
-        // Use existing button component - test that invalid s:bind throws error at compile time
-        $ast = $this->parser->parse('<s-button s:bind="\'not an array\'">Click</s-button>');
-
-        $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('s:bind attribute must be an array expression');
-        $this->expectExceptionMessage('string literal');
-
-        $this->executePipeline($ast, $this->createContext());
     }
 }

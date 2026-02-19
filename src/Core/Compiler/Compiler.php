@@ -12,13 +12,12 @@ use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser as TemplateParser;
-use Sugar\Core\Template\TemplateComposer;
 
 /**
  * Orchestrates template compilation pipeline.
  *
- * Pipeline: Parser -> Template composition (optional) -> DirectiveExtractionPass
- * -> DirectivePairingPass -> DirectiveCompilationPass -> ContextAnalysisPass -> CodeGenerator
+ * Pipeline: Parser -> DirectiveExtractionPass -> DirectivePairingPass
+ * -> DirectiveCompilationPass -> InheritanceCompilationPass -> ContextAnalysisPass -> CodeGenerator
  */
 final class Compiler implements CompilerInterface
 {
@@ -30,11 +29,11 @@ final class Compiler implements CompilerInterface
 
     private readonly CompilerPipelineFactory $pipelineFactory;
 
-    private readonly TemplateComposer $templateComposer;
-
     private readonly PhpSyntaxValidator $phpSyntaxValidator;
 
     private readonly bool $phpSyntaxValidationEnabled;
+
+    private readonly SugarConfig $config;
 
     /**
      * @param \Sugar\Core\Parser\Parser $parser Template parser
@@ -54,7 +53,7 @@ final class Compiler implements CompilerInterface
         array $customPasses = [],
         bool $phpSyntaxValidationEnabled = false,
     ) {
-        $config = $config ?? new SugarConfig();
+        $this->config = $config ?? new SugarConfig();
         $this->escaper = $escaper;
         $this->registry = $registry;
         $this->templateLoader = $templateLoader;
@@ -62,14 +61,9 @@ final class Compiler implements CompilerInterface
         $this->phpSyntaxValidator = new PhpSyntaxValidator();
         $this->pipelineFactory = new CompilerPipelineFactory(
             $this->registry,
-            $config,
-            $customPasses,
-        );
-        $this->templateComposer = new TemplateComposer(
+            $this->config,
             $this->templateLoader,
-            $this->parser,
-            $this->registry,
-            $config,
+            $customPasses,
         );
     }
 
@@ -135,15 +129,14 @@ final class Compiler implements CompilerInterface
         bool $enableInheritance,
         array $inlinePasses = [],
     ): string {
-        if ($enableInheritance) {
-            $ast = $this->templateComposer->compose($ast, $context);
-        }
-
         if ($this->phpSyntaxValidationEnabled) {
             $this->phpSyntaxValidator->templateSegments($ast, $context);
         }
 
-        $pipeline = $this->pipelineFactory->buildCompilerPipeline(inlinePasses: $inlinePasses);
+        $pipeline = $this->pipelineFactory->buildCompilerPipeline(
+            enableInheritance: $enableInheritance,
+            inlinePasses: $inlinePasses,
+        );
         $analyzedAst = $pipeline->execute($ast, $context);
 
         $generator = new CodeGenerator($this->escaper, $context);

@@ -92,7 +92,6 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         // Pass-through (handled by other passes)
         'slot' => PassThroughDirective::class,
         'bind' => PassThroughDirective::class,
-        'component' => PassThroughDirective::class,
         'raw' => PassThroughDirective::class,
         // Content modifiers
         'nowrap' => NoWrapDirective::class,

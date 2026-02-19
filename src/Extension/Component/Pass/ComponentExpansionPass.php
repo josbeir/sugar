@@ -4,93 +4,62 @@ declare(strict_types=1);
 namespace Sugar\Extension\Component\Pass;
 
 use Sugar\Core\Ast\AttributeNode;
-use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\ComponentNode;
-use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\AttributeHelper;
 use Sugar\Core\Ast\Helper\ExpressionValidator;
-use Sugar\Core\Ast\Helper\NodeCloner;
-use Sugar\Core\Ast\Helper\NodeTraverser;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RuntimeCallNode;
+use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Compiler\CodeGen\GeneratedAlias;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
-use Sugar\Core\Compiler\Pipeline\AstPipeline;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Exception\SyntaxException;
-use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
-use Sugar\Core\Parser\Parser;
-use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Core\Template\Support\ScopeIsolationTrait;
-use Sugar\Core\Template\TemplateComposer;
-use Sugar\Extension\Component\ComponentExtension;
-use Sugar\Extension\Component\Helper\ComponentSlots;
-use Sugar\Extension\Component\Helper\SlotOutletResolver;
 use Sugar\Extension\Component\Helper\SlotResolver;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
+use Throwable;
 
 /**
- * Expands component invocations into their template content
+ * Converts component invocations into runtime rendering calls.
  *
- * Replaces ComponentNode instances with their actual template content,
- * injecting slots and attributes as variables.
+ * Replaces ComponentNode instances and s:component directives with
+ * RuntimeCallNode instances that delegate rendering to ComponentRenderer
+ * at runtime. All template compilation, caching, slot resolution, and
+ * attribute merging happens at runtime via the shared TemplateRenderer.
  */
 final class ComponentExpansionPass implements AstPassInterface
 {
-    use ScopeIsolationTrait;
-
     private readonly DirectivePrefixHelper $prefixHelper;
 
     private readonly string $slotAttrName;
-
-    private readonly AstPipeline $componentTemplatePipeline;
-
-    private readonly TemplateComposer $templateComposer;
 
     private readonly DirectiveClassifier $directiveClassifier;
 
     private readonly SlotResolver $slotResolver;
 
-    private readonly SlotOutletResolver $slotOutletResolver;
-
     /**
-     * @var array<string, \Sugar\Core\Ast\DocumentNode> Cache of parsed component ASTs
-     */
-    private array $componentAstCache = [];
-
-    /**
-     * Constructor
-     *
      * @param \Sugar\Extension\Component\Loader\ComponentLoaderInterface $loader Component template loader
-     * @param \Sugar\Core\Parser\Parser $parser Parser for parsing component templates
      * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Extension registry for directive type checking
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
-     * @param \Sugar\Core\Template\TemplateComposer $templateComposer Template composer for extends/includes
-     * @param \Sugar\Core\Compiler\Pipeline\AstPipeline $componentTemplatePipeline Pipeline for component templates
      */
     public function __construct(
         private readonly ComponentLoaderInterface $loader,
-        private readonly Parser $parser,
         private readonly DirectiveRegistryInterface $registry,
         SugarConfig $config,
-        TemplateComposer $templateComposer,
-        AstPipeline $componentTemplatePipeline,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->slotAttrName = $config->directivePrefix . ':slot';
-        $this->templateComposer = $templateComposer;
-        $this->componentTemplatePipeline = $componentTemplatePipeline;
         $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
-        $this->slotOutletResolver = new SlotOutletResolver($this->slotAttrName);
     }
 
     /**
@@ -102,22 +71,52 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * @inheritDoc
+     * Process nodes after child traversal.
+     *
+     * Converts all component invocations (ComponentNode and s:component directive)
+     * into RuntimeCallNode instances for runtime rendering.
      */
     public function after(Node $node, PipelineContext $context): NodeAction
     {
         if ($node instanceof ComponentNode) {
-            return NodeAction::replace($this->expandComponent($node, $context->compilation, true));
+            $this->trackComponentDependency($node->name, $context);
+
+            $runtimeCall = $this->createRuntimeComponentCall(
+                nameExpression: var_export($node->name, true),
+                attributes: $node->attributes,
+                children: $node->children,
+                line: $node->line,
+                column: $node->column,
+                context: $context->compilation,
+            );
+
+            $runtimeCall->inheritTemplatePathFrom($node);
+
+            return NodeAction::replace($runtimeCall);
         }
 
         if ($node instanceof ElementNode || $node instanceof FragmentNode) {
-            $component = $this->tryConvertComponentDirective($node, $context->compilation);
-            if ($component instanceof RuntimeCallNode) {
-                return NodeAction::replace($component);
+            $result = $this->tryConvertComponentDirective($node, $context->compilation);
+            if ($result instanceof RuntimeCallNode) {
+                return NodeAction::replace($result);
             }
 
-            if ($component instanceof ComponentNode) {
-                return NodeAction::replace($this->expandComponent($component, $context->compilation, true));
+            // Literal s:component directive returns ComponentNode; convert to runtime call
+            if ($result instanceof ComponentNode) {
+                $this->trackComponentDependency($result->name, $context);
+
+                $runtimeCall = $this->createRuntimeComponentCall(
+                    nameExpression: var_export($result->name, true),
+                    attributes: $result->attributes,
+                    children: $result->children,
+                    line: $result->line,
+                    column: $result->column,
+                    context: $context->compilation,
+                );
+
+                $runtimeCall->inheritTemplatePathFrom($result);
+
+                return NodeAction::replace($runtimeCall);
             }
         }
 
@@ -125,149 +124,15 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Expand a single component node
+     * Convert s:component directive on an element/fragment into a runtime call.
      *
-     * @param \Sugar\Core\Ast\ComponentNode $component Component to expand
-     * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for dependency tracking
-     * @return array<\Sugar\Core\Ast\Node> Expanded nodes
-     */
-    private function expandComponent(
-        ComponentNode $component,
-        ?CompilationContext $context = null,
-        bool $slotsExpanded = false,
-    ): array {
-        // Load component template
-        try {
-            $templateContent = $this->loader->loadComponent($component->name);
-        } catch (TemplateRuntimeException $templateRuntimeException) {
-            $message = $templateRuntimeException->getRawMessage();
-            if ($context instanceof CompilationContext) {
-                throw $context->createSyntaxExceptionForNode($message, $component);
-            }
-
-            throw new SyntaxException($message);
-        }
-
-        // Track component as dependency
-        $context?->tracker?->addComponent($this->loader->getComponentFilePath($component->name));
-
-        // Cache parsed component ASTs to avoid re-parsing same components
-        if (!isset($this->componentAstCache[$component->name])) {
-            $this->componentAstCache[$component->name] = $this->parser->parse($templateContent);
-        }
-
-        $templateAst = NodeCloner::cloneDocument($this->componentAstCache[$component->name]);
-
-        // Categorize attributes: control flow, attribute directives, bindings, merge
-        $categorized = $this->categorizeComponentAttributes($component->attributes);
-
-        // Find root element in component template for attribute merging
-        // This must run before directive extraction/compilation so directives
-        // like s:ifcontent capture merged attributes in their element metadata.
-        $rootElement = NodeTraverser::findRootElement($templateAst);
-
-        // Merge non-binding attributes to root element
-        if ($rootElement instanceof ElementNode) {
-            $this->mergeAttributesToRoot(
-                $rootElement,
-                $categorized['merge'],
-                $categorized['attributeDirectives'],
-            );
-        }
-
-        // Process template inheritance (s:extends, s:include) in component template
-        // Use resolved component path for proper relative path resolution
-        $componentPath = $this->loader->getComponentPath($component->name);
-        $inheritanceContext = new CompilationContext(
-            $componentPath,
-            $templateContent,
-            $context->debug ?? false,
-            $context?->tracker,
-        );
-        $inheritanceContext->stampTemplatePath($templateAst);
-
-        $templateAst = $this->templateComposer->compose($templateAst, $inheritanceContext);
-
-        // Process directives in composed component template
-        $templateAst = $this->componentTemplatePipeline->execute($templateAst, $inheritanceContext);
-
-        // Extract slots from component usage BEFORE expanding (so we can detect s:slot attributes)
-        $slots = $this->slotResolver->extract($component->children);
-
-        $expandedSlots = $slotsExpanded ? $slots : $this->expandSlotContent($slots, $context);
-
-        // Resolve slot outlets declared in component template before variable injection.
-        $templateAst = $this->slotOutletResolver->apply($templateAst, $expandedSlots, $inheritanceContext);
-
-        // Wrap component template with variable injections (only s-bind: attributes become variables)
-        $wrappedTemplate = $this->wrapWithVariables(
-            $templateAst,
-            $categorized['componentBindings'],
-            $expandedSlots,
-            $context,
-        );
-
-        // Recursively expand any nested components in the wrapped template itself
-        $expandedContent = $this->expandNodes($wrappedTemplate->children, $context);
-
-        // If component has control flow directives, wrap in FragmentNode
-        if ($categorized['controlFlow'] !== []) {
-            $fragment = new FragmentNode(
-                attributes: $categorized['controlFlow'],
-                children: $expandedContent,
-                line: $component->line,
-                column: $component->column,
-            );
-
-            $fragment->inheritTemplatePathFrom($component);
-
-            return [$fragment];
-        }
-
-        return $expandedContent;
-    }
-
-    /**
-     * Recursively expand components in a list of nodes
-     *
-     * @param array<\Sugar\Core\Ast\Node> $nodes Nodes to process
-     * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for dependency tracking
-     * @return array<\Sugar\Core\Ast\Node> Processed nodes with expanded components
-     */
-    private function expandNodes(array $nodes, ?CompilationContext $context = null): array
-    {
-        /**
-         * @return \Sugar\Core\Ast\Node|array<\Sugar\Core\Ast\Node>
-         */
-        $visitor = function (Node $node, callable $recurse) use ($context): Node|array {
-            /** @var callable(\Sugar\Core\Ast\Node): \Sugar\Core\Ast\Node $recurse */
-            if ($node instanceof ComponentNode) {
-                return $this->expandComponent($node, $context);
-            }
-
-            if ($node instanceof ElementNode || $node instanceof FragmentNode) {
-                $component = $this->tryConvertComponentDirective($node, $context);
-                if ($component instanceof RuntimeCallNode) {
-                    return $component;
-                }
-
-                if ($component instanceof ComponentNode) {
-                    return $this->expandComponent($component, $context);
-                }
-            }
-
-            return $recurse($node);
-        };
-
-        return NodeTraverser::walk($nodes, $visitor);
-    }
-
-    /**
-     * Convert s:component directive on an element/fragment into a ComponentNode.
+     * For literal component names, creates a ComponentNode that will be processed
+     * by the pipeline on the next traversal pass. For dynamic expressions, creates
+     * a RuntimeCallNode directly.
      *
      * @param \Sugar\Core\Ast\ElementNode|\Sugar\Core\Ast\FragmentNode $node Node to inspect
      * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for errors
-     * @return \Sugar\Core\Ast\ComponentNode|\Sugar\Core\Ast\RuntimeCallNode|null Component node or null if not applicable
+     * @return \Sugar\Core\Ast\ComponentNode|\Sugar\Core\Ast\RuntimeCallNode|null Component or runtime call node, or null if not applicable
      */
     private function tryConvertComponentDirective(
         ElementNode|FragmentNode $node,
@@ -297,6 +162,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
         $literalName = $this->normalizeComponentName($value);
         if ($literalName !== null) {
+            // Return ComponentNode — the pipeline will revisit and convert to RuntimeCallNode
             $componentNode = new ComponentNode(
                 name: $literalName,
                 attributes: $attributes,
@@ -325,7 +191,37 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Normalize a literal component name or return null for expressions
+     * Normalize a literal component name or return null for expressions.
+     *
+    /**
+     * Track a component dependency for compile-time cache invalidation.
+     *
+     * Records the component file path in the dependency tracker so that
+     * changes to the component template invalidate the compiled parent template.
+     *
+     * @param string $componentName Component name to track
+     * @param \Sugar\Core\Compiler\Pipeline\PipelineContext $context Pipeline context for tracker access
+     */
+    private function trackComponentDependency(string $componentName, PipelineContext $context): void
+    {
+        $tracker = $context->compilation->tracker;
+        if (!$tracker instanceof DependencyTracker) {
+            return;
+        }
+
+        try {
+            $filePath = $this->loader->getComponentFilePath($componentName);
+            $tracker->addComponent($filePath);
+        } catch (Throwable) {
+            // Component file not found at compile time — skip tracking
+        }
+    }
+
+    /**
+     * Normalize a raw directive value to a clean component name.
+     *
+     * Returns the cleaned name for simple identifiers like "alert" or "'alert'",
+     * or null when the value contains PHP expressions (e.g. "$componentName").
      */
     private function normalizeComponentName(string $value): ?string
     {
@@ -347,10 +243,17 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Create a runtime call node for dynamic component rendering
+     * Create a runtime call node for component rendering.
      *
-     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
-     * @param array<\Sugar\Core\Ast\Node> $children
+     * Builds a RuntimeCallNode that calls ComponentRenderer::renderComponent()
+     * with the component name, bindings, slots, and attributes as arguments.
+     *
+     * @param string $nameExpression PHP expression for the component name
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes Component attributes
+     * @param array<\Sugar\Core\Ast\Node> $children Component children (slot content)
+     * @param int $line Source line number
+     * @param int $column Source column number
+     * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for error reporting
      */
     private function createRuntimeComponentCall(
         string $nameExpression,
@@ -423,8 +326,8 @@ final class ComponentExpansionPass implements AstPassInterface
         ));
 
         return new RuntimeCallNode(
-            callableExpression: RuntimeEnvironment::class
-                . '::requireService(' . ComponentExtension::class . '::SERVICE_RENDERER)->renderComponent',
+            callableExpression: GeneratedAlias::RUNTIME_ENV
+                . '::requireService(' . ComponentRenderer::class . '::class)->renderComponent',
             arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
             line: $line,
             column: $column,
@@ -432,9 +335,12 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Build runtime attributes array expression
+     * Build runtime attributes array expression.
      *
-     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     * Converts attribute nodes to a PHP array expression for runtime attribute merging.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes Attributes to convert
+     * @return string PHP array expression
      */
     private function buildRuntimeAttributesExpression(array $attributes): string
     {
@@ -480,65 +386,9 @@ final class ComponentExpansionPass implements AstPassInterface
     }
 
     /**
-     * Merge attributes to root element
-     *
-     * @param \Sugar\Core\Ast\ElementNode $rootElement Root element to merge into
-     * @param array<\Sugar\Core\Ast\AttributeNode> $mergeAttrs Regular attributes to merge
-     * @param array<\Sugar\Core\Ast\AttributeNode> $attributeDirectives Attribute directives (s:class, s:spread)
-     */
-    private function mergeAttributesToRoot(
-        ElementNode $rootElement,
-        array $mergeAttrs,
-        array $attributeDirectives,
-    ): void {
-        // Build map of existing attributes
-        $existingAttrs = [];
-        foreach ($rootElement->attributes as $attr) {
-            $existingAttrs[$attr->name] = $attr;
-        }
-
-        // Merge regular attributes
-        foreach ($mergeAttrs as $attr) {
-            if ($attr->name === 'class' && isset($existingAttrs['class'])) {
-                // Special handling for class: append instead of replace
-                $existingClass = $existingAttrs['class']->value;
-                $newClass = $attr->value;
-
-                // Both values must be strings for concatenation
-                if ($existingClass->isStatic() && $newClass->isStatic()) {
-                    $existingValue = $existingClass->static ?? '';
-                    $newValue = $newClass->static ?? '';
-                    $mergedAttr = new AttributeNode(
-                        'class',
-                        AttributeValue::static(trim($existingValue . ' ' . $newValue)),
-                        $attr->line,
-                        $attr->column,
-                    );
-                    $mergedAttr->inheritTemplatePathFrom($attr);
-                    $existingAttrs['class'] = $mergedAttr;
-                } else {
-                    // If either is not a string (e.g., OutputNode), just override
-                    $existingAttrs[$attr->name] = $attr;
-                }
-            } else {
-                // Regular merge: usage overrides component
-                $existingAttrs[$attr->name] = $attr;
-            }
-        }
-
-        // Add attribute directives (s:class, s:spread)
-        foreach ($attributeDirectives as $attr) {
-            $existingAttrs[$attr->name] = $attr;
-        }
-
-        // Update root element attributes
-        $rootElement->attributes = array_values($existingAttrs);
-    }
-
-    /**
      * Split component attributes into control-flow, directive, bind and merge buckets.
      *
-     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes Component attributes
      * @return array{
      *   controlFlow: array<\Sugar\Core\Ast\AttributeNode>,
      *   attributeDirectives: array<\Sugar\Core\Ast\AttributeNode>,
@@ -579,105 +429,5 @@ final class ComponentExpansionPass implements AstPassInterface
             'componentBindings' => $componentBindings,
             'merge' => $mergeAttrs,
         ];
-    }
-
-    /**
-     * Wrap template with PHP code that injects variables
-     *
-     * @param \Sugar\Core\Ast\DocumentNode $template Component template AST
-     * @param \Sugar\Core\Ast\AttributeNode|null $bindAttribute Optional s:bind attribute node
-     * @param \Sugar\Extension\Component\Helper\ComponentSlots $slots Slot content
-     * @param \Sugar\Core\Compiler\CompilationContext|null $context Compilation context for error reporting
-     * @return \Sugar\Core\Ast\DocumentNode Wrapped template
-     */
-    private function wrapWithVariables(
-        DocumentNode $template,
-        ?AttributeNode $bindAttribute,
-        ComponentSlots $slots,
-        ?CompilationContext $context = null,
-    ): DocumentNode {
-        $arrayItems = [];
-
-        $bindContext = $this->prefixHelper->buildName('bind') . ' attribute';
-
-        // Add component bindings using spread operator if provided
-        if ($bindAttribute instanceof AttributeNode) {
-            $bindingsExpression = $bindAttribute->value;
-
-            // s:bind attribute must have a value
-            if ($bindingsExpression->isBoolean()) {
-                $message = sprintf(
-                    '%s attribute must have a value (e.g., %s="[\'key\' => $value]")',
-                    $this->prefixHelper->buildName('bind'),
-                    $this->prefixHelper->buildName('bind'),
-                );
-                if ($context instanceof CompilationContext) {
-                    throw $context->createSyntaxExceptionForAttribute(
-                        $message,
-                        $bindAttribute,
-                    );
-                }
-
-                throw new SyntaxException($message);
-            }
-
-            if ($bindingsExpression->isParts()) {
-                $message = sprintf(
-                    '%s attribute cannot contain mixed output expressions',
-                    $this->prefixHelper->buildName('bind'),
-                );
-                if ($context instanceof CompilationContext) {
-                    throw $context->createSyntaxExceptionForAttribute(
-                        $message,
-                        $bindAttribute,
-                    );
-                }
-
-                throw new SyntaxException($message);
-            }
-
-            if ($bindingsExpression->isOutput()) {
-                $output = $bindingsExpression->output;
-                $expression = $output instanceof OutputNode ? $output->expression : '[]';
-            } else {
-                $expression = $bindingsExpression->static ?? '[]';
-            }
-
-            // Validate that expression could be an array at compile time
-            ExpressionValidator::validateArrayExpression(
-                $expression,
-                $bindContext,
-                $context,
-                $bindAttribute->line,
-                $bindAttribute->column,
-            );
-
-            $arrayItems[] = '...(' . $expression . ')';
-        }
-
-        $arrayItems = array_merge($arrayItems, $this->slotResolver->buildSlotItems($slots));
-
-        $slotVars = $this->slotResolver->buildSlotVars($slots);
-
-        // Automatically disable escaping for slot variable outputs in component template
-        SlotResolver::disableEscaping($template, $slotVars);
-
-        // Use trait method for consistent closure wrapping with parent passes
-        return $this->wrapInIsolatedScope($template, '[' . implode(', ', $arrayItems) . ']');
-    }
-
-    /**
-     * Expand nested components inside slot content.
-     */
-    private function expandSlotContent(ComponentSlots $slots, ?CompilationContext $context): ComponentSlots
-    {
-        $expandedSlots = [];
-        foreach ($slots->namedSlots as $name => $nodes) {
-            $expandedSlots[$name] = $this->expandNodes($nodes, $context);
-        }
-
-        $expandedDefaultSlot = $this->expandNodes($slots->defaultSlot, $context);
-
-        return new ComponentSlots($expandedSlots, $expandedDefaultSlot);
     }
 }
