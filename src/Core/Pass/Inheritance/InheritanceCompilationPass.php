@@ -22,10 +22,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
-use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Loader\TemplateLoaderInterface;
-use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Core\Runtime\TemplateRenderer;
 
 /**
  * Compiler pass that transforms template inheritance attributes into runtime calls.
@@ -43,6 +40,12 @@ use Sugar\Core\Runtime\TemplateRenderer;
  */
 final class InheritanceCompilationPass implements AstPassInterface
 {
+    private const RUNTIME_ENV_ALIAS = '__SugarRuntimeEnvironment';
+
+    private const TEMPLATE_RENDERER_ALIAS = '__SugarTemplateRenderer';
+
+    private const ESCAPER_ALIAS = '__SugarEscaper';
+
     private readonly DirectivePrefixHelper $prefixHelper;
 
     private readonly string $extendsAttr;
@@ -623,10 +626,10 @@ final class InheritanceCompilationPass implements AstPassInterface
     ): array {
         $nodes = [];
 
-        // Emit: $__tpl = RuntimeEnvironment::requireService(TemplateRenderer::class);
+        // Emit: $__tpl = __SugarRuntimeEnvironment::requireService(__SugarTemplateRenderer::class);
         $nodes[] = $this->createPhpNode(
-            '$__tpl = \\' . RuntimeEnvironment::class . '::requireService('
-            . '\\' . TemplateRenderer::class . '::class'
+            '$__tpl = ' . self::RUNTIME_ENV_ALIAS . '::requireService('
+            . self::TEMPLATE_RENDERER_ALIAS . '::class'
             . '); ',
             $document->line ?? 0,
             $document->column ?? 0,
@@ -738,8 +741,8 @@ final class InheritanceCompilationPass implements AstPassInterface
         string $varsExpression,
         ElementNode|FragmentNode $node,
     ): RawPhpNode {
-        $tplInit = '$__tpl = $__tpl ?? \\' . RuntimeEnvironment::class . '::requireService('
-            . '\\' . TemplateRenderer::class . '::class' . '); ';
+        $tplInit = '$__tpl = $__tpl ?? ' . self::RUNTIME_ENV_ALIAS . '::requireService('
+            . self::TEMPLATE_RENDERER_ALIAS . '::class' . '); ';
 
         $code = $tplInit
             . 'echo $__tpl->renderInclude('
@@ -867,7 +870,7 @@ final class InheritanceCompilationPass implements AstPassInterface
         if ($node instanceof OutputNode) {
             if ($node->escape) {
                 return sprintf(
-                    '<?php echo ' . Escaper::class . '::%s(%s); ?>',
+                    '<?php echo ' . self::ESCAPER_ALIAS . '::%s(%s); ?>',
                     $node->context->value,
                     $node->expression,
                 );
@@ -932,7 +935,7 @@ final class InheritanceCompilationPass implements AstPassInterface
             if ($part instanceof OutputNode) {
                 if ($part->escape) {
                     $value .= sprintf(
-                        '<?php echo ' . Escaper::class . '::%s(%s); ?>',
+                        '<?php echo ' . self::ESCAPER_ALIAS . '::%s(%s); ?>',
                         $part->context->value,
                         $part->expression,
                     );
@@ -999,8 +1002,8 @@ final class InheritanceCompilationPass implements AstPassInterface
         if ($this->hasLayoutBlocks) {
             // Prepend $__tpl initialization for layout templates
             $initNode = $this->createPhpNode(
-                '$__tpl = $__tpl ?? \\' . RuntimeEnvironment::class . '::requireService('
-                . '\\' . TemplateRenderer::class . '::class'
+                '$__tpl = $__tpl ?? ' . self::RUNTIME_ENV_ALIAS . '::requireService('
+                . self::TEMPLATE_RENDERER_ALIAS . '::class'
                 . '); ',
                 0,
                 0,

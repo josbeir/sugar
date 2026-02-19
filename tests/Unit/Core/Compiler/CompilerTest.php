@@ -42,7 +42,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('Hello ', $result);
-        $this->assertStringContainsString(Escaper::class . '::html($name)', $result);
+        $this->assertStringContainsString('__SugarEscaper::html($name)', $result);
         $this->assertStringContainsString('!', $result);
     }
 
@@ -53,8 +53,8 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<script>', $result);
-        $this->assertStringContainsString(Escaper::class . '::js($data', $result);
-        $this->assertStringNotContainsString('Escaper::html', $result);
+        $this->assertStringContainsString('__SugarEscaper::js($data', $result);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $result);
     }
 
     public function testCompileWithJsonPipeInHtmlContext(): void
@@ -63,7 +63,7 @@ final class CompilerTest extends TestCase
 
         $result = $this->compiler->compile($source);
 
-        $this->assertStringContainsString(Escaper::class . '::json($data)', $result);
+        $this->assertStringContainsString('__SugarEscaper::json($data)', $result);
         $this->assertStringNotContainsString(Escaper::class . '::html($data)', $result);
     }
 
@@ -85,7 +85,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<a href="', $result);
-        $this->assertStringContainsString(Escaper::class . '::attr($url)', $result);
+        $this->assertStringContainsString('__SugarEscaper::attr($url)', $result);
         $this->assertStringContainsString('Link</a>', $result);
     }
 
@@ -95,7 +95,7 @@ final class CompilerTest extends TestCase
 
         $result = $this->compiler->compile($source);
 
-        $this->assertStringContainsString(Escaper::class . '::attrJson($data)', $result);
+        $this->assertStringContainsString('__SugarEscaper::attrJson($data)', $result);
     }
 
     public function testCompileWithMixedAttributeValue(): void
@@ -105,7 +105,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('x-data="{ data: ', $result);
-        $this->assertStringContainsString(Escaper::class . '::attr($var)', $result);
+        $this->assertStringContainsString('__SugarEscaper::attr($var)', $result);
         $this->assertStringContainsString(", other: 'bli' }\"", $result);
     }
 
@@ -116,7 +116,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('x-data="{ data: ', $result);
-        $this->assertStringContainsString(Escaper::class . '::attrJson($array)', $result);
+        $this->assertStringContainsString('__SugarEscaper::attrJson($array)', $result);
         $this->assertStringContainsString(", other: 'bli' }\"", $result);
     }
 
@@ -127,7 +127,7 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         $this->assertStringContainsString('<?php $x = 42; ?>', $result);
-        $this->assertStringContainsString(Escaper::class . '::html($x)', $result);
+        $this->assertStringContainsString('__SugarEscaper::html($x)', $result);
     }
 
     public function testCompileComplexTemplate(): void
@@ -137,19 +137,19 @@ final class CompilerTest extends TestCase
         $result = $this->compiler->compile($source);
 
         // Check title is HTML escaped
-        $this->assertStringContainsString(Escaper::class . '::html($title)', $result);
+        $this->assertStringContainsString('__SugarEscaper::html($title)', $result);
 
         // Check CSS context
-        $this->assertStringContainsString(Escaper::class . '::css($bgColor)', $result);
+        $this->assertStringContainsString('__SugarEscaper::css($bgColor)', $result);
 
         // Check JS context
-        $this->assertStringContainsString(Escaper::class . '::js($config', $result);
+        $this->assertStringContainsString('__SugarEscaper::js($config', $result);
 
         // Check attribute context
-        $this->assertStringContainsString(Escaper::class . '::attr($link)', $result);
+        $this->assertStringContainsString('__SugarEscaper::attr($link)', $result);
 
         // Check body HTML context
-        $this->assertStringContainsString(Escaper::class . '::html($heading)', $result);
+        $this->assertStringContainsString('__SugarEscaper::html($heading)', $result);
 
         // Check raw() pipe outputs without escaping
         $this->assertStringContainsString('<?php echo $articleBody; ?>', $result);
@@ -163,7 +163,7 @@ final class CompilerTest extends TestCase
         $this->assertStringContainsString('<?php echo $footerContent; ?>', $result);
 
         // Check year is still escaped (regular output)
-        $this->assertStringContainsString(Escaper::class . '::html($year)', $result);
+        $this->assertStringContainsString('__SugarEscaper::html($year)', $result);
 
         // Verify raw() pipe does not emit raw() calls in output
         $this->assertStringNotContainsString('raw($articleBody)', $result);
@@ -230,13 +230,13 @@ final class CompilerTest extends TestCase
         $this->assertCount(3, $outputs);
 
         // First should be HTML escaped
-        $this->assertStringContainsString(Escaper::class . '::html($html)', $outputs[0]);
+        $this->assertStringContainsString('__SugarEscaper::html($html)', $outputs[0]);
 
         // Second should be JSON encoded (JavaScript context)
-        $this->assertStringContainsString(Escaper::class . '::js($js', $outputs[1]);
+        $this->assertStringContainsString('__SugarEscaper::js($js', $outputs[1]);
 
         // Third should be HTML escaped again
-        $this->assertStringContainsString(Escaper::class . '::html($html2)', $outputs[2]);
+        $this->assertStringContainsString('__SugarEscaper::html($html2)', $outputs[2]);
     }
 
     public function testCompileUnclosedPhpBlock(): void
@@ -389,7 +389,7 @@ final class CompilerTest extends TestCase
 
         // Verify compilation
         $this->assertStringContainsString('<div>', $compiled);
-        $this->assertStringContainsString(Escaper::class . '::html($userName)', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($userName)', $compiled);
         $this->assertStringContainsString('</div>', $compiled);
 
         // Test execution with XSS attempt
@@ -409,7 +409,7 @@ final class CompilerTest extends TestCase
 
         $compiled = $this->compiler->compile($source);
 
-        $this->assertStringContainsString(Escaper::class . '::html($userName)', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($userName)', $compiled);
         $this->assertStringNotContainsString('<div>', $compiled);
         $this->assertStringNotContainsString('</div>', $compiled);
 
@@ -429,7 +429,7 @@ final class CompilerTest extends TestCase
 
         // Verify compilation - should NOT escape
         $this->assertStringContainsString('<div>', $compiled);
-        $this->assertStringNotContainsString('Escaper::html', $compiled);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $compiled);
         $this->assertStringContainsString('echo $trustedContent', $compiled);
         $this->assertStringContainsString('</div>', $compiled);
 
@@ -449,7 +449,7 @@ final class CompilerTest extends TestCase
 
         $compiled = $this->compiler->compile($source);
 
-        $this->assertStringContainsString(Escaper::class . '::html($user->getName()', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($user->getName()', $compiled);
     }
 
     public function testMixingTextAndHtmlDirectives(): void
@@ -481,7 +481,7 @@ TEMPLATE;
         // Should have if wrapper
         $this->assertStringContainsString('<?php if ($show): ?>', $compiled);
         $this->assertStringContainsString('<?php endif; ?>', $compiled);
-        $this->assertStringContainsString(Escaper::class . '::html($message)', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($message)', $compiled);
 
         // Test with condition true
         $output = $this->executeTemplate($compiled, [
@@ -511,7 +511,7 @@ TEMPLATE;
 
         // Should have foreach loop
         $this->assertStringContainsString('foreach ($items as $item)', $compiled);
-        $this->assertStringContainsString(Escaper::class . '::html($item)', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($item)', $compiled);
 
         // Test execution
         $output = $this->executeTemplate($compiled, [
@@ -533,7 +533,7 @@ TEMPLATE;
         $compiled = $this->compiler->compile($source);
 
         // Should NOT escape (s:html)
-        $this->assertStringNotContainsString('Escaper::html', $compiled);
+        $this->assertStringNotContainsString(Escaper::class . '::html', $compiled);
 
         // Test execution - HTML should pass through
         $output = $this->executeTemplate($compiled, [
@@ -552,7 +552,7 @@ TEMPLATE;
 
         // Should have both class helper and escaped text
         $this->assertStringContainsString('classNames', $compiled);
-        $this->assertStringContainsString(Escaper::class . '::html($content)', $compiled);
+        $this->assertStringContainsString('__SugarEscaper::html($content)', $compiled);
 
         // Test execution
         $output = $this->executeTemplate($compiled, [

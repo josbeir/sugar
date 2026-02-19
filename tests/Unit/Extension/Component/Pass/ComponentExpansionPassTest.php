@@ -14,10 +14,8 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Loader\StringTemplateLoader;
-use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
-use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Sugar\Tests\Helper\Trait\AstStringifyTrait;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -67,8 +65,8 @@ final class ComponentExpansionPassTest extends TestCase
         );
         $this->pipeline = new AstPipeline([$pass]);
 
-        $this->expectedCallable = RuntimeEnvironment::class
-            . '::requireService(' . ComponentRenderer::class . '::class)->renderComponent';
+        $this->expectedCallable = '__SugarRuntimeEnvironment'
+            . '::requireService(__SugarComponentRenderer::class)->renderComponent';
     }
 
     private function executePipeline(DocumentNode $ast, CompilationContext $context): DocumentNode

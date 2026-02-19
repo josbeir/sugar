@@ -753,7 +753,7 @@ final class InheritanceCompilationPassTest extends MiddlewarePassTestCase
         $result = $this->execute($ast, $this->createTestContext());
 
         $code = $this->collectAllPhpCode($result);
-        $this->assertStringContainsString('Escaper::html($title)', $code);
+        $this->assertStringContainsString('__SugarEscaper::html($title)', $code);
     }
 
     /**
@@ -868,7 +868,10 @@ final class InheritanceCompilationPassTest extends MiddlewarePassTestCase
         }
 
         $this->assertInstanceOf(RawPhpNode::class, $firstPhp, 'Should have a RawPhpNode for init');
-        $this->assertStringContainsString('$__tpl = \\', $firstPhp->code);
+        $this->assertStringContainsString(
+            '$__tpl = __SugarRuntimeEnvironment::requireService(__SugarTemplateRenderer::class);',
+            $firstPhp->code,
+        );
         // Extends uses direct assignment (not conditional ??=)
         $this->assertStringNotContainsString('$__tpl = $__tpl ??', $firstPhp->code);
     }

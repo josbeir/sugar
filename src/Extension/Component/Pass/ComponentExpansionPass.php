@@ -22,10 +22,8 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Directive\Helper\DirectiveClassifier;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
-use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Helper\SlotResolver;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
-use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Throwable;
 
 /**
@@ -38,6 +36,10 @@ use Throwable;
  */
 final class ComponentExpansionPass implements AstPassInterface
 {
+    private const RUNTIME_ENV_ALIAS = '__SugarRuntimeEnvironment';
+
+    private const COMPONENT_RENDERER_ALIAS = '__SugarComponentRenderer';
+
     private readonly DirectivePrefixHelper $prefixHelper;
 
     private readonly string $slotAttrName;
@@ -326,8 +328,8 @@ final class ComponentExpansionPass implements AstPassInterface
         ));
 
         return new RuntimeCallNode(
-            callableExpression: RuntimeEnvironment::class
-                . '::requireService(' . ComponentRenderer::class . '::class)->renderComponent',
+            callableExpression: self::RUNTIME_ENV_ALIAS
+                . '::requireService(' . self::COMPONENT_RENDERER_ALIAS . '::class)->renderComponent',
             arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
             line: $line,
             column: $column,

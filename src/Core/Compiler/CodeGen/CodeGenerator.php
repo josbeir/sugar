@@ -25,6 +25,14 @@ use Sugar\Core\Exception\UnsupportedNodeException;
  */
 final class CodeGenerator
 {
+    private const RUNTIME_ENV_ALIAS = '__SugarRuntimeEnvironment';
+
+    private const TEMPLATE_RENDERER_ALIAS = '__SugarTemplateRenderer';
+
+    private const COMPONENT_RENDERER_ALIAS = '__SugarComponentRenderer';
+
+    private const ESCAPER_ALIAS = '__SugarEscaper';
+
     /**
      * Constructor
      *
@@ -71,6 +79,14 @@ final class CodeGenerator
         $buffer->writeln(' */');
 
         $registry = new PhpImportRegistry();
+        $registry->add('use Sugar\\Core\\Runtime\\RuntimeEnvironment as ' . self::RUNTIME_ENV_ALIAS . ';');
+        $registry->add('use Sugar\\Core\\Runtime\\TemplateRenderer as ' . self::TEMPLATE_RENDERER_ALIAS . ';');
+        $registry->add('use Sugar\\Core\\Escape\\Escaper as ' . self::ESCAPER_ALIAS . ';');
+        $registry->add(
+            'use Sugar\\Extension\\Component\\Runtime\\ComponentRenderer as '
+            . self::COMPONENT_RENDERER_ALIAS
+            . ';',
+        );
         foreach ($this->collectImportNodes($ast) as $importNode) {
             $registry->add($importNode->statement);
         }
@@ -180,6 +196,7 @@ final class CodeGenerator
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
             $escapedCode = $this->escaper->generateEscapeCode($expression, $node->context);
+            $escapedCode = $this->normalizeEscaperReference($escapedCode);
             $buffer->write(sprintf('<?php echo %s; ?>', $escapedCode));
         } else {
             // Raw output
@@ -280,6 +297,7 @@ final class CodeGenerator
 
             if ($output->escape) {
                 $expression = $this->escaper->generateEscapeCode($expression, $output->context);
+                $expression = $this->normalizeEscaperReference($expression);
             }
 
             $buffer->write(sprintf(
@@ -418,5 +436,13 @@ final class CodeGenerator
         }
 
         return $result;
+    }
+
+    /**
+     * Rewrite generated Escaper FQCN calls to the reserved Sugar alias.
+     */
+    private function normalizeEscaperReference(string $expression): string
+    {
+        return str_replace(Escaper::class . '::', self::ESCAPER_ALIAS . '::', $expression);
     }
 }
