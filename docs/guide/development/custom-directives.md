@@ -115,11 +115,17 @@ final class DataTestDirective implements DirectiveInterface
 ```
 :::
 
-Usage:
+Usage examples:
 
-```sugar
+::: code-group
+```sugar [Content directive]
+<div s:badge="$label"></div>
+```
+
+```sugar [Attribute directive]
 <div s:datatest="$id"></div>
 ```
+:::
 
 ### AttributeMergePolicyDirectiveInterface
 
