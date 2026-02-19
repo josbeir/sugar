@@ -101,7 +101,7 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
                     $spreadOutput = $attr->value->output;
                     if ($spreadOutput instanceof OutputNode) {
                         $spreadExpression = sprintf(
-                            '\$__ifcontent_attr = %s;',
+                            '$__ifcontent_attr = %s;',
                             $spreadOutput->expression,
                         ) . " if (\$__ifcontent_attr !== '') { echo ' ' . \$__ifcontent_attr; }";
 
@@ -152,7 +152,7 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
                     if ($output->escape) {
                         $parts[] = $this->rawNode(
                             sprintf(
-                                'echo htmlspecialchars((string) (%s), ENT_QUOTES, \"UTF-8\");',
+                                'echo htmlspecialchars((string) (%s), ENT_QUOTES, "UTF-8");',
                                 $output->expression,
                             ),
                             $node,

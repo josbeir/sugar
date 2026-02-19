@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Extension\FragmentCache;
 
 use PHPUnit\Framework\TestCase;
+use Psr\SimpleCache\CacheInterface;
 use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistry;
@@ -12,7 +13,6 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\FragmentCache\Directive\FragmentCacheDirective;
 use Sugar\Extension\FragmentCache\FragmentCacheExtension;
-use Sugar\Extension\FragmentCache\Runtime\FragmentCacheHelper;
 use Sugar\Tests\Helper\Stub\ArraySimpleCache;
 
 /**
@@ -33,8 +33,8 @@ final class FragmentCacheExtensionTest extends TestCase
         $this->assertInstanceOf(FragmentCacheDirective::class, $directives['cache']);
 
         $services = $context->getRuntimeServices();
-        $this->assertArrayHasKey(FragmentCacheHelper::SERVICE_ID, $services);
-        $this->assertSame($store, $services[FragmentCacheHelper::SERVICE_ID]);
+        $this->assertArrayHasKey(CacheInterface::class, $services);
+        $this->assertSame($store, $services[CacheInterface::class]);
     }
 
     public function testRegistersDirectiveWithoutRuntimeServiceWhenStoreMissing(): void

@@ -4,9 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Core\Cache\FileCache;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Engine;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
@@ -86,27 +88,27 @@ SUGAR;
         $this->assertStringContainsString('<p>2024</p>', $output);
     }
 
-    public function testHoistsImportsFromComponentTemplate(): void
+    public function testComponentTemplateImportsWorkAtRuntime(): void
     {
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'page.sugar.php' => '<s-card>Hi</s-card>',
-                'components/s-card.sugar.php' => '<?php use DateTimeImmutable as Clock; '
-                    . '$year = (new Clock("2024-01-01"))->format("Y"); ?>'
-                    . '<section><span><?= $year ?></span><div><?= $slot ?></div></section>',
-            ],
-            config: new SugarConfig(),
-        );
+        // Component templates are compiled at runtime, so imports stay in the
+        // component's own compiled template (not hoisted to parent).
+        $templates = [
+            'page.sugar.php' => '<s-card>Hi</s-card>',
+            'components/s-card.sugar.php' => '<?php use DateTimeImmutable as Clock; '
+                . '$year = (new Clock("2024-01-01"))->format("Y"); ?>'
+                . '<section><span><?= $year ?></span><div><?= $slot ?></div></section>',
+        ];
 
-        $compiled = $this->compiler->compile('<s-card>Hi</s-card>', 'page.sugar.php');
-        $renderClosurePosition = strpos($compiled, 'return function(array|object $__data = []): string {');
-        $importPosition = strpos($compiled, 'use DateTimeImmutable as Clock;');
+        $loader = new StringTemplateLoader(templates: $templates);
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withCache(new FileCache(
+                sys_get_temp_dir() . '/sugar_test_' . bin2hex(random_bytes(8)),
+            ))
+            ->withExtension(new ComponentExtension())
+            ->build();
 
-        $this->assertNotFalse($renderClosurePosition);
-        $this->assertNotFalse($importPosition);
-        $this->assertLessThan($renderClosurePosition, $importPosition);
-
-        $output = $this->executeTemplate($compiled);
+        $output = $engine->render('page.sugar.php');
         $this->assertStringContainsString('<span>2024</span>', $output);
         $this->assertStringContainsString('<div>Hi</div>', $output);
     }

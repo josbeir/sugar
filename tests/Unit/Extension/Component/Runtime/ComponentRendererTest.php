@@ -52,7 +52,7 @@ final class ComponentRendererTest extends TestCase
 
     protected function tearDown(): void
     {
-        RuntimeEnvironment::clearService(RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID);
+        RuntimeEnvironment::clearService(TemplateRenderer::class);
         $this->cleanupTempDirs();
         parent::tearDown();
     }
@@ -280,7 +280,7 @@ final class ComponentRendererTest extends TestCase
         );
 
         RuntimeEnvironment::setService(
-            RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID,
+            TemplateRenderer::class,
             $templateRenderer,
         );
 

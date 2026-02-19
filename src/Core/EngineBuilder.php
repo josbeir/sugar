@@ -21,7 +21,6 @@ use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser;
 use Sugar\Core\Runtime\BlockManager;
-use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Core\Util\Hash;
 
@@ -233,6 +232,7 @@ final class EngineBuilder
         // Process extensions: register directives and collect custom passes
         $customPasses = [];
         $runtimeServices = [];
+        $protectedServiceIds = [];
         foreach ($extensions as $extension) {
             $context = new RegistrationContext(
                 config: $this->config,
@@ -252,10 +252,12 @@ final class EngineBuilder
             array_push($customPasses, ...$context->getPasses());
             $incomingRuntimeServices = $context->getRuntimeServices();
 
-            if (array_key_exists(RuntimeEnvironment::RENDERER_SERVICE_ID, $runtimeServices)) {
-                unset($incomingRuntimeServices[RuntimeEnvironment::RENDERER_SERVICE_ID]);
+            // Strip services that were marked as protected by earlier extensions
+            foreach (array_keys($protectedServiceIds) as $protectedId) {
+                unset($incomingRuntimeServices[$protectedId]);
             }
 
+            $protectedServiceIds = [...$protectedServiceIds, ...$context->getProtectedServiceIds()];
             $runtimeServices = [...$runtimeServices, ...$incomingRuntimeServices];
         }
 
@@ -275,7 +277,7 @@ final class EngineBuilder
         $debug = $this->debug;
         $loader = $this->loader;
         $cache = $this->cache;
-        $runtimeServices[RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID] = static function (
+        $runtimeServices[TemplateRenderer::class] = static function (
             RuntimeContext $runtimeContext,
         ) use (
             $loader,

@@ -4,7 +4,12 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Engine;
 use Sugar\Core\Exception\SyntaxException;
+use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Component\ComponentExtension;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 
@@ -98,21 +103,35 @@ final class CompilationContextIntegrationTest extends TestCase
         }
     }
 
+    /**
+     * Verify that exceptions from component templates reference the component template path.
+     *
+     * With runtime component rendering, the component template is compiled at render time.
+     * The SyntaxException should still reference the component template's path.
+     */
     public function testComponentExceptionUsesComponentTemplatePath(): void
     {
-        $this->setUpCompilerWithStringLoader(
-            templates: [
-                'components/s-widget.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
-            ],
-        );
+        $templates = [
+            'pages/home.sugar.php' => '<s-widget></s-widget>',
+            'components/s-widget.sugar.php' => '<s-template s:class="\'oops\'"></s-template>',
+        ];
+
+        $loader = new StringTemplateLoader(templates: $templates);
+        $engine = Engine::builder(new SugarConfig())
+            ->withTemplateLoader($loader)
+            ->withCache(new FileCache(
+                sys_get_temp_dir() . '/sugar_test_' . bin2hex(random_bytes(8)),
+            ))
+            ->withExtension(new ComponentExtension())
+            ->build();
 
         $this->expectException(SyntaxException::class);
 
         try {
-            $this->compiler->compile('<s-widget></s-widget>', 'pages/home.sugar.php');
+            $engine->render('pages/home.sugar.php');
         } catch (SyntaxException $syntaxException) {
             $exceptionString = (string)$syntaxException;
-            $this->assertStringContainsString('template: @app/components/s-widget', $exceptionString);
+            $this->assertStringContainsString('components/s-widget', $exceptionString);
 
             throw $syntaxException;
         }

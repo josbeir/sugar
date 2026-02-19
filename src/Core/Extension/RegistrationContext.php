@@ -41,6 +41,13 @@ final class RegistrationContext
     private array $runtimeServices = [];
 
     /**
+     * Service IDs that must not be overridden by later extensions.
+     *
+     * @var array<string, true>
+     */
+    private array $protectedServices = [];
+
+    /**
      * Constructor.
      *
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
@@ -98,6 +105,20 @@ final class RegistrationContext
     }
 
     /**
+     * Register a protected runtime service that cannot be overridden by later extensions.
+     *
+     * Use this for critical services that must remain under the registering extension's control.
+     *
+     * @param string $id Service identifier
+     * @param (\Closure(\Sugar\Core\Extension\RuntimeContext):object)|object $service Service instance or factory closure accepting RuntimeContext
+     */
+    public function protectedRuntimeService(string $id, object $service): void
+    {
+        $this->runtimeServices[$id] = $service;
+        $this->protectedServices[$id] = true;
+    }
+
+    /**
      * Get all registered directives
      *
      * @return array<string, \Sugar\Core\Directive\Interface\DirectiveInterface|class-string<\Sugar\Core\Directive\Interface\DirectiveInterface>>
@@ -125,6 +146,16 @@ final class RegistrationContext
     public function getRuntimeServices(): array
     {
         return $this->runtimeServices;
+    }
+
+    /**
+     * Get service IDs that are protected from being overridden.
+     *
+     * @return array<string, true>
+     */
+    public function getProtectedServiceIds(): array
+    {
+        return $this->protectedServices;
     }
 
     /**

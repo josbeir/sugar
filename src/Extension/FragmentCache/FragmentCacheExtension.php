@@ -7,7 +7,6 @@ use Psr\SimpleCache\CacheInterface;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Extension\FragmentCache\Directive\FragmentCacheDirective;
-use Sugar\Extension\FragmentCache\Runtime\FragmentCacheHelper;
 
 /**
  * Registers fragment caching support for the s:cache directive.
@@ -30,7 +29,7 @@ final readonly class FragmentCacheExtension implements ExtensionInterface
     public function register(RegistrationContext $context): void
     {
         if ($this->fragmentCache instanceof CacheInterface) {
-            $context->runtimeService(FragmentCacheHelper::SERVICE_ID, $this->fragmentCache);
+            $context->runtimeService(CacheInterface::class, $this->fragmentCache);
         }
 
         $context->directive('cache', new FragmentCacheDirective(defaultTtl: $this->defaultTtl));

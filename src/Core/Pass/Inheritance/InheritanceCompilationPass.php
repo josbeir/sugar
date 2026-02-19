@@ -25,6 +25,7 @@ use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 
 /**
  * Compiler pass that transforms template inheritance attributes into runtime calls.
@@ -622,10 +623,10 @@ final class InheritanceCompilationPass implements AstPassInterface
     ): array {
         $nodes = [];
 
-        // Emit: $__tpl = RuntimeEnvironment::requireService('renderer.template');
+        // Emit: $__tpl = RuntimeEnvironment::requireService(TemplateRenderer::class);
         $nodes[] = $this->createPhpNode(
             '$__tpl = \\' . RuntimeEnvironment::class . '::requireService('
-            . var_export(RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID, true)
+            . '\\' . TemplateRenderer::class . '::class'
             . '); ',
             $document->line ?? 0,
             $document->column ?? 0,
@@ -738,7 +739,7 @@ final class InheritanceCompilationPass implements AstPassInterface
         ElementNode|FragmentNode $node,
     ): RawPhpNode {
         $tplInit = '$__tpl = $__tpl ?? \\' . RuntimeEnvironment::class . '::requireService('
-            . var_export(RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID, true) . '); ';
+            . '\\' . TemplateRenderer::class . '::class' . '); ';
 
         $code = $tplInit
             . 'echo $__tpl->renderInclude('
@@ -999,7 +1000,7 @@ final class InheritanceCompilationPass implements AstPassInterface
             // Prepend $__tpl initialization for layout templates
             $initNode = $this->createPhpNode(
                 '$__tpl = $__tpl ?? \\' . RuntimeEnvironment::class . '::requireService('
-                . var_export(RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID, true)
+                . '\\' . TemplateRenderer::class . '::class'
                 . '); ',
                 0,
                 0,

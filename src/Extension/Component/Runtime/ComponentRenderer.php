@@ -6,6 +6,7 @@ namespace Sugar\Extension\Component\Runtime;
 use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Core\Util\ValueNormalizer;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
@@ -66,10 +67,7 @@ final class ComponentRenderer
         $data = $this->normalizeRenderData($vars, $slots, $attributes);
         $inlinePasses = $this->buildInlinePasses($slotNames);
 
-        /** @var \Sugar\Core\Runtime\TemplateRenderer $templateRenderer */
-        $templateRenderer = RuntimeEnvironment::requireService(
-            RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID,
-        );
+        $templateRenderer = RuntimeEnvironment::requireService(TemplateRenderer::class);
 
         // Track component source file for cache invalidation
         $templateRenderer->trackComponent(
@@ -94,10 +92,16 @@ final class ComponentRenderer
     {
         $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
 
-        return [[
-            'pass' => new ComponentVariantAdjustmentPass($slotVars),
-            'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
-        ]];
+        return [
+            [
+                'pass' => new ComponentVariantAdjustmentPass($slotVars, directiveRootOnly: true),
+                'priority' => PassPriority::DIRECTIVE_PAIRING,
+            ],
+            [
+                'pass' => new ComponentVariantAdjustmentPass($slotVars),
+                'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
+            ],
+        ];
     }
 
     /**

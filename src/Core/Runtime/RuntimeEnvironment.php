@@ -6,14 +6,13 @@ namespace Sugar\Core\Runtime;
 use Sugar\Core\Exception\TemplateRuntimeException;
 
 /**
- * Runtime environment for template execution
+ * Runtime environment for template execution.
+ *
+ * Provides a static service container for accessing runtime services during template
+ * rendering. Services are keyed by their class name (using ::class) for type safety.
  */
 final class RuntimeEnvironment
 {
-    public const RENDERER_SERVICE_ID = 'renderer.component';
-
-    public const TEMPLATE_RENDERER_SERVICE_ID = 'renderer.template';
-
     /**
      * @var array<string, mixed>
      */
@@ -83,8 +82,14 @@ final class RuntimeEnvironment
     /**
      * Fetch a named runtime service and fail when it is missing.
      *
-     * @param string $id Service identifier
-     * @return mixed Service value
+     * Use the service class name as the identifier for type-safe lookups:
+     * ```
+     * $renderer = RuntimeEnvironment::requireService(TemplateRenderer::class);
+     * ```
+     *
+     * @template T of object
+     * @param class-string<T> $id Service identifier (use ::class constants)
+     * @return T Service value
      * @throws \Sugar\Core\Exception\TemplateRuntimeException When service is not initialized
      */
     public static function requireService(string $id): mixed
@@ -93,6 +98,8 @@ final class RuntimeEnvironment
             throw new TemplateRuntimeException(sprintf('Runtime service "%s" is not initialized.', $id));
         }
 
+        // phpcs:ignore SlevomatCodingStandard.Namespaces.FullyQualifiedClassNameInAnnotation.NonFullyQualifiedClassName
+        /** @phpstan-var T */
         return self::$services[$id];
     }
 }

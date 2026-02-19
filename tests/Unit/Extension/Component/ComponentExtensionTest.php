@@ -74,15 +74,15 @@ final class ComponentExtensionTest extends TestCase
         $extension->register($context);
 
         $services = $context->getRuntimeServices();
-        $this->assertArrayHasKey(ComponentExtension::SERVICE_RENDERER, $services);
-        $this->assertInstanceOf(Closure::class, $services[ComponentExtension::SERVICE_RENDERER]);
+        $this->assertArrayHasKey(ComponentRenderer::class, $services);
+        $this->assertInstanceOf(Closure::class, $services[ComponentRenderer::class]);
 
         $runtimeContext = new RuntimeContext(
             compiler: $compiler,
             tracker: null,
         );
 
-        $renderer = $services[ComponentExtension::SERVICE_RENDERER]($runtimeContext);
+        $renderer = $services[ComponentRenderer::class]($runtimeContext);
         $this->assertInstanceOf(ComponentRenderer::class, $renderer);
     }
 }

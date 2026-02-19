@@ -7,11 +7,9 @@ use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;
-use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
-use Sugar\Extension\Component\Pass\ComponentPassFactory;
 use Sugar\Extension\Component\Runtime\ComponentRenderer;
 
 /**
@@ -22,11 +20,6 @@ use Sugar\Extension\Component\Runtime\ComponentRenderer;
  */
 final class ComponentExtension implements ExtensionInterface
 {
-    /**
-     * Runtime service id for the component renderer.
-     */
-    public const SERVICE_RENDERER = RuntimeEnvironment::RENDERER_SERVICE_ID;
-
     private ComponentLoaderInterface $componentLoader;
 
     /**
@@ -53,39 +46,21 @@ final class ComponentExtension implements ExtensionInterface
         );
 
         $context->compilerPass(
-            pass: $this->resolveComponentExpansionPass($context),
+            pass: new ComponentExpansionPass(
+                loader: $this->componentLoader,
+                registry: $context->getDirectiveRegistry(),
+                config: $context->getConfig(),
+            ),
             priority: PassPriority::POST_DIRECTIVE_COMPILATION,
         );
 
-        $context->runtimeService(
-            self::SERVICE_RENDERER,
+        $context->protectedRuntimeService(
+            ComponentRenderer::class,
             function (RuntimeContext $runtimeContext): ComponentRenderer {
                 return new ComponentRenderer(
                     loader: $this->componentLoader,
                 );
             },
         );
-    }
-
-    /**
-     * Resolve component expansion pass from registration context.
-     */
-    private function resolveComponentExpansionPass(RegistrationContext $context): ComponentExpansionPass
-    {
-        $loader = $context->getTemplateLoader();
-        $parser = $context->getParser();
-        $registry = $context->getDirectiveRegistry();
-        $config = $context->getConfig();
-
-        $passFactory = new ComponentPassFactory(
-            templateLoader: $loader,
-            componentLoader: $this->componentLoader,
-            parser: $parser,
-            registry: $registry,
-            config: $config,
-            customPasses: $context->getPasses(),
-        );
-
-        return $passFactory->createExpansionPass();
     }
 }
