@@ -6,10 +6,12 @@ namespace Sugar\Core\Compiler\Pipeline;
 use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
+use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
+use Sugar\Core\Pass\Inheritance\InheritanceCompilationPass;
 use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
 
 /**
@@ -27,12 +29,18 @@ final class CompilerPipelineFactory
 
     private ?ContextAnalysisPass $contextPass = null;
 
+    private ?InheritanceCompilationPass $inheritancePass = null;
+
     /**
-     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses
+     * @param \Sugar\Core\Extension\DirectiveRegistryInterface $registry Directive registry
+     * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration
+     * @param \Sugar\Core\Loader\TemplateLoaderInterface $templateLoader Template loader for inheritance path resolution
+     * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $customPasses Custom extension passes
      */
     public function __construct(
         private readonly DirectiveRegistryInterface $registry,
         private readonly SugarConfig $config,
+        private readonly TemplateLoaderInterface $templateLoader,
         private readonly array $customPasses = [],
     ) {
     }
@@ -40,9 +48,11 @@ final class CompilerPipelineFactory
     /**
      * Build the main compiler pipeline.
      *
+     * @param bool $enableInheritance Whether to include the inheritance compilation pass
      * @param array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}> $inlinePasses Additional per-compilation passes
      */
     public function buildCompilerPipeline(
+        bool $enableInheritance = true,
         array $inlinePasses = [],
     ): AstPipeline {
         $pipeline = new AstPipeline();
@@ -50,6 +60,10 @@ final class CompilerPipelineFactory
         $pipeline->addPass($this->getDirectiveExtractionPass(), PassPriority::DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getDirectivePairingPass(), PassPriority::DIRECTIVE_PAIRING);
         $pipeline->addPass($this->getDirectiveCompilationPass(), PassPriority::DIRECTIVE_COMPILATION);
+
+        if ($enableInheritance) {
+            $pipeline->addPass($this->getInheritancePass(), PassPriority::INHERITANCE_COMPILATION);
+        }
 
         foreach ($inlinePasses as $entry) {
             $pipeline->addPass($entry['pass'], $entry['priority']);
@@ -119,6 +133,23 @@ final class CompilerPipelineFactory
         $this->contextPass = new ContextAnalysisPass();
 
         return $this->contextPass;
+    }
+
+    /**
+     * Get the inheritance compilation pass instance.
+     */
+    private function getInheritancePass(): InheritanceCompilationPass
+    {
+        if ($this->inheritancePass instanceof InheritanceCompilationPass) {
+            return $this->inheritancePass;
+        }
+
+        $this->inheritancePass = new InheritanceCompilationPass(
+            config: $this->config,
+            loader: $this->templateLoader,
+        );
+
+        return $this->inheritancePass;
     }
 
     /**

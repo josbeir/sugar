@@ -150,6 +150,19 @@ final class TemplateRenderer
     }
 
     /**
+     * Track a template path as a component dependency.
+     *
+     * Used by ComponentRenderer to record component source files
+     * for cache invalidation.
+     *
+     * @param string $sourcePath Filesystem path of the component source file
+     */
+    public function trackComponent(string $sourcePath): void
+    {
+        $this->tracker?->addComponent($sourcePath);
+    }
+
+    /**
      * Compile a template and return its compiled code (without caching).
      *
      * Used when a caller needs only the compiled PHP code string.

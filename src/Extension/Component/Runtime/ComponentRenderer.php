@@ -3,39 +3,28 @@ declare(strict_types=1);
 
 namespace Sugar\Extension\Component\Runtime;
 
-use Closure;
-use ParseError;
-use Sugar\Core\Cache\CachedTemplate;
-use Sugar\Core\Cache\CacheKey;
-use Sugar\Core\Cache\DependencyTracker;
-use Sugar\Core\Cache\TemplateCacheInterface;
-use Sugar\Core\Exception\CompilationException;
+use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Exception\TemplateRuntimeException;
+use Sugar\Core\Runtime\RuntimeEnvironment;
 use Sugar\Core\Util\ValueNormalizer;
-use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Exception\ComponentNotFoundException;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Pass\ComponentVariantAdjustmentPass;
 
 /**
  * Renders components at runtime for dynamic component calls.
+ *
+ * Delegates template compilation and execution to the shared TemplateRenderer
+ * service while handling component-specific concerns: name resolution, slot
+ * normalization, attribute merging, and the ComponentVariantAdjustmentPass.
  */
 final class ComponentRenderer
 {
     /**
-     * @param \Sugar\Extension\Component\Compiler\ComponentCompiler $componentCompiler Component template compiler
      * @param \Sugar\Extension\Component\Loader\ComponentLoaderInterface $loader Component template loader
-     * @param \Sugar\Core\Cache\TemplateCacheInterface $cache Template cache
-     * @param \Sugar\Core\Cache\DependencyTracker|null $tracker Optional dependency tracker
-     * @param bool $debug Debug mode
-     * @param object|null $templateContext Optional template context
      */
     public function __construct(
-        private readonly ComponentCompiler $componentCompiler,
         private readonly ComponentLoaderInterface $loader,
-        private readonly TemplateCacheInterface $cache,
-        private readonly ?DependencyTracker $tracker = null,
-        private readonly bool $debug = false,
-        private readonly ?object $templateContext = null,
     ) {
     }
 
@@ -58,30 +47,8 @@ final class ComponentRenderer
             throw new ComponentNotFoundException('Component "" not found');
         }
 
-        $slotNames = array_keys($slots);
-        if (!in_array('slot', $slotNames, true)) {
-            $slotNames[] = 'slot';
-        }
-
-        sort($slotNames);
-
-        $compiledPath = $this->getCompiledComponent($componentName, $slotNames);
-
-        $data = $this->normalizeRenderData($vars, $slots, $attributes);
-
-        return $this->execute($compiledPath, $data);
-    }
-
-    /**
-     * Compile or retrieve a compiled component variant.
-     *
-     * @param array<string> $slotNames
-     */
-    private function getCompiledComponent(string $name, array $slotNames): string
-    {
         try {
-            $componentPath = $this->loader->getComponentPath($name);
-            $componentSourcePath = $this->loader->getComponentFilePath($name);
+            $componentPath = $this->loader->getComponentPath($componentName);
         } catch (TemplateRuntimeException $templateRuntimeException) {
             throw new ComponentNotFoundException(
                 $templateRuntimeException->getRawMessage(),
@@ -89,49 +56,66 @@ final class ComponentRenderer
             );
         }
 
-        $cacheKey = CacheKey::fromTemplate($componentPath, $slotNames);
-
-        $cached = $this->cache->get($cacheKey, $this->debug);
-        if ($cached instanceof CachedTemplate) {
-            return $cached->path;
+        $slotNames = array_keys($slots);
+        if (!in_array('slot', $slotNames, true)) {
+            $slotNames[] = 'slot';
         }
 
-        $tracker = new DependencyTracker();
-        $compiled = $this->componentCompiler->compileComponent(
-            componentName: $name,
-            slotNames: $slotNames,
-            debug: $this->debug,
-            tracker: $tracker,
+        sort($slotNames);
+
+        $data = $this->normalizeRenderData($vars, $slots, $attributes);
+        $inlinePasses = $this->buildInlinePasses($slotNames);
+
+        /** @var \Sugar\Core\Runtime\TemplateRenderer $templateRenderer */
+        $templateRenderer = RuntimeEnvironment::requireService(
+            RuntimeEnvironment::TEMPLATE_RENDERER_SERVICE_ID,
         );
 
-        $metadata = $tracker->getMetadata($componentSourcePath, $this->debug);
+        // Track component source file for cache invalidation
+        $templateRenderer->trackComponent(
+            $this->loader->getComponentFilePath($componentName),
+        );
 
-        if ($this->tracker instanceof DependencyTracker) {
-            foreach ($metadata->dependencies as $dependency) {
-                $this->tracker->addDependency($dependency);
-            }
+        return $templateRenderer->renderTemplate(
+            template: $componentPath,
+            data: $data,
+            inlinePasses: $inlinePasses,
+            variantKeys: $slotNames,
+        );
+    }
 
-            foreach ($metadata->components as $component) {
-                $this->tracker->addComponent($component);
-            }
-        }
+    /**
+     * Build inline passes needed for component variant compilation.
+     *
+     * @param array<string> $slotNames Slot names for escaping adjustment
+     * @return array<array{pass: \Sugar\Core\Compiler\Pipeline\AstPassInterface, priority: \Sugar\Core\Compiler\Pipeline\Enum\PassPriority}>
+     */
+    private function buildInlinePasses(array $slotNames): array
+    {
+        $slotVars = array_values(array_unique(array_merge(['slot'], $slotNames)));
 
-        return $this->cache->put($cacheKey, $compiled, $metadata);
+        return [[
+            'pass' => new ComponentVariantAdjustmentPass($slotVars),
+            'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
+        ]];
     }
 
     /**
      * Normalize render data for component execution.
      *
-     * @param array<string, mixed> $vars
-     * @param array<string, mixed> $slots
-     * @param array<string, mixed> $attributes
-     * @return array<string, mixed>
+     * Merges bound variables, normalized slot content, and attributes into
+     * a single data array for template execution.
+     *
+     * @param array<string, mixed> $vars Bound variables
+     * @param array<string, mixed> $slots Slot content
+     * @param array<string, mixed> $attributes Runtime attributes
+     * @return array<string, mixed> Merged data for template execution
      */
     private function normalizeRenderData(array $vars, array $slots, array $attributes): array
     {
         $normalizedSlots = [];
-        foreach ($slots as $name => $value) {
-            $normalizedSlots[$name] = ValueNormalizer::toDisplayString($value);
+        foreach ($slots as $slotName => $value) {
+            $normalizedSlots[$slotName] = ValueNormalizer::toDisplayString($value);
         }
 
         if (!isset($normalizedSlots['slot'])) {
@@ -141,8 +125,8 @@ final class ComponentRenderer
         $normalizedAttributes = $this->normalizeAttributes($attributes);
 
         $data = $vars;
-        foreach ($normalizedSlots as $name => $value) {
-            $data[$name] = $value;
+        foreach ($normalizedSlots as $slotName => $value) {
+            $data[$slotName] = $value;
         }
 
         $data['__sugar_attrs'] = $normalizedAttributes;
@@ -153,8 +137,8 @@ final class ComponentRenderer
     /**
      * Normalize attribute array values to stringable values.
      *
-     * @param array<string, mixed> $attributes
-     * @return array<string, mixed>
+     * @param array<string, mixed> $attributes Raw attributes
+     * @return array<string, mixed> Normalized attributes
      */
     private function normalizeAttributes(array $attributes): array
     {
@@ -166,35 +150,5 @@ final class ComponentRenderer
         }
 
         return $normalized;
-    }
-
-    /**
-     * Execute compiled template.
-     *
-     * @param array<string, mixed> $data
-     */
-    private function execute(string $compiledPath, array $data): string
-    {
-        try {
-            $fn = include $compiledPath;
-        } catch (ParseError $parseError) {
-            throw CompilationException::fromCompiledComponentParseError($compiledPath, $parseError);
-        }
-
-        if ($fn instanceof Closure) {
-            if ($this->templateContext !== null) {
-                $fn = $fn->bindTo($this->templateContext);
-            }
-
-            $result = $fn($data);
-
-            if (is_string($result)) {
-                return $result;
-            }
-
-            return ValueNormalizer::toDisplayString($result);
-        }
-
-        return '';
     }
 }

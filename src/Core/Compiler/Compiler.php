@@ -7,13 +7,11 @@ use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Compiler\Pipeline\CompilerPipelineFactory;
-use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 use Sugar\Core\Parser\Parser as TemplateParser;
-use Sugar\Core\Pass\Inheritance\InheritanceCompilationPass;
 
 /**
  * Orchestrates template compilation pipeline.
@@ -64,6 +62,7 @@ final class Compiler implements CompilerInterface
         $this->pipelineFactory = new CompilerPipelineFactory(
             $this->registry,
             $this->config,
+            $this->templateLoader,
             $customPasses,
         );
     }
@@ -134,21 +133,10 @@ final class Compiler implements CompilerInterface
             $this->phpSyntaxValidator->templateSegments($ast, $context);
         }
 
-        // Add InheritanceCompilationPass BEFORE other inline passes.
-        // It must run before extension passes (e.g. ComponentVariantAdjustmentPass)
-        // that may modify root element attributes, since extends elements are consumed
-        // by the inheritance pass and should not receive runtime attribute overrides.
-        $allInlinePasses = [];
-        if ($enableInheritance) {
-            $allInlinePasses[] = [
-                'pass' => new InheritanceCompilationPass($this->config, $this->templateLoader),
-                'priority' => PassPriority::POST_DIRECTIVE_COMPILATION,
-            ];
-        }
-
-        array_push($allInlinePasses, ...$inlinePasses);
-
-        $pipeline = $this->pipelineFactory->buildCompilerPipeline(inlinePasses: $allInlinePasses);
+        $pipeline = $this->pipelineFactory->buildCompilerPipeline(
+            enableInheritance: $enableInheritance,
+            inlinePasses: $inlinePasses,
+        );
         $analyzedAst = $pipeline->execute($ast, $context);
 
         $generator = new CodeGenerator($this->escaper, $context);

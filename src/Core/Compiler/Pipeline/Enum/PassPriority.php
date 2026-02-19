@@ -8,17 +8,19 @@ namespace Sugar\Core\Compiler\Pipeline\Enum;
  */
 enum PassPriority: int
 {
-    case PRE_DIRECTIVE_EXTRACTION = 5;
+    case PRE_DIRECTIVE_EXTRACTION = 10;
 
-    case DIRECTIVE_EXTRACTION = 10;
+    case DIRECTIVE_EXTRACTION = 20;
 
-    case DIRECTIVE_PAIRING = 20;
+    case DIRECTIVE_PAIRING = 30;
 
-    case DIRECTIVE_COMPILATION = 30;
+    case DIRECTIVE_COMPILATION = 40;
 
-    case POST_DIRECTIVE_COMPILATION = 35;
+    case INHERITANCE_COMPILATION = 50;
 
-    case PHP_NORMALIZATION = 40;
+    case POST_DIRECTIVE_COMPILATION = 60;
 
-    case CONTEXT_ANALYSIS = 50;
+    case PHP_NORMALIZATION = 70;
+
+    case CONTEXT_ANALYSIS = 80;
 }

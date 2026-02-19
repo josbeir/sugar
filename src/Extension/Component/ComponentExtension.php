@@ -8,7 +8,6 @@ use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;
 use Sugar\Core\Runtime\RuntimeEnvironment;
-use Sugar\Extension\Component\Compiler\ComponentCompiler;
 use Sugar\Extension\Component\Loader\ComponentLoader;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
 use Sugar\Extension\Component\Pass\ComponentExpansionPass;
@@ -44,10 +43,7 @@ final class ComponentExtension implements ExtensionInterface
     public function register(RegistrationContext $context): void
     {
         $loader = $context->getTemplateLoader();
-        $cache = $context->getTemplateCache();
         $config = $context->getConfig();
-        $templateContext = $context->getTemplateContext();
-        $debug = $context->isDebug();
 
         // Initialize component loader - it auto-detects namespaces from the template loader
         $this->componentLoader = new ComponentLoader(
@@ -63,21 +59,9 @@ final class ComponentExtension implements ExtensionInterface
 
         $context->runtimeService(
             self::SERVICE_RENDERER,
-            function (RuntimeContext $runtimeContext) use (
-                $cache,
-                $templateContext,
-                $debug,
-            ): ComponentRenderer {
+            function (RuntimeContext $runtimeContext): ComponentRenderer {
                 return new ComponentRenderer(
-                    componentCompiler: new ComponentCompiler(
-                        compiler: $runtimeContext->getCompiler(),
-                        loader: $this->componentLoader,
-                    ),
                     loader: $this->componentLoader,
-                    cache: $cache,
-                    tracker: $runtimeContext->getTracker(),
-                    debug: $debug,
-                    templateContext: $templateContext,
                 );
             },
         );

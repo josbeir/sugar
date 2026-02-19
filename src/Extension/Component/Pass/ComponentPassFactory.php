@@ -82,7 +82,7 @@ final class ComponentPassFactory
         $pipeline->addPass(new InheritanceCompilationPass(
             config: $this->config,
             loader: $this->templateLoader,
-        ), PassPriority::POST_DIRECTIVE_COMPILATION);
+        ), PassPriority::INHERITANCE_COMPILATION);
 
         $this->addCustomPasses(
             $pipeline,
