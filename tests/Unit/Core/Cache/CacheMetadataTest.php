@@ -14,16 +14,17 @@ final class CacheMetadataTest extends TestCase
     public function testConstructorSetsProperties(): void
     {
         $metadata = new CacheMetadata(
-            dependencies: ['/templates/layout.sugar.php', '/templates/header.sugar.php'],
-            components: ['/components/s-button.sugar.php'],
+            dependencies: ['/templates/layout.sugar.php', '/templates/header.sugar.php', '/components/s-button.sugar.php'],
             sourcePath: '/templates/page.sugar.php',
             sourceTimestamp: 1738765432,
             compiledTimestamp: 1738765433,
             debug: true,
         );
 
-        $this->assertSame(['/templates/layout.sugar.php', '/templates/header.sugar.php'], $metadata->dependencies);
-        $this->assertSame(['/components/s-button.sugar.php'], $metadata->components);
+        $this->assertSame(
+            ['/templates/layout.sugar.php', '/templates/header.sugar.php', '/components/s-button.sugar.php'],
+            $metadata->dependencies,
+        );
         $this->assertSame('/templates/page.sugar.php', $metadata->sourcePath);
         $this->assertSame(1738765432, $metadata->sourceTimestamp);
         $this->assertSame(1738765433, $metadata->compiledTimestamp);
@@ -35,7 +36,6 @@ final class CacheMetadataTest extends TestCase
         $metadata = new CacheMetadata();
 
         $this->assertSame([], $metadata->dependencies);
-        $this->assertSame([], $metadata->components);
         $this->assertSame('', $metadata->sourcePath);
         $this->assertSame(0, $metadata->sourceTimestamp);
         $this->assertSame(0, $metadata->compiledTimestamp);

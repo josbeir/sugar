@@ -211,7 +211,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
         try {
             $filePath = $this->loader->getComponentFilePath($componentName);
-            $tracker->addComponent($filePath);
+            $tracker->addDependency($filePath);
         } catch (Throwable) {
             // Component file not found at compile time — skip tracking
         }

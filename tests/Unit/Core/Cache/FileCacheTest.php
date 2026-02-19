@@ -93,7 +93,6 @@ final class FileCacheTest extends TestCase
 
         file_put_contents($metaPath, (string)json_encode([
             'dependencies' => 'invalid',
-            'components' => 'invalid',
             'sourcePath' => ['invalid'],
             'sourceTimestamp' => 'invalid',
             'compiledTimestamp' => 'invalid',
@@ -104,7 +103,6 @@ final class FileCacheTest extends TestCase
 
         $this->assertInstanceOf(CachedTemplate::class, $cached);
         $this->assertSame([], $cached->metadata->dependencies);
-        $this->assertSame([], $cached->metadata->components);
         $this->assertSame('', $cached->metadata->sourcePath);
         $this->assertSame(0, $cached->metadata->sourceTimestamp);
         $this->assertSame(0, $cached->metadata->compiledTimestamp);
@@ -252,13 +250,13 @@ final class FileCacheTest extends TestCase
         $this->assertContains('/templates/page.sugar.php', $invalidated);
     }
 
-    public function testInvalidateWithComponents(): void
+    public function testInvalidateWithComponentPathDependency(): void
     {
         // Component
         $this->cache->put('/components/s-button.sugar.php', '<?php echo "Button";', new CacheMetadata());
 
         // Page uses component
-        $metadata = new CacheMetadata(components: ['/components/s-button.sugar.php']);
+        $metadata = new CacheMetadata(dependencies: ['/components/s-button.sugar.php']);
         $this->cache->put('/templates/page.sugar.php', '<?php echo "Page";', $metadata);
 
         // Invalidate component - should cascade to page
@@ -445,7 +443,7 @@ final class FileCacheTest extends TestCase
         $cache1 = new FileCache($sharedCacheDir);
 
         $metadata = new CacheMetadata(
-            components: [$componentPath],
+            dependencies: [$componentPath],
             sourcePath: $sourcePath,
             sourceTimestamp: $sourceTime,
             debug: true,
@@ -477,7 +475,7 @@ final class FileCacheTest extends TestCase
         $cache1 = new FileCache($sharedCacheDir);
 
         $metadata = new CacheMetadata(
-            components: [$componentPath],
+            dependencies: [$componentPath],
             sourcePath: $sourcePath,
             sourceTimestamp: $sourceTime,
             debug: true,
@@ -736,11 +734,11 @@ final class FileCacheTest extends TestCase
 
     public function testComponentDependenciesTrackedInMemory(): void
     {
-        // Test that component dependencies (in addition to template dependencies) are tracked
+        // Test that component paths are tracked in the same dependency list
         $this->cache->put(
             'templates/page.sugar.php',
             '<?php echo "Page";',
-            new CacheMetadata(dependencies: ['templates/layout.sugar.php'], components: ['components/button.sugar.php']),
+            new CacheMetadata(dependencies: ['templates/layout.sugar.php', 'components/button.sugar.php']),
         );
 
         // Invalidating component should invalidate page
@@ -751,7 +749,7 @@ final class FileCacheTest extends TestCase
         $this->cache->put(
             'templates/page2.sugar.php',
             '<?php echo "Page2";',
-            new CacheMetadata(dependencies: ['templates/layout.sugar.php'], components: ['components/button.sugar.php']),
+            new CacheMetadata(dependencies: ['templates/layout.sugar.php', 'components/button.sugar.php']),
         );
 
         $invalidated = $this->cache->invalidate('templates/layout.sugar.php');

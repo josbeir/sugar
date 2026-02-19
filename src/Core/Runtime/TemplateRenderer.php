@@ -150,16 +150,16 @@ final class TemplateRenderer
     }
 
     /**
-     * Track a template path as a component dependency.
+     * Add a resolved template source path to the dependency tracker.
      *
-     * Used by ComponentRenderer to record component source files
-     * for cache invalidation.
+     * Used by runtime services (for example ComponentRenderer) when the
+     * dependency path is already known and should be recorded directly.
      *
-     * @param string $sourcePath Filesystem path of the component source file
+     * @param string $sourcePath Filesystem path of the dependent source file
      */
-    public function trackComponent(string $sourcePath): void
+    public function addDependency(string $sourcePath): void
     {
-        $this->tracker?->addComponent($sourcePath);
+        $this->tracker?->addDependency($sourcePath);
     }
 
     /**
@@ -272,10 +272,6 @@ final class TemplateRenderer
 
         foreach ($metadata->dependencies as $dependency) {
             $this->tracker->addDependency($dependency);
-        }
-
-        foreach ($metadata->components as $component) {
-            $this->tracker->addComponent($component);
         }
     }
 
