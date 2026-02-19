@@ -5,6 +5,7 @@ namespace Sugar\Tests\Unit\Core\Pass\Inheritance;
 
 use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\AttributeValue;
+use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
 use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\FragmentNode;
@@ -893,6 +894,158 @@ final class InheritanceCompilationPassTest extends MiddlewarePassTestCase
         $code = $this->collectAllPhpCode($result);
         // Hyphen should be replaced with underscore in variable name
         $this->assertStringContainsString('$__parentDefault_header_nav', $code);
+    }
+
+    /**
+     * Test that nested s:extends inside descendants throws a syntax error.
+     */
+    public function testNestedExtendsInsideDescendantsThrowsSyntaxException(): void
+    {
+        $rootExtends = $this->fragment(
+            attributes: [$this->attribute('s:extends', 'parent.sugar.php')],
+        );
+
+        $nestedExtends = $this->fragment(
+            attributes: [$this->attribute('s:extends', 'parent.sugar.php')],
+        );
+
+        $container = $this->element('section')
+            ->withChild($this->element('div')->withChild($nestedExtends)->build())
+            ->build();
+
+        $ast = $this->document()->withChildren([$rootExtends, $container])->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:extends is only allowed on root-level template elements');
+
+        $this->execute($ast, $this->createTestContext());
+    }
+
+    /**
+     * Test that s:parent placeholder with whitespace children is accepted.
+     */
+    public function testParentPlaceholderWithWhitespaceChildrenIsAllowed(): void
+    {
+        $parentPlaceholder = $this->fragment(
+            attributes: [$this->attribute('s:parent', '')],
+            children: [$this->text("  \n\t")],
+        );
+
+        $blockFragment = $this->fragment(
+            attributes: [$this->attribute('s:block', 'content')],
+            children: [$parentPlaceholder],
+        );
+
+        $extendsFragment = $this->fragment(
+            attributes: [$this->attribute('s:extends', 'parent.sugar.php')],
+        );
+
+        $ast = $this->document()
+            ->withChild($extendsFragment)
+            ->withChild($blockFragment)
+            ->build();
+
+        $result = $this->execute($ast, $this->createTestContext());
+        $code = $this->collectAllPhpCode($result);
+
+        $this->assertStringContainsString('renderParent', $code);
+    }
+
+    /**
+     * Test that non-block children inside extends element are ignored.
+     */
+    public function testExtendsIgnoresNonBlockChildrenInsideExtendsElement(): void
+    {
+        $extendsElement = $this->element('main')
+            ->attribute('s:extends', 'parent.sugar.php')
+            ->withChild($this->element('aside')->withChild($this->text('Ignored'))->build())
+            ->withChild($this->fragment(
+                attributes: [$this->attribute('s:block', 'content')],
+                children: [$this->text('Inline block')],
+            ))
+            ->build();
+
+        $ast = $this->document()->withChild($extendsElement)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $code = $this->collectAllPhpCode($result);
+        $this->assertStringContainsString("defineBlock('content'", $code);
+        $this->assertStringContainsString('Inline block', $code);
+        $this->assertStringNotContainsString("defineBlock('aside'", $code);
+    }
+
+    /**
+     * Test that directive children inside blocks are serialized from their children.
+     */
+    public function testBlockSerializationIncludesDirectiveChildren(): void
+    {
+        $directive = new DirectiveNode(
+            name: 'if',
+            expression: '$show',
+            children: [$this->text('From directive child')],
+            line: 1,
+            column: 1,
+        );
+
+        $blockFragment = $this->fragment(
+            attributes: [$this->attribute('s:block', 'content')],
+            children: [$directive],
+        );
+
+        $ast = $this->document()
+            ->withChild($this->fragment(attributes: [$this->attribute('s:extends', 'parent.sugar.php')]))
+            ->withChild($blockFragment)
+            ->build();
+
+        $result = $this->execute($ast, $this->createTestContext());
+        $code = $this->collectAllPhpCode($result);
+
+        $this->assertStringContainsString('From directive child', $code);
+    }
+
+    /**
+     * Test that dynamic block attributes serialize escaped and raw output correctly.
+     */
+    public function testBlockAttributeSerializationSupportsBooleanAndDynamicOutputs(): void
+    {
+        $contentElement = $this->element('div')
+            ->attributeNode(new AttributeNode('disabled', AttributeValue::boolean(), 1, 0))
+            ->attributeNode(new AttributeNode(
+                'title',
+                AttributeValue::parts([
+                    'prefix-',
+                    $this->outputNode('$safe', true, OutputContext::HTML_ATTRIBUTE),
+                    '-suffix',
+                ]),
+                1,
+                0,
+            ))
+            ->attributeNode(new AttributeNode(
+                'data-raw',
+                AttributeValue::parts([
+                    $this->outputNode('$raw', false, OutputContext::RAW),
+                ]),
+                1,
+                0,
+            ))
+            ->build();
+
+        $blockFragment = $this->fragment(
+            attributes: [$this->attribute('s:block', 'content')],
+            children: [$contentElement],
+        );
+
+        $extendsFragment = $this->fragment(
+            attributes: [$this->attribute('s:extends', 'parent.sugar.php')],
+        );
+
+        $ast = $this->document()->withChildren([$extendsFragment, $blockFragment])->build();
+        $result = $this->execute($ast, $this->createTestContext());
+        $code = $this->collectAllPhpCode($result);
+
+        $this->assertStringContainsString(' disabled', $code);
+        $this->assertStringContainsString('__SugarEscaper::html_attr($safe)', $code);
+        $this->assertStringContainsString('<?php echo $raw; ?>', $code);
     }
 
     /**

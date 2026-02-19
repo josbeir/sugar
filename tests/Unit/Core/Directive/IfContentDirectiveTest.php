@@ -13,6 +13,7 @@ use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\IfContentDirective;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Escape\Enum\OutputContext;
+use Sugar\Core\Escape\Escaper;
 
 final class IfContentDirectiveTest extends DirectiveTestCase
 {
@@ -149,7 +150,7 @@ final class IfContentDirectiveTest extends DirectiveTestCase
         $this->assertStringContainsString("echo '<div';", $compiledPhp);
         $this->assertStringContainsString("echo ' hidden';", $compiledPhp);
         $this->assertStringContainsString('class="card"', $compiledPhp);
-        $this->assertStringContainsString('htmlspecialchars((string) ($title), ENT_QUOTES, "UTF-8");', $compiledPhp);
+        $this->assertStringContainsString(Escaper::class . '::attr(($title));', $compiledPhp);
         $this->assertStringContainsString('echo $raw;', $compiledPhp);
         $this->assertStringContainsString('$__ifcontent_attr = $spread;', $compiledPhp);
         $this->assertStringContainsString("echo '>';", $compiledPhp);

@@ -13,6 +13,7 @@ use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Ast\RuntimeCallNode;
 use Sugar\Core\Cache\DependencyTracker;
+use Sugar\Core\Compiler\CodeGen\GeneratedAlias;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
@@ -24,6 +25,7 @@ use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Extension\DirectiveRegistryInterface;
 use Sugar\Extension\Component\Helper\SlotResolver;
 use Sugar\Extension\Component\Loader\ComponentLoaderInterface;
+use Sugar\Extension\Component\Runtime\ComponentRenderer;
 use Throwable;
 
 /**
@@ -36,9 +38,7 @@ use Throwable;
  */
 final class ComponentExpansionPass implements AstPassInterface
 {
-    private const RUNTIME_ENV_ALIAS = '__SugarRuntimeEnvironment';
-
-    private const COMPONENT_RENDERER_ALIAS = '__SugarComponentRenderer';
+    private const COMPONENT_RENDERER_FQCN = ComponentRenderer::class;
 
     private readonly DirectivePrefixHelper $prefixHelper;
 
@@ -328,8 +328,8 @@ final class ComponentExpansionPass implements AstPassInterface
         ));
 
         return new RuntimeCallNode(
-            callableExpression: self::RUNTIME_ENV_ALIAS
-                . '::requireService(' . self::COMPONENT_RENDERER_ALIAS . '::class)->renderComponent',
+            callableExpression: GeneratedAlias::RUNTIME_ENV
+                . '::requireService(' . self::COMPONENT_RENDERER_FQCN . '::class)->renderComponent',
             arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
             line: $line,
             column: $column,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension\Component;
 
 use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
+use Sugar\Core\Directive\PassThroughDirective;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
 use Sugar\Core\Extension\RuntimeContext;
@@ -44,6 +45,8 @@ final class ComponentExtension implements ExtensionInterface
             config: $config,
             componentDirectories: $this->componentDirectories,
         );
+
+        $context->directive('component', PassThroughDirective::class);
 
         $context->compilerPass(
             pass: new ComponentExpansionPass(

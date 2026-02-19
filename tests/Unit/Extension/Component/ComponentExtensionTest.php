@@ -9,6 +9,7 @@ use Sugar\Core\Cache\TemplateCacheInterface;
 use Sugar\Core\Compiler\Compiler;
 use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\PassThroughDirective;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Extension\DirectiveRegistry;
 use Sugar\Core\Extension\RegistrationContext;
@@ -84,5 +85,29 @@ final class ComponentExtensionTest extends TestCase
 
         $renderer = $services[ComponentRenderer::class]($runtimeContext);
         $this->assertInstanceOf(ComponentRenderer::class, $renderer);
+    }
+
+    public function testRegistersComponentPassThroughDirective(): void
+    {
+        $config = new SugarConfig();
+        $loader = new StringTemplateLoader(templates: [
+            'components/s-card.sugar.php' => '<div><?= $slot ?></div>',
+        ]);
+        $parser = new Parser($config);
+        $registry = new DirectiveRegistry();
+
+        $context = new RegistrationContext(
+            config: $config,
+            templateLoader: $loader,
+            templateCache: $this->createStub(TemplateCacheInterface::class),
+            parser: $parser,
+            directiveRegistry: $registry,
+        );
+
+        (new ComponentExtension())->register($context);
+
+        $directives = $context->getDirectives();
+        $this->assertArrayHasKey('component', $directives);
+        $this->assertSame(PassThroughDirective::class, $directives['component']);
     }
 }

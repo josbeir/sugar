@@ -284,7 +284,7 @@ final class EngineBuilder
             $cache,
             $debug,
             $templateContext,
-): TemplateRenderer {
+        ): TemplateRenderer {
             return new TemplateRenderer(
                 compiler: $runtimeContext->getCompiler(),
                 loader: $loader,

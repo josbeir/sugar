@@ -19,7 +19,6 @@ use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Core\Runtime\HtmlAttributeHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
@@ -299,7 +298,7 @@ final class DirectiveIntegrationTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         $this->assertStringContainsString('HtmlAttributeHelper::spreadAttrs(array_diff_key((array) ($attrs), [\'id\' => true, \'class\' => true]))', $code);
-        $this->assertStringContainsString('class="<?php echo ' . HtmlAttributeHelper::class . "::classNames(['card'", $code);
+        $this->assertStringContainsString('class="<?php echo __SugarHtmlAttributeHelper::classNames([\'card\'', $code);
     }
 
     public function testClassDirectiveRendersMergedOutput(): void

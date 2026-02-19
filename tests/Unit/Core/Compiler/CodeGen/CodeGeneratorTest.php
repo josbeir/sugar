@@ -16,6 +16,10 @@ use Sugar\Core\Compiler\CodeGen\CodeGenerator;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\UnsupportedNodeException;
+use Sugar\Core\Runtime\EmptyHelper;
+use Sugar\Core\Runtime\HtmlTagHelper;
+use Sugar\Core\Runtime\RuntimeEnvironment;
+use Sugar\Core\Runtime\TemplateRenderer;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -163,6 +167,30 @@ final class CodeGeneratorTest extends TestCase
         $this->assertStringContainsString('<?php $x = 42; ?>', $code);
     }
 
+    public function testGenerateRawPhpNormalizesRuntimeFqcnReferences(): void
+    {
+        $ast = $this->document()
+            ->withChild($this->rawPhp(
+                'echo ' . EmptyHelper::class . '::isEmpty($value); '
+                . '$tag = ' . HtmlTagHelper::class . '::sanitizeTagName($name); '
+                . '$tpl = ' . RuntimeEnvironment::class . '::requireService('
+                . TemplateRenderer::class . '::class);',
+                1,
+                1,
+            ))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($value)', $code);
+        $this->assertStringContainsString('__SugarHtmlTagHelper::sanitizeTagName($name)', $code);
+        $this->assertStringContainsString('__SugarRuntimeEnvironment::requireService(__SugarTemplateRenderer::class)', $code);
+        $this->assertStringNotContainsString(EmptyHelper::class . '::', $code);
+        $this->assertStringNotContainsString(HtmlTagHelper::class . '::', $code);
+        $this->assertStringNotContainsString(RuntimeEnvironment::class . '::', $code);
+        $this->assertStringNotContainsString(TemplateRenderer::class . '::class', $code);
+    }
+
     public function testGenerateRawPhpWithLogic(): void
     {
         $ast = $this->document()
@@ -262,6 +290,25 @@ final class CodeGeneratorTest extends TestCase
         $output = $this->executeTemplate($code);
 
         $this->assertSame('4', $output);
+    }
+
+    public function testGenerateRuntimeCallNodeNormalizesCallableAndArguments(): void
+    {
+        $ast = $this->document()
+            ->withChild(new RuntimeCallNode(
+                HtmlTagHelper::class . '::sanitizeTagName',
+                [EmptyHelper::class . '::isEmpty($value) ? "span" : "div"'],
+                1,
+                1,
+            ))
+            ->build();
+
+        $code = $this->generator->generate($ast);
+
+        $this->assertStringContainsString('__SugarHtmlTagHelper::sanitizeTagName(', $code);
+        $this->assertStringContainsString('__SugarEmptyHelper::isEmpty($value)', $code);
+        $this->assertStringNotContainsString(HtmlTagHelper::class . '::', $code);
+        $this->assertStringNotContainsString(EmptyHelper::class . '::', $code);
     }
 
     public function testNoDebugCommentsWhenDisabled(): void

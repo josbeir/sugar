@@ -14,6 +14,7 @@ use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\Interface\ElementAwareDirectiveInterface;
+use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Util\Hash;
 
 /**
@@ -152,7 +153,8 @@ readonly class IfContentDirective implements DirectiveInterface, ElementAwareDir
                     if ($output->escape) {
                         $parts[] = $this->rawNode(
                             sprintf(
-                                'echo htmlspecialchars((string) (%s), ENT_QUOTES, "UTF-8");',
+                                'echo %s::attr((%s));',
+                                Escaper::class,
                                 $output->expression,
                             ),
                             $node,

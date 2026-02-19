@@ -12,7 +12,6 @@ use Sugar\Core\Directive\TagDirective;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
-use Sugar\Core\Runtime\HtmlTagHelper;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\TemplateTestHelperTrait;
 
@@ -62,7 +61,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         // Should contain tag validation
-        $this->assertStringContainsString(HtmlTagHelper::class . '::validateTagName', $code);
+        $this->assertStringContainsString('__SugarHtmlTagHelper::validateTagName', $code);
         $this->assertStringContainsString('$tagName', $code);
         $this->assertStringContainsString('$__tag_', $code);
     }
@@ -76,7 +75,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         $this->assertStringContainsString('\'h\' . $level', $code);
-        $this->assertStringContainsString(HtmlTagHelper::class . '::validateTagName', $code);
+        $this->assertStringContainsString('__SugarHtmlTagHelper::validateTagName', $code);
     }
 
     public function testIfContentDirectiveFullPipeline(): void
@@ -103,7 +102,7 @@ final class DirectiveCompilationPipelineTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         // Should contain both tag validation and output buffering
-        $this->assertStringContainsString(HtmlTagHelper::class . '::validateTagName', $code);
+        $this->assertStringContainsString('__SugarHtmlTagHelper::validateTagName', $code);
         $this->assertStringContainsString('ob_start()', $code);
         $this->assertStringContainsString('$__tag_', $code);
         $this->assertStringContainsString('$__content_', $code);

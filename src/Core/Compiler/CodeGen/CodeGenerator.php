@@ -25,14 +25,6 @@ use Sugar\Core\Exception\UnsupportedNodeException;
  */
 final class CodeGenerator
 {
-    private const RUNTIME_ENV_ALIAS = '__SugarRuntimeEnvironment';
-
-    private const TEMPLATE_RENDERER_ALIAS = '__SugarTemplateRenderer';
-
-    private const COMPONENT_RENDERER_ALIAS = '__SugarComponentRenderer';
-
-    private const ESCAPER_ALIAS = '__SugarEscaper';
-
     /**
      * Constructor
      *
@@ -79,25 +71,21 @@ final class CodeGenerator
         $buffer->writeln(' */');
 
         $registry = new PhpImportRegistry();
-        $registry->add('use Sugar\\Core\\Runtime\\RuntimeEnvironment as ' . self::RUNTIME_ENV_ALIAS . ';');
-        $registry->add('use Sugar\\Core\\Runtime\\TemplateRenderer as ' . self::TEMPLATE_RENDERER_ALIAS . ';');
-        $registry->add('use Sugar\\Core\\Escape\\Escaper as ' . self::ESCAPER_ALIAS . ';');
-        $registry->add(
-            'use Sugar\\Extension\\Component\\Runtime\\ComponentRenderer as '
-            . self::COMPONENT_RENDERER_ALIAS
-            . ';',
-        );
+        foreach (GeneratedAlias::runtimeReferenceMap() as $fqcn => $alias) {
+            $registry->add('use ' . $fqcn . ' as ' . $alias . ';');
+        }
+
         foreach ($this->collectImportNodes($ast) as $importNode) {
             $registry->add($importNode->statement);
         }
 
         $imports = $registry->all();
         if ($imports !== []) {
+            sort($imports);
+
             foreach ($imports as $import) {
                 $buffer->writeln($import);
             }
-
-            $buffer->writeln('');
         }
 
         $buffer->writeln('');
@@ -105,15 +93,14 @@ final class CodeGenerator
         $buffer->writeln('    ob_start();');
         $buffer->writeln('    try {');
         $buffer->writeln('        extract((array)$__data, EXTR_SKIP);');
-        $buffer->write('        ?>');
+        $buffer->writeln('?>');
 
         // Generate code for each node
         foreach ($ast->children as $node) {
             $this->generateNode($node, $buffer);
         }
 
-        $buffer->write('<?php');
-        $buffer->writeln('');
+        $buffer->writeln('<?php');
         $buffer->writeln('        return ob_get_clean();');
         $buffer->writeln('    } catch (\Throwable $__e) {');
         $buffer->writeln('        ob_end_clean();');
@@ -193,10 +180,12 @@ final class CodeGenerator
             $expression = $this->compilePipes($expression, $node->pipes);
         }
 
+        $expression = $this->normalizeRuntimeReferences($expression);
+
         if ($node->escape) {
             // Generate inline escaping code (compile-time optimization)
             $escapedCode = $this->escaper->generateEscapeCode($expression, $node->context);
-            $escapedCode = $this->normalizeEscaperReference($escapedCode);
+            $escapedCode = $this->normalizeRuntimeReferences($escapedCode);
             $buffer->write(sprintf('<?php echo %s; ?>', $escapedCode));
         } else {
             // Raw output
@@ -213,7 +202,7 @@ final class CodeGenerator
     private function generateRawPhp(RawPhpNode $node, OutputBuffer $buffer): void
     {
         // Pass through trimmed code (removes excess whitespace from token parsing)
-        $trimmedCode = trim($node->code);
+        $trimmedCode = $this->normalizeRuntimeReferences(trim($node->code));
 
         $buffer->write(sprintf('<?php %s ?>', $trimmedCode));
     }
@@ -295,9 +284,11 @@ final class CodeGenerator
                 $expression = $this->compilePipes($expression, $output->pipes);
             }
 
+            $expression = $this->normalizeRuntimeReferences($expression);
+
             if ($output->escape) {
                 $expression = $this->escaper->generateEscapeCode($expression, $output->context);
-                $expression = $this->normalizeEscaperReference($expression);
+                $expression = $this->normalizeRuntimeReferences($expression);
             }
 
             $buffer->write(sprintf(
@@ -358,8 +349,9 @@ final class CodeGenerator
      */
     private function generateRuntimeCall(RuntimeCallNode $node, OutputBuffer $buffer): void
     {
-        $arguments = implode(', ', $node->arguments);
-        $buffer->write(sprintf('<?php echo %s(%s); ?>', $node->callableExpression, $arguments));
+        $callableExpression = $this->normalizeRuntimeReferences($node->callableExpression);
+        $arguments = implode(', ', array_map($this->normalizeRuntimeReferences(...), $node->arguments));
+        $buffer->write(sprintf('<?php echo %s(%s); ?>', $callableExpression, $arguments));
     }
 
     /**
@@ -439,10 +431,23 @@ final class CodeGenerator
     }
 
     /**
-     * Rewrite generated Escaper FQCN calls to the reserved Sugar alias.
+     * Rewrite generated runtime/helper FQCN references to reserved Sugar aliases.
      */
-    private function normalizeEscaperReference(string $expression): string
+    private function normalizeRuntimeReferences(string $expression): string
     {
-        return str_replace(Escaper::class . '::', self::ESCAPER_ALIAS . '::', $expression);
+        $search = [];
+        $replace = [];
+        foreach (GeneratedAlias::runtimeReferenceMap() as $fqcn => $alias) {
+            $search[] = $fqcn . '::';
+            $replace[] = $alias . '::';
+            $search[] = '\\' . $fqcn . '::';
+            $replace[] = $alias . '::';
+        }
+
+        return str_replace(
+            $search,
+            $replace,
+            $expression,
+        );
     }
 }
