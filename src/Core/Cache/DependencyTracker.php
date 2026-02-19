@@ -6,8 +6,8 @@ namespace Sugar\Core\Cache;
 /**
  * Tracks template dependencies during compilation
  *
- * Collects information about templates extended/included and
- * components used to enable cache invalidation.
+ * Collects all template files that affect a compiled template so cache
+ * invalidation can be based on a single dependency list.
  */
 final class DependencyTracker
 {
@@ -17,11 +17,6 @@ final class DependencyTracker
     private array $dependencies = [];
 
     /**
-     * @var array<string, true> Components (using keys for uniqueness)
-     */
-    private array $components = [];
-
-    /**
      * Add a template dependency
      *
      * @param string $path Template path that was extended or included
@@ -29,16 +24,6 @@ final class DependencyTracker
     public function addDependency(string $path): void
     {
         $this->dependencies[$path] = true;
-    }
-
-    /**
-     * Add a component dependency
-     *
-     * @param string $path Component path that was used
-     */
-    public function addComponent(string $path): void
-    {
-        $this->components[$path] = true;
     }
 
     /**
@@ -57,7 +42,6 @@ final class DependencyTracker
 
         return new CacheMetadata(
             dependencies: array_keys($this->dependencies),
-            components: array_keys($this->components),
             sourcePath: $sourcePath,
             sourceTimestamp: $sourceTimestamp,
             compiledTimestamp: time(),
@@ -71,6 +55,5 @@ final class DependencyTracker
     public function reset(): void
     {
         $this->dependencies = [];
-        $this->components = [];
     }
 }

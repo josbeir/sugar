@@ -55,7 +55,6 @@ final class DependencyTrackingTest extends TestCase
 
         // Metadata should exist with proper structure
         $this->assertSame([], $metadata->dependencies);
-        $this->assertSame([], $metadata->components);
     }
 
     public function testTracksExtendsDependency(): void
@@ -137,7 +136,7 @@ final class DependencyTrackingTest extends TestCase
         // Should track the button component
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('button'),
-            $metadata->components,
+            $metadata->dependencies,
         );
     }
 
@@ -163,17 +162,17 @@ final class DependencyTrackingTest extends TestCase
         // Should track all components
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('button'),
-            $metadata->components,
+            $metadata->dependencies,
         );
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('badge'),
-            $metadata->components,
+            $metadata->dependencies,
         );
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('alert'),
-            $metadata->components,
+            $metadata->dependencies,
         );
-        $this->assertCount(3, $metadata->components);
+        $this->assertCount(3, $metadata->dependencies);
     }
 
     public function testTracksDuplicateComponentsOnce(): void
@@ -198,9 +197,9 @@ final class DependencyTrackingTest extends TestCase
         // Should track button only once
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('button'),
-            $metadata->components,
+            $metadata->dependencies,
         );
-        $this->assertCount(1, $metadata->components);
+        $this->assertCount(1, $metadata->dependencies);
     }
 
     public function testTracksNestedDependencies(): void
@@ -245,7 +244,7 @@ SUGAR;
         $this->assertGreaterThan(0, count($metadata->dependencies));
         $this->assertContains(
             $this->componentLoader->getComponentFilePath('button'),
-            $metadata->components,
+            $metadata->dependencies,
         );
     }
 }

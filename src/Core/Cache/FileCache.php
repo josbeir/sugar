@@ -114,7 +114,6 @@ final class FileCache implements TemplateCacheInterface
         // Update compiled timestamp to current time
         $metadata = new CacheMetadata(
             dependencies: $metadata->dependencies,
-            components: $metadata->components,
             sourcePath: $metadata->sourcePath,
             sourceTimestamp: $metadata->sourceTimestamp,
             compiledTimestamp: time(),
@@ -280,13 +279,6 @@ final class FileCache implements TemplateCacheInterface
 
         $dependencies = array_values(array_filter($dependencies, static fn($value): bool => is_string($value)));
 
-        $components = $data['components'] ?? [];
-        if (!is_array($components)) {
-            $components = [];
-        }
-
-        $components = array_values(array_filter($components, static fn($value): bool => is_string($value)));
-
         $sourcePath = $data['sourcePath'] ?? '';
         if (!is_string($sourcePath)) {
             $sourcePath = '';
@@ -309,7 +301,6 @@ final class FileCache implements TemplateCacheInterface
 
         return new CacheMetadata(
             dependencies: $dependencies,
-            components: $components,
             sourcePath: $sourcePath,
             sourceTimestamp: $sourceTimestamp,
             compiledTimestamp: $compiledTimestamp,
@@ -327,7 +318,6 @@ final class FileCache implements TemplateCacheInterface
     {
         $data = [
             'dependencies' => $metadata->dependencies,
-            'components' => $metadata->components,
             'sourcePath' => $metadata->sourcePath,
             'sourceTimestamp' => $metadata->sourceTimestamp,
             'compiledTimestamp' => $metadata->compiledTimestamp,
@@ -439,8 +429,7 @@ final class FileCache implements TemplateCacheInterface
         $map = $this->loadDependencyMap();
 
         // Add this template as dependent of all its dependencies
-        $allDependencies = array_merge($metadata->dependencies, $metadata->components);
-        foreach ($allDependencies as $dependency) {
+        foreach ($metadata->dependencies as $dependency) {
             if (!isset($map[$dependency])) {
                 $map[$dependency] = [];
             }
@@ -518,11 +507,7 @@ final class FileCache implements TemplateCacheInterface
             }
         }
 
-        if (!$this->areFilesFresh($metadata->dependencies, $metadata->compiledTimestamp)) {
-            return false;
-        }
-
-        return $this->areFilesFresh($metadata->components, $metadata->compiledTimestamp); // All fresh
+        return $this->areFilesFresh($metadata->dependencies, $metadata->compiledTimestamp);
     }
 
     /**

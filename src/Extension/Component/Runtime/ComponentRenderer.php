@@ -70,7 +70,7 @@ final class ComponentRenderer
         $templateRenderer = RuntimeEnvironment::requireService(TemplateRenderer::class);
 
         // Track component source file for cache invalidation
-        $templateRenderer->trackComponent(
+        $templateRenderer->addDependency(
             $this->loader->getComponentFilePath($componentName),
         );
 

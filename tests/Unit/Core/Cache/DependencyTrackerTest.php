@@ -28,18 +28,18 @@ final class DependencyTrackerTest extends TestCase
         $this->assertTrue($metadata->debug);
     }
 
-    public function testTracksComponents(): void
+    public function testTracksComponentPathsAsDependencies(): void
     {
         $tracker = new DependencyTracker();
 
-        $tracker->addComponent('/components/s-button.sugar.php');
-        $tracker->addComponent('/components/s-alert.sugar.php');
+        $tracker->addDependency('/components/s-button.sugar.php');
+        $tracker->addDependency('/components/s-alert.sugar.php');
 
         $metadata = $tracker->getMetadata('/templates/page.sugar.php');
 
         $this->assertSame(
             ['/components/s-button.sugar.php', '/components/s-alert.sugar.php'],
-            $metadata->components,
+            $metadata->dependencies,
         );
     }
 
@@ -88,19 +88,19 @@ final class DependencyTrackerTest extends TestCase
         );
     }
 
-    public function testDeduplicatesComponents(): void
+    public function testDeduplicatesComponentPathsInDependencies(): void
     {
         $tracker = new DependencyTracker();
 
-        $tracker->addComponent('/components/s-button.sugar.php');
-        $tracker->addComponent('/components/s-button.sugar.php');
-        $tracker->addComponent('/components/s-alert.sugar.php');
+        $tracker->addDependency('/components/s-button.sugar.php');
+        $tracker->addDependency('/components/s-button.sugar.php');
+        $tracker->addDependency('/components/s-alert.sugar.php');
 
         $metadata = $tracker->getMetadata('/templates/page.sugar.php');
 
         $this->assertSame(
             ['/components/s-button.sugar.php', '/components/s-alert.sugar.php'],
-            $metadata->components,
+            $metadata->dependencies,
         );
     }
 
@@ -109,13 +109,12 @@ final class DependencyTrackerTest extends TestCase
         $tracker = new DependencyTracker();
 
         $tracker->addDependency('/templates/layout.sugar.php');
-        $tracker->addComponent('/components/s-button.sugar.php');
+        $tracker->addDependency('/components/s-button.sugar.php');
 
         $tracker->reset();
 
         $metadata = $tracker->getMetadata('/templates/page.sugar.php');
 
         $this->assertSame([], $metadata->dependencies);
-        $this->assertSame([], $metadata->components);
     }
 }

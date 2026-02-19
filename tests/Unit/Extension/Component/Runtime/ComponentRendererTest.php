@@ -209,7 +209,7 @@ final class ComponentRendererTest extends TestCase
         $componentPath = $this->componentLoader->getComponentFilePath('alert');
         $metadata = $tracker->getMetadata($componentPath);
 
-        $this->assertContains($componentPath, $metadata->components);
+        $this->assertContains($componentPath, $metadata->dependencies);
     }
 
     public function testRenderComponentAlwaysIncludesDefaultSlot(): void
