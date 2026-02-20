@@ -136,4 +136,40 @@ final class ParserComponentTest extends TestCase
         $this->assertSame('s:if', $component->attributes[0]->name);
         $this->assertSame('s:class', $component->attributes[1]->name);
     }
+
+    public function testParsesSelfClosingComponentWithoutChildren(): void
+    {
+        $parser = $this->createParser();
+        $ast = $parser->parse('<s-button class="empty-button" />');
+
+        $this->assertCount(1, $ast->children);
+        $this->assertInstanceOf(ComponentNode::class, $ast->children[0]);
+
+        $component = $ast->children[0];
+        $this->assertSame('button', $component->name);
+        $this->assertCount(1, $component->attributes);
+        $this->assertSame('class', $component->attributes[0]->name);
+        $this->assertSame('empty-button', $component->attributes[0]->value->static);
+        $this->assertSame([], $component->children);
+    }
+
+    public function testSelfClosingComponentDoesNotConsumeFollowingSiblings(): void
+    {
+        $parser = $this->createParser();
+        $ast = $parser->parse('<s-button class="empty-button" /><p>After</p>');
+
+        $this->assertCount(2, $ast->children);
+        $this->assertInstanceOf(ComponentNode::class, $ast->children[0]);
+        $this->assertInstanceOf(ElementNode::class, $ast->children[1]);
+
+        $component = $ast->children[0];
+        $paragraph = $ast->children[1];
+
+        $this->assertSame('button', $component->name);
+        $this->assertSame([], $component->children);
+        $this->assertSame('p', $paragraph->tag);
+        $this->assertCount(1, $paragraph->children);
+        $this->assertInstanceOf(TextNode::class, $paragraph->children[0]);
+        $this->assertSame('After', $paragraph->children[0]->content);
+    }
 }
