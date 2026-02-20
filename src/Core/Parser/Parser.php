@@ -205,7 +205,15 @@ final readonly class Parser
         if ($this->prefixHelper->hasElementPrefix($tagName)) {
             $componentName = $this->prefixHelper->stripElementPrefix($tagName);
 
-            return $this->buildComponentNode($stream, $componentName, $attributes, $tagLine, $tagColumn, $tagName);
+            return $this->buildComponentNode(
+                $stream,
+                $componentName,
+                $attributes,
+                $tagLine,
+                $tagColumn,
+                $tagName,
+                $selfClosing,
+            );
         }
 
         return $this->buildElementNode($stream, $tagName, $attributes, $tagLine, $tagColumn, $selfClosing);
@@ -251,9 +259,13 @@ final readonly class Parser
         int $line,
         int $column,
         string $tagName,
+        bool $selfClosing,
     ): ComponentNode {
-        $children = $this->parseChildren($stream, $tagName);
-        $this->consumeClosingTag($stream);
+        $children = [];
+        if (!$selfClosing) {
+            $children = $this->parseChildren($stream, $tagName);
+            $this->consumeClosingTag($stream);
+        }
 
         return new ComponentNode(
             name: $componentName,
