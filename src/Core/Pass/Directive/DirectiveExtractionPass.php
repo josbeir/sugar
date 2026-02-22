@@ -296,7 +296,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                     }
                 }
 
-                if ($type === DirectiveType::CONTENT) {
+                if ($type === DirectiveType::OUTPUT) {
                     $contentCount++;
                     if ($contentCount > 1) {
                         throw $this->context->createSyntaxExceptionForAttribute(
@@ -325,7 +325,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                         'expression' => $expression,
                         'attr' => $attr,
                     ],
-                    DirectiveType::CONTENT => $contentDirective = [
+                    DirectiveType::OUTPUT => $contentDirective = [
                         'name' => $name,
                         'expression' => $expression,
                         'attr' => $attr,
@@ -661,7 +661,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                         'name' => $name,
                         'expression' => $expression,
                     ],
-                    DirectiveType::CONTENT => $contentDirective = [
+                    DirectiveType::OUTPUT => $contentDirective = [
                         'name' => $name,
                         'expression' => $expression,
                     ],

@@ -106,6 +106,6 @@ readonly class ContentDirective implements DirectiveInterface
      */
     public function getType(): DirectiveType
     {
-        return DirectiveType::CONTENT;
+        return DirectiveType::OUTPUT;
     }
 }
