@@ -154,7 +154,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('requires a content directive');
+        $this->expectExceptionMessage('requires an output directive');
 
         $this->execute($ast, $this->createTestContext());
     }
@@ -170,7 +170,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Content directives without a wrapper');
+        $this->expectExceptionMessage('Output directives without a wrapper');
 
         $this->execute($ast, $this->createTestContext());
     }
@@ -308,7 +308,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Only one content directive allowed');
+        $this->expectExceptionMessage('Only one output directive allowed');
 
         $this->execute($ast, $this->createTestContext());
     }
