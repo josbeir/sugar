@@ -53,6 +53,7 @@ final class ComponentRenderer
         } catch (TemplateRuntimeException $templateRuntimeException) {
             throw new ComponentNotFoundException(
                 $templateRuntimeException->getRawMessage(),
+                $templateRuntimeException->getCode(),
                 previous: $templateRuntimeException,
             );
         }

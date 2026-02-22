@@ -238,7 +238,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsWhenNoWrapUsedWithoutContentDirective(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('requires a content directive');
+        $this->expectExceptionMessage('requires an output directive');
 
         $element = $this->element('div')
             ->attributeNode($this->attributeNode('s:nowrap', null, 1, 5))
@@ -251,7 +251,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsWhenNoWrapHasOtherAttributes(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Content directives without a wrapper cannot include other attributes');
+        $this->expectExceptionMessage('Output directives without a wrapper cannot include other attributes');
 
         $element = $this->element('div')
             ->attribute('s:text', '$userName')
@@ -314,7 +314,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsOnMultipleContentDirectives(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Only one content directive allowed per element');
+        $this->expectExceptionMessage('Only one output directive allowed per element');
 
         $element = $this->element('div')
             ->attribute('s:text', '$text')

@@ -14,7 +14,7 @@ namespace Sugar\Core\Directive\Enum;
  * - ATTRIBUTE: Modifies element attributes (class, spread)
  *   Can combine with control flow directives.
  *
- * - CONTENT: Injects content into element children (text, html)
+ * - OUTPUT: Produces output into element children (text, html, asset tags)
  *   Can combine with control flow directives.
  *
  * - PASS_THROUGH: Special attributes that use directive syntax but are handled by other passes.
@@ -33,9 +33,9 @@ enum DirectiveType
     case ATTRIBUTE;
 
     /**
-     * Content directive - injects content into children (text, html)
+     * Output directive - produces output into children (text, html, asset tags)
      */
-    case CONTENT;
+    case OUTPUT;
 
     /**
      * Pass-through attribute - uses directive syntax but handled by other passes (slot)

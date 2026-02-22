@@ -86,7 +86,7 @@ final class BadgeDirective implements DirectiveInterface
 
     public function getType(): DirectiveType
     {
-        return DirectiveType::CONTENT;
+        return DirectiveType::OUTPUT;
     }
 }
 ```

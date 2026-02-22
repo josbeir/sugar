@@ -204,12 +204,7 @@ final class CompilationContext
         ?int $line = null,
         ?int $column = null,
     ): SugarException {
-        return new $exceptionClass(
-            message: $message,
-            templatePath: $templatePath,
-            templateLine: $line,
-            templateColumn: $column,
-        );
+        return (new $exceptionClass($message))->withLocation($templatePath, $line, $column);
     }
 
     /**

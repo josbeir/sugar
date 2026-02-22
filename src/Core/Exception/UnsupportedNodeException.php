@@ -27,11 +27,7 @@ final class UnsupportedNodeException extends CompilationException
         ?int $templateLine = null,
         ?int $templateColumn = null,
     ): self {
-        return new self(
-            message: sprintf('Unsupported node type: %s', $nodeClass),
-            templatePath: $templatePath,
-            templateLine: $templateLine,
-            templateColumn: $templateColumn,
-        );
+        return (new self(sprintf('Unsupported node type: %s', $nodeClass)))
+            ->withLocation($templatePath, $templateLine, $templateColumn);
     }
 }

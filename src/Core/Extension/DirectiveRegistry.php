@@ -167,7 +167,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
         if (!$this->has($name)) {
             $suggestion = DidYouMean::suggest($name, array_keys($this->directives));
 
-            throw new UnknownDirectiveException(
+            throw UnknownDirectiveException::create(
                 directiveName: $name,
                 suggestion: $suggestion,
             );
