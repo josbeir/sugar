@@ -65,7 +65,7 @@ final class ExceptionHierarchyTest extends TestCase
 
     public function testUnknownDirectiveExceptionExtendsCompilationException(): void
     {
-        $exception = new UnknownDirectiveException('unknown');
+        $exception = UnknownDirectiveException::create('unknown');
 
         $this->assertInstanceOf(CompilationException::class, $exception);
         $this->assertSame('Unknown directive "unknown"', $exception->getMessage());

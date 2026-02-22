@@ -24,11 +24,8 @@ final class SugarExceptionTest extends TestCase
 
     public function testExceptionWithTemplatePathAndLine(): void
     {
-        $exception = new TestSugarException(
-            message: 'Syntax error',
-            templatePath: 'views/profile.sugar.php',
-            templateLine: 42,
-        );
+        $exception = (new TestSugarException('Syntax error'))
+            ->withLocation('views/profile.sugar.php', 42);
 
         $this->assertSame('views/profile.sugar.php', $exception->templatePath);
         $this->assertSame(42, $exception->templateLine);
@@ -43,12 +40,8 @@ final class SugarExceptionTest extends TestCase
 
     public function testExceptionWithFullLocation(): void
     {
-        $exception = new TestSugarException(
-            message: 'Unexpected token',
-            templatePath: 'components/button.sugar.php',
-            templateLine: 15,
-            templateColumn: 8,
-        );
+        $exception = (new TestSugarException('Unexpected token'))
+            ->withLocation('components/button.sugar.php', 15, 8);
 
         $this->assertSame('components/button.sugar.php', $exception->templatePath);
         $this->assertSame(15, $exception->templateLine);
@@ -62,22 +55,15 @@ final class SugarExceptionTest extends TestCase
     public function testExceptionWithPreviousException(): void
     {
         $previous = new RuntimeException('Original error');
-        $exception = new TestSugarException(
-            message: 'Compilation failed',
-            previous: $previous,
-        );
+        $exception = new TestSugarException('Compilation failed', previous: $previous);
 
         $this->assertSame($previous, $exception->getPrevious());
     }
 
     public function testExceptionFormatsMessageCorrectly(): void
     {
-        $exception = new TestSugarException(
-            message: 'Test error',
-            templatePath: 'test.sugar.php',
-            templateLine: 10,
-            templateColumn: 5,
-        );
+        $exception = (new TestSugarException('Test error'))
+            ->withLocation('test.sugar.php', 10, 5);
 
         $message = $exception->getMessage();
 

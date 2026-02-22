@@ -21,12 +21,8 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         ]);
 
         $renderer = new HtmlTemplateExceptionRenderer($loader);
-        $exception = new CompilationException(
-            message: 'Compile failed',
-            templatePath: 'Pages/home.sugar.php',
-            templateLine: 2,
-            templateColumn: 2,
-        );
+        $exception = (new CompilationException('Compile failed'))
+            ->withLocation('Pages/home.sugar.php', 2, 2);
 
         $html = $renderer->render($exception);
 
@@ -119,12 +115,8 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
             includeStyles: false,
             wrapDocument: true,
         );
-        $exception = new CompilationException(
-            message: 'Compile failed',
-            templatePath: 'missing.sugar.php',
-            templateLine: 1,
-            templateColumn: 1,
-        );
+        $exception = (new CompilationException('Compile failed'))
+            ->withLocation('missing.sugar.php', 1, 1);
 
         $html = $renderer->render($exception);
 
@@ -138,9 +130,7 @@ final class HtmlTemplateExceptionRendererTest extends TestCase
         $loader = $this->createLoader();
 
         $renderer = new HtmlTemplateExceptionRenderer($loader);
-        $exception = new CompilationException(
-            message: 'Compile failed',
-        );
+        $exception = new CompilationException('Compile failed');
 
         $html = $renderer->render($exception);
 
