@@ -12,6 +12,48 @@ use Sugar\Core\Exception\SyntaxException;
 final class ExpressionValidator
 {
     /**
+     * Normalize a directive/runtime expression.
+     *
+     * This helper supports three common normalization behaviors:
+     * - empty input falls back to a provided expression (default `true`)
+     * - known PHP expression prefixes/literals are preserved as-is
+     * - optional bare-string pattern values are quoted via var_export
+     *
+     * @param string $expression Raw directive expression
+     * @param string $emptyFallback Expression to use when input is empty
+     * @param string|null $bareStringPattern Optional regex for bare values that should be treated as string literals
+     * @return string Normalized PHP expression
+     */
+    public static function normalizeRuntimeExpression(
+        string $expression,
+        string $emptyFallback = 'true',
+        ?string $bareStringPattern = null,
+    ): string {
+        $trimmed = trim($expression);
+        if ($trimmed === '') {
+            return $emptyFallback;
+        }
+
+        if (
+            str_starts_with($trimmed, "'")
+            || str_starts_with($trimmed, '"')
+            || str_starts_with($trimmed, '[')
+            || str_starts_with($trimmed, '$')
+            || str_starts_with($trimmed, '(')
+            || str_starts_with($trimmed, 'array(')
+            || in_array(strtolower($trimmed), ['true', 'false', 'null'], true)
+        ) {
+            return $trimmed;
+        }
+
+        if ($bareStringPattern !== null && preg_match($bareStringPattern, $trimmed) === 1) {
+            return var_export($trimmed, true);
+        }
+
+        return $trimmed;
+    }
+
+    /**
      * Validate that an expression could potentially be an array
      *
      * Detects obvious invalid cases (string/number/boolean literals) and throws SyntaxException.

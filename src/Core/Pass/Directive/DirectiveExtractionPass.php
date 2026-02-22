@@ -265,15 +265,17 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 // Get directive type
                 $compiler = $this->registry->get($name);
+                $type = $compiler->getType();
 
                 if ($compiler instanceof ContentWrappingDirectiveInterface) {
                     $wrapContentElement = $compiler->shouldWrapContentElement();
                     $wrapContentElementDirective = $name;
                     $wrapContentElementAttr = $attr;
-                    continue;
-                }
 
-                $type = $compiler->getType();
+                    if ($type === DirectiveType::PASS_THROUGH) {
+                        continue;
+                    }
+                }
 
                 // Pass-through directives are handled by other passes - keep them as-is
                 if ($type === DirectiveType::PASS_THROUGH) {
@@ -296,7 +298,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                     }
                 }
 
-                if ($type === DirectiveType::CONTENT) {
+                if ($type === DirectiveType::OUTPUT) {
                     $contentCount++;
                     if ($contentCount > 1) {
                         throw $this->context->createSyntaxExceptionForAttribute(
@@ -325,7 +327,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                         'expression' => $expression,
                         'attr' => $attr,
                     ],
-                    DirectiveType::CONTENT => $contentDirective = [
+                    DirectiveType::OUTPUT => $contentDirective = [
                         'name' => $name,
                         'expression' => $expression,
                         'attr' => $attr,
@@ -636,8 +638,9 @@ final class DirectiveExtractionPass implements AstPassInterface
 
                 // Get directive type
                 $compiler = $this->registry->get($name);
+                $type = $compiler->getType();
 
-                if ($compiler instanceof ContentWrappingDirectiveInterface) {
+                if ($compiler instanceof ContentWrappingDirectiveInterface && $type === DirectiveType::PASS_THROUGH) {
                     throw $this->context->createSyntaxExceptionForAttribute(
                         sprintf(
                             'The s:%s directive can only be used on elements with %s:text or %s:html.',
@@ -649,8 +652,6 @@ final class DirectiveExtractionPass implements AstPassInterface
                     );
                 }
 
-                $type = $compiler->getType();
-
                 // Pass-through directives are handled by other passes - skip them
                 if ($type === DirectiveType::PASS_THROUGH) {
                     continue;
@@ -661,7 +662,7 @@ final class DirectiveExtractionPass implements AstPassInterface
                         'name' => $name,
                         'expression' => $expression,
                     ],
-                    DirectiveType::CONTENT => $contentDirective = [
+                    DirectiveType::OUTPUT => $contentDirective = [
                         'name' => $name,
                         'expression' => $expression,
                     ],

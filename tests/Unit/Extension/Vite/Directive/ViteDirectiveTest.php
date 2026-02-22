@@ -81,7 +81,38 @@ final class ViteDirectiveTest extends TestCase
     {
         $directive = new ViteDirective();
 
-        $this->assertSame(DirectiveType::CONTENT, $directive->getType());
+        $this->assertSame(DirectiveType::OUTPUT, $directive->getType());
+    }
+
+    /**
+     * Verify directive opts out of content element wrapping.
+     */
+    public function testDoesNotWrapContentElement(): void
+    {
+        $directive = new ViteDirective();
+
+        $this->assertFalse($directive->shouldWrapContentElement());
+    }
+
+    /**
+     * Verify bare path attribute values are treated as string literals.
+     */
+    public function testNormalizesBarePathExpressionToStringLiteral(): void
+    {
+        $directive = new ViteDirective();
+        $node = new DirectiveNode(
+            name: 'vite',
+            expression: 'resources/scss/site.scss',
+            children: [],
+            line: 3,
+            column: 1,
+        );
+
+        $compiled = $directive->compile($node, $this->createContext());
+
+        $this->assertCount(1, $compiled);
+        $this->assertInstanceOf(OutputNode::class, $compiled[0]);
+        $this->assertStringContainsString("->render('resources/scss/site.scss')", $compiled[0]->expression);
     }
 
     /**

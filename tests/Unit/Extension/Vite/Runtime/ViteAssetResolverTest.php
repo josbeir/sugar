@@ -31,6 +31,7 @@ final class ViteAssetResolverTest extends TestCase
             debug: true,
             manifestPath: null,
             buildBaseUrl: '/build/',
+            assetBaseUrl: null,
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -61,6 +62,7 @@ final class ViteAssetResolverTest extends TestCase
             debug: false,
             manifestPath: $this->manifestPath,
             buildBaseUrl: '/build/',
+            assetBaseUrl: null,
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -73,6 +75,66 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
+     * Verify CSS entry points render stylesheet tags instead of module scripts.
+     */
+    public function testProductionModeCssEntryRendersStylesheetTag(): void
+    {
+        $this->manifestPath = $this->createManifestFile([
+            'resources/assets/css/app.css' => [
+                'file' => 'assets/app-BmtWQ3nA.css',
+                'src' => 'resources/assets/css/app.css',
+                'isEntry' => true,
+                'name' => 'app',
+            ],
+        ]);
+
+        $resolver = new ViteAssetResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $this->manifestPath,
+            buildBaseUrl: '/build/',
+            assetBaseUrl: null,
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            defaultEntry: null,
+        );
+
+        $output = $resolver->render('resources/assets/css/app.css');
+
+        $this->assertStringContainsString('<link rel="stylesheet" href="/build/assets/app-BmtWQ3nA.css">', $output);
+        $this->assertStringNotContainsString('<script type="module" src="/build/assets/app-BmtWQ3nA.css"></script>', $output);
+    }
+
+    /**
+     * Verify filesystem build base paths are normalized to public URLs.
+     */
+    public function testProductionModeNormalizesFilesystemBuildBaseUrl(): void
+    {
+        $this->manifestPath = $this->createManifestFile([
+            'resources/assets/js/site.js' => [
+                'file' => 'assets/site-l0sNRNKZ.js',
+                'isEntry' => true,
+            ],
+        ]);
+
+        $resolver = new ViteAssetResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $this->manifestPath,
+            buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
+            assetBaseUrl: null,
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            defaultEntry: null,
+        );
+
+        $output = $resolver->render('resources/assets/js/site.js');
+
+        $this->assertStringContainsString('<script type="module" src="/build/assets/site-l0sNRNKZ.js"></script>', $output);
+        $this->assertStringNotContainsString('/home/josbeir/Sites/sugar_app/webroot/build/assets/site-l0sNRNKZ.js', $output);
+    }
+
+    /**
      * Verify missing production manifest path raises a runtime exception.
      */
     public function testProductionModeWithoutManifestPathThrowsException(): void
@@ -82,6 +144,7 @@ final class ViteAssetResolverTest extends TestCase
             debug: false,
             manifestPath: null,
             buildBaseUrl: '/build/',
+            assetBaseUrl: null,
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -103,6 +166,7 @@ final class ViteAssetResolverTest extends TestCase
             debug: true,
             manifestPath: null,
             buildBaseUrl: '/build/',
+            assetBaseUrl: null,
             devServerUrl: 'http://localhost:5173',
             injectClient: false,
             defaultEntry: 'resources/js/default.ts',
@@ -111,6 +175,35 @@ final class ViteAssetResolverTest extends TestCase
         $output = $resolver->render(true);
 
         $this->assertStringContainsString('http://localhost:5173/resources/js/default.ts', $output);
+    }
+
+    /**
+     * Verify explicit asset base URL takes precedence over build base normalization.
+     */
+    public function testProductionModeUsesExplicitAssetBaseUrlWhenConfigured(): void
+    {
+        $this->manifestPath = $this->createManifestFile([
+            'resources/assets/js/site.js' => [
+                'file' => 'assets/site-l0sNRNKZ.js',
+                'isEntry' => true,
+            ],
+        ]);
+
+        $resolver = new ViteAssetResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $this->manifestPath,
+            buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
+            assetBaseUrl: '/assets/build',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            defaultEntry: null,
+        );
+
+        $output = $resolver->render('resources/assets/js/site.js');
+
+        $this->assertStringContainsString('<script type="module" src="/assets/build/assets/site-l0sNRNKZ.js"></script>', $output);
+        $this->assertStringNotContainsString('<script type="module" src="/build/assets/site-l0sNRNKZ.js"></script>', $output);
     }
 
     /**

@@ -32,6 +32,7 @@ final class ViteAssetResolver
      * @param bool $debug Whether engine debug mode is enabled
      * @param string|null $manifestPath Absolute path to Vite manifest file for production mode
      * @param string $buildBaseUrl Public base URL prefix for built assets
+     * @param string|null $assetBaseUrl Explicit public URL base for emitted manifest assets
      * @param string $devServerUrl Vite dev server origin
      * @param bool $injectClient Whether to inject `@vite/client` in development mode
      * @param string|null $defaultEntry Optional default entry used when specification is boolean
@@ -41,6 +42,7 @@ final class ViteAssetResolver
         private readonly bool $debug,
         private readonly ?string $manifestPath,
         private readonly string $buildBaseUrl,
+        private readonly ?string $assetBaseUrl,
         private readonly string $devServerUrl,
         private readonly bool $injectClient,
         private readonly ?string $defaultEntry,
@@ -210,11 +212,21 @@ final class ViteAssetResolver
                 throw new TemplateRuntimeException(sprintf('Invalid Vite manifest entry for "%s".', $entry));
             }
 
-            $src = $this->normalizeBuildUrl($entryMeta['file']);
-            $scriptTag = '<script type="module" src="' . Escaper::attr($src) . '"></script>';
-            $dedupedScript = $this->emitTag($scriptTag);
-            if ($dedupedScript !== null) {
-                $tags[] = $dedupedScript;
+            $entryFile = $entryMeta['file'];
+            $src = $this->normalizeBuildUrl($entryFile);
+
+            if ($this->isCssAssetPath($entryFile)) {
+                $styleTag = '<link rel="stylesheet" href="' . Escaper::attr($src) . '">';
+                $dedupedStyle = $this->emitTag($styleTag);
+                if ($dedupedStyle !== null) {
+                    $tags[] = $dedupedStyle;
+                }
+            } else {
+                $scriptTag = '<script type="module" src="' . Escaper::attr($src) . '"></script>';
+                $dedupedScript = $this->emitTag($scriptTag);
+                if ($dedupedScript !== null) {
+                    $tags[] = $dedupedScript;
+                }
             }
         }
 
@@ -360,10 +372,68 @@ final class ViteAssetResolver
      */
     private function normalizeBuildUrl(string $filePath): string
     {
-        $base = rtrim($this->buildBaseUrl, '/');
+        $configuredBase = $this->assetBaseUrl;
+        if (is_string($configuredBase) && trim($configuredBase) !== '') {
+            $base = rtrim($this->normalizePublicPath($configuredBase), '/');
+        } else {
+            $base = rtrim($this->normalizeBuildBaseUrl($this->buildBaseUrl), '/');
+        }
+
         $path = ltrim($filePath, '/');
 
         return $base . '/' . $path;
+    }
+
+    /**
+     * Normalize build base to a public URL path or absolute URL.
+     *
+     * Converts filesystem base paths into a public URL segment using the
+     * last directory name (for example `/var/www/project/build` => `/build`).
+     */
+    private function normalizeBuildBaseUrl(string $buildBaseUrl): string
+    {
+        $base = trim($buildBaseUrl);
+        if ($base === '') {
+            return '/build';
+        }
+
+        if (str_contains($base, '://')) {
+            return rtrim($base, '/');
+        }
+
+        $normalized = str_replace('\\', '/', $base);
+        if (is_dir($base)) {
+            return '/' . trim(basename($normalized), '/');
+        }
+
+        return $this->normalizePublicPath($normalized);
+    }
+
+    /**
+     * Normalize a path into absolute public URL path form.
+     */
+    private function normalizePublicPath(string $path): string
+    {
+        $trimmed = trim(str_replace('\\', '/', $path));
+        $trimmed = trim($trimmed, '/');
+
+        if ($trimmed === '') {
+            return '/';
+        }
+
+        return '/' . $trimmed;
+    }
+
+    /**
+     * Check whether an emitted asset file path refers to CSS.
+     */
+    private function isCssAssetPath(string $filePath): bool
+    {
+        $parsedPath = parse_url($filePath, PHP_URL_PATH);
+        $path = is_string($parsedPath) ? $parsedPath : $filePath;
+        $path = strtolower($path);
+
+        return str_ends_with($path, '.css');
     }
 
     /**

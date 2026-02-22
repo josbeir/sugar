@@ -97,6 +97,83 @@ final class ViteIntegrationTest extends TestCase
     }
 
     /**
+     * Verify explicit asset base URL is used for production manifest output.
+     */
+    public function testRendersProductionAssetsUsingExplicitAssetBaseUrl(): void
+    {
+        $this->manifestPath = $this->createManifestFile([
+            'resources/assets/js/site.js' => [
+                'file' => 'assets/site-l0sNRNKZ.js',
+                'isEntry' => true,
+            ],
+        ]);
+
+        $loader = new StringTemplateLoader(templates: [
+            'vite-prod-custom-base-page' => '<s-template s:vite="\'resources/assets/js/site.js\'" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                mode: 'prod',
+                manifestPath: $this->manifestPath,
+                buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
+                assetBaseUrl: '/assets/build',
+            ))
+            ->build();
+
+        $output = $engine->render('vite-prod-custom-base-page');
+
+        $this->assertStringContainsString('/assets/build/assets/site-l0sNRNKZ.js', $output);
+        $this->assertStringNotContainsString('/home/josbeir/Sites/sugar_app/webroot/build/assets/site-l0sNRNKZ.js', $output);
+    }
+
+    /**
+     * Verify bare path syntax works without nested PHP string quotes.
+     */
+    public function testRendersDevelopmentTagsFromBarePathSyntax(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'vite-dev-bare-path-page' => '<s-template s:vite="resources/scss/site.scss" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+            ))
+            ->build();
+
+        $output = $engine->render('vite-dev-bare-path-page');
+
+        $this->assertStringContainsString('http://localhost:5173/resources/scss/site.scss', $output);
+    }
+
+    /**
+     * Verify s:vite works on void HTML elements without preserving the wrapper.
+     */
+    public function testRendersDevelopmentTagsFromLinkDirectiveUsage(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'vite-dev-link-page' => '<link s:vite="scss/site.scss" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+            ))
+            ->build();
+
+        $output = $engine->render('vite-dev-link-page');
+
+        $this->assertStringContainsString('http://localhost:5173/scss/site.scss', $output);
+        $this->assertStringNotContainsString('<link', $output);
+    }
+
+    /**
      * Create a temporary Vite manifest JSON file for tests.
      *
      * @param array<string, mixed> $manifest Manifest payload

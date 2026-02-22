@@ -47,6 +47,7 @@ export default defineConfig({
           { text: 'Directives', link: '/guide/language/directives' },
           { text: 'Language', link: '/guide/language/pipe-syntax' },
           { text: 'Templates', link: '/guide/templates/components' },
+          { text: 'Runtime', link: '/guide/runtime/vite' },
           { text: 'Development', link: '/guide/development/' },
           { text: 'Reference', link: '/guide/reference/architecture' }
         ]
@@ -102,6 +103,12 @@ export default defineConfig({
             { text: 'Creating Extensions', link: '/guide/development/creating-extensions' },
             { text: 'Exceptions', link: '/guide/development/exceptions' },
             { text: 'Custom Directives', link: '/guide/development/custom-directives' }
+          ]
+        },
+        {
+          text: 'Runtime',
+          items: [
+            { text: 'Vite Integration', link: '/guide/runtime/vite' }
           ]
         },
         {
