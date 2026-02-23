@@ -61,9 +61,14 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 <s-unless condition="$isReady">Loading...</s-unless>
 ```
 
-```html [Rendered]
+```html [Rendered — attribute]
 <!-- $isReady = false -->
 <div>Loading...</div>
+```
+
+```html [Rendered — element]
+<!-- $isReady = false -->
+Loading...
 ```
 :::
 
@@ -80,9 +85,14 @@ Render the element when the variable is set (not null and defined).
 <s-isset value="$user">Welcome, <?= $user->name ?></s-isset>
 ```
 
-```html [Rendered]
+```html [Rendered — attribute]
 <!-- $user->name = 'Jasper' -->
 <div>Welcome, Jasper</div>
+```
+
+```html [Rendered — element]
+<!-- $user->name = 'Jasper' -->
+Welcome, Jasper
 ```
 :::
 
@@ -101,9 +111,14 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 <s-empty value="$items">No items found</s-empty>
 ```
 
-```html [Rendered]
+```html [Rendered — attribute]
 <!-- $items = [] -->
 <div>No items found</div>
+```
+
+```html [Rendered — element]
+<!-- $items = [] -->
+No items found
 ```
 :::
 
@@ -122,9 +137,14 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 <s-notempty value="$items">Items available</s-notempty>
 ```
 
-```html [Rendered]
+```html [Rendered — attribute]
 <!-- $items = ['A'] -->
 <div>Items available</div>
+```
+
+```html [Rendered — element]
+<!-- $items = ['A'] -->
+Items available
 ```
 :::
 
