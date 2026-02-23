@@ -8,6 +8,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Directive\Interface\PairedDirectiveInterface;
 
 /**
@@ -21,7 +22,7 @@ use Sugar\Core\Directive\Interface\PairedDirectiveInterface;
  * <div s:finally>...</div>
  * ```
  */
-final class TryDirective implements DirectiveInterface, PairedDirectiveInterface
+final class TryDirective implements DirectiveInterface, PairedDirectiveInterface, ElementClaimingDirectiveInterface
 {
     /**
      * @param \Sugar\Core\Ast\DirectiveNode $node
@@ -50,6 +51,14 @@ final class TryDirective implements DirectiveInterface, PairedDirectiveInterface
         $parts[] = new RawPhpNode('}', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * s:try is expression-less; the element form is simply <s-try>...</s-try>.
+     */
+    public function getElementExpressionAttribute(): ?string
+    {
+        return null;
     }
 
     /**

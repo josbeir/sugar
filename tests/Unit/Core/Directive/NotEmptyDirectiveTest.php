@@ -93,4 +93,20 @@ final class NotEmptyDirectiveTest extends DirectiveTestCase
             ->containsText('Showing first page')
             ->hasPhpCode('endif;');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        // NotEmptyDirective extends EmptyDirective and inherits the attribute name.
+        $directive = new NotEmptyDirective();
+        $this->assertSame('value', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToNotEmptyCheck(): void
+    {
+        $compiled = $this->compiler->compile('<s-notempty value="$items"><p>Has items</p></s-notempty>');
+
+        $this->assertContainsPhp('!__SugarEmptyHelper::isEmpty($items)', $compiled);
+        $this->assertContainsPhp('endif;', $compiled);
+        $this->assertContainsPhp('<p>Has items</p>', $compiled);
+    }
 }

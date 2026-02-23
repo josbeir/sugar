@@ -115,4 +115,28 @@ final class TimesDirectiveTest extends DirectiveTestCase
     {
         $this->assertSame(DirectiveType::CONTROL_FLOW, $this->directiveCompiler->getType());
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new TimesDirective();
+        $this->assertSame('count', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToForLoop(): void
+    {
+        $compiled = $this->compiler->compile('<s-times count="3"><p>x</p></s-times>');
+
+        $this->assertContainsPhp('for ($__times_', $compiled);
+        $this->assertContainsPhp('< (3)', $compiled);
+        $this->assertContainsPhp('endfor;', $compiled);
+        $this->assertContainsPhp('<p>x</p>', $compiled);
+    }
+
+    public function testElementSyntaxWithIndexCompilesToForLoop(): void
+    {
+        $compiled = $this->compiler->compile('<s-times count="4 as $i"><span><?= $i ?></span></s-times>');
+
+        $this->assertContainsPhp('for ($i = 0; $i < (4); $i++):', $compiled);
+        $this->assertContainsPhp('endfor;', $compiled);
+    }
 }
