@@ -86,13 +86,13 @@ Render the element when the variable is set (not null and defined).
 ```
 
 ```html [Rendered — attribute]
-<!-- $user->name = 'Jasper' -->
-<div>Welcome, Jasper</div>
+<!-- $user->name = 'Alice' -->
+<div>Welcome, Alice</div>
 ```
 
 ```html [Rendered — element]
-<!-- $user->name = 'Jasper' -->
-Welcome, Jasper
+<!-- $user->name = 'Alice' -->
+Welcome, Alice
 ```
 :::
 
