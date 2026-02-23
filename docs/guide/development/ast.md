@@ -65,6 +65,8 @@ ElementNode(tag="a", attributes=[href="/profile"])
 
 Wrapperless node used for `<s-template>` blocks. It renders only its children, accepts only `s:*` attributes, and can be self-closing for directive-only markup.
 
+`FragmentNode` is also produced by `ElementRoutingPass` when a `<s-NAME>` tag is resolved to an element-claiming directive. The element attributes are synthesized as directive attributes on the fragment, which `DirectiveExtractionPass` then processes using the standard nesting rules.
+
 Example:
 
 ```sugar
@@ -77,6 +79,16 @@ Example:
 FragmentNode(attributes=[s:if])
 	ElementNode(tag="p")
 		TextNode("Visible")
+```
+
+Example (element-claiming directive, after `ElementRoutingPass`):
+
+```sugar
+<s-youtube src="$id" s:if="$show" />
+```
+
+```text
+FragmentNode(attributes=[s:youtube="$id", s:if="$show"])
 ```
 
 ### TextNode
@@ -161,7 +173,12 @@ DirectiveNode(name="if", expression="$show")
 
 ### ComponentNode
 
-Represents a component invocation, such as `<s-button>`. It holds component `attributes` and slot `children` until the component expansion pass replaces it with the component template AST.
+Represents a custom element invocation (`<s-NAME>`). It holds element `attributes` and slot `children`.
+
+The parser always produces a `ComponentNode` for `<s-NAME>` tags. What happens next depends on the directive registry:
+
+- If `NAME` is a directive that implements `ElementClaimingDirectiveInterface`, `ElementRoutingPass` converts the `ComponentNode` into a `FragmentNode` with directive attributes before directive extraction runs.
+- Otherwise, `ComponentExpansionPass` replaces it with the component template AST.
 
 Example:
 
