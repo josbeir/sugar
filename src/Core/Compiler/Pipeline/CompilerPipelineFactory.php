@@ -11,6 +11,7 @@ use Sugar\Core\Pass\Context\ContextAnalysisPass;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
+use Sugar\Core\Pass\Element\ElementRoutingPass;
 use Sugar\Core\Pass\Inheritance\InheritanceCompilationPass;
 use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
 
@@ -19,6 +20,8 @@ use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
  */
 final class CompilerPipelineFactory
 {
+    private ?ElementRoutingPass $elementRoutingPass = null;
+
     private ?DirectiveExtractionPass $directiveExtractionPass = null;
 
     private ?DirectivePairingPass $directivePairingPass = null;
@@ -57,6 +60,7 @@ final class CompilerPipelineFactory
     ): AstPipeline {
         $pipeline = new AstPipeline();
 
+        $pipeline->addPass($this->getElementRoutingPass(), PassPriority::ELEMENT_ROUTING);
         $pipeline->addPass($this->getDirectiveExtractionPass(), PassPriority::DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getDirectivePairingPass(), PassPriority::DIRECTIVE_PAIRING);
         $pipeline->addPass($this->getDirectiveCompilationPass(), PassPriority::DIRECTIVE_COMPILATION);
@@ -74,6 +78,27 @@ final class CompilerPipelineFactory
         $this->addCustomPasses($pipeline);
 
         return $pipeline;
+    }
+
+    /**
+     * Get the element routing pass instance.
+     *
+     * Runs before directive extraction and converts <s-NAME> custom element tags whose
+     * directive implements ElementClaimingDirectiveInterface into a FragmentNode with
+     * directive attributes, which DirectiveExtractionPass then processes normally.
+     */
+    private function getElementRoutingPass(): ElementRoutingPass
+    {
+        if ($this->elementRoutingPass instanceof ElementRoutingPass) {
+            return $this->elementRoutingPass;
+        }
+
+        $this->elementRoutingPass = new ElementRoutingPass(
+            registry: $this->registry,
+            config: $this->config,
+        );
+
+        return $this->elementRoutingPass;
     }
 
     /**

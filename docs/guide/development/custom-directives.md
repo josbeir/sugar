@@ -365,3 +365,120 @@ final class NoWrapDirective implements ContentWrappingDirectiveInterface
 ::: warning
 Only use `ContentWrappingDirectiveInterface` with content directives like `s:text` and `s:html`.
 :::
+### ElementClaimingDirectiveInterface
+
+Implement `ElementClaimingDirectiveInterface` when you want a directive to be usable both as an **attribute** on any element (`<div s:youtube="$id">`) and as its own **custom element tag** (`<s-youtube src="$id">`).
+
+When a `<s-NAME>` tag is encountered in a template and `NAME` maps to a directive that implements this interface, the element is transparently converted to the equivalent directive attribute syntax before compilation. This means a single directive class powers both forms; no extra compile logic is needed.
+
+**Methods:**
+- `getElementExpressionAttribute()` returns the attribute name that carries the directive expression on the custom element, or `null` if the directive is expression-less (e.g. `<s-nobr>`).
+
+**Rules for the custom element:**
+- The attribute returned by `getElementExpressionAttribute()` becomes the directive expression.
+- All `s:*` attributes (control flow, loops, etc.) are preserved as-is and nest correctly.
+- Regular HTML attributes (non-`s:*`) other than the expression attribute are **not allowed** and raise a compile-time error.
+- Children of the element are forwarded to the underlying directive.
+
+#### Example: YouTube Embed Directive
+
+This directive renders an iframe for a YouTube video ID. After implementing `ElementClaimingDirectiveInterface` it works as both `s:youtube="$id"` and `<s-youtube src="$id">`.
+
+```php
+use Sugar\Core\Ast\Node;
+use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Compiler\CompilationContext;
+use Sugar\Core\Directive\Enum\DirectiveType;
+use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
+
+final class YoutubeDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
+{
+    /**
+     * The expression attribute used when this directive is written as a custom element.
+     * <s-youtube src="$videoId"> maps src to the directive expression.
+     */
+    public function getElementExpressionAttribute(): ?string
+    {
+        return 'src';
+    }
+
+    public function compile(Node $node, CompilationContext $context): array
+    {
+        $videoId = $node->expression;
+
+        return [
+            new RawPhpNode(
+                'echo "<iframe src=\"https://www.youtube.com/embed/" . htmlspecialchars(' . $videoId . ', ENT_QUOTES | ENT_HTML5, "UTF-8") . "\"></iframe>";',
+                $node->line,
+                $node->column,
+            ),
+        ];
+    }
+
+    public function getType(): DirectiveType
+    {
+        return DirectiveType::OUTPUT;
+    }
+}
+```
+
+Register it as usual:
+
+```php
+use Sugar\Core\Engine;
+use Sugar\Core\Extension\ExtensionInterface;
+use Sugar\Core\Extension\RegistrationContext;
+
+final class MediaExtension implements ExtensionInterface
+{
+    public function register(RegistrationContext $context): void
+    {
+        $context->directive('youtube', YoutubeDirective::class);
+    }
+}
+
+$engine = Engine::builder()
+    ->withTemplateLoader($loader)
+    ->withExtension(new MediaExtension())
+    ->build();
+```
+
+Both of the following template forms produce identical output:
+
+::: code-group
+```sugar [Element syntax]
+<s-youtube src="$videoId" />
+```
+
+```sugar [Attribute syntax]
+<div s:youtube="$videoId"></div>
+```
+
+```html [Rendered]
+<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>
+```
+:::
+
+Control-flow directives work naturally on the element tag:
+
+```sugar
+<!-- Render only when $show is true -->
+<s-youtube src="$id" s:if="$show" />
+
+<!-- Render one iframe per ID -->
+<s-youtube src="$id" s:foreach="$ids as $id" />
+```
+
+#### Expression-less directives
+
+When a directive takes no expression (e.g. `<s-nobr>` is equivalent to `<div s:nobr>`), return `null` from `getElementExpressionAttribute()`:
+
+```php
+public function getElementExpressionAttribute(): ?string
+{
+    return null;
+}
+```
+
+The custom element can still receive `s:*` control-flow attributes; children are forwarded as normal.
