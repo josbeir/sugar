@@ -130,4 +130,19 @@ final class WhileDirectiveTest extends DirectiveTestCase
             ->hasPhpCode('while (true):')
             ->hasPhpCode('endwhile;');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new WhileDirective();
+        $this->assertSame('condition', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToWhileLoop(): void
+    {
+        $compiled = $this->compiler->compile('<s-while condition="$x < 3"><p>y</p></s-while>');
+
+        $this->assertContainsPhp('while ($x < 3):', $compiled);
+        $this->assertContainsPhp('endwhile;', $compiled);
+        $this->assertContainsPhp('<p>y</p>', $compiled);
+    }
 }

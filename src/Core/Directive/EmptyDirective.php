@@ -8,6 +8,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Runtime\EmptyHelper;
 
 /**
@@ -28,7 +29,7 @@ use Sugar\Core\Runtime\EmptyHelper;
  * <?php endif; ?>
  * ```
  */
-readonly class EmptyDirective implements DirectiveInterface
+readonly class EmptyDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     /**
      * @param \Sugar\Core\Ast\DirectiveNode $node
@@ -63,6 +64,15 @@ readonly class EmptyDirective implements DirectiveInterface
     protected function buildCondition(string $expression): string
     {
         return EmptyHelper::class . '::isEmpty(' . $expression . ')';
+    }
+
+    /**
+     * The value to check is supplied via the `value` attribute:
+     * <s-empty value="$cart"> or <s-notempty value="$items">.
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'value';
     }
 
     /**

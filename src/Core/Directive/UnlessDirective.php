@@ -8,6 +8,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 
 /**
  * Compiler for unless directive (inverted if)
@@ -26,7 +27,7 @@ use Sugar\Core\Directive\Interface\DirectiveInterface;
  * <?php endif; ?>
  * ```
  */
-readonly class UnlessDirective implements DirectiveInterface
+readonly class UnlessDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     /**
      * @param \Sugar\Core\Ast\DirectiveNode $node
@@ -50,6 +51,15 @@ readonly class UnlessDirective implements DirectiveInterface
         $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * The condition is supplied via the `condition` attribute:
+     * <s-unless condition="$user->isAdmin()">
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'condition';
     }
 
     /**

@@ -93,4 +93,19 @@ final class EmptyDirectiveTest extends DirectiveTestCase
             ->containsText('Try a different search')
             ->hasPhpCode('endif;');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new EmptyDirective();
+        $this->assertSame('value', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToEmptyCheck(): void
+    {
+        $compiled = $this->compiler->compile('<s-empty value="$list"><p>No items</p></s-empty>');
+
+        $this->assertContainsPhp('__SugarEmptyHelper::isEmpty($list)', $compiled);
+        $this->assertContainsPhp('endif;', $compiled);
+        $this->assertContainsPhp('<p>No items</p>', $compiled);
+    }
 }

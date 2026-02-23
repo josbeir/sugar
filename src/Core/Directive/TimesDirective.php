@@ -10,6 +10,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Directive\Trait\WrapperModeTrait;
 use Sugar\Core\Util\Hash;
 
@@ -24,7 +25,7 @@ use Sugar\Core\Util\Hash;
  * <div s:times="5 as $i">Item <?= $i ?></div>
  * ```
  */
-readonly class TimesDirective implements DirectiveInterface
+readonly class TimesDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     use WrapperModeTrait;
 
@@ -41,6 +42,15 @@ readonly class TimesDirective implements DirectiveInterface
         }
 
         return $this->compileWithoutWrapper($node, $countExpression, $indexVar);
+    }
+
+    /**
+     * The count (and optional index variable) is supplied via the `count` attribute:
+     * <s-times count="5"> or <s-times count="5 as $i">.
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'count';
     }
 
     /**

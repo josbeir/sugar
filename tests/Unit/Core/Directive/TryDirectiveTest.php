@@ -70,4 +70,19 @@ final class TryDirectiveTest extends DirectiveTestCase
             ->hasPhpCode('} finally {')
             ->hasPhpCode('}');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new TryDirective();
+        $this->assertNull($directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToTryCatch(): void
+    {
+        $compiled = $this->compiler->compile('<s-try><p>content</p></s-try>');
+
+        $this->assertContainsPhp('try {', $compiled);
+        $this->assertContainsPhp('} catch (\\Throwable $__e) {', $compiled);
+        $this->assertContainsPhp('<p>content</p>', $compiled);
+    }
 }
