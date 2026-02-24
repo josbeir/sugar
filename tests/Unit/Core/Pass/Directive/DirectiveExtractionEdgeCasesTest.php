@@ -168,9 +168,10 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         // Should have compiled class attribute (not s:class)
         $this->assertCount(1, $resultElement->attributes);
-        $this->assertSame('class', $resultElement->attributes[0]->name);
+        $this->assertSame('', $resultElement->attributes[0]->name);
         $this->assertTrue($resultElement->attributes[0]->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $resultElement->attributes[0]->value->output);
+        $this->assertStringContainsString('classAttribute', $resultElement->attributes[0]->value->output->expression);
     }
 
     public function testElementWithContentDirectiveOnly(): void

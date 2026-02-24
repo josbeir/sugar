@@ -21,6 +21,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Directive\ClassDirective;
 use Sugar\Core\Directive\Enum\AttributeMergeMode;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Helper\DirectiveClassifier;
@@ -815,6 +816,49 @@ final class DirectiveExtractionPass implements AstPassInterface
                 // Named attribute format - extract name and value
                 $attrName = $matches[1];
                 $attrValue = $matches[2];
+
+                if (
+                    $compiler instanceof ClassDirective &&
+                    $mergePolicy instanceof AttributeMergePolicyDirectiveInterface &&
+                    $mergePolicy->getAttributeMergeMode() === AttributeMergeMode::MERGE_NAMED &&
+                    $mergePolicy->getMergeTargetAttributeName() === $attrName
+                ) {
+                    $classExpression = AttributeHelper::normalizeCompiledPhpExpression($attrValue);
+                    $existingIndex = AttributeHelper::findAttributeIndex($remainingAttrs, $attrName);
+
+                    if ($existingIndex !== null) {
+                        $existingAttr = $remainingAttrs[$existingIndex];
+                        $classExpression = $mergePolicy->mergeNamedAttributeExpression(
+                            AttributeHelper::attributeValueToPhpExpression($existingAttr->value),
+                            $classExpression,
+                        );
+                        array_splice($remainingAttrs, $existingIndex, 1);
+                    }
+
+                    $classAttributeExpression = $compiler->buildClassAttributeExpression($classExpression);
+
+                    $classOutput = new OutputNode(
+                        expression: $classAttributeExpression,
+                        escape: false,
+                        context: OutputContext::HTML_ATTRIBUTE,
+                        line: $attr->line,
+                        column: $attr->column,
+                    );
+                    $classOutput->inheritTemplatePathFrom($attr);
+
+                    $classAttribute = new AttributeNode(
+                        name: '',
+                        value: AttributeValue::output($classOutput),
+                        line: $attr->line,
+                        column: $attr->column,
+                    );
+                    $classAttribute->inheritTemplatePathFrom($attr);
+
+                    $remainingAttrs[] = $classAttribute;
+
+                    continue;
+                }
+
                 $outputNode = new OutputNode(
                     expression: AttributeHelper::normalizeCompiledPhpExpression($attrValue),
                     escape: false, // Already handled by the directive compiler
@@ -877,9 +921,17 @@ final class DirectiveExtractionPass implements AstPassInterface
                     $mergePolicy instanceof AttributeMergePolicyDirectiveInterface &&
                     $mergePolicy->getAttributeMergeMode() === AttributeMergeMode::EXCLUDE_NAMED
                 ) {
+                    $excludedAttributeNames = AttributeHelper::collectNamedAttributeNames($remainingAttrs);
+                    if (
+                        !in_array('class', $excludedAttributeNames, true)
+                        && $this->hasConditionalClassAttributeOutput($remainingAttrs)
+                    ) {
+                        $excludedAttributeNames[] = 'class';
+                    }
+
                     $outputExpression = $mergePolicy->buildExcludedAttributesExpression(
                         $expression,
-                        AttributeHelper::collectNamedAttributeNames($remainingAttrs),
+                        $excludedAttributeNames,
                     );
                 }
 
@@ -902,5 +954,35 @@ final class DirectiveExtractionPass implements AstPassInterface
                 $remainingAttrs[] = $newAttr;
             }
         }
+    }
+
+    /**
+     * Check whether extracted attributes contain conditional class attribute output.
+     *
+     * @param array<\Sugar\Core\Ast\AttributeNode> $attributes Attributes to inspect
+     * @return bool True when class attribute output is emitted as spread output
+     */
+    private function hasConditionalClassAttributeOutput(array $attributes): bool
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute->name !== '') {
+                continue;
+            }
+
+            if (!$attribute->value->isOutput()) {
+                continue;
+            }
+
+            $outputNode = $attribute->value->output;
+            if (!$outputNode instanceof OutputNode) {
+                continue;
+            }
+
+            if (str_contains($outputNode->expression, '::classAttribute(')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
