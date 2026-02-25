@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Directive;
 
+use Sugar\Core\Ast\Helper\ExpressionValidator;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
@@ -50,27 +51,11 @@ readonly class IfBlockDirective implements DirectiveInterface, ElementClaimingDi
      */
     private function normalizeExpression(string $expression): string
     {
-        $trimmed = trim($expression);
-        if ($trimmed === '') {
-            return "''";
-        }
-
-        if (
-            str_starts_with($trimmed, "'")
-            || str_starts_with($trimmed, '"')
-            || str_starts_with($trimmed, '$')
-            || str_starts_with($trimmed, '(')
-            || str_starts_with($trimmed, 'array(')
-            || str_starts_with($trimmed, '[')
-        ) {
-            return $trimmed;
-        }
-
-        if (preg_match('/^[a-zA-Z0-9_.:-]+$/', $trimmed) === 1) {
-            return var_export($trimmed, true);
-        }
-
-        return $trimmed;
+        return ExpressionValidator::normalizeRuntimeExpression(
+            expression: $expression,
+            emptyFallback: "''",
+            bareStringPattern: '/^[a-zA-Z0-9_.:-]+$/',
+        );
     }
 
     /**
