@@ -76,9 +76,9 @@ final class ViteDirectiveTest extends TestCase
     }
 
     /**
-     * Verify directive type classification is CONTENT.
+     * Verify directive type classification is OUTPUT.
      */
-    public function testDirectiveTypeIsContent(): void
+    public function testDirectiveTypeIsOutput(): void
     {
         $directive = new ViteDirective();
 

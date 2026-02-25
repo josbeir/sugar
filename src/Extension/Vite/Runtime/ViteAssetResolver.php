@@ -385,8 +385,17 @@ final class ViteAssetResolver
      */
     private function normalizePublicPath(string $path): string
     {
-        $trimmed = trim(str_replace('\\', '/', $path));
-        $trimmed = trim($trimmed, '/');
+        $normalized = trim(str_replace('\\', '/', $path));
+
+        if ($normalized === '') {
+            return '/';
+        }
+
+        if (preg_match('/^(https?:)?\/\//i', $normalized) === 1) {
+            return rtrim($normalized, '/');
+        }
+
+        $trimmed = trim($normalized, '/');
 
         if ($trimmed === '') {
             return '/';

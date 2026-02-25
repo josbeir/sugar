@@ -191,6 +191,33 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
+     * Verify absolute URL asset base paths are preserved for CDN usage.
+     */
+    public function testProductionModeSupportsAbsoluteAssetBaseUrl(): void
+    {
+        $this->manifestPath = $this->createManifestFile([
+            'resources/assets/js/site.js' => [
+                'file' => 'assets/site-l0sNRNKZ.js',
+                'isEntry' => true,
+            ],
+        ]);
+
+        $resolver = new ViteAssetResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $this->manifestPath,
+            assetBaseUrl: 'https://cdn.example.com/build/',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            defaultEntry: null,
+        );
+
+        $output = $resolver->render('resources/assets/js/site.js');
+
+        $this->assertStringContainsString('<script type="module" src="https://cdn.example.com/build/assets/site-l0sNRNKZ.js"></script>', $output);
+    }
+
+    /**
      * Create a temporary Vite manifest JSON file for tests.
      *
      * @param array<string, mixed> $manifest Manifest payload
