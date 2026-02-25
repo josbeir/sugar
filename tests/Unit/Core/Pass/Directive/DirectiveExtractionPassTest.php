@@ -154,7 +154,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('requires a content directive');
+        $this->expectExceptionMessage('requires an output directive');
 
         $this->execute($ast, $this->createTestContext());
     }
@@ -170,7 +170,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Content directives without a wrapper');
+        $this->expectExceptionMessage('Output directives without a wrapper');
 
         $this->execute($ast, $this->createTestContext());
     }
@@ -308,7 +308,7 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $ast = $this->document()->withChild($element)->build();
 
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Only one content directive allowed');
+        $this->expectExceptionMessage('Only one output directive allowed');
 
         $this->execute($ast, $this->createTestContext());
     }
@@ -483,9 +483,10 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
         $attrs = $result->children[0]->attributes;
         $this->assertCount(1, $attrs);
-        $this->assertSame('class', $attrs[0]->name);
+        $this->assertSame('', $attrs[0]->name);
         $this->assertTrue($attrs[0]->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $attrs[0]->value->output);
+        $this->assertStringContainsString('classAttribute', $attrs[0]->value->output->expression);
         $this->assertStringContainsString('classNames', $attrs[0]->value->output->expression);
     }
 
@@ -544,10 +545,11 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
 
         $attrs = $result->children[0]->attributes;
         $this->assertCount(1, $attrs);
-        $this->assertSame('class', $attrs[0]->name);
+        $this->assertSame('', $attrs[0]->name);
         $this->assertTrue($attrs[0]->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $attrs[0]->value->output);
-        $this->assertStringContainsString('classNames', $attrs[0]->value->output->expression);
+        $this->assertStringContainsString('classAttribute', $attrs[0]->value->output->expression);
+        $this->assertStringContainsString('mergeClassValues', $attrs[0]->value->output->expression);
         $this->assertStringContainsString('user-card', $attrs[0]->value->output->expression);
     }
 
@@ -570,8 +572,11 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $attrs = $result->children[0]->attributes;
         $this->assertCount(3, $attrs);
         $this->assertSame('id', $attrs[0]->name);
-        $this->assertSame('class', $attrs[1]->name);
+        $this->assertSame('', $attrs[1]->name);
         $this->assertSame('', $attrs[2]->name);
+        $this->assertTrue($attrs[1]->value->isOutput());
+        $this->assertInstanceOf(OutputNode::class, $attrs[1]->value->output);
+        $this->assertStringContainsString('classAttribute', $attrs[1]->value->output->expression);
         $this->assertTrue($attrs[2]->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $attrs[2]->value->output);
         $this->assertStringContainsString('array_diff_key', $attrs[2]->value->output->expression);

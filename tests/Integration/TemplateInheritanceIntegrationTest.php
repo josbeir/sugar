@@ -243,6 +243,23 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertStringContainsString('Safe content', $result);
     }
 
+    public function testInheritancePreservesAttributeEscapingInBlockContent(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'base.sugar.php' => '<main s:block="content"></main>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>' .
+                    '<s-template s:block="content">' .
+                    '<img class="home-logo" src="/images/logo.svg" alt="<?= $siteName ?>" />' .
+                    '</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php', ['siteName' => 'My "Site" <script>']);
+
+        $this->assertStringContainsString('alt="My &quot;Site&quot; &lt;script&gt;"', $result);
+    }
+
     public function testExecuteCompiledInheritedTemplate(): void
     {
         $engine = $this->createEngine($this->templatesPath);

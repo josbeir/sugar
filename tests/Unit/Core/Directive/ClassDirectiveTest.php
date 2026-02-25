@@ -84,7 +84,8 @@ final class ClassDirectiveTest extends DirectiveTestCase
         $directive = new ClassDirective();
         $result = $directive->mergeNamedAttributeExpression("'card'", "HtmlAttributeHelper::classNames(['active' => \$active])");
 
-        $this->assertStringContainsString(HtmlAttributeHelper::class . '::classNames', $result);
+        $this->assertStringContainsString(HtmlAttributeHelper::class . '::mergeClassValues', $result);
+        $this->assertStringContainsString('classNames', $result);
         $this->assertStringContainsString("'card'", $result);
         $this->assertStringContainsString("'active' => \$active", $result);
     }

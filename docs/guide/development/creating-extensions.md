@@ -163,6 +163,10 @@ $context->directive('badge', new BadgeDirective());
 
 For directive design details, see the [Custom Directives](/guide/development/custom-directives) guide.
 
+::: tip Element syntax for directives
+A directive can additionally implement `ElementClaimingDirectiveInterface` to expose a custom element tag (`<s-youtube src="$id">`) alongside the standard attribute syntax (`<div s:youtube="$id">`). No extra compile logic is required — the engine converts element invocations to directive attributes automatically before extraction runs. See [ElementClaimingDirectiveInterface](/guide/development/custom-directives#elementclaimingdirectiveinterface) for the full example.
+:::
+
 ## Registering Compiler Passes
 
 Compiler passes run during AST compilation and can rewrite or validate nodes. Use them for cross-cutting transformations that are not tied to a single directive.
@@ -297,6 +301,7 @@ $context->compilerPass(new UppercaseTextPass(), PassPriority::POST_DIRECTIVE_COM
 Compiler passes now use enum priorities (`Sugar\Core\Compiler\Pipeline\Enum\PassPriority`) instead of numeric values:
 
 - `PRE_DIRECTIVE_EXTRACTION`
+- `ELEMENT_ROUTING` — built-in; converts `<s-NAME>` element-claiming directive tags to `FragmentNode`
 - `DIRECTIVE_EXTRACTION`
 - `DIRECTIVE_PAIRING`
 - `DIRECTIVE_COMPILATION`

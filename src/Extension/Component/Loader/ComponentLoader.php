@@ -39,6 +39,7 @@ final readonly class ComponentLoader implements ComponentLoaderInterface
         } catch (TemplateNotFoundException $templateNotFoundException) {
             throw new ComponentNotFoundException(
                 sprintf('Component "%s" not found', $name),
+                $templateNotFoundException->getCode(),
                 previous: $templateNotFoundException,
             );
         }

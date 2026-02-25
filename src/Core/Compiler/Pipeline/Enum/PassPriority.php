@@ -10,6 +10,15 @@ enum PassPriority: int
 {
     case PRE_DIRECTIVE_EXTRACTION = 10;
 
+    /**
+     * Runs after pre-extraction passes but before directive extraction (priority 20).
+     *
+     * Used by ElementRoutingPass to convert ComponentNodes produced by the parser
+     * for element-claiming directives (e.g. <s-youtube>) into DirectiveNodes so that
+     * DirectiveExtractionPass can process any remaining s:* attributes normally.
+     */
+    case ELEMENT_ROUTING = 15;
+
     case DIRECTIVE_EXTRACTION = 20;
 
     case DIRECTIVE_PAIRING = 30;

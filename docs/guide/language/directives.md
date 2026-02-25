@@ -47,10 +47,10 @@ Directives are just attributes prefixed with `s:`. They keep templates readable 
 ```
 
 ```sugar [Rendered]
-<!-- $isReady = true, $isActive = true, $userName = 'Jasper' -->
+<!-- $isReady = true, $isActive = true, $userName = 'Alice' -->
 <div>Ready</div>
 <div class="active"></div>
-<div>Jasper</div>
+<div>Alice</div>
 <s-card>
 	<div s:slot="header">Title</div>
 </s-card>

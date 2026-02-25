@@ -46,4 +46,25 @@ final class HtmlAttributeHelperTest extends TestCase
         $this->assertStringNotContainsString('hidden', $result);
         $this->assertStringNotContainsString('nullable', $result);
     }
+
+    public function testClassAttributeReturnsEmptyStringWhenClassListIsEmpty(): void
+    {
+        $result = HtmlAttributeHelper::classAttribute(['class' => false]);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testClassAttributeReturnsEscapedAttributeWhenClassListIsNotEmpty(): void
+    {
+        $result = HtmlAttributeHelper::classAttribute(['btn', 'cta"primary']);
+
+        $this->assertSame('class="btn cta&quot;primary"', $result);
+    }
+
+    public function testMergeClassValuesCombinesExistingAndIncomingValues(): void
+    {
+        $result = HtmlAttributeHelper::mergeClassValues('card', ['active' => true, 'hidden' => false]);
+
+        $this->assertSame('card active', $result);
+    }
 }

@@ -52,27 +52,49 @@ Render the element only when the expression evaluates to false.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:unless="$isReady">Loading...</div>
 ```
 
-```html
+```sugar [Element]
+<s-unless condition="$isReady">Loading...</s-unless>
+```
+
+```html [Rendered — attribute]
 <!-- $isReady = false -->
 <div>Loading...</div>
 ```
+
+```html [Rendered — element]
+<!-- $isReady = false -->
+Loading...
+```
+:::
 
 ### s:isset
 
 Render the element when the variable is set (not null and defined).
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:isset="$user">Welcome, <?= $user->name ?></div>
 ```
 
-```html
-<!-- $user->name = 'Jasper' -->
-<div>Welcome, Jasper</div>
+```sugar [Element]
+<s-isset value="$user">Welcome, <?= $user->name ?></s-isset>
 ```
+
+```html [Rendered — attribute]
+<!-- $user->name = 'Alice' -->
+<div>Welcome, Alice</div>
+```
+
+```html [Rendered — element]
+<!-- $user->name = 'Alice' -->
+Welcome, Alice
+```
+:::
 
 ### s:empty
 
@@ -80,14 +102,25 @@ Render the element when the value is empty.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:empty="$items">No items found</div>
 ```
 
-```html
+```sugar [Element]
+<s-empty value="$items">No items found</s-empty>
+```
+
+```html [Rendered — attribute]
 <!-- $items = [] -->
 <div>No items found</div>
 ```
+
+```html [Rendered — element]
+<!-- $items = [] -->
+No items found
+```
+:::
 
 ### s:notempty
 
@@ -95,14 +128,25 @@ Render the element when the value is not empty.
 
 For more about empty/false checks, see [Empty Checking](/guide/language/empty-checking).
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:notempty="$items">Items available</div>
 ```
 
-```html
+```sugar [Element]
+<s-notempty value="$items">Items available</s-notempty>
+```
+
+```html [Rendered — attribute]
 <!-- $items = ['A'] -->
 <div>Items available</div>
 ```
+
+```html [Rendered — element]
+<!-- $items = ['A'] -->
+Items available
+```
+:::
 
 ### s:foreach
 
@@ -178,11 +222,19 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 
 Repeat the element while a condition remains true.
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:while="$poller->hasNext()">
     <?= $poller->next() ?>
 </div>
 ```
+
+```sugar [Element]
+<s-while condition="$poller->hasNext()">
+    <?= $poller->next() ?>
+</s-while>
+```
+:::
 
 ### s:times
 
@@ -195,6 +247,14 @@ Repeat the element a fixed number of times.
 
 ```sugar [With index]
 <span s:times="5 as $i">#<?= $i ?></span>
+```
+
+```sugar [Element — basic]
+<s-times count="3"><span>*</span></s-times>
+```
+
+```sugar [Element — with index]
+<s-times count="5 as $i"><span>#<?= $i ?></span></s-times>
 ```
 :::
 
@@ -245,6 +305,19 @@ Directive forms:
 
 If no fragment cache store is configured, `s:cache` is treated as a no-op wrapper and content still renders.
 
+The element form uses a `key` attribute instead of the directive expression. Omitting `key` uses the same auto-key behaviour as bare `s:cache`:
+
+```sugar
+<s-cache key="'sidebar'">
+    <nav>...</nav>
+</s-cache>
+
+<!-- Auto key -->
+<s-cache>
+    <section>...</section>
+</s-cache>
+```
+
 ### s:switch
 
 Choose between `s:case` and `s:default` children based on a value.
@@ -290,7 +363,8 @@ Render the wrapper only when it would contain output.
 
 Wrap output in a `try` block with an optional `finally` sibling. There is no `s:catch` directive; if `s:finally` is omitted, Sugar emits a catch that returns `null` to keep the PHP valid and silently stop output on errors.
 
-```sugar
+::: code-group
+```sugar [Attribute]
 <div s:try>
     <?= $content ?>
 </div>
@@ -298,3 +372,13 @@ Wrap output in a `try` block with an optional `finally` sibling. There is no `s:
     <?php $logger->flush(); ?>
 </div>
 ```
+
+```sugar [Element]
+<s-try>
+    <?= $content ?>
+</s-try>
+<div s:finally>
+    <?php $logger->flush(); ?>
+</div>
+```
+:::

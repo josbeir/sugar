@@ -65,7 +65,9 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
     <li s:foreach="$items as $item"><?= $item ?></li>
   </ul>
 
-  <p s:unless="$isPremium">Upgrade to unlock more features.</p>
+  <s-unless condition="$isPremium">
+    <p>Upgrade to unlock more features.</p>
+  </s-unless>
 </s-template>
 ```
 
@@ -99,7 +101,7 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
 </head>
 <body>
   <main>
-    <h1>Welcome, Jasper</h1>
+    <h1>Welcome, Alice</h1>
     <button class="btn btn-dark btn-active">Click me</button>
     <small class="hint">Press to continue</small>
     <p>You can hide this hint with s:if.</p>

@@ -10,6 +10,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Directive\Trait\WrapperModeTrait;
 
 /**
@@ -47,9 +48,18 @@ use Sugar\Core\Directive\Trait\WrapperModeTrait;
  * <?php endwhile; ?>
  * ```
  */
-readonly class WhileDirective implements DirectiveInterface
+readonly class WhileDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     use WrapperModeTrait;
+
+    /**
+     * The loop condition is supplied via the `condition` attribute:
+     * <s-while condition="$counter < 3">.
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'condition';
+    }
 
     /**
      * @param \Sugar\Core\Ast\DirectiveNode $node

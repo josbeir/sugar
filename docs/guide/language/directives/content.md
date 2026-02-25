@@ -28,8 +28,8 @@ Output escaped text from a value.
 ```
 
 ```html [Rendered]
-<!-- $userName = '<Jasper>' -->
-<div>&lt;Jasper&gt;</div>
+<!-- $userName = '<Alice>' -->
+<div>&lt;Alice&gt;</div>
 ```
 :::
 

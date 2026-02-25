@@ -92,4 +92,19 @@ final class IssetDirectiveTest extends DirectiveTestCase
             ->containsText('Second line')
             ->hasPhpCode('endif;');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new IssetDirective();
+        $this->assertSame('value', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToIssetCheck(): void
+    {
+        $compiled = $this->compiler->compile('<s-isset value="$user"><p>Hi</p></s-isset>');
+
+        $this->assertContainsPhp('if (isset($user)):', $compiled);
+        $this->assertContainsPhp('endif;', $compiled);
+        $this->assertContainsPhp('<p>Hi</p>', $compiled);
+    }
 }

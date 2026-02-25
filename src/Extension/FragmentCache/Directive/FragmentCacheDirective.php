@@ -10,6 +10,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Util\Hash;
 use Sugar\Extension\FragmentCache\Runtime\FragmentCacheHelper;
 
@@ -22,7 +23,7 @@ use Sugar\Extension\FragmentCache\Runtime\FragmentCacheHelper;
  * - Key expression: `<div s:cache="'key-' . $id">...</div>`
  * - Options array: `<div s:cache="['key' => $key, 'ttl' => 300]">...</div>`
  */
-final readonly class FragmentCacheDirective implements DirectiveInterface
+final readonly class FragmentCacheDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     /**
      * @param int|null $defaultTtl Default TTL in seconds; null is passed to the PSR-16 store
@@ -89,6 +90,17 @@ final readonly class FragmentCacheDirective implements DirectiveInterface
         $closeNode->inheritTemplatePathFrom($node);
 
         return [$openNode, ...$node->children, $closeNode];
+    }
+
+    /**
+     * The cache key expression is supplied via the `key` attribute:
+     * <s-cache key="'homepage'"> or bare <s-cache> for an auto-generated key.
+     * When no `key` attribute is present the expression defaults to '' which
+     * normalizeExpression() treats as a null (auto-key) expression.
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'key';
     }
 
     /**

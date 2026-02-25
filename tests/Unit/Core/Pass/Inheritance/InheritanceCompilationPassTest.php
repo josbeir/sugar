@@ -1044,7 +1044,7 @@ final class InheritanceCompilationPassTest extends MiddlewarePassTestCase
         $code = $this->collectAllPhpCode($result);
 
         $this->assertStringContainsString(' disabled', $code);
-        $this->assertStringContainsString('__SugarEscaper::html_attr($safe)', $code);
+        $this->assertStringContainsString('__SugarEscaper::attr($safe)', $code);
         $this->assertStringContainsString('<?php echo $raw; ?>', $code);
     }
 

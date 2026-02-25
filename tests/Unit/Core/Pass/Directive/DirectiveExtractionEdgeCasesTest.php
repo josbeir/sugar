@@ -168,9 +168,10 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
 
         // Should have compiled class attribute (not s:class)
         $this->assertCount(1, $resultElement->attributes);
-        $this->assertSame('class', $resultElement->attributes[0]->name);
+        $this->assertSame('', $resultElement->attributes[0]->name);
         $this->assertTrue($resultElement->attributes[0]->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $resultElement->attributes[0]->value->output);
+        $this->assertStringContainsString('classAttribute', $resultElement->attributes[0]->value->output->expression);
     }
 
     public function testElementWithContentDirectiveOnly(): void
@@ -238,7 +239,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsWhenNoWrapUsedWithoutContentDirective(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('requires a content directive');
+        $this->expectExceptionMessage('requires an output directive');
 
         $element = $this->element('div')
             ->attributeNode($this->attributeNode('s:nowrap', null, 1, 5))
@@ -251,7 +252,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsWhenNoWrapHasOtherAttributes(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Content directives without a wrapper cannot include other attributes');
+        $this->expectExceptionMessage('Output directives without a wrapper cannot include other attributes');
 
         $element = $this->element('div')
             ->attribute('s:text', '$userName')
@@ -314,7 +315,7 @@ final class DirectiveExtractionEdgeCasesTest extends MiddlewarePassTestCase
     public function testThrowsOnMultipleContentDirectives(): void
     {
         $this->expectException(SyntaxException::class);
-        $this->expectExceptionMessage('Only one content directive allowed per element');
+        $this->expectExceptionMessage('Only one output directive allowed per element');
 
         $element = $this->element('div')
             ->attribute('s:text', '$text')

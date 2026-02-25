@@ -87,10 +87,28 @@ readonly class ClassDirective implements DirectiveInterface, AttributeMergePolic
     public function mergeNamedAttributeExpression(string $existingExpression, string $incomingExpression): string
     {
         return sprintf(
-            '%s::classNames([%s, %s])',
+            '%s::mergeClassValues(%s, %s)',
             HtmlAttributeHelper::class,
             $existingExpression,
             $incomingExpression,
+        );
+    }
+
+    /**
+     * Build a conditional class attribute expression.
+     *
+     * The returned expression evaluates to either a full `class="..."` attribute
+     * or an empty string when no classes are resolved.
+     *
+     * @param string $classValueExpression PHP expression that resolves to class value(s)
+     * @return string PHP expression that resolves to class attribute output
+     */
+    public function buildClassAttributeExpression(string $classValueExpression): string
+    {
+        return sprintf(
+            '%s::classAttribute(%s)',
+            HtmlAttributeHelper::class,
+            $classValueExpression,
         );
     }
 

@@ -281,9 +281,9 @@ final class DirectiveIntegrationTest extends TestCase
         $transformed = $this->pipeline->execute($ast, $this->createContext());
         $code = $this->generator->generate($transformed);
 
-        $this->assertSame(1, substr_count($code, 'class="'));
-        $this->assertStringContainsString("HtmlAttributeHelper::classNames(['card'", $code);
-        $this->assertStringContainsString('HtmlAttributeHelper::classNames([\'active\' => $isActive])', $code);
+        $this->assertStringContainsString('__SugarHtmlAttributeHelper::classAttribute(', $code);
+        $this->assertStringContainsString('__SugarHtmlAttributeHelper::mergeClassValues(', $code);
+        $this->assertStringContainsString('__SugarHtmlAttributeHelper::classNames([\'active\' => $isActive])', $code);
     }
 
     public function testSpreadDirectiveExcludesExplicitAndMergedNamedAttributesInPipeline(): void
@@ -298,7 +298,8 @@ final class DirectiveIntegrationTest extends TestCase
         $code = $this->generator->generate($transformed);
 
         $this->assertStringContainsString('HtmlAttributeHelper::spreadAttrs(array_diff_key((array) ($attrs), [\'id\' => true, \'class\' => true]))', $code);
-        $this->assertStringContainsString('class="<?php echo __SugarHtmlAttributeHelper::classNames([\'card\'', $code);
+        $this->assertStringContainsString('__SugarHtmlAttributeHelper::classAttribute(', $code);
+        $this->assertStringContainsString('__SugarHtmlAttributeHelper::mergeClassValues(', $code);
     }
 
     public function testClassDirectiveRendersMergedOutput(): void
@@ -317,6 +318,23 @@ final class DirectiveIntegrationTest extends TestCase
 
         $inactiveOutput = $this->executeTemplate($code, ['isActive' => false]);
         $this->assertStringContainsString('<div class="card">Content</div>', $inactiveOutput);
+    }
+
+    public function testClassDirectiveOmitsClassAttributeWhenResolvedClassesAreEmpty(): void
+    {
+        $this->registry->register('class', new ClassDirective());
+
+        $template = '<div s:class="[\'class\' => false]">Content</div>';
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $output = $this->executeTemplate($code, []);
+
+        $this->assertStringContainsString('<div>Content</div>', $output);
+        $this->assertStringNotContainsString('class=""', $output);
+        $this->assertStringNotContainsString('class=', $output);
     }
 
     public function testSpreadDirectiveRendersExcludedNamedAttributes(): void

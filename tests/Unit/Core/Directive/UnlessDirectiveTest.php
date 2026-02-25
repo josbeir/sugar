@@ -83,4 +83,19 @@ final class UnlessDirectiveTest extends DirectiveTestCase
             ->containsText('Second line')
             ->hasPhpCode('endif;');
     }
+
+    public function testGetElementExpressionAttribute(): void
+    {
+        $directive = new UnlessDirective();
+        $this->assertSame('condition', $directive->getElementExpressionAttribute());
+    }
+
+    public function testElementSyntaxCompilesToNegatedIfBlock(): void
+    {
+        $compiled = $this->compiler->compile('<s-unless condition="$hide"><p>visible</p></s-unless>');
+
+        $this->assertContainsPhp('if (!($hide)):', $compiled);
+        $this->assertContainsPhp('endif;', $compiled);
+        $this->assertContainsPhp('<p>visible</p>', $compiled);
+    }
 }

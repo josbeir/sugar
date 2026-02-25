@@ -15,12 +15,10 @@ class CompilationException extends SugarException
      */
     public static function fromCompiledTemplateParseError(string $compiledPath, ParseError $parseError): self
     {
-        return new self(
+        return (new self(
             message: sprintf('Compiled template contains invalid PHP: %s', $parseError->getMessage()),
-            templatePath: $compiledPath,
-            templateLine: $parseError->getLine(),
             previous: $parseError,
-        );
+        ))->withLocation($compiledPath, $parseError->getLine());
     }
 
     /**
@@ -28,11 +26,9 @@ class CompilationException extends SugarException
      */
     public static function fromCompiledComponentParseError(string $compiledPath, ParseError $parseError): self
     {
-        return new self(
+        return (new self(
             message: sprintf('Compiled component contains invalid PHP: %s', $parseError->getMessage()),
-            templatePath: $compiledPath,
-            templateLine: $parseError->getLine(),
             previous: $parseError,
-        );
+        ))->withLocation($compiledPath, $parseError->getLine());
     }
 }

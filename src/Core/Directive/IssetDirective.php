@@ -8,6 +8,7 @@ use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 
 /**
  * Compiler for isset directive
@@ -28,7 +29,7 @@ use Sugar\Core\Directive\Interface\DirectiveInterface;
  * <?php endif; ?>
  * ```
  */
-readonly class IssetDirective implements DirectiveInterface
+readonly class IssetDirective implements DirectiveInterface, ElementClaimingDirectiveInterface
 {
     /**
      * @param \Sugar\Core\Ast\DirectiveNode $node
@@ -52,6 +53,15 @@ readonly class IssetDirective implements DirectiveInterface
         $parts[] = new RawPhpNode('endif;', $node->line, $node->column);
 
         return $parts;
+    }
+
+    /**
+     * The variable(s) to check are supplied via the `value` attribute:
+     * <s-isset value="$user"> or <s-isset value="$user, $profile">.
+     */
+    public function getElementExpressionAttribute(): string
+    {
+        return 'value';
     }
 
     /**

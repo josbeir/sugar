@@ -23,6 +23,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Loader\TemplateLoaderInterface;
 
 /**
@@ -41,6 +42,8 @@ use Sugar\Core\Loader\TemplateLoaderInterface;
  */
 final class InheritanceCompilationPass implements AstPassInterface
 {
+    private readonly Escaper $escaper;
+
     private readonly DirectivePrefixHelper $prefixHelper;
 
     private readonly string $extendsAttr;
@@ -97,6 +100,7 @@ final class InheritanceCompilationPass implements AstPassInterface
         SugarConfig $config,
         private readonly TemplateLoaderInterface $loader,
     ) {
+        $this->escaper = new Escaper();
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
         $this->extendsAttr = $this->prefixHelper->buildName('extends');
         $this->blockAttr = $this->prefixHelper->buildName('block');
@@ -864,11 +868,7 @@ final class InheritanceCompilationPass implements AstPassInterface
         // For any other node type (OutputNode, etc.), fallback
         if ($node instanceof OutputNode) {
             if ($node->escape) {
-                return sprintf(
-                    '<?php echo ' . GeneratedAlias::ESCAPER . '::%s(%s); ?>',
-                    $node->context->value,
-                    $node->expression,
-                );
+                return $this->escapedOutputToString($node);
             }
 
             return sprintf('<?php echo %s; ?>', $node->expression);
@@ -929,11 +929,7 @@ final class InheritanceCompilationPass implements AstPassInterface
         foreach ($parts as $part) {
             if ($part instanceof OutputNode) {
                 if ($part->escape) {
-                    $value .= sprintf(
-                        '<?php echo ' . GeneratedAlias::ESCAPER . '::%s(%s); ?>',
-                        $part->context->value,
-                        $part->expression,
-                    );
+                    $value .= $this->escapedOutputToString($part);
                 } else {
                     $value .= sprintf('<?php echo %s; ?>', $part->expression);
                 }
@@ -943,6 +939,17 @@ final class InheritanceCompilationPass implements AstPassInterface
         }
 
         return ' ' . $attr->name . '="' . $value . '"';
+    }
+
+    /**
+     * Convert an escaped output node into executable PHP output.
+     */
+    private function escapedOutputToString(OutputNode $outputNode): string
+    {
+        $expression = $this->escaper->generateEscapeCode($outputNode->expression, $outputNode->context);
+        $expression = str_replace(Escaper::class, GeneratedAlias::ESCAPER, $expression);
+
+        return sprintf('<?php echo %s; ?>', $expression);
     }
 
     /**
