@@ -253,4 +253,11 @@ final class ExpressionValidatorTest extends TestCase
 
         $this->assertSame("'resources/scss/site.scss'", $normalized);
     }
+
+    public function testValidateArrayExpressionAllowsTernaryWithoutVariablePrefix(): void
+    {
+        ExpressionValidator::validateArrayExpression('condition ? [] : []', 's:bind attribute');
+
+        $this->expectNotToPerformAssertions();
+    }
 }

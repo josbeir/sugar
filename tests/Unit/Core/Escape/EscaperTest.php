@@ -157,6 +157,14 @@ final class EscaperTest extends TestCase
         $this->assertStringContainsString('&quot;', $result);
     }
 
+    public function testEscapingArrayInHtmlAttributeContextThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot auto-escape arrays/objects in HTML attribute context');
+
+        Escaper::attr(['bad']);
+    }
+
     public function testEscapesJsonForAttribute(): void
     {
         $result = $this->escaper->escape(['name' => 'a"b'], OutputContext::JSON_ATTRIBUTE);

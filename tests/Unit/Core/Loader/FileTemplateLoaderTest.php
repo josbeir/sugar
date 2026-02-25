@@ -140,4 +140,70 @@ final class FileTemplateLoaderTest extends TestCase
         $this->assertContains('shared-ui', $namespaces);
         $this->assertCount(3, $namespaces);
     }
+
+    public function testConstructorWithoutTemplatePathsFallsBackToCurrentWorkingDirectory(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        file_put_contents($tempDir . '/cwd-template.sugar.php', '<div>Cwd</div>');
+
+        $previousCwd = getcwd();
+        chdir($tempDir);
+
+        try {
+            $loader = new FileTemplateLoader();
+            $this->assertSame('<div>Cwd</div>', $loader->load('cwd-template.sugar.php'));
+        } finally {
+            if (is_string($previousCwd)) {
+                chdir($previousCwd);
+            }
+
+            unlink($tempDir . '/cwd-template.sugar.php');
+            $this->removeTempDir($tempDir);
+        }
+    }
+
+    public function testSourceIdFallsBackToResolvedCanonicalNameWhenTemplateDoesNotExist(): void
+    {
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+
+        $this->assertSame('@app/missing/path', $loader->sourceId('missing/path'));
+    }
+
+    public function testLoadWithAbsolutePathLikeInputThrowsWhenNotResolvable(): void
+    {
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+
+        $this->expectException(TemplateNotFoundException::class);
+
+        $loader->load('/tmp/absolute-template.sugar.php');
+    }
+
+    public function testDiscoverSkipsMissingRootsAndAppliesPrefixFilter(): void
+    {
+        $tempDir = $this->createTempDir('sugar_test_');
+        mkdir($tempDir . '/components', 0777, true);
+        file_put_contents($tempDir . '/components/s-card.sugar.php', '<div>Card</div>');
+        file_put_contents($tempDir . '/standalone.sugar.php', '<div>Standalone</div>');
+
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+        $loader->registerNamespace('custom', new TemplateNamespaceDefinition([
+            $tempDir,
+            $tempDir . '/missing-root',
+        ]));
+
+        $this->assertSame([
+            '@custom/components/s-card.sugar.php',
+        ], $loader->discover('custom', 'components'));
+
+        unlink($tempDir . '/components/s-card.sugar.php');
+        unlink($tempDir . '/standalone.sugar.php');
+        $this->removeTempDir($tempDir);
+    }
+
+    public function testDiscoverReturnsEmptyArrayForUnknownNamespace(): void
+    {
+        $loader = new FileTemplateLoader([$this->fixturesPath]);
+
+        $this->assertSame([], $loader->discover('unknown'));
+    }
 }

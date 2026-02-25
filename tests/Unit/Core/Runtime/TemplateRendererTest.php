@@ -4,8 +4,11 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Runtime;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Core\Cache\CacheKey;
+use Sugar\Core\Cache\CacheMetadata;
 use Sugar\Core\Cache\DependencyTracker;
 use Sugar\Core\Cache\FileCache;
+use Sugar\Core\Exception\CompilationException;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Runtime\BlockManager;
 use Sugar\Core\Runtime\RuntimeEnvironment;
@@ -248,5 +251,63 @@ final class TemplateRendererTest extends TestCase
 
         $this->assertSame('<header>Header</header>', $header);
         $this->assertSame('<footer>Footer</footer>', $footer);
+    }
+
+    public function testRenderIncludeReturnsEmptyStringWhenCachedTemplateDoesNotReturnClosure(): void
+    {
+        $renderer = $this->createRenderer([
+            '@app/cached-non-closure.sugar.php' => '<div>ignored</div>',
+        ]);
+
+        $resolved = $this->templateLoader->resolve('@app/cached-non-closure.sugar.php');
+        $cacheKey = CacheKey::fromTemplate($resolved);
+        $this->cache->put(
+            $cacheKey,
+            '<?php return 123;',
+            new CacheMetadata(debug: true),
+        );
+
+        $result = $renderer->renderInclude('@app/cached-non-closure.sugar.php', []);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testRenderIncludeNormalizesNonStringClosureResultToDisplayString(): void
+    {
+        $renderer = $this->createRenderer([
+            '@app/cached-non-string.sugar.php' => '<div>ignored</div>',
+        ]);
+
+        $resolved = $this->templateLoader->resolve('@app/cached-non-string.sugar.php');
+        $cacheKey = CacheKey::fromTemplate($resolved);
+        $this->cache->put(
+            $cacheKey,
+            '<?php return static function(array $__data): array { return ["x" => 1]; };',
+            new CacheMetadata(debug: true),
+        );
+
+        $result = $renderer->renderInclude('@app/cached-non-string.sugar.php', []);
+
+        $this->assertSame('', $result);
+    }
+
+    public function testRenderIncludeWrapsCompiledTemplateParseErrors(): void
+    {
+        $renderer = $this->createRenderer([
+            '@app/cached-parse-error.sugar.php' => '<div>ignored</div>',
+        ]);
+
+        $resolved = $this->templateLoader->resolve('@app/cached-parse-error.sugar.php');
+        $cacheKey = CacheKey::fromTemplate($resolved);
+        $this->cache->put(
+            $cacheKey,
+            '<?php return static function(array $__data): string {',
+            new CacheMetadata(debug: true),
+        );
+
+        $this->expectException(CompilationException::class);
+        $this->expectExceptionMessage('Compiled template contains invalid PHP');
+
+        $renderer->renderInclude('@app/cached-parse-error.sugar.php', []);
     }
 }

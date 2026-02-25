@@ -50,6 +50,46 @@ final class StringTemplateLoaderTest extends TestCase
         $this->assertSame('<button>Save</button>', $loader->load('@components/s-button'));
     }
 
+    public function testLoadWithEmptyNamespaceRootAddsLogicalBasePath(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            '@components/shared/button.sugar.php' => '<button>Exact</button>',
+        ]);
+        $loader->registerNamespace('components', new TemplateNamespaceDefinition([''], ['.sugar.php']));
+
+        $this->assertSame('<button>Exact</button>', $loader->load('@components/shared/button'));
+    }
+
+    public function testLoadResolvesNamespacedCandidateFromConfiguredRoot(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            '@components/components/button' => '<button>From root</button>',
+        ]);
+        $loader->registerNamespace('components', new TemplateNamespaceDefinition(['components'], ['.sugar.php']));
+
+        $this->assertSame('<button>From root</button>', $loader->load('@components/button'));
+    }
+
+    public function testLoadFallsBackToAppNamespaceForExactCandidate(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            '@app/components/alert' => '<div>Alert</div>',
+        ]);
+        $loader->registerNamespace('components', new TemplateNamespaceDefinition(['components'], ['.sugar.php']));
+
+        $this->assertSame('<div>Alert</div>', $loader->load('@components/alert'));
+    }
+
+    public function testLoadFallsBackToAppNamespaceForSuffixedCandidate(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            '@app/components/badge.sugar.php' => '<span>Badge</span>',
+        ]);
+        $loader->registerNamespace('components', new TemplateNamespaceDefinition(['components'], ['.sugar.php']));
+
+        $this->assertSame('<span>Badge</span>', $loader->load('@components/badge'));
+    }
+
     public function testLoadUsesConstructorConfiguredSuffixes(): void
     {
         $loader = new StringTemplateLoader(
@@ -103,6 +143,40 @@ final class StringTemplateLoaderTest extends TestCase
         $this->assertSame([
             '@app/components/s-card.sugar.php',
         ], $loader->discover('app', 'components'));
+    }
+
+    public function testResolveReturnsNamespaceRootWhenNoTemplateSegmentExists(): void
+    {
+        $loader = new StringTemplateLoader();
+        $loader->registerNamespace('plugin', new TemplateNamespaceDefinition(['plugin-templates'], ['.sugar.php']));
+
+        $this->assertSame('@plugin', $loader->resolve('@plugin'));
+    }
+
+    public function testResolveRelativePathToNamespaceRootReturnsCanonicalRootPath(): void
+    {
+        $loader = new StringTemplateLoader();
+        $loader->registerNamespace('plugin', new TemplateNamespaceDefinition(['plugin-templates'], ['.sugar.php']));
+
+        $this->assertSame('@plugin', $loader->resolve('./', '@plugin/layout'));
+    }
+
+    public function testDiscoverNamespaceSkipsTemplatesOutsideNamespaceRoot(): void
+    {
+        $loader = new StringTemplateLoader();
+        $loader->registerNamespace('theme', new TemplateNamespaceDefinition(['theme'], ['.sugar.php']));
+        $loader->registerNamespace('plugin', new TemplateNamespaceDefinition(['plugin'], ['.sugar.php']));
+        $loader->addTemplate('@theme/components/button', '<button>Theme</button>');
+        $loader->addTemplate('@plugin/components/button', '<button>Plugin</button>');
+
+        $this->assertSame(['@theme/components/button'], $loader->discover('theme', 'components'));
+    }
+
+    public function testDiscoverReturnsEmptyArrayForUnknownNamespace(): void
+    {
+        $loader = new StringTemplateLoader(templates: ['home' => '<div>Home</div>']);
+
+        $this->assertSame([], $loader->discover('unknown'));
     }
 
     public function testThrowsWhenTemplateNotFound(): void

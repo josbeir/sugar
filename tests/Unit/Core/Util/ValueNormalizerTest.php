@@ -64,4 +64,11 @@ final class ValueNormalizerTest extends TestCase
 
         $this->assertSame(['alpha', 'beta'], $result);
     }
+
+    public function testNormalizeStringListReturnsNullWhenNoValidStringsRemain(): void
+    {
+        $result = ValueNormalizer::normalizeStringList(['   ', '', 123, null]);
+
+        $this->assertNull($result);
+    }
 }

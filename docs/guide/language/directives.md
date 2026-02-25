@@ -83,5 +83,5 @@ Use it as a wrapper when you need directives or scoping without introducing a re
 ```
 
 For related examples, see:
-- [Template Inheritance](./inheritance.md)
+- [Template Inheritance](inheritance.md)
 - [Control Flow Directives](./directives/control-flow.md)
