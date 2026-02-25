@@ -260,6 +260,43 @@ final class TemplateInheritanceIntegrationTest extends TestCase
         $this->assertStringContainsString('alt="My &quot;Site&quot; &lt;script&gt;"', $result);
     }
 
+    public function testIfBlockRendersWhenChildDefinesTargetBlock(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'base.sugar.php' => '<main s:block="content">Default content</main>'
+                    . '<aside s:ifblock="\'sidebar\'"><div s:block="sidebar"></div></aside>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>'
+                    . '<s-template s:block="content">Child content</s-template>'
+                    . '<s-template s:block="sidebar">Sidebar content</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Child content', $result);
+        $this->assertStringContainsString('Sidebar content', $result);
+        $this->assertStringContainsString('<aside>', $result);
+    }
+
+    public function testIfBlockSkipsWhenChildDoesNotDefineTargetBlock(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'base.sugar.php' => '<main s:block="content">Default content</main>'
+                    . '<aside s:ifblock="\'sidebar\'"><div s:block="sidebar">Default sidebar</div></aside>',
+                'child.sugar.php' => '<s-template s:extends="base.sugar.php"></s-template>'
+                    . '<s-template s:block="content">Child content</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Child content', $result);
+        $this->assertStringNotContainsString('<aside>', $result);
+        $this->assertStringNotContainsString('Default sidebar', $result);
+    }
+
     public function testExecuteCompiledInheritedTemplate(): void
     {
         $engine = $this->createEngine($this->templatesPath);

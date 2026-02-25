@@ -77,6 +77,23 @@ final class BlockManager
     }
 
     /**
+     * Check whether a block override has been defined in the current inheritance levels.
+     *
+     * Returns true only when any level explicitly defines the named block.
+     * This does not consider parent layout defaults passed to renderBlock().
+     */
+    public function hasDefinedBlock(string $name): bool
+    {
+        foreach ($this->levels as $level) {
+            if (isset($level[$name])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Render a block by name, falling back to the default closure.
      *
      * Searches through the level stack from most-derived (child) to least-derived

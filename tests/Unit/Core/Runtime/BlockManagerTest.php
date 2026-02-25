@@ -153,6 +153,18 @@ final class BlockManagerTest extends TestCase
         $this->assertSame('default', $result);
     }
 
+    public function testHasDefinedBlockReturnsFalseWhenNotDefined(): void
+    {
+        $this->assertFalse($this->manager->hasDefinedBlock('sidebar'));
+    }
+
+    public function testHasDefinedBlockReturnsTrueWhenDefined(): void
+    {
+        $this->manager->defineBlock('sidebar', fn(array $data): string => 'sidebar content');
+
+        $this->assertTrue($this->manager->hasDefinedBlock('sidebar'));
+    }
+
     public function testRenderParentThrowsOutsideBlockRendering(): void
     {
         $this->expectException(TemplateRuntimeException::class);
