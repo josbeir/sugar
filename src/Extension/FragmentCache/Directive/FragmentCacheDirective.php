@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension\FragmentCache\Directive;
 
 use Sugar\Core\Ast\DirectiveNode;
+use Sugar\Core\Ast\Helper\ExpressionValidator;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Compiler\CompilationContext;
@@ -115,9 +116,12 @@ final readonly class FragmentCacheDirective implements DirectiveInterface, Eleme
      */
     private function normalizeExpression(string $expression): string
     {
-        $trimmed = trim($expression);
+        $trimmed = ExpressionValidator::normalizeRuntimeExpression(
+            expression: $expression,
+            emptyFallback: 'null',
+        );
 
-        if ($trimmed === '' || strtolower($trimmed) === 'true') {
+        if (strtolower($trimmed) === 'true') {
             return 'null';
         }
 
