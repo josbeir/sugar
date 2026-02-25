@@ -206,4 +206,51 @@ final class ExpressionValidatorTest extends TestCase
             20,
         );
     }
+
+    /**
+     * Test runtime normalization fallback for empty expressions.
+     */
+    public function testNormalizeRuntimeExpressionUsesEmptyFallback(): void
+    {
+        $normalized = ExpressionValidator::normalizeRuntimeExpression('   ', emptyFallback: 'null');
+
+        $this->assertSame('null', $normalized);
+    }
+
+    /**
+     * Test runtime normalization preserves PHP-like expressions.
+     */
+    #[DataProvider('runtimeExpressionPassthroughProvider')]
+    public function testNormalizeRuntimeExpressionPassesThroughPhpExpressions(string $expression): void
+    {
+        $normalized = ExpressionValidator::normalizeRuntimeExpression($expression);
+
+        $this->assertSame(trim($expression), $normalized);
+    }
+
+    /**
+     * @return \Iterator<string, array{string}>
+     */
+    public static function runtimeExpressionPassthroughProvider(): Iterator
+    {
+        yield 'quoted single string' => ["'resources/js/app.ts'"];
+        yield 'quoted double string' => ['"resources/js/app.ts"'];
+        yield 'array expression' => ["['entry' => 'resources/js/app.ts']"];
+        yield 'variable expression' => ['$entry'];
+        yield 'function call expression' => ['getEntry()'];
+        yield 'boolean true literal' => ['true'];
+    }
+
+    /**
+     * Test runtime normalization stringifies bare values when pattern matches.
+     */
+    public function testNormalizeRuntimeExpressionQuotesBareValueWhenPatternMatches(): void
+    {
+        $normalized = ExpressionValidator::normalizeRuntimeExpression(
+            'resources/scss/site.scss',
+            bareStringPattern: '/^[a-zA-Z0-9_@.\/-]+$/',
+        );
+
+        $this->assertSame("'resources/scss/site.scss'", $normalized);
+    }
 }

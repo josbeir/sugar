@@ -64,6 +64,21 @@ final class FragmentCacheDirectiveTest extends DirectiveTestCase
         $this->assertStringContainsString('= null;', $result[0]->code);
     }
 
+    public function testCompileTreatsEmptyExpressionAsAutoKeyMode(): void
+    {
+        $node = $this->directive('cache')
+            ->expression('   ')
+            ->withChild($this->text('Cached content', 1, 10))
+            ->at(1, 1)
+            ->build();
+
+        $result = $this->directiveCompiler->compile($node, $this->createTestContext());
+
+        $this->assertCount(3, $result);
+        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
+        $this->assertStringContainsString('= null;', $result[0]->code);
+    }
+
     public function testGetType(): void
     {
         $this->assertSame(DirectiveType::CONTROL_FLOW, $this->directiveCompiler->getType());

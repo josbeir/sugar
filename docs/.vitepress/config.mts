@@ -46,7 +46,8 @@ export default defineConfig({
           { text: 'Introduction', link: '/guide/introduction/what-is-sugar' },
           { text: 'Directives', link: '/guide/language/directives' },
           { text: 'Language', link: '/guide/language/pipe-syntax' },
-          { text: 'Templates', link: '/guide/templates/components' },
+          { text: 'Templates', link: '/guide/language/inheritance' },
+          { text: 'Extensions', link: '/guide/extensions/components' },
           { text: 'Development', link: '/guide/development/' },
           { text: 'Reference', link: '/guide/reference/architecture' }
         ]
@@ -67,20 +68,21 @@ export default defineConfig({
           ]
         },
         {
-          text: 'Templates',
+          text: 'Inheritance & Directives',
           items: [
-            { text: 'Template Inheritance', link: '/guide/templates/inheritance' },
-            { text: 'Components', link: '/guide/templates/components' }
-          ]
-        },
-        {
-          text: 'Directives',
-          items: [
-            { text: 'Introduction', link: '/guide/language/directives' },
+            { text: 'Inheritance', link: '/guide/language/inheritance' },
+            // { text: 'Introduction', link: '/guide/language/directives' },
             { text: 'Control Flow', link: '/guide/language/directives/control-flow' },
             { text: 'Attribute', link: '/guide/language/directives/attribute' },
             { text: 'Content', link: '/guide/language/directives/content' },
             { text: 'Pass-through', link: '/guide/language/directives/pass-through' }
+          ]
+        },
+        {
+          text: 'Extensions',
+          items: [
+            { text: 'Components', link: '/guide/extensions/components' },
+            { text: 'Vite Integration', link: '/guide/extensions/vite' }
           ]
         },
         {
