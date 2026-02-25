@@ -9,6 +9,7 @@ use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
+use Sugar\Core\Directive\Interface\ElementClaimingDirectiveInterface;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Extension\Vite\Directive\ViteDirective;
 use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
@@ -92,6 +93,17 @@ final class ViteDirectiveTest extends TestCase
         $directive = new ViteDirective();
 
         $this->assertFalse($directive->shouldWrapContentElement());
+    }
+
+    /**
+     * Verify directive supports custom element claiming with src attribute expression.
+     */
+    public function testImplementsElementClaimingWithSrcExpressionAttribute(): void
+    {
+        $directive = new ViteDirective();
+
+        $this->assertInstanceOf(ElementClaimingDirectiveInterface::class, $directive);
+        $this->assertSame('src', $directive->getElementExpressionAttribute());
     }
 
     /**

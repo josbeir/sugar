@@ -34,6 +34,7 @@ final class ViteIntegrationTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
             ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
                 mode: 'dev',
                 devServerUrl: 'http://localhost:5173',
             ))
@@ -56,7 +57,7 @@ final class ViteIntegrationTest extends TestCase
 
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
-            ->withExtension(new ViteExtension(mode: 'dev'))
+            ->withExtension(new ViteExtension(assetBaseUrl: '/build/', mode: 'dev'))
             ->build();
 
         $output = $engine->render('vite-dev-dedupe-page');
@@ -84,9 +85,9 @@ final class ViteIntegrationTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
             ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
                 mode: 'prod',
                 manifestPath: $this->manifestPath,
-                buildBaseUrl: '/build/',
             ))
             ->build();
 
@@ -115,10 +116,9 @@ final class ViteIntegrationTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
             ->withExtension(new ViteExtension(
+                assetBaseUrl: '/assets/build',
                 mode: 'prod',
                 manifestPath: $this->manifestPath,
-                buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
-                assetBaseUrl: '/assets/build',
             ))
             ->build();
 
@@ -140,6 +140,7 @@ final class ViteIntegrationTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
             ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
                 mode: 'dev',
                 devServerUrl: 'http://localhost:5173',
             ))
@@ -162,6 +163,7 @@ final class ViteIntegrationTest extends TestCase
         $engine = Engine::builder()
             ->withTemplateLoader($loader)
             ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
                 mode: 'dev',
                 devServerUrl: 'http://localhost:5173',
             ))
@@ -171,6 +173,30 @@ final class ViteIntegrationTest extends TestCase
 
         $this->assertStringContainsString('http://localhost:5173/scss/site.scss', $output);
         $this->assertStringNotContainsString('<link', $output);
+    }
+
+    /**
+     * Verify custom element syntax works through ElementRoutingPass.
+     */
+    public function testRendersDevelopmentTagsFromElementClaimingSyntax(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'vite-dev-element-page' => '<s-vite src="resources/js/app.ts" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+            ))
+            ->build();
+
+        $output = $engine->render('vite-dev-element-page');
+
+        $this->assertStringContainsString('http://localhost:5173/@vite/client', $output);
+        $this->assertStringContainsString('http://localhost:5173/resources/js/app.ts', $output);
     }
 
     /**

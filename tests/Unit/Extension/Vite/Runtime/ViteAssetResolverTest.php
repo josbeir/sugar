@@ -30,8 +30,7 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'dev',
             debug: true,
             manifestPath: null,
-            buildBaseUrl: '/build/',
-            assetBaseUrl: null,
+            assetBaseUrl: '/build/',
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -61,8 +60,7 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'prod',
             debug: false,
             manifestPath: $this->manifestPath,
-            buildBaseUrl: '/build/',
-            assetBaseUrl: null,
+            assetBaseUrl: '/build/',
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -92,8 +90,7 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'prod',
             debug: false,
             manifestPath: $this->manifestPath,
-            buildBaseUrl: '/build/',
-            assetBaseUrl: null,
+            assetBaseUrl: '/build/',
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -106,35 +103,6 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
-     * Verify filesystem build base paths are normalized to public URLs.
-     */
-    public function testProductionModeNormalizesFilesystemBuildBaseUrl(): void
-    {
-        $this->manifestPath = $this->createManifestFile([
-            'resources/assets/js/site.js' => [
-                'file' => 'assets/site-l0sNRNKZ.js',
-                'isEntry' => true,
-            ],
-        ]);
-
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
-            assetBaseUrl: null,
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
-
-        $output = $resolver->render('resources/assets/js/site.js');
-
-        $this->assertStringContainsString('<script type="module" src="/build/assets/site-l0sNRNKZ.js"></script>', $output);
-        $this->assertStringNotContainsString('/home/josbeir/Sites/sugar_app/webroot/build/assets/site-l0sNRNKZ.js', $output);
-    }
-
-    /**
      * Verify missing production manifest path raises a runtime exception.
      */
     public function testProductionModeWithoutManifestPathThrowsException(): void
@@ -143,8 +111,7 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'prod',
             debug: false,
             manifestPath: null,
-            buildBaseUrl: '/build/',
-            assetBaseUrl: null,
+            assetBaseUrl: '/build/',
             devServerUrl: 'http://localhost:5173',
             injectClient: true,
             defaultEntry: null,
@@ -157,6 +124,25 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
+     * Verify empty build base URL is rejected when no explicit asset base URL is configured.
+     */
+    public function testProductionModeWithoutConfiguredAssetBaseUrlThrowsException(): void
+    {
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessage('Vite assetBaseUrl must be configured and non-empty.');
+
+        new ViteAssetResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $this->manifestPath,
+            assetBaseUrl: '',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            defaultEntry: null,
+        );
+    }
+
+    /**
      * Verify boolean directive specification uses configured default entry.
      */
     public function testBooleanSpecificationUsesDefaultEntry(): void
@@ -165,8 +151,7 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'dev',
             debug: true,
             manifestPath: null,
-            buildBaseUrl: '/build/',
-            assetBaseUrl: null,
+            assetBaseUrl: '/build/',
             devServerUrl: 'http://localhost:5173',
             injectClient: false,
             defaultEntry: 'resources/js/default.ts',
@@ -193,7 +178,6 @@ final class ViteAssetResolverTest extends TestCase
             mode: 'prod',
             debug: false,
             manifestPath: $this->manifestPath,
-            buildBaseUrl: '/home/josbeir/Sites/sugar_app/webroot/build',
             assetBaseUrl: '/assets/build',
             devServerUrl: 'http://localhost:5173',
             injectClient: true,

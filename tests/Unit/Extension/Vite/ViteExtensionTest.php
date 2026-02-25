@@ -28,7 +28,7 @@ final class ViteExtensionTest extends TestCase
     public function testRegistersDirectiveAndRuntimeService(): void
     {
         $context = $this->createRegistrationContext();
-        $extension = new ViteExtension(mode: 'dev', devServerUrl: 'http://localhost:5173');
+        $extension = new ViteExtension(assetBaseUrl: '/build/', mode: 'dev', devServerUrl: 'http://localhost:5173');
 
         $extension->register($context);
 
@@ -47,7 +47,7 @@ final class ViteExtensionTest extends TestCase
     public function testResolverServiceClosureMaterializesResolver(): void
     {
         $context = $this->createRegistrationContext();
-        $extension = new ViteExtension(mode: 'dev');
+        $extension = new ViteExtension(assetBaseUrl: '/build/', mode: 'dev');
 
         $extension->register($context);
 

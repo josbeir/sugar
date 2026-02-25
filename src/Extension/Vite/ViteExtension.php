@@ -18,20 +18,17 @@ use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
 final readonly class ViteExtension implements ExtensionInterface
 {
     /**
+     * @param string $assetBaseUrl Public URL base for emitted manifest assets (for example `/build/`)
      * @param string $mode Resolver mode: `auto`, `dev`, or `prod`
      * @param string|null $manifestPath Absolute path to Vite manifest file for production mode
-     * @param string $buildBaseUrl Public base URL prefix for built assets (e.g. `/build/`)
-     * @param string|null $assetBaseUrl Explicit public URL base for emitted manifest assets. When set,
-     * this takes precedence over `buildBaseUrl` normalization.
      * @param string $devServerUrl Vite dev server origin (e.g. `http://localhost:5173`)
      * @param bool $injectClient Whether to inject `@vite/client` in development mode
      * @param string|null $defaultEntry Optional default entry used when `s:vite` is boolean
      */
     public function __construct(
+        private string $assetBaseUrl,
         private string $mode = 'auto',
         private ?string $manifestPath = null,
-        private string $buildBaseUrl = '/build/',
-        private ?string $assetBaseUrl = null,
         private string $devServerUrl = 'http://localhost:5173',
         private bool $injectClient = true,
         private ?string $defaultEntry = null,
@@ -52,7 +49,6 @@ final readonly class ViteExtension implements ExtensionInterface
                     mode: $this->mode,
                     debug: $context->isDebug(),
                     manifestPath: $this->manifestPath,
-                    buildBaseUrl: $this->buildBaseUrl,
                     assetBaseUrl: $this->assetBaseUrl,
                     devServerUrl: $this->devServerUrl,
                     injectClient: $this->injectClient,

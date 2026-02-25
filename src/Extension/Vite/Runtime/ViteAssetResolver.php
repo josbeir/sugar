@@ -31,8 +31,7 @@ final class ViteAssetResolver
      * @param string $mode Resolver mode: `auto`, `dev`, or `prod`
      * @param bool $debug Whether engine debug mode is enabled
      * @param string|null $manifestPath Absolute path to Vite manifest file for production mode
-     * @param string $buildBaseUrl Public base URL prefix for built assets
-     * @param string|null $assetBaseUrl Explicit public URL base for emitted manifest assets
+     * @param string $assetBaseUrl Public URL base for emitted manifest assets
      * @param string $devServerUrl Vite dev server origin
      * @param bool $injectClient Whether to inject `@vite/client` in development mode
      * @param string|null $defaultEntry Optional default entry used when specification is boolean
@@ -41,12 +40,14 @@ final class ViteAssetResolver
         private readonly string $mode,
         private readonly bool $debug,
         private readonly ?string $manifestPath,
-        private readonly string $buildBaseUrl,
-        private readonly ?string $assetBaseUrl,
+        private readonly string $assetBaseUrl,
         private readonly string $devServerUrl,
         private readonly bool $injectClient,
         private readonly ?string $defaultEntry,
     ) {
+        if (trim($this->assetBaseUrl) === '') {
+            throw new TemplateRuntimeException('Vite assetBaseUrl must be configured and non-empty.');
+        }
     }
 
     /**
@@ -372,41 +373,11 @@ final class ViteAssetResolver
      */
     private function normalizeBuildUrl(string $filePath): string
     {
-        $configuredBase = $this->assetBaseUrl;
-        if (is_string($configuredBase) && trim($configuredBase) !== '') {
-            $base = rtrim($this->normalizePublicPath($configuredBase), '/');
-        } else {
-            $base = rtrim($this->normalizeBuildBaseUrl($this->buildBaseUrl), '/');
-        }
+        $base = rtrim($this->normalizePublicPath($this->assetBaseUrl), '/');
 
         $path = ltrim($filePath, '/');
 
         return $base . '/' . $path;
-    }
-
-    /**
-     * Normalize build base to a public URL path or absolute URL.
-     *
-     * Converts filesystem base paths into a public URL segment using the
-     * last directory name (for example `/var/www/project/build` => `/build`).
-     */
-    private function normalizeBuildBaseUrl(string $buildBaseUrl): string
-    {
-        $base = trim($buildBaseUrl);
-        if ($base === '') {
-            return '/build';
-        }
-
-        if (str_contains($base, '://')) {
-            return rtrim($base, '/');
-        }
-
-        $normalized = str_replace('\\', '/', $base);
-        if (is_dir($base)) {
-            return '/' . trim(basename($normalized), '/');
-        }
-
-        return $this->normalizePublicPath($normalized);
     }
 
     /**

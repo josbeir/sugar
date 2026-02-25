@@ -36,11 +36,7 @@
     ],
     "require": {
         "php": ">=8.2",
-        "psr/simple-cache": "^3.0",
-        "psr/http-message": "^2.0",
-        "psr/http-factory": "^1.1",
-        "psr/http-server-handler": "^1.0",
-        "psr/http-server-middleware": "^1.0"
+        "psr/simple-cache": "^3.0"
     },
     "suggest": {
         "nikic/php-parser": "Optional: validates generated PHP during compilation and improves syntax diagnostics."

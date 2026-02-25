@@ -37,7 +37,7 @@ features:
     icon:
       src: /icons/components.svg
     details: Build UI with props, slots, and merged attributes in plain PHP templates.
-    link: /guide/templates/components
+    link: /guide/extensions/components
 
 ---
 
@@ -118,5 +118,5 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
 :::
 
 ::: tip
-New to Sugar? Start with [Getting Started](/guide/introduction/getting-started), then move to [Template Inheritance](/guide/templates/inheritance) and [Components](/guide/templates/components).
+New to Sugar? Start with [Getting Started](/guide/introduction/getting-started), then move to [Template Inheritance](/guide/templates/inheritance) and [Components](/guide/extensions/components).
 :::
