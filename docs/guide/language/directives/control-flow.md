@@ -11,6 +11,7 @@ Use `<s-template>` when you want control flow without adding a wrapper element.
 ## Directives
 
 - `s:if` - Render when a condition is true.
+- `s:ifblock` - Render when a child block override exists.
 - `s:unless` - Render when a condition is false.
 - `s:isset` - Render when a variable is set.
 - `s:empty` - Render when a value is empty.
@@ -69,6 +70,32 @@ For more about empty/false checks, see [Empty Checking](/guide/language/empty-ch
 ```html [Rendered — element]
 <!-- $isReady = false -->
 Loading...
+```
+:::
+
+### s:ifblock
+
+Render the element only when a child template defines the named block.
+
+For inheritance details, see [Template Inheritance](/guide/language/inheritance).
+
+::: code-group
+```sugar [Attribute]
+<aside s:ifblock="'sidebar'">
+    <section s:block="sidebar"></section>
+</aside>
+```
+
+```sugar [Element]
+<s-ifblock name="sidebar">
+    <aside><section s:block="sidebar"></section></aside>
+</s-ifblock>
+```
+
+```html [Rendered when child defines sidebar]
+<aside>
+    <section>Sidebar content</section>
+</aside>
 ```
 :::
 

@@ -207,6 +207,17 @@ final class TemplateRendererTest extends TestCase
         $this->assertSame($bm1, $bm2);
     }
 
+    public function testHasDefinedBlockDelegatesToBlockManager(): void
+    {
+        $renderer = $this->createRenderer([]);
+
+        $this->assertFalse($renderer->hasDefinedBlock('sidebar'));
+
+        $renderer->getBlockManager()->defineBlock('sidebar', fn(array $data): string => 'Sidebar');
+
+        $this->assertTrue($renderer->hasDefinedBlock('sidebar'));
+    }
+
     public function testTemplateContextBindsThis(): void
     {
         $context = new class {

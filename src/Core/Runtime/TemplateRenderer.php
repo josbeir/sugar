@@ -67,6 +67,17 @@ final class TemplateRenderer
     }
 
     /**
+     * Check whether a child override exists for the given block name.
+     *
+     * This reflects only runtime block definitions collected through extends.
+     * Parent layout default content does not count as a defined child block.
+     */
+    public function hasDefinedBlock(string $name): bool
+    {
+        return $this->blockManager->hasDefinedBlock($name);
+    }
+
+    /**
      * Render a parent layout template for extends inheritance.
      *
      * Pushes a new block level before rendering the parent so that child

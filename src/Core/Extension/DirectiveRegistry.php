@@ -12,6 +12,7 @@ use Sugar\Core\Directive\FinallyDirective;
 use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\ForelseDirective;
 use Sugar\Core\Directive\HtmlDirective;
+use Sugar\Core\Directive\IfBlockDirective;
 use Sugar\Core\Directive\IfContentDirective;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
@@ -62,6 +63,7 @@ final class DirectiveRegistry implements DirectiveRegistryInterface
     private const DEFAULT_DIRECTIVES = [
         // Control flow
         'if' => IfDirective::class,
+        'ifblock' => IfBlockDirective::class,
         'elseif' => IfDirective::class,
         'else' => IfDirective::class,
         'unless' => UnlessDirective::class,
