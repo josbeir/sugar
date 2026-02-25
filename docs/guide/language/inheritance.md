@@ -237,6 +237,48 @@ For newcomers, this is the easiest pattern to understand:
 ```
 :::
 
+### Conditional Layout Regions with `s:ifblock`
+
+Use `s:ifblock` in a parent layout when a region should only render if a child defines that block.
+
+`s:ifblock` checks for a child-defined block override at runtime. Parent default content does **not** count as a defined child block.
+
+::: code-group
+```sugar [Parent layout]
+<main s:block="content">Default content</main>
+
+<aside s:ifblock="'sidebar'">
+    <section s:block="sidebar"></section>
+</aside>
+```
+
+```sugar [Child with sidebar]
+<s-template s:extends="../layouts/base.sugar.php"></s-template>
+
+<s-template s:block="content">Page body</s-template>
+<s-template s:block="sidebar">Sidebar widgets</s-template>
+```
+
+```html [Rendered]
+<main>Page body</main>
+<aside>
+    <section>Sidebar widgets</section>
+</aside>
+```
+:::
+
+You can also use custom-element syntax:
+
+```sugar
+<s-ifblock name="sidebar">
+    <aside><section s:block="sidebar"></section></aside>
+</s-ifblock>
+```
+
+::: tip
+Use `s:ifblock` for optional regions like sidebars, extra toolbars, or secondary footers that should disappear entirely when a child template does not provide that block.
+:::
+
 ::: code-group
 ```sugar [s:prepend example]
 <!-- layout: layouts/base.sugar.php -->
