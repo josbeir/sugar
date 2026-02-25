@@ -46,7 +46,7 @@ export default defineConfig({
           { text: 'Introduction', link: '/guide/introduction/what-is-sugar' },
           { text: 'Directives', link: '/guide/language/directives' },
           { text: 'Language', link: '/guide/language/pipe-syntax' },
-          { text: 'Templates', link: '/guide/templates/inheritance' },
+          { text: 'Templates', link: '/guide/language/inheritance' },
           { text: 'Extensions', link: '/guide/extensions/components' },
           { text: 'Development', link: '/guide/development/' },
           { text: 'Reference', link: '/guide/reference/architecture' }

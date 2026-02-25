@@ -41,13 +41,14 @@ final readonly class ViteExtension implements ExtensionInterface
     public function register(RegistrationContext $context): void
     {
         $context->directive('vite', new ViteDirective());
+        $debug = $context->isDebug();
 
         $context->protectedRuntimeService(
             ViteAssetResolver::class,
-            function (RuntimeContext $runtimeContext) use ($context): ViteAssetResolver {
+            function (RuntimeContext $runtimeContext) use ($debug): ViteAssetResolver {
                 return new ViteAssetResolver(
                     mode: $this->mode,
-                    debug: $context->isDebug(),
+                    debug: $debug,
                     manifestPath: $this->manifestPath,
                     assetBaseUrl: $this->assetBaseUrl,
                     devServerUrl: $this->devServerUrl,

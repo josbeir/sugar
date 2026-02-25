@@ -149,7 +149,7 @@ Use `s:bind` when you need optional component variables, for example:
 Continue with:
 
 - [Components](/guide/extensions/components)
-- [Template Inheritance](/guide/templates/inheritance)
+- [Template Inheritance](/guide/language/inheritance)
 - [Directives](/guide/language/directives)
 :::
 

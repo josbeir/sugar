@@ -27,7 +27,7 @@ features:
     icon:
       src: /icons/inheritance.svg
     details: "Compose layouts with s:extends, s:block, and s:include."
-    link: /guide/templates/inheritance
+    link: /guide/language/inheritance
   - title: Built-In Safe Output
     icon:
       src: /icons/safe-output.svg
@@ -118,5 +118,5 @@ Here is a small, beginner-friendly example. Click each tab to see how layout inh
 :::
 
 ::: tip
-New to Sugar? Start with [Getting Started](/guide/introduction/getting-started), then move to [Template Inheritance](/guide/templates/inheritance) and [Components](/guide/extensions/components).
+New to Sugar? Start with [Getting Started](/guide/introduction/getting-started), then move to [Template Inheritance](/guide/language/inheritance) and [Components](/guide/extensions/components).
 :::

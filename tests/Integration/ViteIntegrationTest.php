@@ -125,7 +125,7 @@ final class ViteIntegrationTest extends TestCase
         $output = $engine->render('vite-prod-custom-base-page');
 
         $this->assertStringContainsString('/assets/build/assets/site-l0sNRNKZ.js', $output);
-        $this->assertStringNotContainsString('/home/josbeir/Sites/sugar_app/webroot/build/assets/site-l0sNRNKZ.js', $output);
+        $this->assertStringNotContainsString('/webroot/build/assets/site-l0sNRNKZ.js', $output);
     }
 
     /**
