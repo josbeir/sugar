@@ -446,6 +446,116 @@ Use `s:with` to pass scoped variables to an included template. Variables are onl
 ```
 :::
 
+## Block Content from Partials
+
+Sugar gives you two ways to supply block content from a partial file rather than writing it inline in the child template. Both approaches work at the **top level** of a child extends-template (i.e. outside any `s:block`).
+
+### Partials That Define Blocks
+
+A partial can contain `s:block` directives. When that partial is included at the top level of a child extends-template, its blocks are automatically registered as child overrides — exactly as if you had written them inline.
+
+::: code-group
+```sugar [layouts/base.sugar.php]
+<nav s:block="nav">Default navigation</nav>
+<main s:block="content">Default content</main>
+```
+
+```sugar [partials/nav.sugar.php]
+<nav>
+    <a href="/">Home</a>
+    <a href="/about">About</a>
+</nav>
+```
+
+```sugar [pages/home.sugar.php]
+<s-template s:extends="layouts/base.sugar.php" />
+
+<!-- include at top level — nav block is registered from the partial -->
+<s-template s:include="partials/nav" />
+
+<s-template s:block="content">
+    <h1>Home</h1>
+</s-template>
+```
+:::
+
+::: tip
+This works with conditional blocks too. A partial with `s:notempty="$items" s:block="sidebar"` only registers the block override when `$items` is non-empty — the layout default is used otherwise.
+:::
+
+::: warning
+This only applies to **top-level** includes (outside any `s:block`) in a child extends-template. Includes inside `s:block` or inside layout templates still behave as normal layout placeholders.
+:::
+
+### Inline Include + Block Combo
+
+For a more concise syntax you can combine `s:include` with `s:block`, `s:append`, or `s:prepend` **on the same element**. The partial's rendered output becomes the block content directly — no need to write a separate partial with its own `s:block`.
+
+#### Replace a block with a partial
+
+::: code-group
+```sugar [Child template]
+<s-template s:extends="layouts/base.sugar.php" />
+
+<!-- The output of partials/hero becomes the "content" block -->
+<s-template s:include="partials/hero" s:block="content" />
+```
+
+```sugar [Equivalent long form]
+<s-template s:extends="layouts/base.sugar.php" />
+
+<s-template s:block="content">
+    <s-template s:include="partials/hero" />
+</s-template>
+```
+:::
+
+#### Append or prepend a partial to a block
+
+::: code-group
+```sugar [Append — partial output after parent block]
+<s-template s:extends="layouts/base.sugar.php" />
+
+<!-- Appends partials/scripts after whatever "scripts" yields in the layout -->
+<s-template s:include="partials/scripts" s:append="scripts" />
+```
+
+```sugar [Prepend — partial output before parent block]
+<s-template s:extends="layouts/base.sugar.php" />
+
+<!-- Prepends partials/breadcrumbs before the parent "content" block -->
+<s-template s:include="partials/breadcrumbs" s:prepend="content" />
+```
+:::
+
+#### Passing variables with `s:with`
+
+`s:with` works the same way when combined with `s:block`, `s:append`, or `s:prepend`:
+
+```sugar
+<s-template s:extends="layouts/base.sugar.php" />
+
+<s-template
+    s:include="partials/user-card"
+    s:block="sidebar"
+    s:with="['user' => $currentUser]"
+/>
+```
+
+#### Explicit `s:block` takes precedence
+
+When the same block name appears as both an explicit child `s:block` and an inline include combo, the **explicit `s:block` always wins**:
+
+```sugar
+<s-template s:extends="layouts/base.sugar.php" />
+
+<!-- This wins — declared first, takes precedence -->
+<s-template s:block="content">Explicit override</s-template>
+
+<!-- This is silently ignored for the "content" block -->
+<s-template s:include="partials/content" s:block="content" />
+```
+
 ## Advanced Usage
 
 ### Render Only Specific Blocks
@@ -577,6 +687,8 @@ Understanding these rules will help you avoid common pitfalls:
 
 - **`s:with` scope** - Variables passed via `s:with` are scoped to the included template only and don't leak to parent scope
 - **Requires `s:include`** - `s:with` only works in combination with `s:include` on the same element
+- **Top-level block registration** - A partial with `s:block` directives registers those blocks when included at the top level of a child extends-template; the same partial used inside a layout acts as a normal layout placeholder
+- **Inline combo precedence** - When `s:include` is combined with `s:block`/`s:append`/`s:prepend`, an explicit child `s:block` declaration for the same name always takes precedence
 
 ### Path Resolution
 
@@ -638,9 +750,9 @@ Quick reference for all template inheritance directives:
 | Directive | Purpose | Used With |
 |-----------|---------|-----------|
 | `s:extends` | Declare the parent layout to inherit from | Layouts |
-| `s:block` | Replace a named block in the parent | Layouts |
-| `s:append` | Add content after a parent block | Layouts |
-| `s:prepend` | Add content before a parent block | Layouts |
+| `s:block` | Replace a named block in the parent | Layouts, or combined with `s:include` |
+| `s:append` | Add content after a parent block | Layouts, or combined with `s:include` |
+| `s:prepend` | Add content before a parent block | Layouts, or combined with `s:include` |
 | `s:parent` | Insert parent block content at current position | Inside `s:block` only |
 | `s:include` | Insert another template at this location | Partials |
 | `s:with` | Pass scoped variables to an include | With `s:include` |
