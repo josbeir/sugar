@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Sugar\Tests\Helper\Trait\EngineTestTrait;
 
 /**
@@ -162,9 +163,45 @@ final class PartialBlockDefinitionTest extends TestCase
     }
 
     /**
+     * Block registration depth is restored via try-finally even if an included partial throws.
+     *
+     * After catching the exception a subsequent render must complete successfully,
+     * proving that the BlockManager is not left in a corrupted (depth > 0) state.
+     */
+    public function testBlockRegistrationDepthIsRestoredAfterPartialException(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default</main>',
+                'throwing-partial.sugar.php' => '<?php throw new \RuntimeException("partial failure"); ?>',
+                'child-throws.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="throwing-partial.sugar.php" />',
+                ]),
+                'child-ok.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:block="content">OK content</s-template>',
+                ]),
+            ],
+        );
+
+        try {
+            $engine->render('child-throws.sugar.php');
+            $this->fail('Expected RuntimeException was not thrown.');
+        } catch (RuntimeException) {
+            // Expected — partial failed during block registration.
+        }
+
+        // Block registration depth must be restored; subsequent render must succeed.
+        $result = $engine->render('child-ok.sugar.php');
+        $this->assertStringContainsString('OK content', $result);
+    }
+
+    /**
      * Explicit s:block in child template takes precedence over partial block.
-     * Since the child's explicit s:block is processed before includes,
-     * it should win and the include's block should be ignored by the deduplication rule.
+     * Pre-extends includes are processed first, so the partial registers its block.
+     * The explicit child s:block is then defined afterwards, overwriting the partial's
+     * registration since defineBlock() does not deduplicate — last write wins.
      */
     public function testExplicitChildBlockTakesPrecedenceOverPartialBlock(): void
     {

@@ -120,10 +120,14 @@ final class BlockManager
      *
      * Decrements the depth counter set by `enterBlockRegistration()`. When the
      * counter reaches zero the manager returns to normal rendering behavior.
+     * Safe to call from a finally block: has no effect if the counter is already
+     * at zero (guards against double-decrement on exception paths).
      */
     public function exitBlockRegistration(): void
     {
-        $this->blockRegistrationDepth--;
+        if ($this->blockRegistrationDepth > 0) {
+            $this->blockRegistrationDepth--;
+        }
     }
 
     /**

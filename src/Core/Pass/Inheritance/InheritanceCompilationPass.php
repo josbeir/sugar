@@ -671,10 +671,10 @@ final class InheritanceCompilationPass implements AstPassInterface
         foreach ($this->topLevelExtendIncludes as $include) {
             $nodes[] = $this->createPhpNode(
                 '$__tpl->getBlockManager()->enterBlockRegistration(); '
-                . '$__tpl->renderInclude('
+                . 'try { $__tpl->renderInclude('
                 . var_export($include['path'], true) . ', '
-                . $include['vars'] . '); '
-                . '$__tpl->getBlockManager()->exitBlockRegistration(); ',
+                . $include['vars'] . '); } '
+                . 'finally { $__tpl->getBlockManager()->exitBlockRegistration(); } ',
                 $include['line'],
                 $include['column'],
                 $document,
