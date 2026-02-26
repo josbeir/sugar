@@ -461,7 +461,7 @@ A partial can contain `s:block` directives. When that partial is included at the
 ```
 
 ```sugar [partials/nav.sugar.php]
-<nav>
+<nav s:block="nav">
     <a href="/">Home</a>
     <a href="/about">About</a>
 </nav>
