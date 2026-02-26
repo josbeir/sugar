@@ -57,7 +57,7 @@ final class ComponentExpansionPass implements AstPassInterface
         SugarConfig $config,
     ) {
         $this->prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
-        $this->slotAttrName = $config->directivePrefix . ':slot';
+        $this->slotAttrName = $this->prefixHelper->buildName('slot');
         $this->directiveClassifier = new DirectiveClassifier($this->registry, $this->prefixHelper);
         $this->slotResolver = new SlotResolver($this->slotAttrName);
     }
@@ -320,6 +320,7 @@ final class ComponentExpansionPass implements AstPassInterface
 
         $slots = $this->slotResolver->extract($children);
         $slotsExpression = $this->slotResolver->buildSlotsExpression($slots);
+        $slotMetaExpression = $this->slotResolver->buildSlotMetaExpression($slots);
         $attributesExpression = $this->buildRuntimeAttributesExpression(array_merge(
             $categorized['merge'],
             $categorized['attributeDirectives'],
@@ -328,7 +329,13 @@ final class ComponentExpansionPass implements AstPassInterface
         return new RuntimeCallNode(
             callableExpression: GeneratedAlias::RUNTIME_ENV
                 . '::requireService(' . ComponentRenderer::class . '::class)->renderComponent',
-            arguments: [$nameExpression, $bindingsExpression, $slotsExpression, $attributesExpression],
+            arguments: [
+                $nameExpression,
+                $bindingsExpression,
+                $slotsExpression,
+                $attributesExpression,
+                $slotMetaExpression,
+            ],
             line: $line,
             column: $column,
         );
