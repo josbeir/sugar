@@ -78,6 +78,19 @@ final class TemplateRenderer
     }
 
     /**
+     * Determine whether we are in a block-definition context.
+     *
+     * Returns `true` when no `renderExtends()` call is currently active, meaning
+     * a child template is still setting up its block overrides. Compiled templates
+     * use this to decide whether `s:block` should call `defineBlock()` (defining
+     * context) or `renderBlock()` (rendering context).
+     */
+    public function isDefiningContext(): bool
+    {
+        return $this->blockManager->isDefiningContext();
+    }
+
+    /**
      * Render a parent layout template for extends inheritance.
      *
      * Pushes a new block level before rendering the parent so that child
