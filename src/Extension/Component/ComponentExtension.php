@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Extension\Component;
 
 use Sugar\Core\Compiler\Pipeline\Enum\PassPriority;
+use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Directive\PassThroughDirective;
 use Sugar\Core\Extension\ExtensionInterface;
 use Sugar\Core\Extension\RegistrationContext;
@@ -57,11 +58,14 @@ final class ComponentExtension implements ExtensionInterface
             priority: PassPriority::POST_DIRECTIVE_COMPILATION,
         );
 
+        $prefixHelper = new DirectivePrefixHelper($config->directivePrefix);
+        $slotAttributeName = $prefixHelper->buildName('slot');
         $context->protectedRuntimeService(
             ComponentRenderer::class,
-            function (RuntimeContext $runtimeContext): ComponentRenderer {
+            function (RuntimeContext $runtimeContext) use ($slotAttributeName): ComponentRenderer {
                 return new ComponentRenderer(
                     loader: $this->componentLoader,
+                    slotAttributeName: $slotAttributeName,
                 );
             },
         );

@@ -6,10 +6,10 @@ namespace Sugar\Tests\Unit\Extension\Component\Helper;
 use Closure;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeValue;
-use Sugar\Core\Ast\ElementNode;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawBodyNode;
 use Sugar\Core\Ast\RuntimeCallNode;
+use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Escape\Enum\OutputContext;
 use Sugar\Extension\Component\Helper\ComponentSlots;
 use Sugar\Extension\Component\Helper\SlotResolver;
@@ -96,12 +96,20 @@ final class SlotResolverTest extends TestCase
         $this->assertCount(2, $slots->namedSlots);
         $this->assertCount(2, $slots->defaultSlot);
 
+        // Element-based slots now store children only (not the full element)
         $headerSlotNode = $slots->namedSlots['header'][0];
-        $this->assertInstanceOf(ElementNode::class, $headerSlotNode);
-        $this->assertSame('header', $headerSlotNode->tag);
-        $this->assertCount(1, $headerSlotNode->attributes);
-        $this->assertSame('class', $headerSlotNode->attributes[0]->name);
-        $this->assertSame('hero', $headerSlotNode->attributes[0]->value->static);
+        $this->assertInstanceOf(TextNode::class, $headerSlotNode);
+        $this->assertSame('Title', $headerSlotNode->content);
+
+        // Metadata stores caller tag and remaining attributes for outlet merging
+        $this->assertArrayHasKey('header', $slots->namedSlotMeta);
+        $this->assertSame('header', $slots->namedSlotMeta['header']['tag']);
+        $this->assertCount(1, $slots->namedSlotMeta['header']['attrs']);
+        $this->assertSame('class', $slots->namedSlotMeta['header']['attrs'][0]->name);
+        $this->assertSame('hero', $slots->namedSlotMeta['header']['attrs'][0]->value->static);
+
+        // Fragment-based slots have no metadata
+        $this->assertArrayNotHasKey('footer', $slots->namedSlotMeta);
     }
 
     public function testBuildSlotVarsIncludesDefaultAndNamedSlotKeys(): void

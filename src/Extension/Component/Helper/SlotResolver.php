@@ -87,14 +87,20 @@ final class SlotResolver
     }
 
     /**
-     * @param array<\Sugar\Core\Ast\Node> $children
+     * Extract named slots, default slot, and slot metadata from component children.
+     *
+     * For element-based named slots, the element's inner content is stored as the slot
+     * content (not the full element), and the element's tag and attributes are stored
+     * as metadata for tag swapping and attribute merging at the outlet.
+     *
+     * @param array<\Sugar\Core\Ast\Node> $children Component invocation children
      */
     public function extract(array $children): ComponentSlots
     {
-        $namedSlots = $this->extractNamedSlots($children);
+        [$namedSlots, $namedSlotMeta] = $this->extractNamedSlots($children);
         $defaultSlot = $this->extractDefaultSlot($children);
 
-        return new ComponentSlots($namedSlots, $defaultSlot);
+        return new ComponentSlots($namedSlots, $defaultSlot, $namedSlotMeta);
     }
 
     /**
@@ -136,12 +142,55 @@ final class SlotResolver
     }
 
     /**
+     * Build a PHP array expression for slot metadata.
+     *
+     * Serializes caller element metadata (tag and attributes) so it can be
+     * passed through the runtime and used for tag swapping and attribute merging
+     * at slot outlets.
+     */
+    public function buildSlotMetaExpression(ComponentSlots $slots): string
+    {
+        if ($slots->namedSlotMeta === []) {
+            return '[]';
+        }
+
+        $items = [];
+        foreach ($slots->namedSlotMeta as $name => $meta) {
+            $attrsItems = [];
+            foreach ($meta['attrs'] as $attr) {
+                $key = var_export($attr->name, true);
+                $value = $attr->value->isBoolean()
+                    ? 'null'
+                    : AttributeHelper::attributeValueToPhpExpression($attr->value, wrapOutputExpressions: true);
+                $attrsItems[] = $key . ' => ' . $value;
+            }
+
+            $items[] = sprintf(
+                "'%s' => ['tag' => %s, 'attrs' => [%s]]",
+                $name,
+                var_export($meta['tag'], true),
+                implode(', ', $attrsItems),
+            );
+        }
+
+        return '[' . implode(', ', $items) . ']';
+    }
+
+    /**
+     * Extract named slots and their metadata from component children.
+     *
+     * For element-based named slots, only the inner children are stored as content.
+     * The element's tag and remaining attributes are stored as metadata for tag
+     * swapping and attribute merging. Fragment-based slots store children only
+     * with no metadata.
+     *
      * @param array<\Sugar\Core\Ast\Node> $children
-     * @return array<string, array<\Sugar\Core\Ast\Node>>
+     * @return array{array<string, array<\Sugar\Core\Ast\Node>>, array<string, array{tag: string, attrs: array<\Sugar\Core\Ast\AttributeNode>}>}
      */
     private function extractNamedSlots(array $children): array
     {
         $slots = [];
+        $meta = [];
 
         foreach ($children as $child) {
             if (!$child instanceof ElementNode && !$child instanceof FragmentNode) {
@@ -160,12 +209,21 @@ final class SlotResolver
                 continue;
             }
 
-            $clonedElement = clone $child;
-            array_splice($clonedElement->attributes, $slotAttrIndex, 1);
-            $slots[$slotName] = [$clonedElement];
+            // Store inner content only
+            $slots[$slotName] = $child->children;
+
+            // Build remaining attributes (without s:slot)
+            $remainingAttrs = $child->attributes;
+            array_splice($remainingAttrs, $slotAttrIndex, 1);
+
+            // Store metadata for tag swapping and attribute merging
+            $meta[$slotName] = [
+                'tag' => $child->tag,
+                'attrs' => $remainingAttrs,
+            ];
         }
 
-        return $slots;
+        return [$slots, $meta];
     }
 
     /**

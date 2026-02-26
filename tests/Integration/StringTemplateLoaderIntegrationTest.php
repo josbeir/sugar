@@ -127,17 +127,17 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $engine = $this->createEngineWithComponentExtension($loader, [
             'card' => '<div class="card">'
-                . '<div class="card-header"><?= $header ?></div>'
+                . '<div class="card-header" s:slot="header">Default Header</div>'
                 . '<div class="card-body"><?= $slot ?></div>'
-                . '<div class="card-footer"><?= $footer ?></div>'
+                . '<div class="card-footer" s:slot="footer">Default Footer</div>'
                 . '</div>',
         ]);
 
         $result = $engine->render('card-page');
 
-        $this->assertStringContainsString('<div class="card-header"><h2>Card Title</h2></div>', $result);
+        $this->assertStringContainsString('<h2 class="card-header">Card Title</h2>', $result);
         $this->assertStringContainsString('<div class="card-body"><p>Body content</p></div>', $result);
-        $this->assertStringContainsString('<div class="card-footer"><small>Footer</small></div>', $result);
+        $this->assertStringContainsString('<small class="card-footer">Footer</small>', $result);
     }
 
     public function testDynamicallyAddTemplateAndComponent(): void
@@ -379,6 +379,109 @@ final class StringTemplateLoaderIntegrationTest extends TestCase
 
         $this->assertStringContainsString('<h1>Welcome John Doe!</h1>', $welcomeEmail);
         $this->assertStringContainsString('<p>Thank you for joining!</p>', $welcomeEmail);
+    }
+
+    /**
+     * Test that slot outlets with s:slot swap caller tag onto outlet element.
+     */
+    public function testSlotOutletSwapsCallerTag(): void
+    {
+        $loader = new StringTemplateLoader(
+            templates: [
+                'swap-page' => '<s-hero>'
+                    . '<h3 s:slot="title">My Title</h3>'
+                    . '</s-hero>',
+            ],
+        );
+
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'hero' => '<section>'
+                . '<h1 s:slot="title">Default Title</h1>'
+                . '</section>',
+        ]);
+
+        $result = $engine->render('swap-page');
+
+        // Caller <h3> tag should replace outlet <h1> tag
+        $this->assertStringContainsString('<h3>My Title</h3>', $result);
+        $this->assertStringNotContainsString('<h1>', $result);
+    }
+
+    /**
+     * Test that slot outlets merge caller attributes with outlet attributes.
+     */
+    public function testSlotOutletMergesAttributes(): void
+    {
+        $loader = new StringTemplateLoader(
+            templates: [
+                'merge-page' => '<s-panel>'
+                    . '<div s:slot="header" class="custom" data-id="42">Header Content</div>'
+                    . '</s-panel>',
+            ],
+        );
+
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'panel' => '<div class="panel">'
+                . '<div s:slot="header" class="panel-header">Default Header</div>'
+                . '<div class="panel-body"><?= $slot ?></div>'
+                . '</div>',
+        ]);
+
+        $result = $engine->render('merge-page');
+
+        // Caller attrs override outlet attrs; class is concatenated
+        $this->assertStringContainsString('class="panel-header custom"', $result);
+        $this->assertStringContainsString('data-id="42"', $result);
+        $this->assertStringContainsString('Header Content', $result);
+    }
+
+    /**
+     * Test that slot outlet falls back when no slot content is provided.
+     */
+    public function testSlotOutletFallsBackWhenNoContent(): void
+    {
+        $loader = new StringTemplateLoader(
+            templates: [
+                'fallback-page' => '<s-widget></s-widget>',
+            ],
+        );
+
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'widget' => '<div>'
+                . '<h2 s:slot="title">Fallback Title</h2>'
+                . '</div>',
+        ]);
+
+        $result = $engine->render('fallback-page');
+
+        // Should render the fallback content when no slot is provided
+        $this->assertStringContainsString('<h2>Fallback Title</h2>', $result);
+    }
+
+    /**
+     * Test fragment-based slot outlets render content without wrapper.
+     */
+    public function testFragmentSlotOutletRendersWithoutWrapper(): void
+    {
+        $loader = new StringTemplateLoader(
+            templates: [
+                'fragment-page' => '<s-layout>'
+                    . '<s-template s:slot="scripts">console.log("hi")</s-template>'
+                    . 'Body content'
+                    . '</s-layout>',
+            ],
+        );
+
+        $engine = $this->createEngineWithComponentExtension($loader, [
+            'layout' => '<html><body><?= $slot ?></body>'
+                . '<script><s-template s:slot="scripts">// default</s-template></script>'
+                . '</html>',
+        ]);
+
+        $result = $engine->render('fragment-page');
+
+        $this->assertStringContainsString('<body>Body content</body>', $result);
+        $this->assertStringContainsString('<script>console.log("hi")</script>', $result);
     }
 
     /**

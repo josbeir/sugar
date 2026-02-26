@@ -677,6 +677,66 @@ final class ComponentExpansionPassTest extends TestCase
     }
 
     // ================================================================
+    // Slot metadata (5th argument)
+    // ================================================================
+
+    /**
+     * Test that element-based named slots generate slot metadata expression.
+     */
+    public function testNamedElementSlotGeneratesSlotMetaExpression(): void
+    {
+        $template = '<s-card>' .
+            '<h2 s:slot="header" class="title">Custom Header</h2>' .
+            '<p>Body content</p>' .
+            '</s-card>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertCount(5, $call->arguments);
+        $this->assertStringContainsString("'header'", $call->arguments[4]);
+        $this->assertStringContainsString("'tag' => 'h2'", $call->arguments[4]);
+        $this->assertStringContainsString("'class' => 'title'", $call->arguments[4]);
+    }
+
+    /**
+     * Test that fragment-based named slots do not generate metadata.
+     */
+    public function testFragmentSlotDoesNotGenerateMetadata(): void
+    {
+        $template = '<s-card>' .
+            '<s-template s:slot="footer">Footer text</s-template>' .
+            '<p>Body</p>' .
+            '</s-card>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertCount(5, $call->arguments);
+        $this->assertSame('[]', $call->arguments[4]);
+    }
+
+    /**
+     * Test that components without named slots have empty slot meta.
+     */
+    public function testComponentWithoutNamedSlotsHasEmptySlotMeta(): void
+    {
+        $template = '<s-button>Click</s-button>';
+        $ast = $this->parser->parse($template);
+
+        $result = $this->executePipeline($ast, $this->createContext());
+
+        $call = $result->children[0];
+        $this->assertInstanceOf(RuntimeCallNode::class, $call);
+        $this->assertCount(5, $call->arguments);
+        $this->assertSame('[]', $call->arguments[4]);
+    }
+
+    // ================================================================
     // Helper
     // ================================================================
 

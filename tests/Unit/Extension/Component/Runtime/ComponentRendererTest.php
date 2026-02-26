@@ -286,6 +286,7 @@ final class ComponentRendererTest extends TestCase
 
         return new ComponentRenderer(
             loader: $this->componentLoader,
+            slotAttributeName: 's:slot',
         );
     }
 }
