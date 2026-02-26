@@ -100,9 +100,19 @@ final class InheritanceCompilationPass implements AstPassInterface
      * `renderInclude()` calls. This lets included partials call `defineBlock()`
      * while in defining context — before `renderExtends()` fires.
      *
-     * Each entry is an array with `path` (string) and `vars` (string) keys.
+     * When the include also carries `s:block`, `s:append`, or `s:prepend`, the entry
+     * stores that information (`blockName` / `blockMode`) so a direct `defineBlock()`
+     * closure is emitted rather than the block-registration-mode pattern.
      *
-     * @var array<array{path: string, vars: string, line: int, column: int}>
+     * Each entry has the following keys:
+     * - `path`      (string) Resolved template path
+     * - `vars`      (string) PHP expression for the variables to pass
+     * - `line`      (int)    Source line for debug info
+     * - `column`    (int)    Source column for debug info
+     * - `blockName` (string|null) Block name when s:block/s:append/s:prepend is present
+     * - `blockMode` (string) 'replace', 'append', or 'prepend'
+     *
+     * @var array<array{path: string, vars: string, line: int, column: int, blockName: string|null, blockMode: string}>
      */
     private array $topLevelExtendIncludes = [];
 
@@ -665,20 +675,37 @@ final class InheritanceCompilationPass implements AstPassInterface
 
         // Emit pre-extends include calls so that partials with s:block can register
         // their content as child block overrides before the parent layout renders.
-        // Each include is wrapped in enter/exitBlockRegistration() so that renderBlock()
-        // in the partial stores the content via defineBlock() instead of rendering it.
-        // Output of the include is intentionally discarded (no echo).
+        // Entries with a blockName emit a direct defineBlock() closure.
+        // Entries without a blockName use the block-registration mode so that
+        // s:block directives inside the partial can register themselves.
         foreach ($this->topLevelExtendIncludes as $include) {
-            $nodes[] = $this->createPhpNode(
-                '$__tpl->getBlockManager()->enterBlockRegistration(); '
-                . 'try { $__tpl->renderInclude('
-                . var_export($include['path'], true) . ', '
-                . $include['vars'] . '); } '
-                . 'finally { $__tpl->getBlockManager()->exitBlockRegistration(); } ',
-                $include['line'],
-                $include['column'],
-                $document,
-            );
+            if ($include['blockName'] !== null) {
+                // Skip when an explicit child block already defines this name
+                if (isset($blockDefs[$include['blockName']])) {
+                    continue;
+                }
+
+                $nodes[] = $this->buildIncludeBlockDefinitionNode(
+                    $include['blockName'],
+                    $include['blockMode'],
+                    $include['path'],
+                    $include['vars'],
+                    $include['line'],
+                    $include['column'],
+                    $document,
+                );
+            } else {
+                $nodes[] = $this->createPhpNode(
+                    '$__tpl->getBlockManager()->enterBlockRegistration(); '
+                    . 'try { $__tpl->renderInclude('
+                    . var_export($include['path'], true) . ', '
+                    . $include['vars'] . '); } '
+                    . 'finally { $__tpl->getBlockManager()->exitBlockRegistration(); } ',
+                    $include['line'],
+                    $include['column'],
+                    $document,
+                );
+            }
         }
 
         // Emit block definitions
@@ -757,6 +784,69 @@ final class InheritanceCompilationPass implements AstPassInterface
     }
 
     /**
+     * Build a defineBlock() RawPhpNode whose content is a renderInclude() call.
+     *
+     * Used when `s:include` and `s:block` / `s:append` / `s:prepend` appear on the
+     * same element in a child extends-template. The compiled closure delegates
+     * entirely to `renderInclude()` so the partial's rendered output fills the block.
+     *
+     * - **replace** (`s:block`): closure returns the include output directly.
+     * - **append** (`s:append`): closure renders the parent block first, then the include.
+     * - **prepend** (`s:prepend`): closure renders the include first, then the parent block.
+     *
+     * The `$__tpl` variable is guaranteed to exist at this point in the compiled
+     * output because the runtime-init guard is emitted first.
+     */
+    private function buildIncludeBlockDefinitionNode(
+        string $name,
+        string $mode,
+        string $path,
+        string $varsExpression,
+        int $line,
+        int $column,
+        DocumentNode $document,
+    ): RawPhpNode {
+        $exportedName = var_export($name, true);
+        $exportedPath = var_export($path, true);
+        $sanitizedName = $this->sanitizeBlockVarName($name);
+        $parentDefaultVar = '$__parentDefault_' . $sanitizedName;
+        $defaultFn = ' = static fn(array $__data): string => \'\'; ';
+
+        if ($mode === 'append') {
+            // Append: parent block content first, then include output
+            $code = '$__tpl->getBlockManager()->defineBlock('
+                . $exportedName
+                . ', function(array $__data) use ($__tpl): string { extract($__data, EXTR_SKIP); '
+                . $parentDefaultVar . $defaultFn
+                . 'ob_start(); '
+                . 'echo $__tpl->getBlockManager()->renderParent(' . $exportedName . ', '
+                . $parentDefaultVar . ', $__data); '
+                . 'echo $__tpl->renderInclude(' . $exportedPath . ', get_defined_vars()); '
+                . 'return ob_get_clean(); }); ';
+        } elseif ($mode === 'prepend') {
+            // Prepend: include output first, then parent block content
+            $code = '$__tpl->getBlockManager()->defineBlock('
+                . $exportedName
+                . ', function(array $__data) use ($__tpl): string { extract($__data, EXTR_SKIP); '
+                . $parentDefaultVar . $defaultFn
+                . 'ob_start(); '
+                . 'echo $__tpl->renderInclude(' . $exportedPath . ', get_defined_vars()); '
+                . 'echo $__tpl->getBlockManager()->renderParent(' . $exportedName . ', '
+                . $parentDefaultVar . ', $__data); '
+                . 'return ob_get_clean(); }); ';
+        } else {
+            // Replace: closure returns include output directly
+            $code = '$__tpl->getBlockManager()->defineBlock('
+                . $exportedName
+                . ', function(array $__data) use ($__tpl): string { extract($__data, EXTR_SKIP); '
+                . 'return $__tpl->renderInclude(' . $exportedPath . ', ' . $varsExpression . '); '
+                . '}); ';
+        }
+
+        return $this->createPhpNode($code, $line, $column, $document);
+    }
+
+    /**
      * Build a renderBlock() RuntimeCallNode for a block in a parent/layout template.
      */
     private function buildBlockRuntimeCall(
@@ -781,9 +871,13 @@ final class InheritanceCompilationPass implements AstPassInterface
     /**
      * Collect a top-level s:include from an extends-child document.
      *
-     * These includes are emitted before the defineBlock() calls so that any
-     * s:block directives inside the partial can call defineBlock() while still
-     * in defining context (before renderExtends() pushes the rendering level).
+     * When the node also carries `s:block`, `s:append`, or `s:prepend`, the block
+     * name and mode are stored so `buildExtendsRuntimeNodes()` can emit a direct
+     * `defineBlock()` closure wrapping `renderInclude()` instead of the block
+     * registration mode.
+     *
+     * For bare includes (no block attribute), block-registration mode is used so
+     * that any `s:block` directives inside the partial register themselves.
      */
     private function collectTopLevelExtendInclude(
         ElementNode|FragmentNode $node,
@@ -797,11 +891,16 @@ final class InheritanceCompilationPass implements AstPassInterface
             ? AttributeHelper::getStringAttributeValue($node, $this->withAttr)
             : $this->buildGetDefinedVarsExpression();
 
+        // Detect inline s:block / s:append / s:prepend combination
+        $blockInfo = $this->getBlockName($node);
+
         $this->topLevelExtendIncludes[] = [
             'path' => $resolvedPath,
             'vars' => $varsExpression,
             'line' => $node->line,
             'column' => $node->column,
+            'blockName' => $blockInfo !== null ? $blockInfo['name'] : null,
+            'blockMode' => $blockInfo !== null ? $blockInfo['mode'] : 'replace',
         ];
     }
 
