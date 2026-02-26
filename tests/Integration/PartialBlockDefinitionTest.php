@@ -223,4 +223,159 @@ final class PartialBlockDefinitionTest extends TestCase
         $this->assertStringNotContainsString('TOC from partial', $result);
         $this->assertStringNotContainsString('Default TOC', $result);
     }
+
+    // -------------------------------------------------------------------------
+    // Inline s:include + s:block combination
+    // -------------------------------------------------------------------------
+
+    /**
+     * Using s:include and s:block on the same element should define a block
+     * whose content is the rendered output of the included partial.
+     */
+    public function testInlineIncludeBlockDefinesBlockFromPartial(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default content</main>',
+                'partial.sugar.php' => '<p>Partial content</p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:block="content" />',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('<p>Partial content</p>', $result);
+        $this->assertStringNotContainsString('Default content', $result);
+        // Layout wrapper preserved
+        $this->assertStringContainsString('<main>', $result);
+    }
+
+    /**
+     * Inline s:include + s:block supports passing variables via s:with.
+     */
+    public function testInlineIncludeBlockWithVariables(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default</main>',
+                'partial.sugar.php' => '<p><?php echo $title; ?></p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:block="content" s:with="[\'title\' => \'Hello\']" />',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('<p>Hello</p>', $result);
+        $this->assertStringNotContainsString('Default', $result);
+    }
+
+    /**
+     * Inline s:include + s:append appends the partial output after the parent block content.
+     */
+    public function testInlineIncludeAppendAddsPartialAfterParent(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Parent content</main>',
+                'partial.sugar.php' => '<p>Appended from partial</p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:append="content" />',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Parent content', $result);
+        $this->assertStringContainsString('<p>Appended from partial</p>', $result);
+        // Appended partial must appear after the parent block content
+        $this->assertGreaterThan(
+            strpos($result, 'Parent content'),
+            strpos($result, 'Appended from partial'),
+        );
+    }
+
+    /**
+     * Inline s:include + s:append/s:prepend respects s:with variable passing.
+     */
+    public function testInlineIncludeAppendWithVariables(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Parent</main>',
+                'partial.sugar.php' => '<p><?php echo $label; ?></p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:append="content" s:with="[\'label\' => \'Appended label\']"/>',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Parent', $result);
+        $this->assertStringContainsString('<p>Appended label</p>', $result);
+        $this->assertGreaterThan(
+            strpos($result, 'Parent'),
+            strpos($result, 'Appended label'),
+        );
+    }
+
+    /**
+     * Inline s:include + s:prepend prepends the partial output before the parent block content.
+     */
+    public function testInlineIncludePrependAddsPartialBeforeParent(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Parent content</main>',
+                'partial.sugar.php' => '<p>Prepended from partial</p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:prepend="content" />',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Parent content', $result);
+        $this->assertStringContainsString('<p>Prepended from partial</p>', $result);
+        // Prepended partial must appear before the parent block content
+        $this->assertGreaterThan(
+            strpos($result, 'Prepended from partial'),
+            strpos($result, 'Parent content'),
+        );
+    }
+
+    /**
+     * Explicit child s:block takes precedence over an inline s:include + s:block for the same name.
+     */
+    public function testExplicitBlockTakesPrecedenceOverInlineIncludeBlock(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default</main>',
+                'partial.sugar.php' => '<p>Partial content</p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:block="content">Explicit override</s-template>',
+                    '<s-template s:include="partial.sugar.php" s:block="content" />',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Explicit override', $result);
+        $this->assertStringNotContainsString('Partial content', $result);
+        $this->assertStringNotContainsString('Default', $result);
+    }
 }

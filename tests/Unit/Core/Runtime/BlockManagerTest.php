@@ -275,6 +275,30 @@ final class BlockManagerTest extends TestCase
         $this->assertSame('default', $result);
     }
 
+    /**
+     * reset() must restore the renderingDepth and blockRegistrationDepth counters to zero
+     * so that isDefiningContext() and block-registration mode work correctly after reset.
+     */
+    public function testResetRestoresDepthCounters(): void
+    {
+        // Dirty renderingDepth via pushLevel()
+        $this->manager->pushLevel();
+        $this->assertFalse($this->manager->isDefiningContext());
+
+        // Dirty blockRegistrationDepth
+        $this->manager->enterBlockRegistration();
+
+        $this->manager->reset();
+
+        // Both depths must be back to zero
+        $this->assertTrue($this->manager->isDefiningContext());
+
+        // Block-registration mode must be off: renderBlock should render, not register
+        $this->manager->pushLevel(); // enter rendering context
+        $result = $this->manager->renderBlock('x', fn(array $d): string => 'fallback', []);
+        $this->assertSame('fallback', $result);
+    }
+
     public function testPopLevelRemovesBlockDefinitions(): void
     {
         $this->manager->pushLevel();

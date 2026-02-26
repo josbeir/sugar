@@ -269,11 +269,16 @@ final class BlockManager
     /**
      * Reset the block manager state.
      *
-     * Clears all levels and the render stack for a fresh template render.
+     * Clears all levels, the render stack, and depth counters for a fresh
+     * template render. Both `renderingDepth` and `blockRegistrationDepth` are
+     * restored to zero so that `isDefiningContext()` and block-registration mode
+     * behave correctly even after a previous render that threw an exception.
      */
     public function reset(): void
     {
         $this->levels = [];
         $this->renderStack = [];
+        $this->renderingDepth = 0;
+        $this->blockRegistrationDepth = 0;
     }
 }
