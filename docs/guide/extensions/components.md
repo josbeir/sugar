@@ -5,7 +5,7 @@ description: Reusable components with props, slots, and attribute merging.
 
 # Components
 
-Components let you package markup into reusable building blocks with clear inputs and clean output. They provide a way to create self-contained, reusable UI elements with well-defined interfaces through props, slots, and attribute merging.
+Components are one of the most powerful features of the Sugar templating engine. They let you package markup into reusable, self-contained building blocks with clear interfaces — props for data, slots for content injection, and automatic attribute merging. Combined with tag swapping and attribute merging on slot outlets, components give you fine-grained control over how caller and component markup combine, making it easy to build flexible, composable UI systems.
 
 ::: info
 Components are opt-in. Enable the component extension first, then Sugar resolves component templates from configured component paths and renders them with props and slots.
@@ -130,45 +130,48 @@ When you place content inside a component tag without any `s:slot` attribute, th
 
 ### Named Slots
 
-Use `s:slot="name"` in your usage markup to send content to specific named slots:
+Use `s:slot="name"` on elements in your usage markup to send content to specific named slots. The caller's element tag replaces the outlet's tag, and attributes from both sides are merged — class values are concatenated, other attributes are overridden by the caller:
 
 ::: code-group
 ```sugar [Usage]
-<s-user-panel>
-    <h3 s:slot="header">User Profile</h3>
+<s-card>
+    <h3 s:slot="title" class="text-lg">User Profile</h3>
     <p>Main content here</p>
-    <p s:slot="footer">Last updated just now</p>
-</s-user-panel>
+    <nav s:slot="actions" class="flex gap-2">
+        <a href="/edit">Edit</a>
+    </nav>
+</s-card>
 ```
 
-```html [components/s-user-panel.sugar.php]
+```html [components/s-card.sugar.php]
 <article class="card">
-    <header s:slot="header">
-        <h3>Default header</h3>
-    </header>
-    <section><?= $slot ?></section>
-    <footer s:slot="footer"></footer>
+    <h2 s:slot="title" class="card-title">Untitled</h2>
+    <div class="card-body"><?= $slot ?></div>
+    <div s:slot="actions" class="card-actions"></div>
 </article>
 ```
 
 ```html [Rendered output]
 <article class="card">
-    <header>
-        <h3>User Profile</h3>
-    </header>
-    <section>
+    <h3 class="card-title text-lg">User Profile</h3>
+    <div class="card-body">
         <p>Main content here</p>
-    </section>
-    <footer>
-        <p>Last updated just now</p>
-    </footer>
+    </div>
+    <nav class="card-actions flex gap-2">
+        <a href="/edit">Edit</a>
+    </nav>
 </article>
 ```
 :::
 
+In this example:
+- The caller's `<h3>` replaces the outlet's `<h2>` (tag swapping)
+- Class values are merged: `card-title` from the outlet + `text-lg` from the caller
+- The caller's `<nav>` replaces the outlet's `<div>`, preserving the outlet's `card-actions` class
+
 ### Slot Outlets
 
-In your component template, use `s:slot` attributes to define where slot content should be rendered:
+In your component template, use `s:slot` attributes on elements to define where slot content should be rendered. When a caller provides content for a slot, the outlet element is replaced with the caller's element — the caller's tag and attributes take over, merged with the outlet's attributes.
 
 - `s:slot` (no value) defines the outlet for the default slot
 - `s:slot="name"` defines the outlet for a named slot
@@ -177,9 +180,7 @@ In your component template, use `s:slot` attributes to define where slot content
 ::: code-group
 ```html [Component with fallbacks]
 <div class="modal">
-    <header s:slot="header">
-        <h2>Default Title</h2>
-    </header>
+    <h2 s:slot="header" class="modal-title">Default Title</h2>
     <main s:slot>
         <p>Default body content</p>
     </main>
@@ -193,11 +194,9 @@ In your component template, use `s:slot` attributes to define where slot content
 </s-modal>
 ```
 
-```html [Rendered - uses fallback for header]
+```html [Rendered - uses fallback for header and footer]
 <div class="modal">
-    <header>
-        <h2>Default Title</h2>
-    </header>
+    <h2 class="modal-title">Default Title</h2>
     <main>
         <p>Custom body content</p>
     </main>
@@ -206,8 +205,62 @@ In your component template, use `s:slot` attributes to define where slot content
 ```
 :::
 
+#### Tag Swapping and Attribute Merging
+
+When a caller provides content for a named slot using an element with `s:slot`, the caller's tag **replaces** the outlet's tag, and attributes are **merged**:
+
+- **Class values** are concatenated (outlet classes first, then caller classes)
+- **Other attributes** with the same name are overridden by the caller
+- **Unique attributes** from both sides are included
+
+::: code-group
+```html [Component template]
+<h2 s:slot="header" class="card-title" id="default-id">Default</h2>
+```
+
+```sugar [Caller]
+<h3 s:slot="header" class="text-lg" id="custom-id" data-role="heading">My Title</h3>
+```
+
+```html [Result]
+<h3 class="card-title text-lg" id="custom-id" data-role="heading">My Title</h3>
+```
+:::
+
+This gives callers full control over the semantic tag while preserving the component's styling defaults.
+
+#### Fragment Outlets
+
+Use a fragment element (`s-template`) as an outlet when you want slot content to be injected **without a wrapper element**:
+
+::: code-group
+```html [Component template]
+<div class="sidebar">
+    <s-template s:slot="nav">
+        <p>Default navigation</p>
+    </s-template>
+</div>
+```
+
+```sugar [Usage]
+<s-sidebar>
+    <s-template s:slot="nav">
+        <ul><li>Link 1</li><li>Link 2</li></ul>
+    </s-template>
+</s-sidebar>
+```
+
+```html [Rendered - no wrapper element]
+<div class="sidebar">
+    <ul><li>Link 1</li><li>Link 2</li></ul>
+</div>
+```
+:::
+
+Fragment outlets are useful when the component shouldn't impose any wrapper markup around the slot content.
+
 ::: tip
-Using `s:slot` without a value targets the same default slot content as `<?= $slot ?>`. The difference is that an outlet element can wrap that content and provide fallback children.
+Use **element outlets** (e.g., `<h2 s:slot="title">`) when the component needs a structural element with default styling. Use **fragment outlets** (`<s-template s:slot="name">`) when slot content should be injected as-is without a wrapper.
 :::
 
 ## Props and Data

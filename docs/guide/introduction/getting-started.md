@@ -116,9 +116,9 @@ echo $engine->render('pages/home', [
 
 ```sugar [components/s-user-panel.sugar.php]
 <article class="card">
-    <header s:slot="header"></header>
+    <h3 s:slot="header" class="card-header">Untitled</h3>
     <section><?= $slot ?></section>
-    <footer s:slot="footer"></footer>
+    <small s:slot="footer" class="card-footer"></small>
 </article>
 ```
 
@@ -126,16 +126,16 @@ echo $engine->render('pages/home', [
 <h1>Welcome &lt;Sugar&gt;</h1>
 <p>This line is controlled by a Sugar directive.</p>
 <article class="card shadow-lg">
-    <header><h3>Profile</h3></header>
-    <p>Hello, Alex &amp; Co.</p>
-    <footer><p>Profile ready</p></footer>
+    <h3 class="card-header">Profile</h3>
+    <section><p>Hello, Alex &amp; Co.</p></section>
+    <small class="card-footer">Profile ready</small>
 </article>
 ```
 :::
 
 In this example:
 
-- Named slots (`s:slot="header"`, `s:slot="footer"`) handle structured component content.
+- Named slots (`s:slot="header"`, `s:slot="footer"`) handle structured component content. The caller's tag replaces the outlet's tag (e.g., `<h3>` replaces the outlet's `<h3>`, `<p>` replaces `<small>`), and attributes are merged.
 - `class="shadow-lg"` is a regular HTML attribute merged onto the component root.
 - The default slot is the inner content (`<p>Hello, ...</p>`).
 
