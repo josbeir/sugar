@@ -40,6 +40,27 @@ final class BlockManager
     private array $renderStack = [];
 
     /**
+     * Depth counter tracking how many `renderExtends()` calls are currently active.
+     *
+     * Zero means we are in "defining context" — a child template is setting up
+     * its block overrides before calling `renderExtends()`. Greater than zero means
+     * a parent layout is actively rendering via `renderExtends()`, and any `s:block`
+     * encountered should act as a layout placeholder rather than a definition.
+     */
+    private int $renderingDepth = 0;
+
+    /**
+     * Depth counter for block registration mode.
+     *
+     * While this is greater than zero, `renderBlock()` behaves as `defineBlock()`:
+     * the default closure (partial content) is registered as a child override rather
+     * than being rendered. This mode is entered before pre-extends include calls so
+     * that `s:block` in included partials can register block overrides for the
+     * parent layout.
+     */
+    private int $blockRegistrationDepth = 0;
+
+    /**
      * Push a new block definition level onto the stack.
      *
      * Called when entering an extends render. New levels are appended at the end,
@@ -48,6 +69,7 @@ final class BlockManager
     public function pushLevel(): void
     {
         $this->levels[] = [];
+        $this->renderingDepth++;
     }
 
     /**
@@ -58,6 +80,50 @@ final class BlockManager
     public function popLevel(): void
     {
         array_pop($this->levels);
+        $this->renderingDepth--;
+    }
+
+    /**
+     * Determine whether we are in a block-definition context.
+     *
+     * Returns `true` when no `renderExtends()` call is currently active, meaning
+     * a child template is still setting up its block overrides. In this context,
+     * `s:block` in an included partial should call `defineBlock()` rather than
+     * `renderBlock()`, so that the partial's content is registered as a child
+     * override for the parent layout.
+     *
+     * Returns `false` once a parent layout is being rendered via `renderExtends()`;
+     * in that phase, `s:block` acts as a layout placeholder using `renderBlock()`.
+     */
+    public function isDefiningContext(): bool
+    {
+        return $this->renderingDepth === 0;
+    }
+
+    /**
+     * Enter block registration mode.
+     *
+     * While in this mode, `renderBlock()` acts as `defineBlock()`: the default
+     * closure (partial content) is stored as a child block override rather than
+     * being rendered. Nested calls are supported via a depth counter.
+     *
+     * Called before each pre-extends `renderInclude()` so that `s:block`
+     * directives in included partials register their content as overrides.
+     */
+    public function enterBlockRegistration(): void
+    {
+        $this->blockRegistrationDepth++;
+    }
+
+    /**
+     * Exit block registration mode.
+     *
+     * Decrements the depth counter set by `enterBlockRegistration()`. When the
+     * counter reaches zero the manager returns to normal rendering behavior.
+     */
+    public function exitBlockRegistration(): void
+    {
+        $this->blockRegistrationDepth--;
     }
 
     /**
@@ -96,9 +162,14 @@ final class BlockManager
     /**
      * Render a block by name, falling back to the default closure.
      *
-     * Searches through the level stack from most-derived (child) to least-derived
-     * (grandparent) and renders the first match. If no override is found, the
-     * default closure (inline parent content) is rendered.
+     * When in block registration mode (inside a pre-extends `renderInclude()` call),
+     * the default closure is registered via `defineBlock()` instead of rendered.
+     * This allows `s:block` directives in included partials to propagate their
+     * content as child block overrides for the parent layout.
+     *
+     * In normal rendering mode, searches through the level stack from most-derived
+     * (child) to least-derived (grandparent) and renders the first match. If no
+     * override is found, the default closure (inline parent content) is rendered.
      *
      * The default closure is stored in the render stack so that `renderParent()`
      * can access it when the child block uses `s:parent`.
@@ -110,6 +181,15 @@ final class BlockManager
      */
     public function renderBlock(string $name, Closure $default, array $data): string
     {
+        // In block registration mode, store the default closure as a child override.
+        // The output of any element wrappers (like <div>) is intentionally discarded by
+        // the pre-extends include mechanism that wraps the renderInclude() call.
+        if ($this->blockRegistrationDepth > 0) {
+            $this->defineBlock($name, $default);
+
+            return '';
+        }
+
         // Search from most-derived (index 0) to least-derived
         foreach ($this->levels as $levelIndex => $level) {
             if (isset($level[$name])) {

@@ -93,6 +93,20 @@ final class InheritanceCompilationPass implements AstPassInterface
     private ?array $blocksFilter = null;
 
     /**
+     * Top-level `s:include` nodes found in an extends-child document.
+     *
+     * These includes are removed from the document's regular content (which would
+     * otherwise be stripped as non-block content) and emitted as pre-extends
+     * `renderInclude()` calls. This lets included partials call `defineBlock()`
+     * while in defining context — before `renderExtends()` fires.
+     *
+     * Each entry is an array with `path` (string) and `vars` (string) keys.
+     *
+     * @var array<array{path: string, vars: string, line: int, column: int}>
+     */
+    private array $topLevelExtendIncludes = [];
+
+    /**
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration for directive prefix
      * @param \Sugar\Core\Loader\TemplateLoaderInterface $loader Template loader for path resolution
      */
@@ -125,6 +139,7 @@ final class InheritanceCompilationPass implements AstPassInterface
             $this->hasLayoutBlocks = false;
             $this->collectedImports = [];
             $this->blocksFilter = $context->compilation->blocks;
+            $this->topLevelExtendIncludes = [];
         }
 
         // Track when we enter a block definition in an extends context
@@ -283,6 +298,10 @@ final class InheritanceCompilationPass implements AstPassInterface
      * In extends documents, blocks are NOT processed here — they're collected
      * by processDocument() and emitted as defineBlock() calls. Only s:parent
      * placeholders and s:include directives are processed during traversal.
+     *
+     * Top-level s:include nodes in extends documents are a special case: they are
+     * collected for pre-extends emission (see buildExtendsRuntimeNodes) and removed
+     * from the document so they are not treated as discarded non-block content.
      */
     private function processNode(
         ElementNode|FragmentNode $node,
@@ -290,6 +309,15 @@ final class InheritanceCompilationPass implements AstPassInterface
     ): NodeAction {
         // Handle s:include
         if (AttributeHelper::hasAttribute($node, $this->includeAttr)) {
+            // Top-level includes in extends documents are collected for pre-extends
+            // emission, allowing included partials to call defineBlock() before the
+            // parent layout renders.
+            if ($this->isExtendsDocument && $context->parent instanceof DocumentNode) {
+                $this->collectTopLevelExtendInclude($node, $context);
+
+                return NodeAction::replace([]);
+            }
+
             return $this->processInclude($node, $context);
         }
 
@@ -635,6 +663,24 @@ final class InheritanceCompilationPass implements AstPassInterface
             $document,
         );
 
+        // Emit pre-extends include calls so that partials with s:block can register
+        // their content as child block overrides before the parent layout renders.
+        // Each include is wrapped in enter/exitBlockRegistration() so that renderBlock()
+        // in the partial stores the content via defineBlock() instead of rendering it.
+        // Output of the include is intentionally discarded (no echo).
+        foreach ($this->topLevelExtendIncludes as $include) {
+            $nodes[] = $this->createPhpNode(
+                '$__tpl->getBlockManager()->enterBlockRegistration(); '
+                . '$__tpl->renderInclude('
+                . var_export($include['path'], true) . ', '
+                . $include['vars'] . '); '
+                . '$__tpl->getBlockManager()->exitBlockRegistration(); ',
+                $include['line'],
+                $include['column'],
+                $document,
+            );
+        }
+
         // Emit block definitions
         foreach ($blockDefs as $name => $blockDef) {
             $nodes[] = $this->buildBlockDefinitionNode($name, $blockDef);
@@ -730,6 +776,33 @@ final class InheritanceCompilationPass implements AstPassInterface
             . 'get_defined_vars()); ';
 
         return $this->createPhpNode($code, $node->line, $node->column, $node);
+    }
+
+    /**
+     * Collect a top-level s:include from an extends-child document.
+     *
+     * These includes are emitted before the defineBlock() calls so that any
+     * s:block directives inside the partial can call defineBlock() while still
+     * in defining context (before renderExtends() pushes the rendering level).
+     */
+    private function collectTopLevelExtendInclude(
+        ElementNode|FragmentNode $node,
+        PipelineContext $context,
+    ): void {
+        $includePath = AttributeHelper::getStringAttributeValue($node, $this->includeAttr);
+        $resolvedPath = $this->resolveTemplatePath($includePath, $context);
+
+        $hasWith = AttributeHelper::hasAttribute($node, $this->withAttr);
+        $varsExpression = $hasWith
+            ? AttributeHelper::getStringAttributeValue($node, $this->withAttr)
+            : $this->buildGetDefinedVarsExpression();
+
+        $this->topLevelExtendIncludes[] = [
+            'path' => $resolvedPath,
+            'vars' => $varsExpression,
+            'line' => $node->line,
+            'column' => $node->column,
+        ];
     }
 
     /**
