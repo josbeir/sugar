@@ -295,10 +295,36 @@ final class PartialBlockDefinitionTest extends TestCase
 
         $this->assertStringContainsString('Parent content', $result);
         $this->assertStringContainsString('<p>Appended from partial</p>', $result);
-        // Parent content comes before partial content
-        $this->assertLessThan(
-            strpos($result, 'Appended from partial'),
+        // Appended partial must appear after the parent block content
+        $this->assertGreaterThan(
             strpos($result, 'Parent content'),
+            strpos($result, 'Appended from partial'),
+        );
+    }
+
+    /**
+     * Inline s:include + s:append/s:prepend respects s:with variable passing.
+     */
+    public function testInlineIncludeAppendWithVariables(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Parent</main>',
+                'partial.sugar.php' => '<p><?php echo $label; ?></p>',
+                'child.sugar.php' => implode('', [
+                    '<s-template s:extends="layout.sugar.php" />',
+                    '<s-template s:include="partial.sugar.php" s:append="content" s:with="[\'label\' => \'Appended label\']"/>',
+                ]),
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Parent', $result);
+        $this->assertStringContainsString('<p>Appended label</p>', $result);
+        $this->assertGreaterThan(
+            strpos($result, 'Parent'),
+            strpos($result, 'Appended label'),
         );
     }
 
@@ -322,10 +348,10 @@ final class PartialBlockDefinitionTest extends TestCase
 
         $this->assertStringContainsString('Parent content', $result);
         $this->assertStringContainsString('<p>Prepended from partial</p>', $result);
-        // Partial content comes before parent content
-        $this->assertLessThan(
-            strpos($result, 'Parent content'),
+        // Prepended partial must appear before the parent block content
+        $this->assertGreaterThan(
             strpos($result, 'Prepended from partial'),
+            strpos($result, 'Parent content'),
         );
     }
 

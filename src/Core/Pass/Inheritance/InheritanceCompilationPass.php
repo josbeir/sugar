@@ -821,7 +821,7 @@ final class InheritanceCompilationPass implements AstPassInterface
                 . 'ob_start(); '
                 . 'echo $__tpl->getBlockManager()->renderParent(' . $exportedName . ', '
                 . $parentDefaultVar . ', $__data); '
-                . 'echo $__tpl->renderInclude(' . $exportedPath . ', get_defined_vars()); '
+                . 'echo $__tpl->renderInclude(' . $exportedPath . ', ' . $varsExpression . '); '
                 . 'return ob_get_clean(); }); ';
         } elseif ($mode === 'prepend') {
             // Prepend: include output first, then parent block content
@@ -830,7 +830,7 @@ final class InheritanceCompilationPass implements AstPassInterface
                 . ', function(array $__data) use ($__tpl): string { extract($__data, EXTR_SKIP); '
                 . $parentDefaultVar . $defaultFn
                 . 'ob_start(); '
-                . 'echo $__tpl->renderInclude(' . $exportedPath . ', get_defined_vars()); '
+                . 'echo $__tpl->renderInclude(' . $exportedPath . ', ' . $varsExpression . '); '
                 . 'echo $__tpl->getBlockManager()->renderParent(' . $exportedName . ', '
                 . $parentDefaultVar . ', $__data); '
                 . 'return ob_get_clean(); }); ';
