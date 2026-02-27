@@ -378,4 +378,83 @@ final class PartialBlockDefinitionTest extends TestCase
         $this->assertStringNotContainsString('Partial content', $result);
         $this->assertStringNotContainsString('Default', $result);
     }
+
+    // -------------------------------------------------------------------------
+    // Non-self-closing s:extends element (children inside extends element)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Inline s:include + s:block inside a non-self-closing s:extends element
+     * must produce the same result as when placed as a sibling of s:extends.
+     *
+     * Regression: previously the block was silently defined as empty because
+     * collectBlockDefinitions() processed the s:include node as ordinary block
+     * content and processNode() only caught top-level includes with DocumentNode parents.
+     */
+    public function testInlineIncludeBlockWorksInsideNonSelfClosingExtendsElement(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default</main>',
+                'partial.sugar.php' => '<p>Partial content</p>',
+                'child.sugar.php' =>
+                    '<s-template s:extends="layout.sugar.php">' .
+                    '<s-template s:include="partial.sugar.php" s:block="content" />' .
+                    '</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('<p>Partial content</p>', $result);
+        $this->assertStringNotContainsString('Default', $result);
+        $this->assertStringContainsString('<main>', $result);
+    }
+
+    /**
+     * A partial with s:block nested inside a non-self-closing s:extends element
+     * must register its block override for the parent layout.
+     */
+    public function testPartialWithBlockWorksInsideNonSelfClosingExtendsElement(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Default</main>',
+                'partial.sugar.php' => '<div s:block="content">From partial</div>',
+                'child.sugar.php' =>
+                    '<s-template s:extends="layout.sugar.php">' .
+                    '<s-template s:include="partial.sugar.php" />' .
+                    '</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('From partial', $result);
+        $this->assertStringNotContainsString('Default', $result);
+    }
+
+    /**
+     * Inline s:include + s:append inside a non-self-closing s:extends element
+     * must append the partial output after the parent block content.
+     */
+    public function testInlineIncludeAppendWorksInsideNonSelfClosingExtendsElement(): void
+    {
+        $engine = $this->createStringEngine(
+            templates: [
+                'layout.sugar.php' => '<main s:block="content">Parent</main>',
+                'partial.sugar.php' => '<p>Appended</p>',
+                'child.sugar.php' =>
+                    '<s-template s:extends="layout.sugar.php">' .
+                    '<s-template s:include="partial.sugar.php" s:append="content" />' .
+                    '</s-template>',
+            ],
+        );
+
+        $result = $engine->render('child.sugar.php');
+
+        $this->assertStringContainsString('Parent', $result);
+        $this->assertStringContainsString('<p>Appended</p>', $result);
+        $this->assertGreaterThan(strpos($result, 'Parent'), strpos($result, 'Appended'));
+    }
 }

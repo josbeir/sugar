@@ -322,7 +322,16 @@ final class InheritanceCompilationPass implements AstPassInterface
             // Top-level includes in extends documents are collected for pre-extends
             // emission, allowing included partials to call defineBlock() before the
             // parent layout renders.
-            if ($this->isExtendsDocument && $context->parent instanceof DocumentNode) {
+            // This covers two syntaxes:
+            // (a) sibling of s:extends:  <s-template s:extends="..." />\n<s-template s:include="..." />
+            // (b) child of s:extends:   <s-template s:extends="..."><s-template s:include="..." /></s-template>
+            $parentIsExtendsScope = $context->parent instanceof DocumentNode
+                || (
+                    ($context->parent instanceof ElementNode || $context->parent instanceof FragmentNode)
+                    && AttributeHelper::hasAttribute($context->parent, $this->extendsAttr)
+                );
+
+            if ($this->isExtendsDocument && $parentIsExtendsScope) {
                 $this->collectTopLevelExtendInclude($node, $context);
 
                 return NodeAction::replace([]);
@@ -596,6 +605,14 @@ final class InheritanceCompilationPass implements AstPassInterface
         array &$blocks,
         PipelineContext $context,
     ): void {
+        // Inline include+block combos (<s-template s:include="..." s:block="name" />) are
+        // handled as defineBlock() closures delegating to renderInclude(). They are
+        // collected by collectTopLevelExtendInclude() and must NOT be treated as
+        // regular inline block content here (their children are empty).
+        if (AttributeHelper::hasAttribute($node, $this->includeAttr)) {
+            return;
+        }
+
         $blockInfo = $this->getBlockName($node);
         if ($blockInfo === null) {
             return;
