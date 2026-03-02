@@ -97,26 +97,6 @@ final class WhitespaceTrimPass implements AstPassInterface
     }
 
     /**
-     * Remove whitespace-only text nodes from a children list.
-     *
-     * @param array<\Sugar\Core\Ast\Node> $children
-     * @return array<\Sugar\Core\Ast\Node>
-     */
-    private function withoutWhitespaceOnlyTextChildren(array $children): array
-    {
-        return array_values(array_filter(
-            $children,
-            static function (Node $child): bool {
-                if (!$child instanceof TextNode) {
-                    return true;
-                }
-
-                return preg_match('/^\s*$/u', $child->content) !== 1;
-            },
-        ));
-    }
-
-    /**
      * Apply s:trim behavior to a single element.
      */
     private function applyTrimToElement(ElementNode $element): ElementNode
@@ -141,9 +121,92 @@ final class WhitespaceTrimPass implements AstPassInterface
         }
 
         $element->attributes = AttributeHelper::removeAttribute($element->attributes, $trimAttributeName);
-        $element->children = $this->withoutWhitespaceOnlyTextChildren($element->children);
+        $element->children = $this->normalizeTrimmedChildren($element->children);
 
         return $element;
+    }
+
+    /**
+     * Normalize a children list for s:trim behavior.
+     *
+     * Rules:
+     * - Tabs/newlines in text nodes are collapsed to single spaces.
+     * - Leading and trailing text-node whitespace is trimmed.
+     * - Empty text nodes are removed.
+     * - Normalization is applied recursively to all descendants.
+     *
+     * @param array<\Sugar\Core\Ast\Node> $children
+     * @return array<\Sugar\Core\Ast\Node>
+     */
+    private function normalizeTrimmedChildren(array $children): array
+    {
+        foreach ($children as $index => $child) {
+            $childChildren = $this->getChildren($child);
+            if ($childChildren !== null) {
+                $this->setChildren($child, $this->normalizeTrimmedChildren($childChildren));
+            }
+
+            if ($child instanceof TextNode) {
+                $child->content = $this->normalizeTextContent($child->content);
+            }
+
+            $children[$index] = $child;
+        }
+
+        $firstIndex = $this->firstTextNodeIndex($children);
+        if ($firstIndex !== null && $children[$firstIndex] instanceof TextNode) {
+            $children[$firstIndex]->content = ltrim($children[$firstIndex]->content);
+        }
+
+        $lastIndex = $this->lastTextNodeIndex($children);
+        if ($lastIndex !== null && $children[$lastIndex] instanceof TextNode) {
+            $children[$lastIndex]->content = rtrim($children[$lastIndex]->content);
+        }
+
+        return array_values(array_filter(
+            $children,
+            static fn(Node $child): bool => !($child instanceof TextNode && $child->content === ''),
+        ));
+    }
+
+    /**
+     * Normalize a text node content for s:trim.
+     */
+    private function normalizeTextContent(string $content): string
+    {
+        if (preg_match('/[\r\n\t]/u', $content) !== 1) {
+            return $content;
+        }
+
+        return preg_replace('/[ \t\r\n]+/u', ' ', $content) ?? $content;
+    }
+
+    /**
+     * @param array<\Sugar\Core\Ast\Node> $children
+     */
+    private function firstTextNodeIndex(array $children): ?int
+    {
+        foreach ($children as $index => $child) {
+            if ($child instanceof TextNode) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<\Sugar\Core\Ast\Node> $children
+     */
+    private function lastTextNodeIndex(array $children): ?int
+    {
+        for ($index = count($children) - 1; $index >= 0; $index--) {
+            if ($children[$index] instanceof TextNode) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
     /**

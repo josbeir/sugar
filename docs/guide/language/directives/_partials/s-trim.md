@@ -18,6 +18,8 @@ This is useful for compact inline outputs such as `<title>`, where line breaks f
 
 Notes:
 - `s:trim` removes only whitespace-only child text nodes.
+- Tabs/newlines in trimmed text nodes are compacted to single spaces.
+- Leading/trailing whitespace in the trimmed subtree is removed.
 - Non-whitespace text and other child nodes are preserved.
 - `s:trim` is supported on HTML elements only.
 - `s:trim` is presence-only and does not accept a value.

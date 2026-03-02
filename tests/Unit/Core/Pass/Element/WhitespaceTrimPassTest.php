@@ -41,7 +41,7 @@ final class WhitespaceTrimPassTest extends MiddlewarePassTestCase
         $this->assertCount(3, $result->children[0]->children);
     }
 
-    public function testRemovesTrimAttributeAndWhitespaceOnlyTextChildren(): void
+    public function testCompactsWhitespaceAndRemovesTrimAttribute(): void
     {
         $element = $this->element('title')
             ->attributeNode($this->attributeNode('s:trim', null, 1, 1))
@@ -60,10 +60,12 @@ final class WhitespaceTrimPassTest extends MiddlewarePassTestCase
         $trimmed = $result->children[0];
         $this->assertInstanceOf(ElementNode::class, $trimmed);
         $this->assertSame([], $trimmed->attributes);
-        $this->assertCount(2, $trimmed->children);
+        $this->assertCount(3, $trimmed->children);
         $this->assertInstanceOf(TextNode::class, $trimmed->children[0]);
         $this->assertSame('Glaze Documentation | ', $trimmed->children[0]->content);
-        $this->assertInstanceOf(OutputNode::class, $trimmed->children[1]);
+        $this->assertInstanceOf(TextNode::class, $trimmed->children[1]);
+        $this->assertSame(' ', $trimmed->children[1]->content);
+        $this->assertInstanceOf(OutputNode::class, $trimmed->children[2]);
     }
 
     public function testKeepsNestedElementsWhileTrimmingOnlyWhitespaceTextNodes(): void

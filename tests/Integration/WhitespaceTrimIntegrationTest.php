@@ -40,6 +40,27 @@ SUGAR;
         $this->assertSame('<title>Glaze Documentation | Glaze</title>', trim($output));
     }
 
+    public function testTrimCompactsMultilineAndTabIndentedDirectiveContent(): void
+    {
+        $template = <<<'SUGAR'
+<title s:trim>
+		<s-template s:if="$hasPageTitle">
+			Glaze Documentation |
+		</s-template>
+		<?= $siteTitle ?>
+</title>
+SUGAR;
+
+        $compiled = $this->compiler->compile($template, 'title-tabs.sugar.php');
+
+        $output = $this->executeTemplate($compiled, [
+            'hasPageTitle' => true,
+            'siteTitle' => 'Glaze',
+        ]);
+
+        $this->assertSame('<title>Glaze Documentation | Glaze</title>', trim($output));
+    }
+
     public function testWithoutTrimPreservesTemplateWhitespaceAroundChildren(): void
     {
         $template = <<<'SUGAR'
