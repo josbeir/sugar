@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Directive;
 
 use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\Node;
-use Sugar\Core\Ast\RawPhpNode;
 use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Exception\SyntaxException;
@@ -94,48 +92,33 @@ final class ForeachDirectiveTest extends DirectiveTestCase
             ->hasPhpCode('endforeach;');
     }
 
-    public function testCompileForeachUsesWrapperModeForSingleElementChild(): void
+    public function testCompileForeachRepeatsHostElementWithSingleElementChild(): void
     {
-        $list = $this->element('ul')
+        $listItem = $this->element('li')
             ->withChildren([
-                $this->text("\n    "),
-                $this->element('li')->withChild($this->text('Item'))->build(),
-                $this->text("\n"),
+                $this->element('a')
+                    ->attribute('href', '/docs')
+                    ->withChild($this->text('Documentation'))
+                    ->build(),
             ])
             ->build();
 
         $node = $this->directive('foreach')
             ->expression('$items as $item')
-            ->withChild($list)
+            ->withChild($listItem)
             ->build();
 
         $result = $this->directiveCompiler->compile($node, $this->createTestContext());
 
-        $this->assertCount(1, $result);
-        $this->assertInstanceOf(ElementNode::class, $result[0]);
-        $this->assertSame('ul', $result[0]->tag);
+        $this->assertCount(8, $result);
+        $this->assertInstanceOf(ElementNode::class, $result[4]);
+        $this->assertSame('li', $result[4]->tag);
+        $this->assertCount(1, $result[4]->children);
+        $this->assertInstanceOf(ElementNode::class, $result[4]->children[0]);
+        $this->assertSame('a', $result[4]->children[0]->tag);
 
-        $wrapperChildren = $result[0]->children;
-        $this->assertNotEmpty($wrapperChildren);
-        $this->assertContainsOnlyInstancesOf(Node::class, $wrapperChildren);
-
-        $phpChildren = array_values(array_filter(
-            $wrapperChildren,
-            static fn(Node $child): bool => $child instanceof RawPhpNode,
-        ));
-
-        $this->assertNotEmpty($phpChildren);
-
-        $containsForeach = false;
-
-        foreach ($phpChildren as $phpChild) {
-            if (str_contains($phpChild->code, 'foreach ($items as $item):')) {
-                $containsForeach = true;
-
-                break;
-            }
-        }
-
-        $this->assertTrue($containsForeach);
+        $this->assertAst($result)
+            ->hasPhpCode('foreach ($items as $item):')
+            ->hasPhpCode('endforeach;');
     }
 }

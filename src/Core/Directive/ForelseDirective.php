@@ -16,45 +16,10 @@ use Sugar\Core\Runtime\EmptyHelper;
  * else clause when the collection is empty. Must be paired with s:empty
  * directive on a sibling element.
  *
- * Extends ForeachDirective and adds if/else logic around the loop.
+ * Extends ForeachDirective and adds if/else logic around the loop while
+ * preserving repeat-the-host-element semantics.
  *
- * Supports two modes (inherited from ForeachDirective):
- * 1. **Wrapper mode**: Element has child elements - acts as container
- * 2. **Repeat mode**: Element is leaf - repeats itself
- *
- * Wrapper mode example:
- * ```
- * <ul s:forelse="$items as $item">
- *     <li><?= $item ?></li>
- * </ul>
- * <div s:empty>
- *     No items found
- * </div>
- * ```
- * Compiles to:
- * ```php
- * <?php if (!empty($items)): ?>
- * <ul>
- * <?php
- * $__loopStack[] = $loop ?? null;
- * $loop = new \Sugar\Core\Runtime\LoopMetadata($items, end($__loopStack));
- * foreach ($items as $item):
- * ?>
- *     <li><?= $item ?></li>
- * <?php
- *     $loop->next();
- * endforeach;
- * $loop = array_pop($__loopStack);
- * ?>
- * </ul>
- * <?php else: ?>
- * <div>
- *     No items found
- * </div>
- * <?php endif; ?>
- * ```
- *
- * Repeat mode example:
+ * Example:
  * ```
  * <li s:forelse="$items as $item"><?= $item ?></li>
  * <div s:empty>No items found</div>
@@ -104,7 +69,7 @@ class ForelseDirective extends ForeachDirective implements PairedDirectiveInterf
             $node->column,
         );
 
-        // Compile the foreach loop (wrapper or repeat mode)
+        // Compile the foreach loop (repeat mode inherited from ForeachDirective)
         array_push($parts, ...parent::compile($node, $context));
 
         // Else clause

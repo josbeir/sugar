@@ -8,7 +8,6 @@ use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\Trait\ForeachLoopTrait;
-use Sugar\Core\Directive\Trait\WrapperModeTrait;
 
 /**
  * Compiler for foreach directive
@@ -16,34 +15,9 @@ use Sugar\Core\Directive\Trait\WrapperModeTrait;
  * Transforms s:foreach directives into PHP foreach loops with automatic
  * $loop variable injection for loop metadata.
  *
- * Supports two modes:
- * 1. **Wrapper mode**: Element has child elements - acts as container
- * 2. **Repeat mode**: Element is leaf - repeats itself
+ * The directive always repeats the host element.
  *
- * Wrapper mode example:
- * ```
- * <ul s:foreach="$items as $item">
- *     <li><?= $item ?></li>
- * </ul>
- * ```
- * Compiles to:
- * ```php
- * <ul>
- * <?php
- * $__loopStack[] = $loop ?? null;
- * $loop = new \Sugar\Core\Runtime\LoopMetadata($items, end($__loopStack));
- * foreach ($items as $item):
- * ?>
- *     <li><?= $item ?></li>
- * <?php
- *     $loop->next();
- * endforeach;
- * $loop = array_pop($__loopStack);
- * ?>
- * </ul>
- * ```
- *
- * Repeat mode example:
+ * Example:
  * ```
  * <li s:foreach="$items as $item"><?= $item ?></li>
  * ```
@@ -64,7 +38,6 @@ use Sugar\Core\Directive\Trait\WrapperModeTrait;
  */
 class ForeachDirective implements DirectiveInterface
 {
-    use WrapperModeTrait;
     use ForeachLoopTrait;
 
     /**
@@ -75,14 +48,6 @@ class ForeachDirective implements DirectiveInterface
     {
         $this->validateExpression($node, $context);
 
-        // Check if we should use wrapper mode (element as container)
-        if ($this->shouldUseWrapperMode($node)) {
-            $wrapper = $this->getWrapperElement($node);
-
-            return [$this->compileLoopWrapper($node, $wrapper, $wrapper->children)];
-        }
-
-        // Default behavior: repeat the directive element itself
         return $this->compileLoopRepeat($node);
     }
 

@@ -177,7 +177,9 @@ Items available
 
 ### s:foreach
 
-Repeat the element for every item in an iterable.
+Repeat the host element for every item in an iterable.
+
+If you only want to repeat children without repeating a wrapper element, place `s:foreach` on an `s-template` fragment.
 
 For full loop metadata details, see [Loop Metadata](/guide/language/loop-metadata).
 

@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Directive\Trait;
 
-use Sugar\Core\Ast\ElementNode;
-use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\RawPhpNode;
 
@@ -13,6 +11,7 @@ use Sugar\Core\Ast\RawPhpNode;
  *
  * Provides shared functionality for:
  * - Loop setup/teardown (LoopMetadata, loop stack management)
+ * - Repeating directive host nodes
  * - Collection extraction from foreach expressions
  */
 trait ForeachLoopTrait
@@ -99,30 +98,6 @@ trait ForeachLoopTrait
             new RawPhpNode('endforeach;', $line, $column),
             new RawPhpNode('$loop = array_pop($__loopStack);', $line, $column),
         ];
-    }
-
-    /**
-     * Compile loop in wrapper mode - element is container, children repeat inside
-     *
-     * @param \Sugar\Core\Ast\DirectiveNode $node The loop directive node
-     * @param \Sugar\Core\Ast\ElementNode $wrapper The wrapper element
-     * @param array<\Sugar\Core\Ast\Node> $loopBody Loop body nodes (children to repeat)
-     * @return \Sugar\Core\Ast\ElementNode Wrapper element with loop inside
-     */
-    protected function compileLoopWrapper(Node $node, ElementNode $wrapper, array $loopBody): ElementNode
-    {
-        $collection = $this->extractCollection($node->expression);
-
-        // Build loop content
-        $loopContent = [
-            ...$this->createLoopSetup($collection, $node->line, $node->column),
-            $this->createForeachOpening($node->expression, $node->line, $node->column),
-            ...$loopBody,
-            ...$this->createLoopTeardown($node->line, $node->column),
-        ];
-
-        // Create wrapper element with loop content inside
-        return NodeCloner::withChildren($wrapper, $loopContent);
     }
 
     /**
