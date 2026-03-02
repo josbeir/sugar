@@ -363,7 +363,7 @@ final class ComponentExpansionPass implements AstPassInterface
                 $output = $attr->value->output;
                 $value = $output instanceof OutputNode ? $output->expression : 'null';
             } elseif ($attr->value->isBoolean()) {
-                $value = 'null';
+                $value = 'true';
             } else {
                 $parts = $attr->value->toParts() ?? [];
                 if (count($parts) > 1) {

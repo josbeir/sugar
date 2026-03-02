@@ -309,6 +309,49 @@ final class ComponentIntegrationTest extends TestCase
     }
 
     /**
+     * Test that boolean attributes on a component root element are preserved as
+     * presence-only attributes without an empty value assignment (e.g., x-cloak
+     * must not become x-cloak="").
+     *
+     * @see https://github.com/josbeir/sugar/issues
+     */
+    public function testBooleanAttributesOnComponentRootArePreserved(): void
+    {
+        // Component template with boolean attributes on its root element.
+        $componentSource = '<div x-data="docsSearch" class="relative" x-cloak><?= $slot ?></div>';
+
+        $engine = $this->createEngineWithTemplates(
+            '<s-search>Hello</s-search>',
+            ['components/s-search.sugar.php' => $componentSource],
+        );
+
+        $output = $engine->render('test');
+
+        // x-cloak must appear WITHOUT a value
+        $this->assertStringContainsString('x-cloak', $output);
+        $this->assertStringNotContainsString('x-cloak="', $output);
+    }
+
+    /**
+     * Test that a boolean attribute on the component root element is preserved
+     * even when the same attribute is also passed by the caller.
+     */
+    public function testBooleanAttributePassedByCallerIsPreserved(): void
+    {
+        $componentSource = '<div x-cloak><?= $slot ?></div>';
+
+        $engine = $this->createEngineWithTemplates(
+            '<s-widget x-cloak>Content</s-widget>',
+            ['components/s-widget.sugar.php' => $componentSource],
+        );
+
+        $output = $engine->render('test');
+
+        $this->assertStringContainsString('x-cloak', $output);
+        $this->assertStringNotContainsString('x-cloak="', $output);
+    }
+
+    /**
      * Test slot content with named slots renders correctly.
      */
     public function testNamedSlotsWithMultipleElements(): void

@@ -114,11 +114,15 @@ final class ComponentVariantAdjustmentPassTest extends TestCase
         $pass = new ComponentVariantAdjustmentPass([]);
         $pass->after($document, $this->createPipelineContext());
 
+        // Boolean attributes become empty-name spread-style nodes using booleanAttribute().
         $disabledAttr = $element->attributes[0];
-        $this->assertSame('disabled', $disabledAttr->name);
+        $this->assertSame('', $disabledAttr->name);
         $this->assertTrue($disabledAttr->value->isOutput());
         $this->assertInstanceOf(OutputNode::class, $disabledAttr->value->output);
-        $this->assertStringContainsString('$__sugar_attrs[\'disabled\'] ?? null', $disabledAttr->value->output->expression);
+        $this->assertFalse($disabledAttr->value->output->escape);
+        $this->assertStringContainsString('booleanAttribute', $disabledAttr->value->output->expression);
+        $this->assertStringContainsString("'disabled'", $disabledAttr->value->output->expression);
+        $this->assertStringContainsString("\$__sugar_attrs['disabled'] ?? true", $disabledAttr->value->output->expression);
 
         $titleAttr = $element->attributes[1];
         $this->assertSame('title', $titleAttr->name);
