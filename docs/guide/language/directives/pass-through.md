@@ -12,6 +12,7 @@ Pass-through directives look like normal directives, but they are handled by spe
 - `s:slot` - Component slot assignment.
 - `s:bind` - Component attribute binding.
 - `s:raw` - Preserve element inner content without directive parsing.
+- `s:trim` - Remove whitespace-only child text nodes at compile time.
 
 ## Examples
 
@@ -50,3 +51,5 @@ Bind a set of attributes or props to a component element.
 :::
 
 <!--@include: ./_partials/s-raw.md-->
+
+<!--@include: ./_partials/s-trim.md-->

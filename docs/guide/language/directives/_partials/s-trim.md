@@ -1,0 +1,22 @@
+### s:trim
+
+Use `s:trim` on an element when indentation/newline-only text nodes between children should be removed at compile time.
+
+This is useful for compact inline outputs such as `<title>`, where line breaks from template formatting would otherwise be preserved.
+
+```sugar
+<title s:trim>
+    <s-template s:if="$hasPageTitle">Glaze Documentation | </s-template>
+    <?= $siteTitle ?>
+</title>
+```
+
+```html
+<!-- $hasPageTitle = true, $siteTitle = 'Glaze' -->
+<title>Glaze Documentation | Glaze</title>
+```
+
+Notes:
+- `s:trim` removes only whitespace-only child text nodes.
+- Non-whitespace text and other child nodes are preserved.
+- The `s:trim` attribute itself is not rendered in final HTML.
