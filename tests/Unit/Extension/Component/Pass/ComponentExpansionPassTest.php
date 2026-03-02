@@ -370,7 +370,7 @@ final class ComponentExpansionPassTest extends TestCase
 
         $runtimeCall = $result->children[0];
         $this->assertStringContainsString("'data-id' => \$id", $runtimeCall->arguments[3]);
-        $this->assertStringContainsString("'hidden' => null", $runtimeCall->arguments[3]);
+        $this->assertStringContainsString("'hidden' => true", $runtimeCall->arguments[3]);
     }
 
     // ================================================================
@@ -571,7 +571,7 @@ final class ComponentExpansionPassTest extends TestCase
         $this->assertSame('[]', $call->arguments[1]);
         $this->assertStringContainsString("'slot' => 'Content'", $call->arguments[2]);
         $this->assertStringContainsString("'class' => 'panel'", $call->arguments[3]);
-        $this->assertStringContainsString("'disabled' => null", $call->arguments[3]);
+        $this->assertStringContainsString("'disabled' => true", $call->arguments[3]);
         $this->assertStringContainsString('\'data-id\' => $id', $call->arguments[3]);
     }
 

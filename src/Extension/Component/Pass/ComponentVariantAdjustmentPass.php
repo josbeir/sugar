@@ -149,6 +149,37 @@ final class ComponentVariantAdjustmentPass implements AstPassInterface
                 continue;
             }
 
+            // Boolean attributes must be handled via booleanAttribute() helper so they
+            // render as a presence-only attribute (no value) rather than attr="".
+            if ($attr->value->isBoolean()) {
+                $expression = sprintf(
+                    '%s::booleanAttribute(%s, %s[%s] ?? true)',
+                    HtmlAttributeHelper::class,
+                    var_export($attr->name, true),
+                    $attrsVar,
+                    var_export($attr->name, true),
+                );
+
+                $outputNode = new OutputNode(
+                    expression: $expression,
+                    escape: false,
+                    context: OutputContext::HTML,
+                    line: $attr->line,
+                    column: $attr->column,
+                );
+                $outputNode->inheritTemplatePathFrom($attr);
+
+                $newAttr = new AttributeNode(
+                    name: '',
+                    value: AttributeValue::output($outputNode),
+                    line: $attr->line,
+                    column: $attr->column,
+                );
+                $newAttr->inheritTemplatePathFrom($attr);
+                $updatedAttributes[] = $newAttr;
+                continue;
+            }
+
             if ($attr->name === 'class') {
                 $existingExpr = $this->attributeValueExpression($attr);
                 $expression = sprintf(
