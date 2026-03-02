@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Sugar\Core\Pass\Element;
 
+use LogicException;
+use Sugar\Core\Ast\AttributeNode;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
@@ -11,6 +13,7 @@ use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\AttributeHelper;
 use Sugar\Core\Ast\Node;
 use Sugar\Core\Ast\TextNode;
+use Sugar\Core\Compiler\CompilationContext;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
@@ -27,6 +30,8 @@ final class WhitespaceTrimPass implements AstPassInterface
 {
     private readonly DirectivePrefixHelper $prefixHelper;
 
+    private ?CompilationContext $context = null;
+
     /**
      * @param \Sugar\Core\Config\SugarConfig $config Sugar configuration used to derive directive prefix
      */
@@ -40,6 +45,26 @@ final class WhitespaceTrimPass implements AstPassInterface
      */
     public function before(Node $node, PipelineContext $context): NodeAction
     {
+        if ($node instanceof DocumentNode) {
+            $this->context = $context->compilation;
+        }
+
+        $trimAttributeName = $this->prefixHelper->buildName('trim');
+
+        if ($node instanceof FragmentNode || $node instanceof ComponentNode) {
+            $trimAttribute = AttributeHelper::findAttribute($node->attributes, $trimAttributeName);
+            if ($trimAttribute instanceof AttributeNode) {
+                throw $context->compilation->createSyntaxExceptionForAttribute(
+                    sprintf(
+                        '%s is only supported on HTML elements, not on %s.',
+                        $trimAttributeName,
+                        $node instanceof FragmentNode ? '<s-template>' : 'component tags',
+                    ),
+                    $trimAttribute,
+                );
+            }
+        }
+
         if ($node instanceof ElementNode) {
             $this->applyTrimToElement($node);
         }
@@ -47,11 +72,14 @@ final class WhitespaceTrimPass implements AstPassInterface
         $children = $this->getChildren($node);
         if ($children !== null) {
             foreach ($children as $index => $child) {
-                if (!$child instanceof ElementNode) {
+                if ($child instanceof ElementNode) {
+                    $children[$index] = $this->applyTrimToElement($child);
                     continue;
                 }
 
-                $children[$index] = $this->applyTrimToElement($child);
+                if ($child instanceof FragmentNode || $child instanceof ComponentNode) {
+                    $this->validateUnsupportedTrimOnNonElementNode($child);
+                }
             }
 
             $this->setChildren($node, $children);
@@ -94,14 +122,53 @@ final class WhitespaceTrimPass implements AstPassInterface
     private function applyTrimToElement(ElementNode $element): ElementNode
     {
         $trimAttributeName = $this->prefixHelper->buildName('trim');
-        if (!AttributeHelper::hasAttribute($element, $trimAttributeName)) {
+        $trimAttribute = AttributeHelper::findAttribute($element->attributes, $trimAttributeName);
+        if (!$trimAttribute instanceof AttributeNode) {
             return $element;
+        }
+
+        if (!$trimAttribute->value->isBoolean()) {
+            if ($this->context instanceof CompilationContext) {
+                throw $this->context->createSyntaxExceptionForAttribute(
+                    sprintf('%s does not accept a value; use it as a presence-only attribute.', $trimAttributeName),
+                    $trimAttribute,
+                );
+            }
+
+            throw new LogicException(
+                sprintf('%s does not accept a value; use it as a presence-only attribute.', $trimAttributeName),
+            );
         }
 
         $element->attributes = AttributeHelper::removeAttribute($element->attributes, $trimAttributeName);
         $element->children = $this->withoutWhitespaceOnlyTextChildren($element->children);
 
         return $element;
+    }
+
+    /**
+     * Validate that s:trim is not used on non-element template nodes.
+     */
+    private function validateUnsupportedTrimOnNonElementNode(FragmentNode|ComponentNode $node): void
+    {
+        $trimAttributeName = $this->prefixHelper->buildName('trim');
+        $trimAttribute = AttributeHelper::findAttribute($node->attributes, $trimAttributeName);
+        if (!$trimAttribute instanceof AttributeNode) {
+            return;
+        }
+
+        if ($this->context instanceof CompilationContext) {
+            throw $this->context->createSyntaxExceptionForAttribute(
+                sprintf(
+                    '%s is only supported on HTML elements, not on %s.',
+                    $trimAttributeName,
+                    $node instanceof FragmentNode ? '<s-template>' : 'component tags',
+                ),
+                $trimAttribute,
+            );
+        }
+
+        throw new LogicException(sprintf('%s is only supported on HTML elements.', $trimAttributeName));
     }
 
     /**

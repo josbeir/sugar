@@ -9,6 +9,7 @@ use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Compiler\Pipeline\AstPassInterface;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Enum\OutputContext;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Core\Pass\Element\WhitespaceTrimPass;
 use Sugar\Tests\Unit\Core\Pass\MiddlewarePassTestCase;
 
@@ -86,5 +87,55 @@ final class WhitespaceTrimPassTest extends MiddlewarePassTestCase
         $this->assertCount(1, $trimmed->children);
         $this->assertInstanceOf(ElementNode::class, $trimmed->children[0]);
         $this->assertSame('span', $trimmed->children[0]->tag);
+    }
+
+    public function testRejectsTrimWithExplicitValue(): void
+    {
+        $element = $this->element('title')
+            ->attributeNode($this->attributeNode('s:trim', 'yes', 1, 1))
+            ->withChild($this->text('Hello', 1, 1))
+            ->build();
+
+        $ast = $this->document()->withChild($element)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:trim does not accept a value; use it as a presence-only attribute.');
+
+        $this->execute($ast);
+    }
+
+    public function testRejectsTrimOnFragmentNode(): void
+    {
+        $fragment = $this->fragment(
+            attributes: [$this->attributeNode('s:trim', null, 1, 1)],
+            children: [$this->text('Hello', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:trim is only supported on HTML elements, not on <s-template>.');
+
+        $this->execute($ast);
+    }
+
+    public function testRejectsTrimOnComponentNode(): void
+    {
+        $component = $this->component(
+            name: 'card',
+            attributes: [$this->attributeNode('s:trim', null, 1, 1)],
+            children: [$this->text('Hello', 1, 1)],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($component)->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:trim is only supported on HTML elements, not on component tags.');
+
+        $this->execute($ast);
     }
 }

@@ -19,4 +19,6 @@ This is useful for compact inline outputs such as `<title>`, where line breaks f
 Notes:
 - `s:trim` removes only whitespace-only child text nodes.
 - Non-whitespace text and other child nodes are preserved.
+- `s:trim` is supported on HTML elements only.
+- `s:trim` is presence-only and does not accept a value.
 - The `s:trim` attribute itself is not rendered in final HTML.

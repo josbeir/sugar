@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
+use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
@@ -59,5 +60,33 @@ SUGAR;
         $this->assertStringContainsString('Glaze Documentation | ', $output);
         $this->assertStringContainsString('Glaze', $output);
         $this->assertStringContainsString('</title>', $output);
+    }
+
+    public function testTrimOnTemplateFragmentFailsWithClearError(): void
+    {
+        $template = <<<'SUGAR'
+<s-template s:trim>
+    <p>Body</p>
+</s-template>
+SUGAR;
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:trim is only supported on HTML elements, not on <s-template>.');
+
+        $this->compiler->compile($template, 'trim-fragment.sugar.php');
+    }
+
+    public function testTrimWithValueFailsWithClearError(): void
+    {
+        $template = <<<'SUGAR'
+<title s:trim="yes">
+    <?= $siteTitle ?>
+</title>
+SUGAR;
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('s:trim does not accept a value; use it as a presence-only attribute.');
+
+        $this->compiler->compile($template, 'trim-value.sugar.php');
     }
 }
