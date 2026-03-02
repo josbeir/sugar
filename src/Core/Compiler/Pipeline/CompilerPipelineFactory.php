@@ -12,6 +12,7 @@ use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
 use Sugar\Core\Pass\Directive\DirectiveExtractionPass;
 use Sugar\Core\Pass\Directive\DirectivePairingPass;
 use Sugar\Core\Pass\Element\ElementRoutingPass;
+use Sugar\Core\Pass\Element\WhitespaceTrimPass;
 use Sugar\Core\Pass\Inheritance\InheritanceCompilationPass;
 use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
 
@@ -21,6 +22,8 @@ use Sugar\Core\Pass\RawPhp\PhpNormalizationPass;
 final class CompilerPipelineFactory
 {
     private ?ElementRoutingPass $elementRoutingPass = null;
+
+    private ?WhitespaceTrimPass $whitespaceTrimPass = null;
 
     private ?DirectiveExtractionPass $directiveExtractionPass = null;
 
@@ -60,6 +63,7 @@ final class CompilerPipelineFactory
     ): AstPipeline {
         $pipeline = new AstPipeline();
 
+        $pipeline->addPass($this->getWhitespaceTrimPass(), PassPriority::PRE_DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getElementRoutingPass(), PassPriority::ELEMENT_ROUTING);
         $pipeline->addPass($this->getDirectiveExtractionPass(), PassPriority::DIRECTIVE_EXTRACTION);
         $pipeline->addPass($this->getDirectivePairingPass(), PassPriority::DIRECTIVE_PAIRING);
@@ -78,6 +82,20 @@ final class CompilerPipelineFactory
         $this->addCustomPasses($pipeline);
 
         return $pipeline;
+    }
+
+    /**
+     * Get the whitespace trim pass instance.
+     */
+    private function getWhitespaceTrimPass(): WhitespaceTrimPass
+    {
+        if ($this->whitespaceTrimPass instanceof WhitespaceTrimPass) {
+            return $this->whitespaceTrimPass;
+        }
+
+        $this->whitespaceTrimPass = new WhitespaceTrimPass($this->config);
+
+        return $this->whitespaceTrimPass;
     }
 
     /**
