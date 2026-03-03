@@ -31,6 +31,7 @@ final class FragmentNode extends Node
      * @param int $line Line number in source
      * @param int $column Column number in source
      * @param bool $selfClosing Whether the fragment is self-closing
+     * @param bool $trimContext Whether this fragment is a descendant of an s:trim-marked element; set by WhitespaceTrimPass to propagate trim scope into cross-template runtime calls
      */
     public function __construct(
         public array $attributes,
@@ -38,6 +39,7 @@ final class FragmentNode extends Node
         public readonly int $line,
         public readonly int $column,
         public bool $selfClosing = false,
+        public bool $trimContext = false,
     ) {
     }
 }

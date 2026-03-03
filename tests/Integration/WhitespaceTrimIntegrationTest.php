@@ -6,6 +6,7 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Exception\SyntaxException;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 /**
@@ -14,6 +15,7 @@ use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 final class WhitespaceTrimIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
+    use EngineTestTrait;
     use ExecuteTemplateTrait;
 
     protected function setUp(): void
@@ -81,6 +83,88 @@ SUGAR;
         $this->assertStringContainsString('Glaze Documentation | ', $output);
         $this->assertStringContainsString('Glaze', $output);
         $this->assertStringContainsString('</title>', $output);
+    }
+
+    public function testTrimAppliesRecursivelyToNestedDescendantChildren(): void
+    {
+        $template = <<<'SUGAR'
+<title s:trim>
+    <span>
+		Glaze
+		<strong>
+			Docs
+		</strong>
+		Site
+    </span>
+</title>
+SUGAR;
+
+        $compiled = $this->compiler->compile($template, 'title-recursive-trim.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertSame('<title><span>Glaze <strong>Docs</strong> Site</span></title>', trim($output));
+    }
+
+    public function testTrimNormalizesIncludedPartialOutput(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'root.sugar.php' => '<title s:trim><s-template s:include="partial.sugar.php" /></title>',
+            'partial.sugar.php' => "\n  Glaze\n",
+        ]);
+
+        $this->assertSame('<title>Glaze</title>', $engine->render('root.sugar.php'));
+    }
+
+    public function testTrimNormalizesIncludedPartialInsideElement(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'root.sugar.php' => '<title s:trim><div s:include="partial.sugar.php"></div></title>',
+            'partial.sugar.php' => "\n  Glaze\n",
+        ]);
+
+        $this->assertSame('<title><div>Glaze</div></title>', $engine->render('root.sugar.php'));
+    }
+
+    public function testTrimNormalizesDefaultBlockContent(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'layout.sugar.php' => "<title s:trim><s-template s:block=\"content\">\n  Default\n</s-template></title>",
+            'child.sugar.php' => '<s-template s:extends="layout.sugar.php" />',
+        ]);
+
+        $this->assertSame('<title>Default</title>', $engine->render('child.sugar.php'));
+    }
+
+    public function testTrimNormalizesChildBlockOverride(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'layout.sugar.php' => '<title s:trim><s-template s:block="content">Default</s-template></title>',
+            'child.sugar.php' => "<s-template s:extends=\"layout.sugar.php\" />\n<s-template s:block=\"content\">\n  Glaze\n</s-template>",
+        ]);
+
+        $this->assertSame('<title>Glaze</title>', $engine->render('child.sugar.php'));
+    }
+
+    public function testTrimNormalizesIncludeWithMultilineWhitespace(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'root.sugar.php' => '<title s:trim><s-template s:include="partial.sugar.php" /></title>',
+            'partial.sugar.php' => "\n\t\tGlaze Documentation |\n\t\t",
+        ]);
+
+        $this->assertSame('<title>Glaze Documentation |</title>', $engine->render('root.sugar.php'));
+    }
+
+    public function testTrimDoesNotAffectIncludeOutsideTrimScope(): void
+    {
+        $engine = $this->createStringEngine(templates: [
+            'root.sugar.php' => '<title><s-template s:include="partial.sugar.php" /></title>',
+            'partial.sugar.php' => "\n  Glaze\n",
+        ]);
+
+        $output = $engine->render('root.sugar.php');
+        $this->assertStringContainsString("\n", $output);
+        $this->assertStringContainsString('Glaze', $output);
     }
 
     public function testTrimOnTemplateFragmentFailsWithClearError(): void

@@ -26,6 +26,7 @@ final class ElementNode extends Node implements SiblingNavigationInterface
      * @param int $line Line number in source template
      * @param int $column Column number in source template
      * @param ?string $dynamicTag Dynamic tag variable name for s:tag directive (when set, this PHP variable contains the runtime tag name)
+     * @param bool $trimContext Whether this element is a descendant of an s:trim-marked element; set by WhitespaceTrimPass to propagate trim scope into cross-template runtime calls
      */
     public function __construct(
         public string $tag,
@@ -35,6 +36,7 @@ final class ElementNode extends Node implements SiblingNavigationInterface
         int $line,
         int $column,
         public ?string $dynamicTag = null,
+        public bool $trimContext = false,
     ) {
         parent::__construct($line, $column);
     }
