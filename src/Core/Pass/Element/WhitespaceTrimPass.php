@@ -178,14 +178,12 @@ final class WhitespaceTrimPass implements AstPassInterface
      * Normalize a text node content for s:trim.
      *
      * Delegates to WhitespaceNormalizer::collapseSequences() so the same
-     * normalisation logic is shared with the runtime boundary wrapper.
+     * normalization logic is shared with the runtime boundary wrapper.
+     * All whitespace runs (spaces, tabs, newlines) are collapsed unconditionally,
+     * matching the runtime semantics of WhitespaceNormalizer::normalize().
      */
     private function normalizeTextContent(string $content): string
     {
-        if (preg_match('/[\r\n\t]/u', $content) !== 1) {
-            return $content;
-        }
-
         return WhitespaceNormalizer::collapseSequences($content);
     }
 

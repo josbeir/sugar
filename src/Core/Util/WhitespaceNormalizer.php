@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Core\Util;
 
 /**
- * Stateless utility for whitespace normalisation used by both the compile-time
+ * Stateless utility for whitespace normalization used by both the compile-time
  * AST pass and the runtime-generated wrappers emitted by InheritanceCompilationPass.
  *
  * Having one shared implementation ensures that `s:trim` behaves identically
@@ -14,7 +14,7 @@ namespace Sugar\Core\Util;
  *
  * Example:
  * ```php
- * WhitespaceNormalizer::collapseSequences("  hello\n  world  "); // "  hello   world  "
+ * WhitespaceNormalizer::collapseSequences("  hello\n  world  "); // " hello world "
  * WhitespaceNormalizer::normalize("  hello\n  world  ");         // "hello world"
  * ```
  */
@@ -22,10 +22,12 @@ final class WhitespaceNormalizer
 {
     /**
      * Collapse any run of whitespace characters (space, tab, CR, LF) into
-     * a single space.  Leading/trailing whitespace is preserved.
+     * a single space. Leading/trailing whitespace is collapsed to a single space
+     * but not removed; call normalize() if trimming is also needed.
      *
-     * Used on individual text-node content during AST normalisation so that
-     * indentation and line-breaks inside a trimmed element become single spaces.
+     * Used on individual text-node content during AST normalization so that
+     * indentation, line-breaks, and runs of spaces inside a trimmed element
+     * become single spaces.
      *
      * @param string $text Raw text content
      * @return string Text with collapsed whitespace sequences
@@ -39,7 +41,7 @@ final class WhitespaceNormalizer
      * Collapse whitespace sequences in a fully rendered HTML string and
      * then strip any remaining leading or trailing whitespace.
      *
-     * Used at runtime to normalise the output of `s:include` and `s:block`
+     * Used at runtime to normalize the output of `s:include` and `s:block`
      * calls that appear inside an element marked with `s:trim`.
      *
      * @param string $html Rendered HTML string

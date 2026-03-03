@@ -22,6 +22,16 @@ final class WhitespaceNormalizerTest extends TestCase
         $this->assertSame(' A B ', WhitespaceNormalizer::collapseSequences($input));
     }
 
+    public function testCollapseSequencesAlsoCollapsesRunsOfSpaces(): void
+    {
+        // Spaces-only runs (no tabs/newlines) must also be collapsed so that
+        // compile-time (normalizeTextContent) and runtime (normalize) paths
+        // share identical semantics.
+        $input = 'hello   world';
+
+        $this->assertSame('hello world', WhitespaceNormalizer::collapseSequences($input));
+    }
+
     public function testNormalizeCollapsesAndTrimsString(): void
     {
         $input = "\n\t  Glaze   Documentation\r\n  ";
