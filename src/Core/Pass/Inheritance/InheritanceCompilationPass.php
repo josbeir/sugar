@@ -25,6 +25,7 @@ use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Loader\TemplateLoaderInterface;
+use Sugar\Core\Util\WhitespaceNormalizer;
 
 /**
  * Compiler pass that transforms template inheritance attributes into runtime calls.
@@ -865,6 +866,12 @@ final class InheritanceCompilationPass implements AstPassInterface
 
     /**
      * Build a renderBlock() RuntimeCallNode for a block in a parent/layout template.
+     *
+     * When the node is inside an `s:trim` scope (flagged by WhitespaceTrimPass),
+     * the entire renderBlock() return value is wrapped with
+     * WhitespaceNormalizer::normalize() so that both the default closure content
+     * and any child-template override are trimmed regardless of whether they
+     * originate from a different compiled template.
      */
     private function buildBlockRuntimeCall(
         string $name,
@@ -872,15 +879,19 @@ final class InheritanceCompilationPass implements AstPassInterface
     ): RawPhpNode {
         $blockContent = $this->captureChildrenContent($node);
 
-        // The block in a layout template emits a renderBlock() call.
-        // The default closure contains the inline parent content.
-        $code = 'echo $__tpl->getBlockManager()->renderBlock('
+        $renderCall = '$__tpl->getBlockManager()->renderBlock('
             . var_export($name, true) . ', '
             . 'function(array $__data) use ($__tpl): string { extract($__data, EXTR_SKIP); '
             . 'ob_start(); ?>'
             . $blockContent
             . '<?php return ob_get_clean(); }, '
-            . 'get_defined_vars()); ';
+            . 'get_defined_vars())';
+
+        if ($node->trimContext) {
+            $renderCall = '\\' . WhitespaceNormalizer::class . '::normalize(' . $renderCall . ')';
+        }
+
+        $code = 'echo ' . $renderCall . '; ';
 
         return $this->createPhpNode($code, $node->line, $node->column, $node);
     }
@@ -923,6 +934,12 @@ final class InheritanceCompilationPass implements AstPassInterface
 
     /**
      * Build a renderInclude() RuntimeCallNode.
+     *
+     * When the node is inside an `s:trim` scope (flagged by WhitespaceTrimPass),
+     * the renderInclude() return value is wrapped with
+     * WhitespaceNormalizer::normalize() so that the included template's rendered
+     * output is whitespace-normalised at the boundary, matching the compile-time
+     * behaviour applied to static text nodes in the same template.
      */
     private function buildIncludeRuntimeCall(
         string $templatePath,
@@ -932,10 +949,15 @@ final class InheritanceCompilationPass implements AstPassInterface
         $tplInit = '$__tpl = $__tpl ?? ' . GeneratedAlias::RUNTIME_ENV . '::requireService('
             . GeneratedAlias::TEMPLATE_RENDERER . '::class' . '); ';
 
-        $code = $tplInit
-            . 'echo $__tpl->renderInclude('
+        $includeCall = '$__tpl->renderInclude('
             . var_export($templatePath, true) . ', '
-            . $varsExpression . '); ';
+            . $varsExpression . ')';
+
+        if ($node->trimContext) {
+            $includeCall = '\\' . WhitespaceNormalizer::class . '::normalize(' . $includeCall . ')';
+        }
+
+        $code = $tplInit . 'echo ' . $includeCall . '; ';
 
         return $this->createPhpNode($code, $node->line, $node->column, $node);
     }

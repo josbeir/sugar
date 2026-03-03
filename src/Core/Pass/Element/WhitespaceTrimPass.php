@@ -19,6 +19,7 @@ use Sugar\Core\Compiler\Pipeline\NodeAction;
 use Sugar\Core\Compiler\Pipeline\PipelineContext;
 use Sugar\Core\Config\Helper\DirectivePrefixHelper;
 use Sugar\Core\Config\SugarConfig;
+use Sugar\Core\Util\WhitespaceNormalizer;
 
 /**
  * Trims whitespace-only child text nodes on elements marked with s:trim.
@@ -150,6 +151,10 @@ final class WhitespaceTrimPass implements AstPassInterface
                 $child->content = $this->normalizeTextContent($child->content);
             }
 
+            if ($child instanceof ElementNode || $child instanceof FragmentNode) {
+                $child->trimContext = true;
+            }
+
             $children[$index] = $child;
         }
 
@@ -171,6 +176,9 @@ final class WhitespaceTrimPass implements AstPassInterface
 
     /**
      * Normalize a text node content for s:trim.
+     *
+     * Delegates to WhitespaceNormalizer::collapseSequences() so the same
+     * normalisation logic is shared with the runtime boundary wrapper.
      */
     private function normalizeTextContent(string $content): string
     {
@@ -178,7 +186,7 @@ final class WhitespaceTrimPass implements AstPassInterface
             return $content;
         }
 
-        return preg_replace('/[ \t\r\n]+/u', ' ', $content) ?? $content;
+        return WhitespaceNormalizer::collapseSequences($content);
     }
 
     /**

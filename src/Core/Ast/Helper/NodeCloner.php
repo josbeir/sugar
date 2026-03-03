@@ -70,6 +70,7 @@ final class NodeCloner
                 line: $node->line,
                 column: $node->column,
                 dynamicTag: $node->dynamicTag,
+                trimContext: $node->trimContext,
             ),
             $node instanceof FragmentNode => new FragmentNode(
                 attributes: self::cloneAttributes($node->attributes),
@@ -77,6 +78,7 @@ final class NodeCloner
                 line: $node->line,
                 column: $node->column,
                 selfClosing: $node->selfClosing,
+                trimContext: $node->trimContext,
             ),
             $node instanceof TextNode => new TextNode($node->content, $node->line, $node->column),
             $node instanceof RawPhpNode => new RawPhpNode($node->code, $node->line, $node->column),
@@ -127,6 +129,7 @@ final class NodeCloner
             line: $node->line,
             column: $node->column,
             dynamicTag: $node->dynamicTag,
+            trimContext: $node->trimContext,
         );
 
         $cloned->inheritTemplatePathFrom($node);
@@ -155,6 +158,7 @@ final class NodeCloner
             line: $node->line,
             column: $node->column,
             dynamicTag: $node->dynamicTag,
+            trimContext: $node->trimContext,
         );
 
         $cloned->inheritTemplatePathFrom($node);
@@ -177,6 +181,7 @@ final class NodeCloner
             line: $node->line,
             column: $node->column,
             selfClosing: $node->selfClosing,
+            trimContext: $node->trimContext,
         );
 
         $cloned->inheritTemplatePathFrom($node);
@@ -199,6 +204,7 @@ final class NodeCloner
             line: $node->line,
             column: $node->column,
             selfClosing: $node->selfClosing,
+            trimContext: $node->trimContext,
         );
 
         $cloned->inheritTemplatePathFrom($node);

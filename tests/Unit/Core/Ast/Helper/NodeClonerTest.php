@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Sugar\Core\Ast\AttributeValue;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\ElementNode;
+use Sugar\Core\Ast\FragmentNode;
 use Sugar\Core\Ast\Helper\NodeCloner;
 use Sugar\Core\Ast\OutputNode;
 use Sugar\Tests\Helper\Trait\NodeBuildersTrait;
@@ -53,6 +54,23 @@ final class NodeClonerTest extends TestCase
         $this->assertSame($node->column, $result->column);
     }
 
+    public function testWithAttributesAndChildrenPreservesTrimContext(): void
+    {
+        $node = new ElementNode(
+            tag: 'div',
+            attributes: [$this->attribute('s:include', 'partial.sugar.php', 1, 1)],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+            trimContext: true,
+        );
+
+        $result = NodeCloner::withAttributesAndChildren($node, $node->attributes, $node->children);
+
+        $this->assertTrue($result->trimContext);
+    }
+
     public function testFragmentWithChildren(): void
     {
         $node = $this->fragment(
@@ -89,6 +107,24 @@ final class NodeClonerTest extends TestCase
         $this->assertSame($node->children, $result->children);
         $this->assertSame($node->line, $result->line);
         $this->assertSame($node->column, $result->column);
+    }
+
+    public function testFragmentCopyHelpersPreserveTrimContext(): void
+    {
+        $node = new FragmentNode(
+            attributes: [$this->attribute('s:include', 'partial.sugar.php', 1, 1)],
+            children: [$this->text('content', 1, 1)],
+            line: 1,
+            column: 1,
+            selfClosing: false,
+            trimContext: true,
+        );
+
+        $withChildren = NodeCloner::fragmentWithChildren($node, $node->children);
+        $withAttributes = NodeCloner::fragmentWithAttributes($node, $node->attributes);
+
+        $this->assertTrue($withChildren->trimContext);
+        $this->assertTrue($withAttributes->trimContext);
     }
 
     public function testImmutabilityWithChildren(): void
@@ -154,6 +190,36 @@ final class NodeClonerTest extends TestCase
         $this->assertNotSame($second, $cloned[1]);
         $this->assertInstanceOf(ComponentNode::class, $cloned[1]);
         $this->assertNotSame($second->children[0], $cloned[1]->children[0]);
+    }
+
+    public function testCloneNodePreservesTrimContext(): void
+    {
+        $element = new ElementNode(
+            tag: 'div',
+            attributes: [],
+            children: [],
+            selfClosing: false,
+            line: 1,
+            column: 1,
+            trimContext: true,
+        );
+
+        $fragment = new FragmentNode(
+            attributes: [],
+            children: [],
+            line: 1,
+            column: 1,
+            selfClosing: false,
+            trimContext: true,
+        );
+
+        $clonedElement = NodeCloner::cloneNode($element);
+        $clonedFragment = NodeCloner::cloneNode($fragment);
+
+        $this->assertInstanceOf(ElementNode::class, $clonedElement);
+        $this->assertInstanceOf(FragmentNode::class, $clonedFragment);
+        $this->assertTrue($clonedElement->trimContext);
+        $this->assertTrue($clonedFragment->trimContext);
     }
 
     public function testCloneAttributeValueOutputCreatesDistinctOutputNode(): void
