@@ -178,6 +178,110 @@ final class LexerTest extends TestCase
         $this->assertNotContains('s:raw', $values);
     }
 
+    public function testPhpBlockCommentContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php /*\n\$tags = (array)\$page->taxonomies['tags'];\n*/ ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens, 'Block comment should produce exactly one PhpCode token');
+        $this->assertStringContainsString('/*', $codeTokens[0]->value);
+        $this->assertStringContainsString('*/', $codeTokens[0]->value);
+    }
+
+    public function testPhpBlockCommentWithNestedPhpTagsIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php /*\n<?php \$tags = []; ?>\n<div>html</div>\n*/ ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens, 'Nested PHP tags inside block comment should not split the token');
+        $this->assertStringContainsString('/*', $codeTokens[0]->value);
+        $this->assertStringContainsString('*/', $codeTokens[0]->value);
+    }
+
+    public function testPhpSingleLineCommentCloseTagTerminatesComment(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        // In PHP, single-line comments ARE terminated by close tags
+        $source = '<?php // comment ?><div>html</div>';
+
+        $tokens = $lexer->tokenize($source);
+        $types = $this->tokenTypes($tokens);
+        $values = $this->tokenValues($tokens);
+
+        $this->assertContains(TokenType::PhpClose, $types);
+        $this->assertContains(TokenType::Text, $types);
+        $this->assertContains('html', $values);
+    }
+
+    public function testPhpStringLiteralContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $x = "some ?> text"; ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString('"some ?> text"', $codeTokens[0]->value);
+    }
+
+    public function testPhpSingleQuotedStringContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php \$x = 'some ?> text'; ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString("'some ?> text'", $codeTokens[0]->value);
+    }
+
+    public function testPhpStringWithEscapedQuotesAndCloseTag(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $x = "val \\"?> still"; ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString('still', $codeTokens[0]->value);
+    }
+
+    public function testPhpCloseTagOutsideCommentOrStringStillTerminates(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $a = 1; ?>HTML';
+
+        $tokens = $lexer->tokenize($source);
+        $types = $this->tokenTypes($tokens);
+
+        $this->assertContains(TokenType::PhpClose, $types);
+        $this->assertContains(TokenType::Text, $types);
+    }
+
     /**
      * @param array<Token> $tokens
      * @return array<TokenType>
