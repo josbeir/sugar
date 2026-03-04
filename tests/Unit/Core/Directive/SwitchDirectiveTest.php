@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Sugar\Tests\Unit\Core\Directive;
 
 use Sugar\Core\Ast\RawPhpNode;
+use Sugar\Core\Ast\TextNode;
 use Sugar\Core\Directive\Enum\DirectiveType;
 use Sugar\Core\Directive\Interface\DirectiveInterface;
 use Sugar\Core\Directive\SwitchDirective;
@@ -312,5 +313,150 @@ TEMPLATE;
         $this->expectExceptionMessage('Case directive requires a value expression');
 
         $this->directiveCompiler->compile($switch, $this->createTestContext($source));
+    }
+
+    public function testCompilesIndividualCaseDirective(): void
+    {
+        $case = $this->directive('case')
+            ->expression("'admin'")
+            ->withChild($this->text('Admin Panel'))
+            ->at(2, 5)
+            ->build();
+
+        $result = $this->directiveCompiler->compile($case, $this->createTestContext());
+
+        $this->assertCount(3, $result);
+        $this->assertAst($result)
+            ->hasPhpCode("case 'admin':")
+            ->hasPhpCode('break;');
+        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
+        $this->assertInstanceOf(RawPhpNode::class, $result[2]);
+    }
+
+    public function testCompilesIndividualDefaultDirective(): void
+    {
+        $default = $this->directive('default')
+            ->withChild($this->text('Default content'))
+            ->at(3, 5)
+            ->build();
+
+        $result = $this->directiveCompiler->compile($default, $this->createTestContext());
+
+        $this->assertCount(2, $result);
+        $this->assertAst($result)
+            ->hasPhpCode('default:');
+        $this->assertInstanceOf(RawPhpNode::class, $result[0]);
+    }
+
+    public function testIndividualCaseWithEmptyExpressionThrows(): void
+    {
+        $case = $this->directive('case')
+            ->expression('')
+            ->withChild($this->text('Content'))
+            ->at(2, 5)
+            ->build();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Case directive requires a value expression');
+
+        $this->directiveCompiler->compile($case, $this->createTestContext());
+    }
+
+    public function testSwitchWithPrecompiledCaseRawPhpNodes(): void
+    {
+        // Simulates pipeline bottom-up compilation: case/default have already been
+        // compiled into RawPhpNodes before switch's compile() runs.
+        $switch = $this->directive('switch')
+            ->expression('$role')
+            ->withChildren([
+                $this->rawPhp("case 'admin':", 2, 5),
+                $this->text('Admin Panel'),
+                $this->rawPhp('break;', 2, 5),
+                $this->rawPhp('default:', 3, 5),
+                $this->text('User Dashboard'),
+            ])
+            ->build();
+
+        $result = $this->directiveCompiler->compile($switch, $this->createTestContext());
+
+        $this->assertAst($result)
+            ->hasPhpCode('switch ($role):')
+            ->hasPhpCode("case 'admin':")
+            ->hasPhpCode('break;')
+            ->hasPhpCode('default:')
+            ->hasPhpCode('endswitch;');
+    }
+
+    public function testSwitchSkipsNonCaseContentBeforeCases(): void
+    {
+        // Non-case content before cases should be excluded from the output
+        $switch = $this->directive('switch')
+            ->expression('$role')
+            ->withChildren([
+                $this->text('Non-case content'),
+                $this->directive('case')
+                    ->expression("'admin'")
+                    ->withChild($this->text('Admin'))
+                    ->at(2, 0)
+                    ->build(),
+            ])
+            ->build();
+
+        $result = $this->directiveCompiler->compile($switch, $this->createTestContext());
+
+        // Non-case text node should not appear in output
+        $hasNonCaseText = false;
+        foreach ($result as $node) {
+            if ($node instanceof TextNode && $node->content === 'Non-case content') {
+                $hasNonCaseText = true;
+            }
+        }
+
+        $this->assertFalse($hasNonCaseText, 'Non-case content should be excluded from switch output');
+    }
+
+    public function testSwitchWithPrecompiledChildrenInWrapperElement(): void
+    {
+        // Simulates the pipeline AST: switch DirectiveNode wraps an ElementNode (the
+        // original element with s:switch removed), whose children contain
+        // pre-compiled RawPhpNodes from individually compiled case/default.
+        $switch = $this->directive('switch')
+            ->expression('$iconKey')
+            ->withChild(
+                $this->element('div')
+                    ->withChildren([
+                        $this->text("\n    "),
+                        $this->element('div')
+                            ->withChild($this->text('Non-case element'))
+                            ->build(),
+                        $this->text("\n    "),
+                        $this->rawPhp("case 'cakephp':", 5, 5),
+                        $this->element('svg')
+                            ->attribute('class', 'cake-icon')
+                            ->build(),
+                        $this->rawPhp('break;', 5, 5),
+                        $this->text("\n    "),
+                        $this->rawPhp('default:', 7, 5),
+                        $this->element('svg')
+                            ->attribute('class', 'default-icon')
+                            ->build(),
+                        $this->text("\n"),
+                    ])
+                    ->build(),
+            )
+            ->build();
+
+        $result = $this->directiveCompiler->compile($switch, $this->createTestContext());
+
+        $this->assertAst($result)
+            ->hasPhpCode('switch ($iconKey):')
+            ->hasPhpCode("case 'cakephp':")
+            ->hasPhpCode('break;')
+            ->hasPhpCode('default:')
+            ->hasPhpCode('endswitch;');
+
+        // Non-case element should not appear
+        $this->assertAst($result)
+            ->doesNotContainElement('div');
     }
 }

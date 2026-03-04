@@ -14,6 +14,7 @@ use Sugar\Core\Directive\FinallyDirective;
 use Sugar\Core\Directive\ForeachDirective;
 use Sugar\Core\Directive\IfDirective;
 use Sugar\Core\Directive\SpreadDirective;
+use Sugar\Core\Directive\SwitchDirective;
 use Sugar\Core\Directive\TryDirective;
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Pass\Directive\DirectiveCompilationPass;
@@ -381,5 +382,92 @@ final class DirectiveIntegrationTest extends TestCase
         $this->assertStringNotContainsString('  />', $code);
         // Should have correct spacing for self-closing tag
         $this->assertStringContainsString(' />', $code);
+    }
+
+    public function testSwitchCaseDefaultFullPipeline(): void
+    {
+        $this->registry->register('switch', new SwitchDirective());
+        $this->registry->register('case', new SwitchDirective());
+        $this->registry->register('default', new SwitchDirective());
+
+        $template = <<<'SUGAR'
+<div s:switch="$role">
+    <span s:case="'admin'">Admin</span>
+    <span s:case="'user'">User</span>
+    <span s:default>Guest</span>
+</div>
+SUGAR;
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $this->assertStringContainsString('switch ($role):', $code);
+        $this->assertStringContainsString("case 'admin':", $code);
+        $this->assertStringContainsString("case 'user':", $code);
+        $this->assertStringContainsString('default:', $code);
+        $this->assertStringContainsString('break;', $code);
+        $this->assertStringContainsString('endswitch;', $code);
+        $this->assertStringContainsString('<span>Admin</span>', $code);
+        $this->assertStringContainsString('<span>User</span>', $code);
+        $this->assertStringContainsString('<span>Guest</span>', $code);
+    }
+
+    public function testSwitchCaseDefaultRendersCorrectCase(): void
+    {
+        $this->registry->register('switch', new SwitchDirective());
+        $this->registry->register('case', new SwitchDirective());
+        $this->registry->register('default', new SwitchDirective());
+
+        $template = <<<'SUGAR'
+<div s:switch="$role">
+    <span s:case="'admin'">Admin</span>
+    <span s:case="'user'">User</span>
+    <span s:default>Guest</span>
+</div>
+SUGAR;
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $adminOutput = $this->executeTemplate($code, ['role' => 'admin']);
+        $this->assertStringContainsString('<span>Admin</span>', $adminOutput);
+        $this->assertStringNotContainsString('<span>User</span>', $adminOutput);
+        $this->assertStringNotContainsString('<span>Guest</span>', $adminOutput);
+
+        $userOutput = $this->executeTemplate($code, ['role' => 'user']);
+        $this->assertStringContainsString('<span>User</span>', $userOutput);
+        $this->assertStringNotContainsString('<span>Admin</span>', $userOutput);
+
+        $defaultOutput = $this->executeTemplate($code, ['role' => 'other']);
+        $this->assertStringContainsString('<span>Guest</span>', $defaultOutput);
+        $this->assertStringNotContainsString('<span>Admin</span>', $defaultOutput);
+    }
+
+    public function testSwitchWithNonCaseChildrenExcludesThemFromOutput(): void
+    {
+        $this->registry->register('switch', new SwitchDirective());
+        $this->registry->register('case', new SwitchDirective());
+        $this->registry->register('default', new SwitchDirective());
+
+        $template = <<<'SUGAR'
+<div s:switch="$iconKey">
+    <div>Non-case content</div>
+    <svg s:case="'cakephp'">CakePHP</svg>
+    <svg s:default>Generic</svg>
+</div>
+SUGAR;
+
+        $ast = $this->parser->parse($template);
+        $transformed = $this->pipeline->execute($ast, $this->createContext());
+        $code = $this->generator->generate($transformed);
+
+        $this->assertStringContainsString('switch ($iconKey):', $code);
+        $this->assertStringContainsString("case 'cakephp':", $code);
+
+        $output = $this->executeTemplate($code, ['iconKey' => 'cakephp']);
+        $this->assertStringContainsString('CakePHP', $output);
+        $this->assertStringNotContainsString('Non-case content', $output);
     }
 }
