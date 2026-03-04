@@ -6,11 +6,13 @@ namespace Sugar\Tests\Integration;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Config\SugarConfig;
 use Sugar\Tests\Helper\Trait\CompilerTestTrait;
+use Sugar\Tests\Helper\Trait\EngineTestTrait;
 use Sugar\Tests\Helper\Trait\ExecuteTemplateTrait;
 
 final class FragmentIntegrationTest extends TestCase
 {
     use CompilerTestTrait;
+    use EngineTestTrait;
     use ExecuteTemplateTrait;
 
     protected function setUp(): void
@@ -171,5 +173,74 @@ final class FragmentIntegrationTest extends TestCase
         $this->assertStringContainsString('<li>1</li>', $output);
         $this->assertStringContainsString('<li>2</li>', $output);
         $this->assertStringNotContainsString('s-fragment', $output);
+    }
+
+    public function testForeachWithIncludeAndWith(): void
+    {
+        // <s-template s:foreach s:include s:with /> should include the partial once per iteration,
+        // passing per-iteration variables via s:with.
+        $engine = $this->createStringEngine(
+            templates: [
+                'list.sugar.php' => '<s-template
+                    s:foreach="$posts as $post"
+                    s:include="partials/post-teaser.sugar.php"
+                    s:with="[\'post\' => $post]"
+                />',
+                'partials/post-teaser.sugar.php' => '<article><?= $post->title ?></article>',
+            ],
+        );
+
+        $posts = [
+            (object)['title' => 'Post A'],
+            (object)['title' => 'Post B'],
+            (object)['title' => 'Post C'],
+        ];
+
+        $result = $engine->render('list.sugar.php', ['posts' => $posts]);
+
+        $this->assertStringContainsString('<article>Post A</article>', $result);
+        $this->assertStringContainsString('<article>Post B</article>', $result);
+        $this->assertStringContainsString('<article>Post C</article>', $result);
+    }
+
+    public function testIfWithIncludeAndWith(): void
+    {
+        // <s-template s:if s:include s:with /> should conditionally include the partial.
+        $engine = $this->createStringEngine(
+            templates: [
+                'page.sugar.php' => '<s-template
+                    s:if="$show"
+                    s:include="partials/header.sugar.php"
+                    s:with="[\'title\' => $title]"
+                />',
+                'partials/header.sugar.php' => '<header><?= $title ?></header>',
+            ],
+        );
+
+        $result = $engine->render('page.sugar.php', ['show' => true, 'title' => 'Hello']);
+        $this->assertStringContainsString('<header>Hello</header>', $result);
+
+        $result = $engine->render('page.sugar.php', ['show' => false, 'title' => 'Hello']);
+        $this->assertStringNotContainsString('<header>', $result);
+    }
+
+    public function testForeachWithIncludeUsesCurrentScopeWhenNoWith(): void
+    {
+        // Without s:with the partial receives all currently defined variables (get_defined_vars()).
+        $engine = $this->createStringEngine(
+            templates: [
+                'list.sugar.php' => '<s-template
+                    s:foreach="$items as $item"
+                    s:include="partials/item.sugar.php"
+                />',
+                'partials/item.sugar.php' => '<li><?= $item ?></li>',
+            ],
+        );
+
+        $result = $engine->render('list.sugar.php', ['items' => ['One', 'Two', 'Three']]);
+
+        $this->assertStringContainsString('<li>One</li>', $result);
+        $this->assertStringContainsString('<li>Two</li>', $result);
+        $this->assertStringContainsString('<li>Three</li>', $result);
     }
 }
