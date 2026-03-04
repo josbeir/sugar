@@ -250,8 +250,7 @@ final class Lexer
         if ($this->lookingAt('/>')) {
             $selfClose = true;
             $this->tokens[] = new Token(TokenType::TagClose, '/>', $this->line, $this->column);
-            $this->advance();
-            $this->advance();
+            $this->advance(2);
         } elseif ($this->pos < $this->length && $this->charAt($this->pos) === '>') {
             // Check if this is a known self-closing (void) element
             if ($tagName !== '' && HtmlTagHelper::isSelfClosing($tagName, $this->config->selfClosingTags)) {
@@ -401,8 +400,7 @@ final class Lexer
                 && ($this->pos + 1) < $this->length
                 && $this->charAt($this->pos + 1) === $quote
             ) {
-                $this->advance(); // skip backslash
-                $this->advance(); // skip escaped quote
+                $this->advance(2); // skip backslash + escaped quote
                 continue;
             }
 
@@ -453,30 +451,29 @@ final class Lexer
     /**
      * Scan a PHP short echo output block.
      */
+
+    /**
+     * Scan a PHP short echo output block.
+     *
+     * Uses the same context-aware close-tag scan as `scanPhpBlock()` so that
+     * a `?>` sequence inside a quoted string (e.g. `<?= "a ?> b" ?>`) does
+     * not prematurely terminate the expression.
+     */
     private function scanPhpOutput(): void
     {
         $this->tokens[] = new Token(TokenType::PhpOutputOpen, '<?=', $this->line, $this->column);
-        $this->advance(); // <
-        $this->advance(); // ?
-        $this->advance(); // =
+        $this->advance(3); // <?=
 
         $this->skipWhitespace();
         $exprStart = $this->pos;
         $exprLine = $this->line;
         $exprCol = $this->column;
 
-        // Scan until PHP close tag
-        while ($this->pos < $this->length) {
-            if ($this->lookingAt('?>')) {
-                break;
-            }
-
-            $this->advance();
-        }
+        // Scan until close tag or end-of-file, respecting strings
+        $this->scanPhpCodeUntilClose();
 
         // Trim trailing whitespace from expression
-        $exprEnd = $this->pos;
-        $expr = substr($this->source, $exprStart, $exprEnd - $exprStart);
+        $expr = substr($this->source, $exprStart, $this->pos - $exprStart);
         $expr = rtrim($expr);
 
         if ($expr !== '') {
@@ -485,13 +482,19 @@ final class Lexer
 
         if ($this->lookingAt('?>')) {
             $this->tokens[] = new Token(TokenType::PhpClose, '?>', $this->line, $this->column);
-            $this->advance();
-            $this->advance();
+            $this->advance(2);
         }
     }
 
     /**
      * Scan a PHP code block (full open tag).
+     *
+     * To match PHP lexer semantics when locating the closing tag, this method
+     * is context-aware: it tracks block comments, single-line comments
+     * (`//`, `#`), and string literals so that a close-tag sequence inside
+     * those constructs is NOT treated as the closing tag. This allows common
+     * template patterns such as commenting out blocks of template code to
+     * work without prematurely terminating the PHP block.
      */
     private function scanPhpBlock(): void
     {
@@ -506,24 +509,15 @@ final class Lexer
         }
 
         $this->tokens[] = new Token(TokenType::PhpBlockOpen, $openTag, $startLine, $startCol);
-        $openTagLen = strlen($openTag);
-        for ($i = 0; $i < $openTagLen; $i++) {
-            $this->advance();
-        }
+        $this->advance(strlen($openTag));
 
         $this->skipWhitespace();
         $codeStart = $this->pos;
         $codeLine = $this->line;
         $codeCol = $this->column;
 
-        // Scan until close tag or end-of-file
-        while ($this->pos < $this->length) {
-            if ($this->lookingAt('?>')) {
-                break;
-            }
-
-            $this->advance();
-        }
+        // Scan until close tag or end-of-file, respecting comments and strings
+        $this->scanPhpCodeUntilClose();
 
         $code = substr($this->source, $codeStart, $this->pos - $codeStart);
         $code = rtrim($code);
@@ -534,8 +528,231 @@ final class Lexer
 
         if ($this->lookingAt('?>')) {
             $this->tokens[] = new Token(TokenType::PhpClose, '?>', $this->line, $this->column);
+            $this->advance(2);
+        }
+    }
+
+    /**
+     * Advance through PHP code until an unquoted, uncommented close tag or EOF.
+     *
+     * Handles block comments (including nested close-tag sequences),
+     * single-line comments (`//` and `#`), single and double-quoted
+     * string literals with backslash escapes, and heredoc/nowdoc syntax.
+     */
+    private function scanPhpCodeUntilClose(): void
+    {
+        while ($this->pos < $this->length) {
+            $ch = $this->charAt($this->pos);
+
+            // Unquoted close tag — we're done
+            if ($this->lookingAt('?>')) {
+                return;
+            }
+
+            // Block comment
+            if ($ch === '/' && ($this->pos + 1 < $this->length) && $this->charAt($this->pos + 1) === '*') {
+                $this->skipBlockComment();
+
+                continue;
+            }
+
+            // Single-line comment: // or #
+            // Note: #[ is a PHP 8 attribute, not a comment — exclude it
+            if (
+                ($ch === '/' && ($this->pos + 1 < $this->length) && $this->charAt($this->pos + 1) === '/')
+                || ($ch === '#' && ($this->pos + 1 >= $this->length || $this->charAt($this->pos + 1) !== '['))
+            ) {
+                $this->skipLineComment();
+
+                continue;
+            }
+
+            // String literals
+            if ($ch === "'" || $ch === '"') {
+                $this->skipPhpString($ch);
+
+                continue;
+            }
+
+            // Heredoc/nowdoc
+            if ($ch === '<' && $this->lookingAt('<<<')) {
+                $this->skipHeredoc();
+
+                continue;
+            }
+
             $this->advance();
+        }
+    }
+
+    /**
+     * Skip a PHP block comment including its contents.
+     *
+     * Advances past the entire block comment without treating a close-tag
+     * sequence inside as a PHP close tag.
+     */
+    private function skipBlockComment(): void
+    {
+        // Skip opening /*
+        $this->advance(2);
+
+        while ($this->pos < $this->length) {
+            $ch = $this->charAt($this->pos);
+            $next = $this->pos + 1 < $this->length ? $this->charAt($this->pos + 1) : '';
+
+            if ($ch === '*' && $next === '/') {
+                $this->advance(2); // */
+
+                return;
+            }
+
             $this->advance();
+        }
+    }
+
+    /**
+     * Skip a single-line PHP comment (// or #) to end of line.
+     *
+     * Stops at newline or a close-tag sequence (which terminates
+     * single-line comments in PHP).
+     */
+    private function skipLineComment(): void
+    {
+        while ($this->pos < $this->length) {
+            $ch = $this->charAt($this->pos);
+
+            if ($ch === "\n") {
+                $this->advance();
+
+                return;
+            }
+
+            // Close tag terminates single-line comments in PHP
+            if ($this->lookingAt('?>')) {
+                return;
+            }
+
+            $this->advance();
+        }
+    }
+
+    /**
+     * Skip a PHP string literal (single or double quoted).
+     *
+     * Handles backslash escapes so that `\'` or `\"` don't end the string.
+     */
+    private function skipPhpString(string $quote): void
+    {
+        $this->advance(); // skip opening quote
+
+        while ($this->pos < $this->length) {
+            $ch = $this->charAt($this->pos);
+
+            if ($ch === '\\') {
+                $this->advance(2); // skip backslash + escaped character
+
+                continue;
+            }
+
+            if ($ch === $quote) {
+                $this->advance(); // skip closing quote
+
+                return;
+            }
+
+            $this->advance();
+        }
+    }
+
+    /**
+     * Skip a heredoc or nowdoc literal.
+     *
+     * Advances through `<<<LABEL\n...\nLABEL` or `<<<'LABEL'\n...\nLABEL`,
+     * stopping just after the closing label. The trailing `;` and newline,
+     * if present, are left to the caller (the outer `scanPhpCodeUntilClose` loop).
+     */
+    private function skipHeredoc(): void
+    {
+        // Skip <<<
+        $this->advance(3);
+
+        $this->skipWhitespace();
+
+        // Detect nowdoc (<<<'LABEL') vs heredoc (<<<LABEL or <<<"LABEL")
+        $quoteChar = '';
+        if ($this->pos < $this->length && ($this->charAt($this->pos) === "'" || $this->charAt($this->pos) === '"')) {
+            $quoteChar = $this->charAt($this->pos);
+            $this->advance();
+        }
+
+        // Read the label
+        $labelStart = $this->pos;
+        while (
+            $this->pos < $this->length
+            && ($this->isAlphanumeric($this->charAt($this->pos)) || $this->charAt($this->pos) === '_')
+        ) {
+            $this->advance();
+        }
+
+        $label = substr($this->source, $labelStart, $this->pos - $labelStart);
+
+        if ($label === '') {
+            return; // malformed, bail
+        }
+
+        $labelLen = strlen($label);
+
+        // Skip closing quote if present
+        if (
+            $quoteChar !== ''
+            && $this->pos < $this->length
+            && $this->charAt($this->pos) === $quoteChar
+        ) {
+            $this->advance();
+        }
+
+        // Skip to end of line
+        while ($this->pos < $this->length && $this->charAt($this->pos) !== "\n") {
+            $this->advance();
+        }
+
+        if ($this->pos < $this->length) {
+            $this->advance(); // skip newline
+        }
+
+        // Scan until closing label at start of line (PHP 7.3+ allows indented)
+        while ($this->pos < $this->length) {
+            // Skip optional leading whitespace
+            while (
+                $this->pos < $this->length
+                && ($this->charAt($this->pos) === ' ' || $this->charAt($this->pos) === "\t")
+            ) {
+                $this->advance();
+            }
+
+            if ($this->lookingAt($label)) {
+                $afterLabel = $this->pos + $labelLen;
+                if (
+                    $afterLabel >= $this->length
+                    || $this->charAt($afterLabel) === ';'
+                    || $this->charAt($afterLabel) === "\n"
+                    || $this->charAt($afterLabel) === "\r"
+                ) {
+                    // Found closing label — advance past it
+                    $this->advance($labelLen);
+
+                    return;
+                }
+            }
+
+            // Not the closing label — skip to end of line
+            while ($this->pos < $this->length && $this->charAt($this->pos) !== "\n") {
+                $this->advance();
+            }
+
+            if ($this->pos < $this->length) {
+                $this->advance(); // skip newline
+            }
         }
     }
 
@@ -551,16 +768,12 @@ final class Lexer
         $startCol = $this->column;
 
         // Skip past <!--
-        for ($i = 0; $i < 4; $i++) {
-            $this->advance();
-        }
+        $this->advance(4);
 
         // Find -->
         while ($this->pos < $this->length) {
             if ($this->lookingAt('-->')) {
-                $this->advance();
-                $this->advance();
-                $this->advance();
+                $this->advance(3);
                 break;
             }
 
@@ -589,9 +802,7 @@ final class Lexer
             // Find ]]>
             while ($this->pos < $this->length) {
                 if ($this->lookingAt(']]>')) {
-                    $this->advance();
-                    $this->advance();
-                    $this->advance();
+                    $this->advance(3);
                     break;
                 }
 
@@ -671,14 +882,12 @@ final class Lexer
         $startCol = $this->column;
 
         // Advance past <?
-        $this->advance();
-        $this->advance();
+        $this->advance(2);
 
         // Find the closing PI terminator
         while ($this->pos < $this->length) {
             if ($this->lookingAt('?>')) {
-                $this->advance();
-                $this->advance();
+                $this->advance(2);
                 break;
             }
 
@@ -1238,11 +1447,13 @@ final class Lexer
     }
 
     /**
-     * Advance position by one character, tracking line/column.
+     * Advance position by one or more characters, tracking line/column.
+     *
+     * @param int $count Number of characters to advance (defaults to 1)
      */
-    private function advance(): void
+    private function advance(int $count = 1): void
     {
-        if ($this->pos < $this->length) {
+        for ($i = 0; $i < $count && $this->pos < $this->length; $i++) {
             if ($this->source[$this->pos] === "\n") {
                 $this->line++;
                 $this->column = 1;

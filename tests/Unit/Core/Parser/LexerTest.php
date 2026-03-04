@@ -178,6 +178,173 @@ final class LexerTest extends TestCase
         $this->assertNotContains('s:raw', $values);
     }
 
+    public function testPhpBlockCommentContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        // The PHP close tag inside the block comment must NOT terminate the PHP block
+        $source = "<?php /*\n\$tags = (array)\$page->taxonomies; ?> still in comment\n*/ ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens, 'Close tag inside block comment should produce exactly one PhpCode token');
+        $this->assertStringContainsString('/*', $codeTokens[0]->value);
+        $this->assertStringContainsString('*/', $codeTokens[0]->value);
+        $this->assertStringContainsString('?>', $codeTokens[0]->value);
+    }
+
+    public function testPhpBlockCommentWithNestedPhpTagsIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php /*\n<?php \$tags = []; ?>\n<div>html</div>\n*/ ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens, 'Nested PHP tags inside block comment should not split the token');
+        $this->assertStringContainsString('/*', $codeTokens[0]->value);
+        $this->assertStringContainsString('*/', $codeTokens[0]->value);
+    }
+
+    public function testPhpSingleLineCommentCloseTagTerminatesComment(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        // In PHP, single-line comments ARE terminated by close tags
+        $source = '<?php // comment ?><div>html</div>';
+
+        $tokens = $lexer->tokenize($source);
+        $types = $this->tokenTypes($tokens);
+        $values = $this->tokenValues($tokens);
+
+        $this->assertContains(TokenType::PhpClose, $types);
+        $this->assertContains(TokenType::Text, $types);
+        $this->assertContains('html', $values);
+    }
+
+    public function testPhpStringLiteralContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $x = "some ?> text"; ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString('"some ?> text"', $codeTokens[0]->value);
+    }
+
+    public function testPhpSingleQuotedStringContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php \$x = 'some ?> text'; ?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString("'some ?> text'", $codeTokens[0]->value);
+    }
+
+    public function testPhpStringWithEscapedQuotesAndCloseTag(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $x = "val \\"?> still"; ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString('still', $codeTokens[0]->value);
+    }
+
+    public function testPhpCloseTagOutsideCommentOrStringStillTerminates(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?php $a = 1; ?>HTML';
+
+        $tokens = $lexer->tokenize($source);
+        $types = $this->tokenTypes($tokens);
+
+        $this->assertContains(TokenType::PhpClose, $types);
+        $this->assertContains(TokenType::Text, $types);
+    }
+
+    public function testPhpAttributeSyntaxIsNotTreatedAsComment(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        // #[Attribute] is a PHP 8+ attribute, NOT a comment; the real close tag follows the declaration
+        $source = '<?php #[MyAttribute] function foo(): void {} ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens);
+        $this->assertStringContainsString('#[MyAttribute]', $codeTokens[0]->value);
+    }
+
+    public function testPhpHashCommentWithoutBracketIsStillTreatedAsComment(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        // Plain # (without [) must still be treated as a single-line comment
+        $source = '<?php # a comment ?><p>after</p>';
+
+        $tokens = $lexer->tokenize($source);
+        $types = $this->tokenTypes($tokens);
+        $values = $this->tokenValues($tokens);
+
+        $this->assertContains(TokenType::PhpClose, $types);
+        $this->assertContains('after', $values);
+    }
+
+    public function testPhpHeredocWithCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = "<?php \$x = <<<EOT\nsome ?> content\nEOT;\n?>";
+
+        $tokens = $lexer->tokenize($source);
+        $codeTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpCode,
+        ));
+
+        $this->assertCount(1, $codeTokens, 'A close tag inside a heredoc should not split the token');
+        $this->assertStringContainsString('<<<EOT', $codeTokens[0]->value);
+        $this->assertStringContainsString('EOT;', $codeTokens[0]->value);
+    }
+
+    public function testPhpOutputExpressionContainingCloseTagIsKeptIntact(): void
+    {
+        $lexer = new Lexer(new SugarConfig());
+        $source = '<?= "some ?> value" ?>';
+
+        $tokens = $lexer->tokenize($source);
+        $expressionTokens = array_values(array_filter(
+            $tokens,
+            static fn(Token $t): bool => $t->type === TokenType::PhpExpression,
+        ));
+
+        $this->assertCount(1, $expressionTokens, 'Close tag inside string in short echo should not split the expression');
+        $this->assertStringContainsString('"some ?> value"', $expressionTokens[0]->value);
+    }
+
     /**
      * @param array<Token> $tokens
      * @return array<TokenType>

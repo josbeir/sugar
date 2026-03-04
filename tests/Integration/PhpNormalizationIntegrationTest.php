@@ -243,4 +243,81 @@ SUGAR;
         $output = $engine->render('page.sugar.php');
         $this->assertStringContainsString('["a","b"]', $output);
     }
+
+    public function testBlockCommentContainingCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        // The PHP close tag inside the comment must not terminate the PHP block
+        $template = "<?php /*\n\$tags = (array)\$page->taxonomies; ?> still in comment\n*/ ?>\n<div>visible</div>";
+
+        $compiled = $this->compiler->compile($template, 'comment-test.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('<div>visible</div>', $output);
+    }
+
+    public function testBlockCommentWithCloseTagSequenceCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = "<?php /*\n<?php \$unused = 1; ?>\n<div>commented out</div>\n*/ ?>\n<p>after</p>";
+
+        $compiled = $this->compiler->compile($template, 'nested-comment.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('<p>after</p>', $output);
+        $this->assertStringNotContainsString('commented out', $output);
+    }
+
+    public function testStringLiteralContainingCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = '<?php $x = "contains ?> sequence"; ?><span><?= $x ?></span>';
+
+        $compiled = $this->compiler->compile($template, 'string-closetag.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('contains ?&gt; sequence', $output);
+    }
+
+    public function testShortEchoExpressionContainingCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = '<?= "value ?> end" ?>';
+
+        $compiled = $this->compiler->compile($template, 'echo-closetag.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('value ?&gt; end', $output);
+    }
+
+    public function testHeredocBodyWithCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = "<?php \$msg = <<<EOT\nsome ?> content\nEOT;\n?>\n<p><?= \$msg ?></p>";
+
+        $compiled = $this->compiler->compile($template, 'heredoc-closetag.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('some ?&gt; content', $output);
+    }
 }
