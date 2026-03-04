@@ -453,6 +453,14 @@ final class Lexer
     /**
      * Scan a PHP short echo output block.
      */
+
+    /**
+     * Scan a PHP short echo output block.
+     *
+     * Uses the same context-aware close-tag scan as `scanPhpBlock()` so that
+     * a `?>` sequence inside a quoted string (e.g. `<?= "a ?> b" ?>`) does
+     * not prematurely terminate the expression.
+     */
     private function scanPhpOutput(): void
     {
         $this->tokens[] = new Token(TokenType::PhpOutputOpen, '<?=', $this->line, $this->column);
@@ -465,18 +473,11 @@ final class Lexer
         $exprLine = $this->line;
         $exprCol = $this->column;
 
-        // Scan until PHP close tag
-        while ($this->pos < $this->length) {
-            if ($this->lookingAt('?>')) {
-                break;
-            }
-
-            $this->advance();
-        }
+        // Scan until close tag or end-of-file, respecting strings
+        $this->scanPhpCodeUntilClose();
 
         // Trim trailing whitespace from expression
-        $exprEnd = $this->pos;
-        $expr = substr($this->source, $exprStart, $exprEnd - $exprStart);
+        $expr = substr($this->source, $exprStart, $this->pos - $exprStart);
         $expr = rtrim($expr);
 
         if ($expr !== '') {
@@ -493,12 +494,12 @@ final class Lexer
     /**
      * Scan a PHP code block (full open tag).
      *
-     * Unlike the standard PHP tokenizer, this method is context-aware: it
-     * tracks block comments, single-line comments (`//`, `#`), and string
-     * literals so that a close-tag sequence inside those constructs is NOT
-     * treated as the closing tag. This allows common template patterns such
-     * as commenting out blocks of template code to work without prematurely
-     * terminating the PHP block.
+     * To match PHP lexer semantics when locating the closing tag, this method
+     * is context-aware: it tracks block comments, single-line comments
+     * (`//`, `#`), and string literals so that a close-tag sequence inside
+     * those constructs is NOT treated as the closing tag. This allows common
+     * template patterns such as commenting out blocks of template code to
+     * work without prematurely terminating the PHP block.
      */
     private function scanPhpBlock(): void
     {
@@ -565,9 +566,10 @@ final class Lexer
             }
 
             // Single-line comment: // or #
+            // Note: #[ is a PHP 8 attribute, not a comment — exclude it
             if (
                 ($ch === '/' && ($this->pos + 1 < $this->length) && $this->charAt($this->pos + 1) === '/')
-                || $ch === '#'
+                || ($ch === '#' && ($this->pos + 1 >= $this->length || $this->charAt($this->pos + 1) !== '['))
             ) {
                 $this->skipLineComment();
 
@@ -677,7 +679,9 @@ final class Lexer
     /**
      * Skip a heredoc or nowdoc literal.
      *
-     * Advances past `<<<LABEL\n...\nLABEL;` or `<<<'LABEL'\n...\nLABEL;`.
+     * Advances through `<<<LABEL\n...\nLABEL` or `<<<'LABEL'\n...\nLABEL`,
+     * stopping just after the closing label. The trailing `;` and newline,
+     * if present, are left to the caller (the outer `scanPhpCodeUntilClose` loop).
      */
     private function skipHeredoc(): void
     {

@@ -244,14 +244,15 @@ SUGAR;
         $this->assertStringContainsString('["a","b"]', $output);
     }
 
-    public function testBlockCommentWithNestedPhpTagsCompilesCorrectly(): void
+    public function testBlockCommentContainingCloseTagCompilesCorrectly(): void
     {
         $this->setUpCompilerWithStringLoader(
             templates: [],
             config: new SugarConfig(),
         );
 
-        $template = "<?php /*\n\$tags = (array)\$page->taxonomies['tags'] ?? [];\n*/ ?>\n<div>visible</div>";
+        // The PHP close tag inside the comment must not terminate the PHP block
+        $template = "<?php /*\n\$tags = (array)\$page->taxonomies; ?> still in comment\n*/ ?>\n<div>visible</div>";
 
         $compiled = $this->compiler->compile($template, 'comment-test.sugar.php');
         $output = $this->executeTemplate($compiled);
@@ -288,5 +289,35 @@ SUGAR;
         $output = $this->executeTemplate($compiled);
 
         $this->assertStringContainsString('contains ?&gt; sequence', $output);
+    }
+
+    public function testShortEchoExpressionContainingCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = '<?= "value ?> end" ?>';
+
+        $compiled = $this->compiler->compile($template, 'echo-closetag.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('value ?&gt; end', $output);
+    }
+
+    public function testHeredocBodyWithCloseTagCompilesCorrectly(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+        );
+
+        $template = "<?php \$msg = <<<EOT\nsome ?> content\nEOT;\n?>\n<p><?= \$msg ?></p>";
+
+        $compiled = $this->compiler->compile($template, 'heredoc-closetag.sugar.php');
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('some ?&gt; content', $output);
     }
 }
