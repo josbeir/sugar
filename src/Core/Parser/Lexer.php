@@ -250,8 +250,7 @@ final class Lexer
         if ($this->lookingAt('/>')) {
             $selfClose = true;
             $this->tokens[] = new Token(TokenType::TagClose, '/>', $this->line, $this->column);
-            $this->advance();
-            $this->advance();
+            $this->advance(2);
         } elseif ($this->pos < $this->length && $this->charAt($this->pos) === '>') {
             // Check if this is a known self-closing (void) element
             if ($tagName !== '' && HtmlTagHelper::isSelfClosing($tagName, $this->config->selfClosingTags)) {
@@ -401,8 +400,7 @@ final class Lexer
                 && ($this->pos + 1) < $this->length
                 && $this->charAt($this->pos + 1) === $quote
             ) {
-                $this->advance(); // skip backslash
-                $this->advance(); // skip escaped quote
+                $this->advance(2); // skip backslash + escaped quote
                 continue;
             }
 
@@ -464,9 +462,7 @@ final class Lexer
     private function scanPhpOutput(): void
     {
         $this->tokens[] = new Token(TokenType::PhpOutputOpen, '<?=', $this->line, $this->column);
-        $this->advance(); // <
-        $this->advance(); // ?
-        $this->advance(); // =
+        $this->advance(3); // <?=
 
         $this->skipWhitespace();
         $exprStart = $this->pos;
@@ -486,8 +482,7 @@ final class Lexer
 
         if ($this->lookingAt('?>')) {
             $this->tokens[] = new Token(TokenType::PhpClose, '?>', $this->line, $this->column);
-            $this->advance();
-            $this->advance();
+            $this->advance(2);
         }
     }
 
@@ -514,10 +509,7 @@ final class Lexer
         }
 
         $this->tokens[] = new Token(TokenType::PhpBlockOpen, $openTag, $startLine, $startCol);
-        $openTagLen = strlen($openTag);
-        for ($i = 0; $i < $openTagLen; $i++) {
-            $this->advance();
-        }
+        $this->advance(strlen($openTag));
 
         $this->skipWhitespace();
         $codeStart = $this->pos;
@@ -536,8 +528,7 @@ final class Lexer
 
         if ($this->lookingAt('?>')) {
             $this->tokens[] = new Token(TokenType::PhpClose, '?>', $this->line, $this->column);
-            $this->advance();
-            $this->advance();
+            $this->advance(2);
         }
     }
 
@@ -603,16 +594,14 @@ final class Lexer
     private function skipBlockComment(): void
     {
         // Skip opening /*
-        $this->advance();
-        $this->advance();
+        $this->advance(2);
 
         while ($this->pos < $this->length) {
             $ch = $this->charAt($this->pos);
             $next = $this->pos + 1 < $this->length ? $this->charAt($this->pos + 1) : '';
 
             if ($ch === '*' && $next === '/') {
-                $this->advance(); // *
-                $this->advance(); // /
+                $this->advance(2); // */
 
                 return;
             }
@@ -660,8 +649,7 @@ final class Lexer
             $ch = $this->charAt($this->pos);
 
             if ($ch === '\\') {
-                $this->advance(); // skip backslash
-                $this->advance(); // skip escaped character
+                $this->advance(2); // skip backslash + escaped character
 
                 continue;
             }
@@ -686,9 +674,7 @@ final class Lexer
     private function skipHeredoc(): void
     {
         // Skip <<<
-        $this->advance();
-        $this->advance();
-        $this->advance();
+        $this->advance(3);
 
         $this->skipWhitespace();
 
@@ -753,9 +739,7 @@ final class Lexer
                     || $this->charAt($afterLabel) === "\r"
                 ) {
                     // Found closing label — advance past it
-                    for ($i = 0; $i < $labelLen; $i++) {
-                        $this->advance();
-                    }
+                    $this->advance($labelLen);
 
                     return;
                 }
@@ -784,16 +768,12 @@ final class Lexer
         $startCol = $this->column;
 
         // Skip past <!--
-        for ($i = 0; $i < 4; $i++) {
-            $this->advance();
-        }
+        $this->advance(4);
 
         // Find -->
         while ($this->pos < $this->length) {
             if ($this->lookingAt('-->')) {
-                $this->advance();
-                $this->advance();
-                $this->advance();
+                $this->advance(3);
                 break;
             }
 
@@ -822,9 +802,7 @@ final class Lexer
             // Find ]]>
             while ($this->pos < $this->length) {
                 if ($this->lookingAt(']]>')) {
-                    $this->advance();
-                    $this->advance();
-                    $this->advance();
+                    $this->advance(3);
                     break;
                 }
 
@@ -904,14 +882,12 @@ final class Lexer
         $startCol = $this->column;
 
         // Advance past <?
-        $this->advance();
-        $this->advance();
+        $this->advance(2);
 
         // Find the closing PI terminator
         while ($this->pos < $this->length) {
             if ($this->lookingAt('?>')) {
-                $this->advance();
-                $this->advance();
+                $this->advance(2);
                 break;
             }
 
@@ -1471,11 +1447,13 @@ final class Lexer
     }
 
     /**
-     * Advance position by one character, tracking line/column.
+     * Advance position by one or more characters, tracking line/column.
+     *
+     * @param int $count Number of characters to advance (defaults to 1)
      */
-    private function advance(): void
+    private function advance(int $count = 1): void
     {
-        if ($this->pos < $this->length) {
+        for ($i = 0; $i < $count && $this->pos < $this->length; $i++) {
             if ($this->source[$this->pos] === "\n") {
                 $this->line++;
                 $this->column = 1;
