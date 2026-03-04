@@ -225,15 +225,20 @@ readonly class SwitchDirective implements DirectiveInterface
     }
 
     /**
-     * Collect effective children by unwrapping wrapper ElementNodes
+     * Collect effective children by unwrapping the single wrapper ElementNode
      *
-     * After directive extraction, the switch wrapper element becomes an ElementNode
-     * child of the switch DirectiveNode. This method unwraps those wrappers so
-     * case/default nodes (or their compiled RawPhpNode equivalents) can be found
-     * regardless of nesting depth.
+     * After directive extraction, the original host element (e.g. `<div s:switch>`)
+     * becomes a single ElementNode child of the switch DirectiveNode. This method
+     * unwraps that one level so that the case/default DirectiveNodes (or their
+     * already-compiled RawPhpNode equivalents) can be found directly.
+     *
+     * Only one level of ElementNode wrapping is unwrapped, which is exactly what
+     * the pipeline produces. Deeper ElementNodes (e.g. the host elements of
+     * individual s:case or s:default children) are intentionally left in place
+     * as content nodes within each case body.
      *
      * @param array<\Sugar\Core\Ast\Node> $children Direct children of the switch DirectiveNode
-     * @return array<\Sugar\Core\Ast\Node> Flattened children with wrappers unwrapped
+     * @return array<\Sugar\Core\Ast\Node> Children with the single wrapper ElementNode unwrapped
      */
     protected function collectEffectiveChildren(array $children): array
     {

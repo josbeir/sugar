@@ -411,6 +411,7 @@ TEMPLATE;
                 $hasNonCaseText = true;
             }
         }
+
         $this->assertFalse($hasNonCaseText, 'Non-case content should be excluded from switch output');
     }
 
