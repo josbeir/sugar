@@ -843,4 +843,170 @@ final class DirectiveExtractionPassTest extends MiddlewarePassTestCase
         $this->assertInstanceOf(ElementNode::class, $result->children[0]);
         $this->assertCount(1, $result->children[0]->attributes);
     }
+
+    public function testFragmentWithForeachAndIncludeProducesInnerFragment(): void
+    {
+        // <s-template s:foreach="$posts as $post" s:include="partial.sugar.php" />
+        // Expected AST: DirectiveNode[foreach] -> FragmentNode[s:include]
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:foreach', '$posts as $post'),
+                $this->attribute('s:include', 'partial.sugar.php'),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        // Root: DirectiveNode[foreach]
+        $this->assertCount(1, $result->children);
+        $controlNode = $result->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $controlNode);
+        $this->assertSame('foreach', $controlNode->name);
+        $this->assertSame('$posts as $post', $controlNode->expression);
+
+        // Child: inner FragmentNode carrying s:include
+        $this->assertCount(1, $controlNode->children);
+        $innerFragment = $controlNode->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $innerFragment);
+        $this->assertCount(1, $innerFragment->attributes);
+        $this->assertSame('s:include', $innerFragment->attributes[0]->name);
+        $this->assertSame('partial.sugar.php', $innerFragment->attributes[0]->value->static);
+    }
+
+    public function testFragmentWithForeachIncludeAndWithProducesInnerFragmentWithBothAttrs(): void
+    {
+        // <s-template s:foreach="$posts as $post" s:include="partial.sugar.php" s:with="['post' => $post]" />
+        // Expected: DirectiveNode[foreach] -> FragmentNode[s:include, s:with]
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:foreach', '$posts as $post'),
+                $this->attribute('s:include', 'partial.sugar.php'),
+                $this->attribute('s:with', "['post' => \$post]"),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $controlNode = $result->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $controlNode);
+        $this->assertSame('foreach', $controlNode->name);
+
+        $innerFragment = $controlNode->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $innerFragment);
+
+        // Both s:include and s:with must be on the inner fragment
+        $innerAttrNames = array_map(static fn(AttributeNode $a) => $a->name, $innerFragment->attributes);
+        $this->assertContains('s:include', $innerAttrNames);
+        $this->assertContains('s:with', $innerAttrNames);
+        $this->assertCount(2, $innerFragment->attributes);
+    }
+
+    public function testFragmentWithIfAndIncludeProducesInnerFragment(): void
+    {
+        // <s-template s:if="$show" s:include="partial.sugar.php" s:with="['x' => 1]" />
+        // Expected: DirectiveNode[if] -> FragmentNode[s:include, s:with]
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:if', '$show'),
+                $this->attribute('s:include', 'partial.sugar.php'),
+                $this->attribute('s:with', "['x' => 1]"),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        $controlNode = $result->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $controlNode);
+        $this->assertSame('if', $controlNode->name);
+
+        $innerFragment = $controlNode->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $innerFragment);
+        $innerAttrNames = array_map(static fn(AttributeNode $a) => $a->name, $innerFragment->attributes);
+        $this->assertContains('s:include', $innerAttrNames);
+        $this->assertContains('s:with', $innerAttrNames);
+    }
+
+    public function testFragmentWithForeachBlockAndIncludeKeepsBlockOuterAndIncludeInner(): void
+    {
+        // <s-template s:foreach="$items as $item" s:block="list" s:include="partial.sugar.php" />
+        // s:block must stay OUTER (wrapping the foreach), s:include must go INNER (inside foreach body).
+        // Expected: FragmentNode[s:block] -> DirectiveNode[foreach] -> FragmentNode[s:include]
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:foreach', '$items as $item'),
+                $this->attribute('s:block', 'list'),
+                $this->attribute('s:include', 'partial.sugar.php'),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        // Outer: FragmentNode carrying s:block
+        $this->assertCount(1, $result->children);
+        $outerFragment = $result->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $outerFragment);
+        $outerAttrNames = array_map(static fn(AttributeNode $a) => $a->name, $outerFragment->attributes);
+        $this->assertContains('s:block', $outerAttrNames);
+
+        // Middle: DirectiveNode[foreach]
+        $this->assertCount(1, $outerFragment->children);
+        $controlNode = $outerFragment->children[0];
+        $this->assertInstanceOf(DirectiveNode::class, $controlNode);
+        $this->assertSame('foreach', $controlNode->name);
+
+        // Inner: FragmentNode[s:include]
+        $this->assertCount(1, $controlNode->children);
+        $innerFragment = $controlNode->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $innerFragment);
+        $innerAttrNames = array_map(static fn(AttributeNode $a) => $a->name, $innerFragment->attributes);
+        $this->assertContains('s:include', $innerAttrNames);
+        $this->assertNotContains('s:block', $innerAttrNames);
+    }
+
+    public function testFragmentWithOutputDirectiveAndIncludePreservesIncludeInWrapper(): void
+    {
+        // <s-template s:text="$x" s:include="partial.sugar.php" />
+        // No control-flow directive — s:include must NOT be dropped; it should remain in the
+        // outer wrapper just like any other inheritance attribute.
+        $fragment = $this->fragment(
+            attributes: [
+                $this->attribute('s:text', '$x'),
+                $this->attribute('s:include', 'partial.sugar.php'),
+            ],
+            children: [],
+            line: 1,
+            column: 1,
+        );
+
+        $ast = $this->document()->withChild($fragment)->build();
+        $result = $this->execute($ast, $this->createTestContext());
+
+        // The output DirectiveNode must be wrapped in a FragmentNode that still carries s:include
+        $this->assertCount(1, $result->children);
+        $wrapper = $result->children[0];
+        $this->assertInstanceOf(FragmentNode::class, $wrapper);
+        $wrapperAttrNames = array_map(static fn(AttributeNode $a) => $a->name, $wrapper->attributes);
+        $this->assertContains('s:include', $wrapperAttrNames);
+
+        // Inner node must be the output DirectiveNode
+        $this->assertCount(1, $wrapper->children);
+        $this->assertInstanceOf(DirectiveNode::class, $wrapper->children[0]);
+        $this->assertSame('text', $wrapper->children[0]->name);
+    }
 }

@@ -597,19 +597,44 @@ final class DirectiveExtractionPass implements AstPassInterface
      *
      * Fragments can only have directive attributes, not regular HTML attributes.
      *
-     * When the fragment also carries inheritance attributes (s:block, s:append, etc.),
-     * the directive is wrapped in a new FragmentNode that preserves those attributes
-     * so InheritanceCompilationPass can process them later.
+     * Inheritance attributes are split into two groups:
+     *
+     * - **Outer** (`s:block`, `s:append`, `s:prepend`, `s:parent`, `s:extends`): wrap the
+     *   compiled control-flow `DirectiveNode` so that `InheritanceCompilationPass` sees
+     *   them outside the loop.
+     *
+     * - **Inner** (`s:include`, `s:with`): when a control-flow directive is present, placed
+     *   as a child `FragmentNode` *inside* the control-flow body so that
+     *   `InheritanceCompilationPass` emits a `renderInclude()` call on every loop iteration
+     *   rather than replacing the entire loop with a single include. When no control-flow
+     *   directive is present (output-only), they fall back to the outer wrapper so they
+     *   are not silently dropped. This enables the pattern:
+     *
+     *   ```html
+     *   <s-template s:foreach="$posts as $post"
+     *               s:include="partials/post-teaser"
+     *               s:with="['post' => $post]" />
+     *   ```
      *
      * @return \Sugar\Core\Ast\Node DirectiveNode or FragmentNode wrapping a DirectiveNode
      */
     private function fragmentToDirective(FragmentNode $node): Node
     {
-        // Collect inheritance attributes to preserve them
-        $inheritanceAttrs = [];
+        // Split inheritance attributes into outer (block/append/prepend/parent/extends) and
+        // inner (include/with). Outer attrs wrap the control-flow directive; inner attrs become
+        // a child FragmentNode placed inside the loop body so InheritanceCompilationPass
+        // processes them per iteration. When no control-flow directive is present the inner
+        // attrs are merged back into the outer group so nothing is silently dropped.
+        $outerInheritanceAttrs = [];
+        $innerInheritanceAttrs = [];
         foreach ($node->attributes as $attr) {
             if ($this->prefixHelper->isInheritanceAttribute($attr->name)) {
-                $inheritanceAttrs[] = $attr;
+                $name = $this->prefixHelper->stripPrefix($attr->name);
+                if (in_array($name, ['include', 'with'], true)) {
+                    $innerInheritanceAttrs[] = $attr;
+                } else {
+                    $outerInheritanceAttrs[] = $attr;
+                }
             }
         }
 
@@ -705,18 +730,34 @@ final class DirectiveExtractionPass implements AstPassInterface
         // If there's a control flow directive, wrap children directly in it
         // Fragments don't need a wrapper element - their children render directly
         if ($controlFlowDirective !== null) {
+            $loopChildren = $transformedChildren;
+
+            // When s:include (and optionally s:with) appear alongside a control-flow directive,
+            // embed them as an inner FragmentNode so InheritanceCompilationPass emits a
+            // renderInclude() call *inside* every loop iteration instead of replacing the loop.
+            if ($innerInheritanceAttrs !== []) {
+                $innerFragment = new FragmentNode(
+                    attributes: $innerInheritanceAttrs,
+                    children: $loopChildren,
+                    line: $node->line,
+                    column: $node->column,
+                );
+                $innerFragment->inheritTemplatePathFrom($node);
+                $loopChildren = [$innerFragment];
+            }
+
             $controlDir = $controlFlowDirective;
             $controlNode = new DirectiveNode(
                 name: $controlDir['name'],
                 expression: $controlDir['expression'],
-                children: $transformedChildren,
+                children: $loopChildren,
                 line: $node->line,
                 column: $node->column,
             );
 
             $controlNode->inheritTemplatePathFrom($node);
 
-            return $this->wrapDirectiveWithInheritanceAttributes($controlNode, $inheritanceAttrs, $node);
+            return $this->wrapDirectiveWithInheritanceAttributes($controlNode, $outerInheritanceAttrs, $node);
         }
 
         // Only output directive - return it directly
@@ -733,7 +774,11 @@ final class DirectiveExtractionPass implements AstPassInterface
 
         $outputNode->inheritTemplatePathFrom($node);
 
-        return $this->wrapDirectiveWithInheritanceAttributes($outputNode, $inheritanceAttrs, $node);
+        // No control-flow directive: s:include/s:with cannot be inlined, so merge them
+        // back into the outer group to preserve the pre-existing wrapper behaviour.
+        $allOuterAttrs = [...$outerInheritanceAttrs, ...$innerInheritanceAttrs];
+
+        return $this->wrapDirectiveWithInheritanceAttributes($outputNode, $allOuterAttrs, $node);
     }
 
     /**
