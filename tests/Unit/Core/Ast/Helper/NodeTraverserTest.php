@@ -28,7 +28,7 @@ final class NodeTraverserTest extends TestCase
         /**
          * @return \Sugar\Core\Ast\Node
          */
-        $visitor = function (Node $node, callable $recurse): Node {
+        $visitor = static function (Node $node, callable $recurse): Node {
             /** @var callable(\Sugar\Core\Ast\Node): \Sugar\Core\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return new TextNode(strtoupper($node->content), $node->line, $node->column);
@@ -60,7 +60,7 @@ final class NodeTraverserTest extends TestCase
         /**
          * @return \Sugar\Core\Ast\Node|array<\Sugar\Core\Ast\Node>
          */
-        $visitor = function (Node $node, callable $recurse): Node|array {
+        $visitor = static function (Node $node, callable $recurse): Node|array {
             /** @var callable(\Sugar\Core\Ast\Node): \Sugar\Core\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return [
@@ -96,7 +96,7 @@ final class NodeTraverserTest extends TestCase
         /**
          * @return \Sugar\Core\Ast\Node
          */
-        $visitor = function (Node $node, callable $recurse): Node {
+        $visitor = static function (Node $node, callable $recurse): Node {
             /** @var callable(\Sugar\Core\Ast\Node): \Sugar\Core\Ast\Node $recurse */
             if ($node instanceof TextNode) {
                 return new TextNode('Transformed', $node->line, $node->column);
@@ -135,7 +135,7 @@ final class NodeTraverserTest extends TestCase
             ])
             ->build();
 
-        NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
+        NodeTraverser::walkRecursive($root, static function (Node $node) use (&$visited): void {
             if ($node instanceof TextNode) {
                 $visited[] = $node->content;
             }
@@ -155,7 +155,7 @@ final class NodeTraverserTest extends TestCase
             )
             ->build();
 
-        NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
+        NodeTraverser::walkRecursive($root, static function (Node $node) use (&$visited): void {
             if ($node instanceof ElementNode) {
                 $visited[] = $node->tag;
             }
@@ -174,7 +174,7 @@ final class NodeTraverserTest extends TestCase
             ])
             ->build();
 
-        $result = NodeTraverser::findFirst($root, function (Node $node): bool {
+        $result = NodeTraverser::findFirst($root, static function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'div';
         });
 
@@ -190,7 +190,7 @@ final class NodeTraverserTest extends TestCase
             ->withChild($this->text('Only text', 1, 1))
             ->build();
 
-        $result = NodeTraverser::findFirst($root, function (Node $node): bool {
+        $result = NodeTraverser::findFirst($root, static function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'missing';
         });
 
@@ -211,7 +211,7 @@ final class NodeTraverserTest extends TestCase
             )
             ->build();
 
-        $result = NodeTraverser::findFirst($root, function (Node $node): bool {
+        $result = NodeTraverser::findFirst($root, static function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'target';
         });
 
@@ -232,7 +232,7 @@ final class NodeTraverserTest extends TestCase
             ])
             ->build();
 
-        $result = NodeTraverser::findAll($root, function (Node $node): bool {
+        $result = NodeTraverser::findAll($root, static function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag !== 'root';
         });
 
@@ -256,7 +256,7 @@ final class NodeTraverserTest extends TestCase
             ->withChild($this->text('Only text', 1, 1))
             ->build();
 
-        $result = NodeTraverser::findAll($root, function (Node $node): bool {
+        $result = NodeTraverser::findAll($root, static function (Node $node): bool {
             return $node instanceof ElementNode && $node->tag === 'missing';
         });
 
@@ -277,7 +277,7 @@ final class NodeTraverserTest extends TestCase
             )
             ->build();
 
-        $result = NodeTraverser::findAll($root, function (Node $node): bool {
+        $result = NodeTraverser::findAll($root, static function (Node $node): bool {
             return $node instanceof ElementNode;
         });
 
@@ -303,7 +303,7 @@ final class NodeTraverserTest extends TestCase
         /**
          * @return \Sugar\Core\Ast\Node
          */
-        $visitor = function (Node $node, callable $recurse): Node {
+        $visitor = static function (Node $node, callable $recurse): Node {
             /** @var callable(\Sugar\Core\Ast\Node): \Sugar\Core\Ast\Node $recurse */
             return $recurse($node);
         };
@@ -318,7 +318,7 @@ final class NodeTraverserTest extends TestCase
         $visited = false;
         $root = $this->element('root')->build();
 
-        NodeTraverser::walkRecursive($root, function (Node $node) use (&$visited): void {
+        NodeTraverser::walkRecursive($root, static function (Node $node) use (&$visited): void {
             if ($node instanceof TextNode) {
                 $visited = true;
             }
@@ -331,7 +331,7 @@ final class NodeTraverserTest extends TestCase
     {
         $root = $this->element('root')->build();
 
-        $result = NodeTraverser::findFirst($root, function (Node $node): bool {
+        $result = NodeTraverser::findFirst($root, static function (Node $node): bool {
             return $node instanceof TextNode;
         });
 
@@ -342,7 +342,7 @@ final class NodeTraverserTest extends TestCase
     {
         $root = $this->element('root')->build();
 
-        $result = NodeTraverser::findAll($root, function (Node $node): bool {
+        $result = NodeTraverser::findAll($root, static function (Node $node): bool {
             return $node instanceof TextNode;
         });
 

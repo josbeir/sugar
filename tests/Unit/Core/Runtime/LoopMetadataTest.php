@@ -194,7 +194,7 @@ final class LoopMetadataTest extends TestCase
 
     public function testWorksWithGenerator(): void
     {
-        $generator = function () {
+        $generator = static function () {
             yield 'a';
             yield 'b';
             yield 'c';
@@ -256,7 +256,7 @@ final class LoopMetadataTest extends TestCase
 
     public function testWorksWithGeneratorKeys(): void
     {
-        $generator = function () {
+        $generator = static function () {
             yield 'key1' => 'value1';
             yield 'key2' => 'value2';
         };

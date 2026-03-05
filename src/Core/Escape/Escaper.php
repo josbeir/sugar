@@ -150,7 +150,7 @@ final class Escaper implements EscaperInterface
         $string = preg_replace('/@import/i', '', $string) ?? $string;
 
         // Escape special CSS characters
-        $result = preg_replace_callback('/[^a-zA-Z0-9\s\-_.,#]/', function (array $matches): string {
+        $result = preg_replace_callback('/[^a-zA-Z0-9\s\-_.,#]/', static function (array $matches): string {
             return '\\' . dechex(ord($matches[0]));
         }, $string);
 

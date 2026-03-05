@@ -24,7 +24,7 @@ if ($cacheDirs !== false) {
     foreach ($cacheDirs as $cacheDir) {
         if (is_dir($cacheDir)) {
             // Recursively remove cache directory
-            $removeDir = function (string $dir) use (&$removeDir): void {
+            $removeDir = static function (string $dir) use (&$removeDir): void {
                 if (!is_dir($dir)) {
                     return;
                 }
@@ -45,7 +45,7 @@ if ($cacheDirs !== false) {
 // Clear test tmp directory
 $testTmpDir = __DIR__ . '/tmp';
 if (is_dir($testTmpDir)) {
-    $removeDir = function (string $dir) use (&$removeDir): void {
+    $removeDir = static function (string $dir) use (&$removeDir): void {
         if (!is_dir($dir)) {
             return;
         }

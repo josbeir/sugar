@@ -174,7 +174,7 @@ final class EmptyHelperTest extends TestCase
     public function testIsEmptyWithEmptyGeneratorThrowsException(): void
     {
         // phpcs:disable Generic.CodeAnalysis.UnconditionalIfStatement.Found
-        $generator = (function () {
+        $generator = (static function () {
             if (false) { // @phpstan-ignore if.alwaysFalse (intentional - makes function a generator)
                 yield;
             }
@@ -188,7 +188,7 @@ final class EmptyHelperTest extends TestCase
 
     public function testIsEmptyWithNonEmptyGeneratorThrowsException(): void
     {
-        $generator = (function () {
+        $generator = (static function () {
             yield 1;
             yield 2;
         })();

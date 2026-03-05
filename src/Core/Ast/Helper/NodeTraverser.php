@@ -44,7 +44,7 @@ final class NodeTraverser
 
         foreach ($nodes as $node) {
             // Provide recurse callback that processes children
-            $recurse = function (Node $node) use ($visitor): Node {
+            $recurse = static function (Node $node) use ($visitor): Node {
                 if ($node instanceof ElementNode) {
                     $node->children = self::walk($node->children, $visitor);
 
@@ -139,7 +139,7 @@ final class NodeTraverser
     {
         $matches = [];
 
-        self::walkRecursive($root, function (Node $node) use ($predicate, &$matches): void {
+        self::walkRecursive($root, static function (Node $node) use ($predicate, &$matches): void {
             if ($predicate($node)) {
                 $matches[] = $node;
             }

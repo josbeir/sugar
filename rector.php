@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Rector\CodeQuality\Rector\If_\SimplifyIfElseToTernaryRector;
+use Rector\CodingStyle\Rector\Closure\StaticClosureRector;
 use Rector\Config\RectorConfig;
 use Rector\ValueObject\PhpVersion;
 
@@ -31,4 +32,7 @@ return RectorConfig::configure()
 		earlyReturn: true,
 		instanceOf: true,
 		phpunitCodeQuality: true,
-    );
+    )
+    ->withRules([
+        StaticClosureRector::class,
+    ]);

@@ -74,7 +74,7 @@ final class BlockManagerTest extends TestCase
 
     public function testRenderBlockPassesDataToOverride(): void
     {
-        $this->manager->defineBlock('title', function (array $data): string {
+        $this->manager->defineBlock('title', static function (array $data): string {
             $name = $data['name'] ?? '';
 
             return 'Title: ' . (is_string($name) ? $name : '');
@@ -87,7 +87,7 @@ final class BlockManagerTest extends TestCase
 
     public function testRenderBlockPassesDataToDefault(): void
     {
-        $default = function (array $data): string {
+        $default = static function (array $data): string {
             $greeting = $data['greeting'] ?? '';
 
             return 'Default: ' . (is_string($greeting) ? $greeting : '');
@@ -179,7 +179,7 @@ final class BlockManagerTest extends TestCase
         $manager = $this->manager;
         $parentDefault = fn(array $data): string => 'parent default content';
 
-        $this->manager->defineBlock('content', function (array $data) use ($manager, $parentDefault): string {
+        $this->manager->defineBlock('content', static function (array $data) use ($manager, $parentDefault): string {
             // Inside a renderBlock call, renderParent should work
             $parent = $manager->renderParent('content', $parentDefault, $data);
 
@@ -196,7 +196,7 @@ final class BlockManagerTest extends TestCase
         $manager = $this->manager;
 
         // Child defines block that calls renderParent (level 0)
-        $this->manager->defineBlock('content', function (array $data) use ($manager): string {
+        $this->manager->defineBlock('content', static function (array $data) use ($manager): string {
             $parent = $manager->renderParent('content', fn(array $d): string => 'never', $data);
 
             return 'CHILD + ' . $parent;
@@ -220,7 +220,7 @@ final class BlockManagerTest extends TestCase
         $manager = $this->manager;
 
         // Child (level 0) — calls renderParent
-        $this->manager->defineBlock('content', function (array $data) use ($manager): string {
+        $this->manager->defineBlock('content', static function (array $data) use ($manager): string {
             $parent = $manager->renderParent('content', fn(array $d): string => '', $data);
 
             return 'CHILD[' . $parent . ']';
@@ -230,7 +230,7 @@ final class BlockManagerTest extends TestCase
         $this->manager->pushLevel();
 
         // Parent (level 1) — also calls renderParent
-        $this->manager->defineBlock('content', function (array $data) use ($manager): string {
+        $this->manager->defineBlock('content', static function (array $data) use ($manager): string {
             $parent = $manager->renderParent('content', fn(array $d): string => '', $data);
 
             return 'PARENT[' . $parent . ']';
@@ -320,7 +320,7 @@ final class BlockManagerTest extends TestCase
         // Append: parent content first, then child content
         $manager = $this->manager;
 
-        $this->manager->defineBlock('sidebar', function (array $data) use ($manager): string {
+        $this->manager->defineBlock('sidebar', static function (array $data) use ($manager): string {
             $parent = $manager->renderParent('sidebar', fn(array $d): string => '', $data);
 
             return $parent . ' + CHILD SIDEBAR';
@@ -339,7 +339,7 @@ final class BlockManagerTest extends TestCase
         // Prepend: child content first, then parent content
         $manager = $this->manager;
 
-        $this->manager->defineBlock('sidebar', function (array $data) use ($manager): string {
+        $this->manager->defineBlock('sidebar', static function (array $data) use ($manager): string {
             $parent = $manager->renderParent('sidebar', fn(array $d): string => '', $data);
 
             return 'CHILD SIDEBAR + ' . $parent;
