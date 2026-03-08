@@ -1,4 +1,4 @@
-name: Deploy Site
+name: Deploy docs
 
 on:
   push:
@@ -64,16 +64,17 @@ jobs:
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
-          path: docs/.vitepress/dist
+        with:
           path: docs/public
-  # Deployment job
-    environment:
+
+  deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
 
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
