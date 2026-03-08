@@ -44,6 +44,7 @@
 						aria-label="On this page"
 					>
 						<s-template s:block="toc" />
+	                    <s-template s:include="../partials/other-projects" />
 					</aside>
 				</s-ifblock>
 			</div>

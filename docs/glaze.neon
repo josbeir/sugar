@@ -12,7 +12,7 @@ site:
 	footer: Created by Jasper Smet.
 	license: MIT License
 	licenseLink: https://github.com/josbeir/sugar/blob/main/LICENSE.md
-	logo: /hero/sugar-cube-static.svg
+	logo: /sugar-cube-static.svg
 
 djot:
 	codeHighlighting:

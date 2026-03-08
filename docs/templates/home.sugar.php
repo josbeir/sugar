@@ -55,7 +55,7 @@ use function Sugar\Core\Runtime\raw;
 				<div class="hidden lg:flex lg:justify-end">
 					<img
 						class="w-64 xl:w-76 2xl:w-84 h-auto"
-						src="<?= $this->url('/hero/sugar-cube.svg') ?>"
+						src="<?= $this->url('/sugar-cube.svg') ?>"
 						alt="<?= $site->title ?>"
 					/>
 				</div>
