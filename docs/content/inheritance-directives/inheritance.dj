@@ -141,7 +141,9 @@ Use `s:extends` to inherit from a parent layout and replace its `s:block` region
 When a template uses `s:extends`, only inheritance content (`s:block`, `s:append`, `s:prepend`) is kept. Top-level markup or raw PHP outside those blocks is discarded, except leading import statements (`use`, `use function`, `use const`) which are preserved for compile-time hoisting.
 :::
 
-::: details Implementation note
+::: details
+**Implementation notes**
+
 Inheritance directives are compiled by `InheritanceCompilationPass` into runtime calls handled by `TemplateRenderer` and `BlockManager`. This is why block ordering and `s:parent` placement are deterministic across cached renders.
 :::
 
@@ -663,7 +665,9 @@ The `@app` namespace is the default fallback. Explicit namespace prefixes always
 
 Sugar tracks template dependencies during inheritance and includes. Circular dependencies are detected and rejected so a template cannot extend or include itself indirectly.
 
-::: details What is prevented
+::: details
+**What is prevented**
+
 - Circular inheritance (A extends B, B extends A)
 - Circular includes (A includes B, B includes A)
 - Diamond-shaped chains that would re-enter a template already on the stack

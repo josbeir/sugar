@@ -49,7 +49,9 @@ composer rector-fix
 ```
 :::
 
-::: details What each tool does
+::: info
+**What each tool does**
+
 - **PHPUnit:** Executes the unit and integration tests.
 - **PHPStan:** Static analysis for type and logic issues.
 - **PHPCS/PHPCBF:** Code style enforcement and auto-fixes.

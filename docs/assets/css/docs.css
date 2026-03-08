@@ -4,6 +4,16 @@
 	themes: glaze-docs-dark --default, glaze-docs-light;
 }
 
+@layer utilities {
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)):first-child {
+		margin-top: 0;
+	}
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)):last-child {
+		margin-bottom: 0;
+	}
+}
+
 @plugin "daisyui/theme" {
 	name: "glaze-docs-dark";
 	default: true;
@@ -94,6 +104,98 @@
 }
 
 @layer components {
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) {
+		position: relative;
+		margin-block: 0.9rem;
+		padding: 0.65rem 0.8rem;
+		padding-inline-start: 0.8rem;
+		border: 1px solid color-mix(in srgb, var(--color-base-300) 88%, transparent);
+		border-left-width: 4px;
+		border-radius: 0.65rem;
+		background: color-mix(in srgb, var(--color-base-200) 55%, transparent);
+		color: var(--color-base-content);
+	}
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :first-child {
+		margin-top: 0;
+	}
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :last-child {
+		margin-bottom: 0;
+	}
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)):first-child {
+		margin-top: 0;
+	}
+
+	.prose :where(.tip, .note, .alert, .info, .warning, .details) > :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)):last-child {
+		margin-bottom: 0;
+	}
+
+	.prose :where(.tip, .info, .warning, .alert, .note)::before {
+		display: inline-block;
+		margin-bottom: 0.35rem;
+		font-size: 0.66rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.prose :where(.tip) {
+		border-left-color: var(--color-success);
+		background: color-mix(in srgb, var(--color-success) 14%, var(--color-base-100));
+	}
+
+	.prose :where(.tip)::before {
+		content: "Tip";
+		color: color-mix(in srgb, var(--color-success) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.info) {
+		border-left-color: var(--color-info);
+		background: color-mix(in srgb, var(--color-info) 14%, var(--color-base-100));
+	}
+
+	.prose :where(.info)::before {
+		content: "Info";
+		color: color-mix(in srgb, var(--color-info) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.warning) {
+		border-left-color: var(--color-warning);
+		background: color-mix(in srgb, var(--color-warning) 13%, var(--color-base-100));
+	}
+
+	.prose :where(.warning)::before {
+		content: "Warning";
+		color: color-mix(in srgb, var(--color-warning) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.alert) {
+		border-left-color: var(--color-error);
+		background: color-mix(in srgb, var(--color-error) 12%, var(--color-base-100));
+	}
+
+	.prose :where(.alert)::before {
+		content: "Alert";
+		color: color-mix(in srgb, var(--color-error) 86%, var(--color-base-content));
+	}
+
+	.prose :where(.note) {
+		border-left-color: var(--color-accent);
+		background: color-mix(in srgb, var(--color-accent) 13%, var(--color-base-100));
+	}
+
+	.prose :where(.note)::before {
+		content: "Note";
+		color: color-mix(in srgb, var(--color-accent) 86%, var(--color-base-content));
+	}
+
+	.prose :where(.details) {
+		border-left-color: var(--color-accent);
+		background: color-mix(in srgb, var(--color-accent) 10%, var(--color-base-100));
+	}
 
 	/* Offset anchor scroll position to account for the sticky header */
 	.prose section[id] {

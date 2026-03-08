@@ -387,7 +387,9 @@ $engine = Engine::builder()
 For reusable directive bundles, create an [Extension](/development/creating-extensions) instead. Extensions provide better organization and can include multiple directives, compiler passes, and hooks.
 :::
 
-::: details Advanced: Empty Registry
+::: details
+**Advanced: Empty Registry**
+
 Start from scratch and register only the directives you want. This removes all built-in directives:
 
 ```php

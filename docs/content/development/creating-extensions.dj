@@ -166,7 +166,9 @@ $context->directive('badge', new BadgeDirective());
 
 For directive design details, see the [Custom Directives](/development/custom-directives) guide.
 
-::: tip Element syntax for directives
+::: tip
+**Element syntax for directives**
+
 A directive can additionally implement `ElementClaimingDirectiveInterface` to expose a custom element tag (`<s-youtube src="$id">`) alongside the standard attribute syntax (`<div s:youtube="$id">`). No extra compile logic is required — the engine converts element invocations to directive attributes automatically before extraction runs. See [ElementClaimingDirectiveInterface](/development/custom-directives#elementclaimingdirectiveinterface) for the full example.
 :::
 
