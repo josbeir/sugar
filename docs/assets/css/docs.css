@@ -316,8 +316,13 @@
 		color: color-mix(in srgb, var(--color-base-content) 88%, transparent);
 		background: color-mix(in srgb, var(--color-base-100) 72%, transparent);
 		border: 1px solid color-mix(in srgb, var(--color-base-300) 92%, transparent);
+		opacity: 0;
+		transition: opacity 150ms ease;
 	}
 
+	.prose :where(pre.phiki.phiki-themes[data-language]):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover::after {
+		opacity: 1;
+	}
 
 	html[data-theme="glaze-docs-light"] .prose :where(pre.phiki.phiki-themes) :where([style*="--phiki-light-color"]) {
 		color: var(--phiki-light-color) !important;
