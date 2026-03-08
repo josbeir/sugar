@@ -436,7 +436,7 @@
 
 	.prose :where(.glaze-code-group > .glaze-code-group-tab) {
 		order: 1;
-		@apply relative py-2 px-5 text-base font-medium text-base-content/65;
+		@apply relative py-2 px-3 text-sm font-medium text-base-content/65;
 		appearance: none;
 		cursor: pointer;
 		border: 0;
