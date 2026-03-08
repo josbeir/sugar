@@ -1,0 +1,114 @@
+---
+title: Sugar Documentation
+description: "Official Sugar documentation with guides, language reference, and extension docs."
+template: home
+navigation: true
+hero:
+  category: Documentation
+  title: A PHP template engine for cleaner templates.
+  subtitle: Keep writing PHP templates—Sugar adds directive attributes and context-aware escaping.
+  primaryAction:
+    label: Get Started
+    href: /introduction/getting-started/
+  secondaryAction:
+    label: What Is Sugar
+    href: /introduction/what-is-sugar/
+  highlights:
+    -
+      icon: control-flow
+      title: Cleaner Control Flow
+      description: "Use s: attributes like s:if and s:foreach directly in HTML."
+    -
+      icon: inheritance
+      title: Template Inheritance
+      description: "Compose layouts with s:extends, s:block, and s:include."
+    -
+      icon: safe-output
+      title: Built-In Safe Output
+      description: "Auto-escapes HTML, attributes, URLs, JavaScript, and CSS by context."
+    -
+      icon: components
+      title: Reusable Components
+      description: "Build UI with props, slots, and merged attributes in plain PHP templates."
+
+navigationTitle: Home
+---
+
+## A Taste of the Syntax
+
+Here is a small, beginner-friendly example showing layout inheritance and components:
+
+::: code-group
+
+```sugar [Child Template]
+<!-- pages/home.sugar.php -->
+<s-template s:extends="layouts/app.sugar.php"></s-template>
+
+<title s:block="title">Home</title>
+
+<s-template s:block="content">
+  <h1 class="title">Welcome, <?= $user->name ?></h1>
+
+  <s-button class="btn-dark" s:class="['btn-active' => $isActive]">
+    Click me
+  </s-button>
+  <p s:if="$showHint">You can hide this hint with s:if.</p>
+
+  <ul>
+    <li s:foreach="$items as $item"><?= $item ?></li>
+  </ul>
+
+  <s-unless condition="$isPremium">
+    <p>Upgrade to unlock more features.</p>
+  </s-unless>
+</s-template>
+```
+
+```sugar [Parent Layout]
+<!-- layouts/app.sugar.php -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title s:block="title">Sugar App</title>
+</head>
+<body>
+  <main s:block="content">Default content</main>
+</body>
+</html>
+```
+
+```sugar [Component: Button]
+<!-- components/s-button.sugar.php -->
+<button class="btn">
+  <?= $slot ?>
+</button>
+```
+
+```sugar [Rendered output]
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Home</title>
+</head>
+<body>
+  <main>
+    <h1>Welcome, Alice</h1>
+    <button class="btn btn-dark btn-active">Click me</button>
+    <small class="hint">Press to continue</small>
+    <p>You can hide this hint with s:if.</p>
+    <ul>
+      <li>Docs</li>
+      <li>API</li>
+    </ul>
+    <p>Upgrade to unlock more features.</p>
+  </main>
+</body>
+</html>
+```
+
+:::
+
+> **Note**
+> New to Sugar? Start with [Getting Started](/introduction/getting-started), then move to [Template Inheritance](/language/inheritance) and [Components](/extensions/components).

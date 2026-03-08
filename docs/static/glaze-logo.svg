@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" fill="none" aria-labelledby="title desc" viewBox="0 0 360 360">
+    <title>Glaze logo</title>
+    <desc>
+        Geometric 3D sugar cube with glossy glaze highlights.
+    </desc>
+    <defs>
+        <linearGradient id="a" x1="22" x2="22" y1="7" y2="17" gradientTransform="translate(-7.343 -6.884)" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#c4b5fd"/>
+            <stop offset="1" stop-color="#a78bfa"/>
+        </linearGradient>
+        <linearGradient id="b" x1="11" x2="22" y1="15" y2="36" gradientTransform="translate(-7.343 -6.884)" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#8b5cf6"/>
+            <stop offset="1" stop-color="#6d28d9"/>
+        </linearGradient>
+        <linearGradient id="c" x1="33" x2="22" y1="15" y2="36" gradientTransform="translate(-7.343 -6.884)" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#7c3aed"/>
+            <stop offset="1" stop-color="#5b21b6"/>
+        </linearGradient>
+        <linearGradient id="d" x1="22" x2="22" y1="13" y2="24" gradientTransform="translate(-7.343 -6.884)" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#f8fafc" stop-opacity=".92"/>
+            <stop offset="1" stop-color="#f1f5f9" stop-opacity=".58"/>
+        </linearGradient>
+    </defs>
+    <g transform="matrix(13.00214 0 0 10.51338 -10.572 26.335)">
+        <path fill="url(#a)" d="m14.657.116 11 6.5-11 6.5-11-6.5z" style="fill:url(#a)"/>
+        <path fill="url(#b)" d="m3.657 6.616 11 6.5v16l-11-6.5z" style="fill:url(#b)"/>
+        <path fill="url(#c)" d="m25.657 6.616-11 6.5v16l11-6.5z" style="fill:url(#c)"/>
+        <path fill="url(#d)" d="M7.057 8.016c1.4-1.3 3.4-1.9 5.5-1.9h5.8c3 0 5.1.9 6.1 2.7.8 1.4.7 3.1-.1 4.7l-.8 1.7c-.3.6-.9 1.1-1.6 1.2l-4.5.7c-.8.1-1.6-.4-1.8-1.1l-.5-1.4c-.3-.9-1.1-1.5-2.1-1.5h-1.6c-2.3 0-4-.8-4.7-2.3-.6-1.1-.5-2.1.3-2.8" style="fill:url(#d)"/>
+        <path fill="#f8fafc" fill-opacity=".7" d="m15.557 18.016-.7 3.2c-.2.9-1.4.9-1.7.1l-.4-1.1c-.3-.8.2-1.7 1.1-1.9z"/>
+        <path stroke="#fff" stroke-linecap="round" stroke-opacity=".55" stroke-width="1.2" d="M9.457 10.216q1.05-.9 2.7-.9h5.2"/>
+        <circle cx="20.557" cy="2.916" r="1.05" fill="#fff" fill-opacity=".8"/>
+        <circle cx="8.257" cy="4.416" r=".85" fill="#fff" fill-opacity=".65"/>
+    </g>
+</svg>

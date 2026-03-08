@@ -1,0 +1,531 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+	themes: glaze-docs-dark --default, glaze-docs-light;
+}
+
+@plugin "daisyui/theme" {
+	name: "glaze-docs-dark";
+	default: true;
+	prefersdark: true;
+	color-scheme: dark;
+
+	--color-base-100: #161412;
+	--color-base-200: #1f1c19;
+	--color-base-300: #312b27;
+	--color-base-content: #f5efe8;
+
+	--color-primary: #c9b3a7;
+	--color-primary-content: #201714;
+	--color-secondary: #b7c3b6;
+	--color-secondary-content: #132018;
+	--color-accent: #b1bbd2;
+	--color-accent-content: #121a28;
+	--color-neutral: #2a2420;
+	--color-neutral-content: #f3ece4;
+
+	--color-info: #8aaed8;
+	--color-info-content: #0f1a2a;
+	--color-success: #7da98f;
+	--color-success-content: #0f2117;
+	--color-warning: #d9b07a;
+	--color-warning-content: #2b1a08;
+	--color-error: #d28d99;
+	--color-error-content: #2a0f15;
+
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.75rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+@plugin "daisyui/theme" {
+	name: "glaze-docs-light";
+	prefersdark: false;
+	color-scheme: light;
+
+	--color-base-100: #ffffff;
+	--color-base-200: #fdfbf8;
+	--color-base-300: #f6f0e8;
+	--color-base-content: #2b2520;
+
+	--color-primary: #a07b6a;
+	--color-primary-content: #fffaf7;
+	--color-secondary: #6f8f7c;
+	--color-secondary-content: #f4fbf6;
+	--color-accent: #6f86ad;
+	--color-accent-content: #f4f8ff;
+	--color-neutral: #8a7b70;
+	--color-neutral-content: #fffdf9;
+
+	--color-info: #4f79a8;
+	--color-info-content: #f6fbff;
+	--color-success: #4d7d61;
+	--color-success-content: #f4fff7;
+	--color-warning: #b88441;
+	--color-warning-content: #fffaf3;
+	--color-error: #b45b6d;
+	--color-error-content: #fff6f8;
+
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.75rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+@layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+
+	body {
+		@apply text-base-content;
+	}
+
+	[x-cloak] { display: none !important; }
+}
+
+@layer components {
+
+	/* Offset anchor scroll position to account for the sticky header */
+	.prose section[id] {
+		scroll-margin-top: 6rem;
+	}
+
+	#page-loader {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 2px;
+		z-index: 9999;
+		pointer-events: none;
+		background-color: var(--color-primary);
+		opacity: 0;
+		transform: translateX(-100%);
+		transition: opacity 0.3s ease;
+	}
+
+	#page-loader.htmx-request {
+		opacity: 1;
+		animation: page-loader-progress 3s cubic-bezier(0.05, 0.8, 0.25, 1) forwards;
+	}
+
+	@keyframes page-loader-progress {
+		from { transform: translateX(-100%); }
+		to { transform: translateX(-15%); }
+	}
+
+	.hero-surface {
+		isolation: isolate;
+	}
+
+	.hero-mesh {
+		position: absolute;
+		inset: -22%;
+		z-index: 0;
+		pointer-events: none;
+		opacity: 0.16;
+		background:
+			radial-gradient(circle at 18% 28%, color-mix(in srgb, var(--color-primary) 54%, transparent) 0%, transparent 50%),
+			radial-gradient(circle at 78% 32%, color-mix(in srgb, var(--color-secondary) 46%, transparent) 0%, transparent 48%),
+			radial-gradient(circle at 48% 78%, color-mix(in srgb, var(--color-accent) 46%, transparent) 0%, transparent 52%);
+		filter: blur(30px);
+		animation: heroMeshDrift 24s ease-in-out infinite alternate;
+	}
+
+	.hero-status-strip {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		padding: 0.75rem;
+		border-radius: 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--color-base-300) 86%, transparent);
+		background: color-mix(in srgb, var(--color-base-200) 62%, transparent);
+	}
+
+	.hero-status-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+	}
+
+	.scaffold-terminal {
+		@apply rounded-box p-4 sm:p-5 font-mono text-sm leading-relaxed overflow-hidden;
+	}
+
+	.scaffold-terminal :where(pre) {
+		display: flex;
+		align-items: baseline;
+		gap: 0.55rem;
+		margin: 0;
+		padding: 0.2rem 0;
+		background: transparent;
+	}
+
+	.scaffold-terminal :where(pre)::before {
+		content: attr(data-prefix);
+		display: inline-block;
+		width: 1rem;
+		text-align: center;
+		font-weight: 600;
+		opacity: 0.72;
+	}
+
+	html[data-theme="glaze-docs-dark"] .scaffold-terminal,
+	.scaffold-terminal {
+		background-color: var(--color-neutral);
+		color: var(--color-neutral-content);
+		border: 1px solid color-mix(in srgb, var(--color-base-300) 72%, transparent);
+	}
+
+	html[data-theme="glaze-docs-dark"] .scaffold-terminal :where(pre)::before,
+	.scaffold-terminal :where(pre)::before {
+		color: color-mix(in srgb, var(--color-secondary) 74%, var(--color-neutral-content));
+	}
+
+	html[data-theme="glaze-docs-light"] .scaffold-terminal {
+		background-color: var(--color-base-100);
+		color: var(--color-base-content);
+		border: 1px solid var(--color-base-300);
+		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-base-content) 6%, transparent);
+	}
+
+	html[data-theme="glaze-docs-light"] .scaffold-terminal :where(pre)::before {
+		color: color-mix(in srgb, var(--color-primary) 70%, var(--color-base-content));
+		opacity: 0.64;
+	}
+
+	.hero-logo-glow {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		overflow: visible;
+	}
+
+	.hero-logo-glow::before {
+		content: "";
+		position: absolute;
+		inset: -11%;
+		z-index: 0;
+		border-radius: 9999px;
+		background:
+			radial-gradient(circle, color-mix(in srgb, var(--color-primary) 40%, transparent) 0%, transparent 64%),
+			radial-gradient(circle at 66% 36%, color-mix(in srgb, var(--color-secondary) 24%, transparent) 0%, transparent 60%);
+		filter: blur(22px);
+		opacity: 0.84;
+		pointer-events: none;
+		animation: heroGlowAmbient 7.2s ease-in-out infinite alternate;
+	}
+
+	.hero-logo-glow > img {
+		position: relative;
+		z-index: 1;
+		filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-primary) 24%, transparent))
+			drop-shadow(0 0 22px color-mix(in srgb, var(--color-secondary) 14%, transparent));
+		animation: heroLogoFloat 8.4s ease-in-out infinite;
+	}
+
+	.terminal-preview {
+		@apply hidden;
+	}
+
+	html[data-theme="glaze-docs-dark"] .terminal-preview-dark {
+		@apply block;
+	}
+
+	html[data-theme="glaze-docs-light"] .terminal-preview-light {
+		@apply block;
+	}
+
+	@keyframes heroGlowAmbient {
+		0% {
+			transform: translate(-1%, -0.5%) scale(0.98);
+			opacity: 0.66;
+		}
+
+		100% {
+			transform: translate(1.2%, 0.8%) scale(1.04);
+			opacity: 0.86;
+		}
+	}
+
+	@keyframes heroLogoFloat {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+
+		50% {
+			transform: translateY(-3px);
+		}
+	}
+
+	@keyframes heroMeshDrift {
+		0% {
+			transform: translate3d(-2%, -1.5%, 0) scale(0.98);
+		}
+
+		100% {
+			transform: translate3d(2%, 1.5%, 0) scale(1.02);
+		}
+	}
+
+	.prose {
+		@apply max-w-none text-base-content;
+	}
+
+	.prose :where(img) {
+		@apply rounded-box border border-base-300;
+	}
+
+	.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		@apply bg-base-200 border border-base-300 rounded-box;
+	}
+
+	html[data-theme="glaze-docs-light"] .prose :where(pre.phiki.phiki-themes) {
+		background-color: var(--phiki-light-background-color) !important;
+		color: var(--phiki-light-color) !important;
+	}
+
+	.prose :where(pre.phiki.phiki-themes):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		border-radius: var(--radius-box) !important;
+		border-width: 1px !important;
+		border-style: solid !important;
+		border-color: var(--color-base-300) !important;
+		@apply relative;
+	}
+
+	.prose :where(pre.phiki.phiki-themes[data-language]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		@apply pt-9;
+	}
+
+	.prose :where(pre.phiki.phiki-themes[data-language]):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+		content: attr(data-language);
+		@apply absolute top-2.5 right-2.5 py-0.5 px-2 rounded-full text-[0.65rem] leading-none font-light tracking-[0.01em] whitespace-nowrap border pointer-events-none;
+		color: color-mix(in srgb, var(--color-base-content) 88%, transparent);
+		background: color-mix(in srgb, var(--color-base-100) 72%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-base-300) 92%, transparent);
+	}
+
+
+	html[data-theme="glaze-docs-light"] .prose :where(pre.phiki.phiki-themes) :where([style*="--phiki-light-color"]) {
+		color: var(--phiki-light-color) !important;
+	}
+
+	html[data-theme="glaze-docs-light"] .prose :where(pre.phiki.phiki-themes) :where([style*="--phiki-light-background-color"]) {
+		background-color: var(--phiki-light-background-color) !important;
+	}
+
+	.prose :where(code):not(:where(pre code)) {
+		@apply bg-base-200 px-1.5 py-0.5 rounded;
+	}
+
+	.prose :where(blockquote) {
+		@apply border-l-4 border-primary bg-base-200 rounded-r-box px-4 py-2;
+	}
+
+	.prose :where(table) {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+		overflow-y: hidden;
+		-webkit-overflow-scrolling: touch;
+		@apply table w-full;
+	}
+
+	.prose :where(thead) {
+		@apply bg-base-200;
+	}
+
+	.prose :where(th, td) {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
+	.prose :where(th code, td code) {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
+	.prose :where(th pre, td pre) {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
+	.prose :where(a) {
+		@apply text-primary hover:text-primary;
+	}
+
+	.prose :where(h1, h2, h3, h4, h5, h6) {
+		position: relative;
+		scroll-margin-top: 6rem;
+	}
+
+	.prose :where(h2) {
+		@apply border-b border-base-300 pb-2;
+	}
+
+	.prose :where(h1, h2, h3, h4, h5, h6) > .permalink-wrapper {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-left: 0.45rem;
+		font-size: 0.72em;
+		line-height: 1;
+		transform: translateY(-0.04em) scale(0.94);
+		opacity: 0;
+		text-decoration: none;
+		@apply text-base-content/35 no-underline transition-all duration-200 ease-out;
+	}
+
+	.prose :where(h1, h2, h3, h4, h5, h6):hover > .permalink-wrapper,
+	.prose :where(h1, h2, h3, h4, h5, h6):focus-within > .permalink-wrapper {
+		opacity: 1;
+		transform: translateY(-0.04em) scale(1);
+	}
+
+	.prose :where(h1, h2, h3, h4, h5, h6) > .permalink-wrapper a,
+	.prose :where(h1, h2, h3, h4, h5, h6) > .permalink-wrapper a:hover,
+	.prose :where(h1, h2, h3, h4, h5, h6) > .permalink-wrapper a:focus,
+	.prose :where(h1, h2, h3, h4, h5, h6) > .permalink-wrapper a:focus-visible {
+		text-decoration: none !important;
+	}
+
+	.prose :where(.permalink-wrapper:hover),
+	.prose :where(.permalink-wrapper:focus-within) {
+		@apply text-primary/80;
+	}
+
+	.prose a.header-anchor,
+	.prose a.header-anchor:hover,
+	.prose a.header-anchor:focus,
+	.prose a.header-anchor:focus-visible {
+		text-decoration: none !important;
+	}
+
+	.prose :where(.glaze-code-group) {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		@apply my-6 w-full rounded-box border border-base-300 bg-base-200 overflow-hidden;
+	}
+
+	.prose :where(.glaze-code-group pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		margin: 0 !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab) {
+		order: 1;
+		@apply relative py-2 px-5 text-base font-medium text-base-content/65;
+		appearance: none;
+		cursor: pointer;
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+		box-shadow: none;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab)::before {
+		font-size: 0.95rem;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab[aria-label$=".js"])::before {
+		content: "JS  " attr(aria-label);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		color: color-mix(in srgb, var(--color-warning) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab[aria-label$=".ts"])::before {
+		content: "TS  " attr(aria-label);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		color: color-mix(in srgb, var(--color-info) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab:not([aria-label$=".js"]):not([aria-label$=".ts"]))::before {
+		content: attr(aria-label);
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab[aria-selected="true"]) {
+		@apply text-base-content;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-tab[aria-selected="true"])::after {
+		content: "";
+		position: absolute;
+		left: 0.9rem;
+		right: 0.9rem;
+		bottom: 0;
+		height: 2px;
+		border-radius: 9999px;
+		background-color: color-mix(in srgb, var(--color-primary) 88%, var(--color-base-content));
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-panel) {
+		order: 2;
+		@apply w-full border-t border-base-300 bg-base-100 overflow-hidden rounded-b-box;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-panel[hidden]) {
+		display: none !important;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-panel > pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		@apply m-0 rounded-none border-0;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-panel > pre.phiki.phiki-themes):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+		border-radius: 0 !important;
+		border-width: 0 !important;
+	}
+
+	.prose :where(.glaze-code-group > .glaze-code-group-panel code) {
+		@apply text-sm;
+	}
+
+	[data-scaffold-demo] .typed-cursor {
+		@apply text-primary opacity-80;
+		animation: scaffoldCursorBlink 1s step-end infinite;
+	}
+
+	[data-scaffold-demo] [data-scaffold-step] {
+		@apply rounded-box transition-colors duration-200;
+	}
+
+	[data-scaffold-steps] .scaffold-step {
+		background-color: var(--color-base-200);
+		color: var(--color-base-content);
+	}
+
+	[data-scaffold-steps] .scaffold-step.menu-active {
+		background-color: var(--color-primary);
+		color: var(--color-primary-content);
+	}
+
+	@keyframes scaffoldCursorBlink {
+		from,
+		to {
+			opacity: 1;
+		}
+
+		50% {
+			opacity: 0.2;
+		}
+	}
+}

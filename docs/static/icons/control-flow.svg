@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Entry node -->
+  <circle cx="16" cy="3" r="2.5" fill="#6366f1"/>
+  <!-- Down to diamond -->
+  <path d="M16 5.5V9" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+  <!-- Decision diamond -->
+  <path d="M16 9L24 16L16 23L8 16Z" fill="#6366f1" fill-opacity="0.18" stroke="#6366f1" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Left branch (yes) -->
+  <path d="M8 16H4V29" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right branch (no) -->
+  <path d="M24 16H28V29" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- End nodes -->
+  <circle cx="4" cy="29" r="2.5" fill="#6366f1"/>
+  <circle cx="28" cy="29" r="2.5" fill="#6366f1"/>
+</svg>

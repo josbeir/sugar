@@ -1,0 +1,132 @@
+pageTemplate: page
+extensions:
+	- sitemap
+	- llms-txt
+	- search-index
+site:
+	title: Sugar
+	description: A modern PHP templating engine that compiles to pure PHP
+	baseUrl: https://josbeir.github.io/
+	basePath: /sugar
+	repository: https://github.com/josbeir/sugar
+	footer: Created by Jasper Smet.
+	license: MIT License
+	licenseLink: https://github.com/josbeir/sugar/blob/main/LICENSE.md
+	logo: /hero/sugar-cube-static.svg
+
+djot:
+	codeHighlighting:
+		enabled: true
+		themes:
+			dark: github-dark-default
+			light: light-plus
+		withGutter: false
+	headerAnchors:
+		enabled: true
+
+build:
+	vite:
+		enabled: true
+		command: npm run build
+		defaultEntry: assets/css/site.css
+
+devServer:
+	vite:
+		enabled: true
+		host: '127.0.0.1'
+		port: 5175
+		command: 'npm run dev -- --host {host} --port {port} --strictPort'
+		defaultEntry: assets/css/site.css
+
+
+# --- Available options (uncomment and adjust as needed) ---
+# pageTemplate: page
+# paths:
+# 	content: content
+# 	template: templates
+# 	static: static
+# 	public: public
+# 	extensions: extensions
+#
+# extensions: []
+# site:
+# 	title: null
+# 	description: null
+# 	baseUrl: null
+# 	basePath: null
+# 	meta: []
+#
+# images:
+# 	driver: null
+# 	presets: []
+#
+# contentTypes: []
+# djot:
+# 	xhtml: false
+# 	significantNewlines: false
+# 	profile: null
+# 	codeHighlighting:
+# 		enabled: true
+# 		theme: nord
+# 		themes: []
+# 		withGutter: false
+#
+# 	headerAnchors:
+# 		enabled: false
+# 		symbol: '#'
+# 		position: after
+# 		cssClass: permalink-wrapper
+# 		ariaLabel: Anchor link
+#
+# 	autolink:
+# 		enabled: false
+#
+# 	externalLinks:
+# 		enabled: false
+# 		internalHosts: []
+# 		target: _blank
+# 		rel: noopener noreferrer
+# 		nofollow: false
+#
+# 	smartQuotes:
+# 		enabled: false
+# 		locale: null
+# 		openDouble: null
+# 		closeDouble: null
+# 		openSingle: null
+# 		closeSingle: null
+#
+# 	mentions:
+# 		enabled: false
+# 		urlTemplate: '/users/view/{username}'
+# 		cssClass: mention
+#
+# 	semanticSpan:
+# 		enabled: false
+#
+# 	defaultAttributes:
+# 		enabled: false
+# 		defaults: []
+#
+# build:
+# 	clean: false
+# 	drafts: false
+# 	vite:
+# 		enabled: false
+# 		command: npm run build
+# 		assetBaseUrl: /
+# 		manifestPath: public/.vite/manifest.json
+# 		defaultEntry: null
+#
+# devServer:
+# 	php:
+# 		host: '127.0.0.1'
+# 		port: 8080
+#
+# 	vite:
+# 		enabled: false
+# 		host: '127.0.0.1'
+# 		port: 5173
+# 		injectClient: true
+# 		defaultEntry: null
+# 		command: 'npm run dev -- --host {host} --port {port} --strictPort'

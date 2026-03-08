@@ -1,0 +1,80 @@
+---
+title: Pass-through
+description: "Registered directives handled by other passes."
+weight: 50
+navigation: true
+---
+
+# Pass-through Directives
+
+Pass-through directives look like normal directives, but they are handled by specialized compiler passes instead of the directive compilation pass.
+
+## Directives
+
+- `s:slot` - Component slot assignment.
+- `s:bind` - Component attribute binding.
+- `s:raw` - Preserve element inner content without directive parsing.
+- `s:trim` - Remove whitespace-only child text nodes at compile time.
+
+## Examples
+
+### s:slot
+
+Assign element content to a named component slot.
+
+::: code-group
+```sugar [Named slot]
+<s-card>
+    <div s:slot="header">Title</div>
+    <p>Body</p>
+</s-card>
+```
+
+```sugar [Multiple slots]
+<s-layout>
+    <div s:slot="sidebar">Filters</div>
+    <div s:slot="content">Results</div>
+</s-layout>
+```
+:::
+
+<!--@include: ./_partials/s-raw.dj-->
+
+<!--@include: ./_partials/s-trim.dj-->
+
+### s:bind
+
+Bind a set of attributes or props to a component element.
+
+::: code-group
+```sugar [Props object]
+<s-card s:bind="$cardProps"></s-card>
+```
+
+```sugar [Merge attributes]
+<s-button s:bind="$buttonAttrs">Save</s-button>
+```
+:::
+
+
+## Raw PHP imports (`use`, `use function`, `use const`)
+
+When a raw PHP block starts with import statements, Sugar hoists those imports to the compiled template prelude (outside the render closure), where PHP allows them.
+
+```sugar
+<?php
+use DateTimeImmutable as Clock;
+
+$year = (new Clock('2024-01-01'))->format('Y');
+?>
+
+<p><?= $year ?></p>
+```
+
+Behavior details:
+
+- Leading imports are extracted and emitted once at file scope.
+- Remaining executable PHP stays in place inside the template output flow.
+- Equivalent imports are de-duplicated, even when they appear multiple times (for example across includes, inheritance output, or expanded components).
+
+This means repeating the same library import across template files does not produce repeated `use` lines in compiled output.

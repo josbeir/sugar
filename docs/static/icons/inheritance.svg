@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Parent layout (top, narrower) -->
+  <rect x="8" y="2" width="16" height="9" rx="2" fill="#a855f7" fill-opacity="0.18" stroke="#a855f7" stroke-width="2"/>
+  <!-- Title bar line in parent -->
+  <path d="M11 6h10" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Connector -->
+  <path d="M16 11V15" stroke="#a855f7" stroke-width="2" stroke-linecap="round"/>
+  <!-- Arrowhead -->
+  <path d="M13 13L16 16L19 13" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Child template (bottom, wider) -->
+  <rect x="3" y="17" width="26" height="13" rx="2" fill="#a855f7" fill-opacity="0.28" stroke="#a855f7" stroke-width="2"/>
+  <!-- Block slot lines in child -->
+  <path d="M7 22h18M7 26h12" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
