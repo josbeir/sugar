@@ -24,11 +24,9 @@ use function Sugar\Core\Runtime\raw;
         </ul>
     </div>
 
-    <article class="card bg-base-100 border border-base-300 shadow-sm">
-        <div class="card-body p-6 sm:p-8 lg:p-10">
-            <div class="prose prose-invert max-w-none">
-                <?= $content |> raw() ?>
-            </div>
+    <article class="bg-base-100">
+        <div class="prose prose-invert max-w-none">
+            <?= $content |> raw() ?>
         </div>
     </article>
 

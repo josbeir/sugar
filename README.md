@@ -1,9 +1,8 @@
 <h1 align="center">🍬 Sugar - PHP template engine</h1>
 
 <div align="center" style="margin-bottom: 2rem;">
-	<img src="docs/public/hero/sugar-cube.svg" alt="Sugar cube" width="200" />
+	<img src="docs/static/sugar-cube.svg" alt="Sugar cube" width="200" />
 </div>
-
 
 <div align="center">
 	<a href="https://github.com/josbeir/sugar/actions" style="text-decoration: none;">

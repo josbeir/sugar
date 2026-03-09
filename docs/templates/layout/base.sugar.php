@@ -34,7 +34,7 @@
         <s-template s:include="../partials/header" />
 
         <s-ifblock name="toc">
-            <div class="xl:hidden relative z-20 border-b border-base-300 bg-base-100/95 backdrop-blur">
+            <div class="xl:hidden relative z-10 border-b border-base-300 bg-base-100/95 backdrop-blur">
                 <div
                     class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-2"
                 >
