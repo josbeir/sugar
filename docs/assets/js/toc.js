@@ -3,9 +3,13 @@
  * currently being read by observing the scroll position relative to the sticky
  * header.
  *
- * Attach as `x-data="tocPage"` on the flex container wrapping both the prose
- * content (marked with `data-prose`) and the TOC sidebar. TOC links bind their
- * active state via `:class="{ '...': activeToc === '<id>' }"`.
+ * Active state is stored in the global `toc` Alpine store (`$store.toc.active`)
+ * so that TOC links rendered outside the `x-data="tocPage"` scope (e.g. the
+ * mobile dropdown) can still bind to it.
+ *
+ * Attach as `x-data="tocPage"` on the flex container wrapping the prose
+ * content (marked with `data-prose`). TOC links bind their active state via
+ * `:class="{ '...': $store.toc.active === '<id>' }"` from any scope.
  *
  * The scroll listener is cleaned up via Alpine's `destroy()` lifecycle hook
  * when the element is removed from the DOM (e.g. on HTMX page swap).
@@ -13,8 +17,9 @@
  * @param {import('alpinejs').Alpine} Alpine
  */
 export default function registerTocPage(Alpine) {
+	Alpine.store('toc', { active: '' });
+
 	Alpine.data('tocPage', () => ({
-		activeToc: '',
 		_rafPending: false,
 		_offScroll: /** @type {(() => void) | null} */ (null),
 
@@ -33,7 +38,7 @@ export default function registerTocPage(Alpine) {
 				const update = () => {
 					const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 8;
 					if (atBottom) {
-						this.activeToc = ids[ids.length - 1];
+						Alpine.store('toc').active = ids[ids.length - 1];
 						return;
 					}
 
@@ -43,7 +48,7 @@ export default function registerTocPage(Alpine) {
 							active = section.id;
 						}
 					}
-					this.activeToc = active;
+					Alpine.store('toc').active = active;
 				};
 
 				const onScroll = () => {

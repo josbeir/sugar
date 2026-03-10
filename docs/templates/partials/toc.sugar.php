@@ -12,7 +12,7 @@
 			<a
 				href="#<?= $entry->id ?>"
 				title="<?= $entry->text ?>"
-				:class="{ 'text-primary bg-base-200': activeToc === '<?= $entry->id ?>' }"
+				:class="{ 'text-primary bg-base-200': $store.toc.active === '<?= $entry->id ?>' }"
 				class="block py-1 px-2 rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200 transition-colors duration-150 leading-snug truncate"
 			>
 				<?= $entry->text ?>
