@@ -5,6 +5,7 @@ namespace Sugar\Extension\Vite\Runtime;
 
 use Sugar\Core\Escape\Escaper;
 use Sugar\Core\Exception\TemplateRuntimeException;
+use Sugar\Extension\Vite\ViteConfig;
 
 /**
  * Resolves and renders Vite asset tags at runtime.
@@ -12,40 +13,40 @@ use Sugar\Core\Exception\TemplateRuntimeException;
  * In development mode this emits `@vite/client` and entry module scripts.
  * In production mode this resolves entries from `manifest.json` and emits
  * stylesheet and module script tags.
+ *
+ * Named namespace configs (e.g. `@theme`) allow multi-build setups where each
+ * namespace has its own manifest, base URL, and optional dev server.
  */
 final class ViteAssetResolver
 {
     /**
-     * @var array<string, mixed>|null
+     * @var array<string, array<string, mixed>>
      */
-    private ?array $manifest = null;
+    private array $manifests = [];
 
     /**
      * @var array<string, true>
      */
     private array $emittedTags = [];
 
-    private bool $clientInjected = false;
+    /**
+     * @var array<string, true>
+     */
+    private array $injectedClients = [];
 
     /**
      * @param string $mode Resolver mode: `auto`, `dev`, or `prod`
      * @param bool $debug Whether engine debug mode is enabled
-     * @param string|null $manifestPath Absolute path to Vite manifest file for production mode
-     * @param string $assetBaseUrl Public URL base for emitted manifest assets
-     * @param string $devServerUrl Vite dev server origin
-     * @param bool $injectClient Whether to inject `@vite/client` in development mode
-     * @param string|null $defaultEntry Optional default entry used when specification is boolean
+     * @param \Sugar\Extension\Vite\ViteConfig $default Configuration for the default (unnamed) namespace
+     * @param array<string, \Sugar\Extension\Vite\ViteConfig> $namespaces Named namespace configurations keyed by namespace name
      */
     public function __construct(
         private readonly string $mode,
         private readonly bool $debug,
-        private readonly ?string $manifestPath,
-        private readonly string $assetBaseUrl,
-        private readonly string $devServerUrl,
-        private readonly bool $injectClient,
-        private readonly ?string $defaultEntry,
+        private readonly ViteConfig $default,
+        private readonly array $namespaces = [],
     ) {
-        if (trim($this->assetBaseUrl) === '') {
+        if (trim($this->default->assetBaseUrl) === '') {
             throw new TemplateRuntimeException('Vite assetBaseUrl must be configured and non-empty.');
         }
     }
@@ -89,15 +90,121 @@ final class ViteAssetResolver
     }
 
     /**
-     * Normalize directive specification into entry list.
+     * Parse a `@namespace/path` entry into its namespace name and bare path.
+     *
+     * Returns `[null, $entry]` for entries without a namespace prefix.
+     *
+     * @return array{0: string|null, 1: string}
+     */
+    private function parseEntry(string $entry): array
+    {
+        if (!str_starts_with($entry, '@')) {
+            return [null, $entry];
+        }
+
+        $slashPos = strpos($entry, '/');
+        if ($slashPos === false) {
+            // "@namespace" with no slash — treat as namespace shorthand with empty path.
+            return [substr($entry, 1), ''];
+        }
+
+        return [substr($entry, 1, $slashPos - 1), substr($entry, $slashPos + 1)];
+    }
+
+    /**
+     * Resolve the ViteConfig for a given namespace name.
+     *
+     * Falls back to the default config when namespace is null.
+     *
+     * @param string|null $namespace Namespace name or null for the default
+     * @throws \Sugar\Core\Exception\TemplateRuntimeException When the namespace is not registered
+     */
+    private function resolveConfig(?string $namespace): ViteConfig
+    {
+        if ($namespace === null) {
+            return $this->default;
+        }
+
+        if (!isset($this->namespaces[$namespace])) {
+            throw new TemplateRuntimeException(sprintf(
+                'Vite namespace "@%s" is not registered. Registered namespaces: %s.',
+                $namespace,
+                $this->namespaces === [] ? '(none)' : implode(', ', array_map(
+                    static fn(string $n): string => '@' . $n,
+                    array_keys($this->namespaces),
+                )),
+            ));
+        }
+
+        $config = $this->namespaces[$namespace];
+
+        if (trim($config->assetBaseUrl) === '') {
+            throw new TemplateRuntimeException(sprintf(
+                'Vite namespace "@%s" has an empty assetBaseUrl; a non-empty assetBaseUrl is required.',
+                $namespace,
+            ));
+        }
+
+        return $config;
+    }
+
+    /**
+     * Resolve the effective dev server URL for a config, falling back to the default.
+     */
+    private function resolveDevServerUrl(ViteConfig $config): string
+    {
+        return $config->devServerUrl ?? $this->default->devServerUrl ?? 'http://localhost:5173';
+    }
+
+    /**
+     * Normalize directive specification into a list of `[namespace, path]` tuples.
+     *
+     * @param mixed $spec Entry specification
+     * @return array<array{0: string|null, 1: string}>
+     */
+    private function normalizeEntries(mixed $spec): array
+    {
+        $raw = $this->normalizeRawEntries($spec);
+        $result = [];
+
+        foreach ($raw as $entry) {
+            [$namespace, $path] = $this->parseEntry($entry);
+
+            if ($path !== '') {
+                $result[] = [$namespace, $path];
+                continue;
+            }
+
+            // Empty path — resolve via the (namespace) config's configured defaultEntry.
+            $config = $this->resolveConfig($namespace);
+            if ($config->defaultEntry === null || trim($config->defaultEntry) === '') {
+                $nsLabel = $namespace === null
+                    ? 'default namespace'
+                    : sprintf('namespace "@%s"', $namespace);
+                throw new TemplateRuntimeException(sprintf(
+                    'Vite %s was requested with an empty entry path, but no defaultEntry is configured.',
+                    $nsLabel,
+                ));
+            }
+
+            $result[] = [$namespace, trim($config->defaultEntry)];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Normalize directive specification into a flat list of raw entry strings.
      *
      * @param mixed $spec Entry specification
      * @return array<string>
      */
-    private function normalizeEntries(mixed $spec): array
+    private function normalizeRawEntries(mixed $spec): array
     {
         if ($spec === null || $spec === true) {
-            return $this->defaultEntry === null ? [] : [$this->defaultEntry];
+            $defaultEntry = $this->default->defaultEntry !== null ? trim($this->default->defaultEntry) : null;
+
+            return $defaultEntry !== null && $defaultEntry !== '' ? [$defaultEntry] : [];
         }
 
         if (is_string($spec)) {
@@ -114,61 +221,65 @@ final class ViteAssetResolver
             }
 
             if (array_key_exists('entries', $spec) && is_array($spec['entries'])) {
-                $entries = [];
-                foreach ($spec['entries'] as $entry) {
-                    if (!is_string($entry)) {
-                        continue;
-                    }
-
-                    $normalized = trim($entry);
-                    if ($normalized !== '') {
-                        $entries[] = $normalized;
-                    }
-                }
-
-                return $entries;
+                return $this->collectStringEntries($spec['entries']);
             }
 
-            $entries = [];
-            foreach ($spec as $entry) {
-                if (!is_string($entry)) {
-                    continue;
-                }
-
-                $normalized = trim($entry);
-                if ($normalized !== '') {
-                    $entries[] = $normalized;
-                }
-            }
-
-            return $entries;
+            return $this->collectStringEntries($spec);
         }
 
         throw new TemplateRuntimeException('s:vite expects a string, list, or options array expression.');
     }
 
     /**
+     * Collect non-empty string entries from a list.
+     *
+     * @param array<mixed> $items
+     * @return array<string>
+     */
+    private function collectStringEntries(array $items): array
+    {
+        $entries = [];
+        foreach ($items as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+
+            $normalized = trim($item);
+            if ($normalized !== '') {
+                $entries[] = $normalized;
+            }
+        }
+
+        return $entries;
+    }
+
+    /**
      * Render development mode tags for entries.
      *
-     * @param array<string> $entries Entry paths
+     * @param array<array{0: string|null, 1: string}> $entries Parsed namespace+path tuples
      * @return string Rendered HTML tags
      */
     private function renderDevelopmentTags(array $entries): string
     {
         $tags = [];
 
-        if ($this->injectClient && !$this->clientInjected) {
-            $clientUrl = $this->normalizeDevUrl('@vite/client');
-            $tag = '<script type="module" src="' . Escaper::attr($clientUrl) . '"></script>';
-            $deduped = $this->emitTag($tag);
-            if ($deduped !== null) {
-                $tags[] = $deduped;
-                $this->clientInjected = true;
-            }
-        }
+        foreach ($entries as [$namespace, $path]) {
+            $config = $this->resolveConfig($namespace);
+            $devServerUrl = $this->resolveDevServerUrl($config);
+            $configKey = $namespace ?? '';
 
-        foreach ($entries as $entry) {
-            $entryUrl = $this->normalizeDevUrl($entry);
+            if ($config->injectClient && !isset($this->injectedClients[$configKey])) {
+                $clientUrl = $this->normalizeDevUrl('@vite/client', $devServerUrl);
+                $tag = '<script type="module" src="' . Escaper::attr($clientUrl) . '"></script>';
+                $deduped = $this->emitTag($tag);
+                if ($deduped !== null) {
+                    $tags[] = $deduped;
+                }
+
+                $this->injectedClients[$configKey] = true;
+            }
+
+            $entryUrl = $this->normalizeDevUrl($path, $devServerUrl);
             $tag = '<script type="module" src="' . Escaper::attr($entryUrl) . '"></script>';
             $deduped = $this->emitTag($tag);
             if ($deduped !== null) {
@@ -182,25 +293,27 @@ final class ViteAssetResolver
     /**
      * Render production mode tags for entries.
      *
-     * @param array<string> $entries Entry paths
+     * @param array<array{0: string|null, 1: string}> $entries Parsed namespace+path tuples
      * @return string Rendered HTML tags
      */
     private function renderProductionTags(array $entries): string
     {
-        $manifest = $this->loadManifest();
         $tags = [];
 
-        foreach ($entries as $entry) {
-            $entryKey = $this->resolveManifestEntryKey($entry, $manifest);
+        foreach ($entries as [$namespace, $path]) {
+            $config = $this->resolveConfig($namespace);
+            $manifest = $this->loadManifest($namespace, $config);
+
+            $entryKey = $this->resolveManifestEntryKey($path, $manifest);
             if ($entryKey === null) {
-                throw new TemplateRuntimeException(sprintf('Vite manifest entry "%s" was not found.', $entry));
+                throw new TemplateRuntimeException(sprintf('Vite manifest entry "%s" was not found.', $path));
             }
 
             $visited = [];
             $cssFiles = $this->collectCssFiles($entryKey, $manifest, $visited);
 
             foreach ($cssFiles as $cssFile) {
-                $href = $this->normalizeBuildUrl($cssFile);
+                $href = $this->normalizeBuildUrl($cssFile, $config->assetBaseUrl);
                 $tag = '<link rel="stylesheet" href="' . Escaper::attr($href) . '">';
                 $deduped = $this->emitTag($tag);
                 if ($deduped !== null) {
@@ -210,11 +323,11 @@ final class ViteAssetResolver
 
             $entryMeta = $manifest[$entryKey];
             if (!is_array($entryMeta) || !isset($entryMeta['file']) || !is_string($entryMeta['file'])) {
-                throw new TemplateRuntimeException(sprintf('Invalid Vite manifest entry for "%s".', $entry));
+                throw new TemplateRuntimeException(sprintf('Invalid Vite manifest entry for "%s".', $path));
             }
 
             $entryFile = $entryMeta['file'];
-            $src = $this->normalizeBuildUrl($entryFile);
+            $src = $this->normalizeBuildUrl($entryFile, $config->assetBaseUrl);
 
             if ($this->isCssAssetPath($entryFile)) {
                 $styleTag = '<link rel="stylesheet" href="' . Escaper::attr($src) . '">';
@@ -306,32 +419,38 @@ final class ViteAssetResolver
     }
 
     /**
-     * Load and decode the Vite manifest.
+     * Load and decode the Vite manifest for the given config, caching per namespace.
      *
+     * @param string|null $namespace Namespace key used for caching
+     * @param \Sugar\Extension\Vite\ViteConfig $config Config to load the manifest from
      * @return array<string, mixed>
      */
-    private function loadManifest(): array
+    private function loadManifest(?string $namespace, ViteConfig $config): array
     {
-        if (is_array($this->manifest)) {
-            return $this->manifest;
+        $cacheKey = $namespace ?? '';
+
+        if (isset($this->manifests[$cacheKey])) {
+            return $this->manifests[$cacheKey];
         }
 
-        if ($this->manifestPath === null || trim($this->manifestPath) === '') {
+        $manifestPath = $config->manifestPath;
+
+        if ($manifestPath === null || trim($manifestPath) === '') {
             throw new TemplateRuntimeException('Vite manifest path is required in production mode.');
         }
 
-        if (!is_file($this->manifestPath)) {
+        if (!is_file($manifestPath)) {
             throw new TemplateRuntimeException(sprintf(
                 'Vite manifest file was not found at "%s".',
-                $this->manifestPath,
+                $manifestPath,
             ));
         }
 
-        $manifestJson = file_get_contents($this->manifestPath);
+        $manifestJson = file_get_contents($manifestPath);
         if (!is_string($manifestJson) || $manifestJson === '') {
             throw new TemplateRuntimeException(sprintf(
                 'Vite manifest file "%s" is empty or unreadable.',
-                $this->manifestPath,
+                $manifestPath,
             ));
         }
 
@@ -339,7 +458,7 @@ final class ViteAssetResolver
         if (!is_array($decoded)) {
             throw new TemplateRuntimeException(sprintf(
                 'Vite manifest file "%s" contains invalid JSON.',
-                $this->manifestPath,
+                $manifestPath,
             ));
         }
 
@@ -352,29 +471,28 @@ final class ViteAssetResolver
             $manifest[$key] = $value;
         }
 
-        $this->manifest = $manifest;
+        $this->manifests[$cacheKey] = $manifest;
 
-        return $this->manifest;
+        return $this->manifests[$cacheKey];
     }
 
     /**
-     * Normalize an entry path against the dev server URL.
+     * Normalize an entry path against the given dev server URL.
      */
-    private function normalizeDevUrl(string $entryPath): string
+    private function normalizeDevUrl(string $entryPath, string $devServerUrl): string
     {
-        $base = rtrim($this->devServerUrl, '/');
+        $base = rtrim($devServerUrl, '/');
         $path = ltrim($entryPath, '/');
 
         return $base . '/' . $path;
     }
 
     /**
-     * Normalize a built file path against the configured build base URL.
+     * Normalize a built file path against the given build base URL.
      */
-    private function normalizeBuildUrl(string $filePath): string
+    private function normalizeBuildUrl(string $filePath, string $assetBaseUrl): string
     {
-        $base = rtrim($this->normalizePublicPath($this->assetBaseUrl), '/');
-
+        $base = rtrim($this->normalizePublicPath($assetBaseUrl), '/');
         $path = ltrim($filePath, '/');
 
         return $base . '/' . $path;

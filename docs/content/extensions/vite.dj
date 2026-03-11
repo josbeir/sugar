@@ -60,6 +60,55 @@ In this form, `src` is used as the directive expression and produces the same ou
 - `dev`: Always emits dev server tags.
 - `prod`: Always resolves assets from `manifest.json`.
 
+## Namespaces
+
+For multi-build setups — such as a plugin or theme with its own Vite build — you can register named namespaces. Each namespace is an independent `ViteConfig` with its own `assetBaseUrl`, `manifestPath`, and optionally a separate `devServerUrl`.
+
+Register namespaces when creating the extension:
+
+```php
+use Sugar\Core\Engine;
+use Sugar\Extension\Vite\ViteConfig;
+use Sugar\Extension\Vite\ViteExtension;
+
+$engine = Engine::builder()
+    ->withExtension(new ViteExtension(
+        assetBaseUrl: '/build/',
+        manifestPath: ROOT . '/webroot/build/.vite/manifest.json',
+        namespaces: [
+            'theme' => new ViteConfig(
+                assetBaseUrl: '/theme/build/',
+                manifestPath: ROOT . '/plugins/Theme/webroot/build/.vite/manifest.json',
+                devServerUrl: 'http://localhost:5174',
+                defaultEntry: 'resources/js/theme.ts',
+            ),
+        ],
+    ))
+    ->build();
+```
+
+Reference a namespace entry in templates using the `@name/` prefix:
+
+```sugar
+<s-template s:vite="'@theme/resources/js/theme.ts'" />
+```
+
+When a namespace has a `defaultEntry` configured, you can use the bare `@name` shorthand to load it without specifying an explicit path:
+
+```sugar
+<s-template s:vite="'@theme'" />
+```
+
+Multiple entries from different namespaces can be combined in one directive:
+
+```sugar
+<s-template s:vite="['resources/js/app.ts', '@theme/resources/js/theme.ts']" />
+```
+
+Each namespace resolves its assets independently: its own manifest in production, its own dev server URL in development, and its own `@vite/client` injection tracking.
+
+When `devServerUrl` is omitted from a `ViteConfig`, the namespace falls back to the root extension `devServerUrl`.
+
 ## Configuration options
 
 - `mode`: `auto`, `dev`, or `prod`.
@@ -68,7 +117,18 @@ In this form, `src` is used as the directive expression and produces the same ou
 - `devServerUrl`: Vite development server origin.
 - `injectClient`: Automatically inject `@vite/client` in development mode.
 - `defaultEntry`: Entry used when `s:vite` is used as a boolean directive.
+- `namespaces`: Named namespace configurations as an array of `ViteConfig` objects, keyed by namespace name.
+
+### `ViteConfig` options
+
+`ViteConfig` is used to configure a named namespace. All options mirror the top-level extension options and apply only to that namespace.
+
+- `assetBaseUrl`: Public URL prefix for built assets (required).
+- `manifestPath`: Absolute filesystem path to the Vite `manifest.json`.
+- `devServerUrl`: Dev server origin for this namespace. Falls back to the root `devServerUrl` when omitted.
+- `injectClient`: Whether to inject `@vite/client` for this namespace in development mode. Defaults to `true`.
+- `defaultEntry`: Default entry resolved when the namespace is referenced without an explicit path (e.g. `'@theme'` or `'@theme/'`). Throws at render time if the shorthand is used and `defaultEntry` is not configured.
 
 ## Production recommendation
 
-Set `manifestPath` and `assetBaseUrl` explicitly in production.
+Set `manifestPath` and `assetBaseUrl` explicitly in production. This applies equally to each registered namespace.

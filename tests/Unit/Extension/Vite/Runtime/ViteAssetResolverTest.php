@@ -6,6 +6,7 @@ namespace Sugar\Tests\Unit\Extension\Vite\Runtime;
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
+use Sugar\Extension\Vite\ViteConfig;
 
 /**
  * Tests ViteAssetResolver runtime behavior.
@@ -22,19 +23,40 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
+     * Build a ViteAssetResolver using the default (flat) config for brevity in tests.
+     *
+     * @param array<string, ViteConfig> $namespaces
+     */
+    private function makeResolver(
+        string $mode = 'dev',
+        bool $debug = true,
+        ?string $manifestPath = null,
+        string $assetBaseUrl = '/build/',
+        string $devServerUrl = 'http://localhost:5173',
+        bool $injectClient = true,
+        ?string $defaultEntry = null,
+        array $namespaces = [],
+    ): ViteAssetResolver {
+        return new ViteAssetResolver(
+            mode: $mode,
+            debug: $debug,
+            default: new ViteConfig(
+                assetBaseUrl: $assetBaseUrl,
+                manifestPath: $manifestPath,
+                devServerUrl: $devServerUrl,
+                injectClient: $injectClient,
+                defaultEntry: $defaultEntry,
+            ),
+            namespaces: $namespaces,
+        );
+    }
+
+    /**
      * Verify development output injects client and deduplicates repeated entries.
      */
     public function testDevelopmentModeInjectsClientAndDeduplicates(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: true);
 
         $first = $resolver->render('resources/js/app.ts');
         $second = $resolver->render('resources/js/app.ts');
@@ -56,15 +78,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -86,15 +100,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/assets/css/app.css');
 
@@ -107,15 +113,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testProductionModeWithoutManifestPathThrowsException(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Vite manifest path is required in production mode.');
@@ -131,15 +129,7 @@ final class ViteAssetResolverTest extends TestCase
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Vite assetBaseUrl must be configured and non-empty.');
 
-        new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $this->makeResolver(mode: 'prod', debug: false, assetBaseUrl: '');
     }
 
     /**
@@ -147,15 +137,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testBooleanSpecificationUsesDefaultEntry(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: 'resources/js/default.ts',
-        );
+        $resolver = $this->makeResolver(injectClient: false, defaultEntry: 'resources/js/default.ts');
 
         $output = $resolver->render(true);
 
@@ -167,15 +149,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testNullSpecificationWithoutDefaultEntryReturnsEmptyString(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: false);
 
         $output = $resolver->render(null);
 
@@ -187,15 +161,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testEntryOptionArrayRendersNormalizedEntry(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: false);
 
         $output = $resolver->render(['entry' => '  resources/js/app.ts  ']);
 
@@ -207,15 +173,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testEntriesOptionArrayFiltersNonStringValues(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: false);
 
         $output = $resolver->render([
             'entries' => [' resources/js/a.ts ', 42, '', 'resources/js/b.ts'],
@@ -231,15 +189,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testListSpecificationFiltersInvalidEntries(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: false);
 
         $output = $resolver->render([' resources/js/a.ts ', null, '', 'resources/js/b.ts']);
 
@@ -252,15 +202,7 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testUnsupportedSpecificationTypeThrowsException(): void
     {
-        $resolver = new ViteAssetResolver(
-            mode: 'dev',
-            debug: true,
-            manifestPath: null,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: false,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(injectClient: false);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('s:vite expects a string, list, or options array expression.');
@@ -279,15 +221,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'auto',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'auto', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -306,15 +240,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('/resources/js/app.ts');
 
@@ -339,15 +265,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -366,15 +284,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Vite manifest entry "resources/js/app.ts" was not found.');
@@ -393,15 +303,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Invalid Vite manifest entry for "resources/js/app.ts".');
@@ -417,15 +319,7 @@ final class ViteAssetResolverTest extends TestCase
         $this->manifestPath = sys_get_temp_dir() . '/sugar-vite-invalid-' . uniqid('', true) . '.json';
         file_put_contents($this->manifestPath, '{invalid-json');
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('contains invalid JSON');
@@ -438,14 +332,10 @@ final class ViteAssetResolverTest extends TestCase
      */
     public function testProductionModeWithMissingManifestFileThrowsException(): void
     {
-        $resolver = new ViteAssetResolver(
+        $resolver = $this->makeResolver(
             mode: 'prod',
             debug: false,
             manifestPath: sys_get_temp_dir() . '/sugar-vite-missing-' . uniqid('', true) . '.json',
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
         );
 
         $this->expectException(TemplateRuntimeException::class);
@@ -464,15 +354,7 @@ final class ViteAssetResolverTest extends TestCase
             ['file' => 'assets/app.js'],
         ], JSON_THROW_ON_ERROR));
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('Vite manifest entry "resources/js/app.ts" was not found.');
@@ -492,15 +374,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/assets/css/app.css');
 
@@ -519,15 +393,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $first = $resolver->render('resources/js/app.ts');
         $second = $resolver->render('resources/js/app.ts');
@@ -550,15 +416,7 @@ final class ViteAssetResolverTest extends TestCase
             'dep.ts' => 'invalid-meta',
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -574,15 +432,7 @@ final class ViteAssetResolverTest extends TestCase
         $this->manifestPath = sys_get_temp_dir() . '/sugar-vite-empty-' . uniqid('', true) . '.json';
         file_put_contents($this->manifestPath, '');
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath);
 
         $this->expectException(TemplateRuntimeException::class);
         $this->expectExceptionMessage('is empty or unreadable');
@@ -601,15 +451,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '///',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath, assetBaseUrl: '///');
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -627,15 +469,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath, assetBaseUrl: '/');
 
         $output = $resolver->render('resources/js/app.ts');
 
@@ -654,15 +488,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: '/assets/build',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath, assetBaseUrl: '/assets/build');
 
         $output = $resolver->render('resources/assets/js/site.js');
 
@@ -682,15 +508,7 @@ final class ViteAssetResolverTest extends TestCase
             ],
         ]);
 
-        $resolver = new ViteAssetResolver(
-            mode: 'prod',
-            debug: false,
-            manifestPath: $this->manifestPath,
-            assetBaseUrl: 'https://cdn.example.com/build/',
-            devServerUrl: 'http://localhost:5173',
-            injectClient: true,
-            defaultEntry: null,
-        );
+        $resolver = $this->makeResolver(mode: 'prod', debug: false, manifestPath: $this->manifestPath, assetBaseUrl: 'https://cdn.example.com/build/');
 
         $output = $resolver->render('resources/assets/js/site.js');
 
@@ -708,5 +526,324 @@ final class ViteAssetResolverTest extends TestCase
         file_put_contents($path, json_encode($manifest, JSON_THROW_ON_ERROR));
 
         return $path;
+    }
+
+    // ----------------------------------------------------------------
+    // Namespace tests
+    // ----------------------------------------------------------------
+
+    /**
+     * Verify @namespace/path dev entries route to the namespace-specific dev server URL.
+     */
+    public function testNamespacedEntryDevModeRoutesToNamespaceDevServer(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            devServerUrl: 'http://localhost:5173',
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertStringContainsString('http://localhost:5174/@vite/client', $output);
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+        $this->assertStringNotContainsString('http://localhost:5173', $output);
+    }
+
+    /**
+     * Verify @namespace/path dev entries fall back to root dev server when namespace has none.
+     */
+    public function testNamespacedEntryDevModeFallsBackToRootDevServer(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            devServerUrl: 'http://localhost:5173',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+            ],
+        );
+
+        $output = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertStringContainsString('http://localhost:5173/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify @namespace/path prod entries resolve from the namespace manifest and base URL.
+     */
+    public function testNamespacedEntryProdModeUsesNamespaceManifestAndBaseUrl(): void
+    {
+        $themeManifest = $this->createManifestFile([
+            'resources/js/theme.ts' => [
+                'file' => 'assets/theme-xyz.js',
+                'css' => ['assets/theme-xyz.css'],
+            ],
+        ]);
+
+        $resolver = $this->makeResolver(
+            mode: 'prod',
+            debug: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    manifestPath: $themeManifest,
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.css', $output);
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.js', $output);
+        $this->assertStringNotContainsString('src="/build/assets/', $output);
+
+        unlink($themeManifest);
+    }
+
+    /**
+     * Verify separate namespace manifests are cached independently from each other.
+     */
+    public function testNamespaceManifestsAreCachedIndependently(): void
+    {
+        $defaultManifest = $this->createManifestFile([
+            'resources/js/app.ts' => ['file' => 'assets/app-abc.js'],
+        ]);
+        $themeManifest = $this->createManifestFile([
+            'resources/js/theme.ts' => ['file' => 'assets/theme-xyz.js'],
+        ]);
+        $this->manifestPath = $defaultManifest;
+
+        $resolver = $this->makeResolver(
+            mode: 'prod',
+            debug: false,
+            manifestPath: $defaultManifest,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    manifestPath: $themeManifest,
+                ),
+            ],
+        );
+
+        $defaultOutput = $resolver->render('resources/js/app.ts');
+        $themeOutput = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertStringContainsString('/build/assets/app-abc.js', $defaultOutput);
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.js', $themeOutput);
+
+        unlink($themeManifest);
+    }
+
+    /**
+     * Verify an unregistered namespace throws a descriptive exception listing known namespaces.
+     */
+    public function testUnregisteredNamespaceThrowsDescriptiveException(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+            ],
+        );
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/@unknown/');
+        $this->expectExceptionMessageMatches('/@theme/');
+
+        $resolver->render('@unknown/resources/js/app.ts');
+    }
+
+    /**
+     * Verify the error message for an unregistered namespace states "(none)" when no namespaces exist.
+     */
+    public function testUnregisteredNamespaceWithNoNamespacesRegisteredMentionsNone(): void
+    {
+        $resolver = $this->makeResolver(mode: 'dev');
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/\(none\)/');
+
+        $resolver->render('@theme/resources/js/app.ts');
+    }
+
+    /**
+     * Verify per-namespace @vite/client injection is tracked independently.
+     */
+    public function testNamespacedClientInjectionTrackedPerNamespace(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                    injectClient: true,
+                ),
+            ],
+        );
+
+        $defaultOutput = $resolver->render('resources/js/app.ts');
+        $themeOutput = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertSame(1, substr_count($defaultOutput . $themeOutput, 'http://localhost:5173/@vite/client'));
+        $this->assertSame(1, substr_count($defaultOutput . $themeOutput, 'http://localhost:5174/@vite/client'));
+    }
+
+    /**
+     * Verify namespaced entries are deduplicated independently from default entries.
+     */
+    public function testNamespacedEntriesDeduplicatedIndependently(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    injectClient: false,
+                ),
+            ],
+        );
+
+        $first = $resolver->render('@theme/resources/js/theme.ts');
+        $second = $resolver->render('@theme/resources/js/theme.ts');
+
+        $this->assertStringContainsString('resources/js/theme.ts', $first);
+        $this->assertSame('', $second);
+    }
+
+    /**
+     * Verify the root defaultEntry is used when spec is boolean true.
+     */
+    public function testDefaultEntryIsUsedInDevMode(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            defaultEntry: 'resources/js/app.ts',
+        );
+
+        $output = $resolver->render(true);
+
+        $this->assertStringContainsString('resources/js/app.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace" shorthand (no trailing slash) resolves via the namespace defaultEntry.
+     */
+    public function testNamespaceShorthandUsesNamespaceDefaultEntry(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                    injectClient: false,
+                    defaultEntry: 'resources/js/theme.ts',
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme');
+
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace/" (empty path after slash) also resolves via the namespace defaultEntry.
+     */
+    public function testNamespaceEmptyPathUsesNamespaceDefaultEntry(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                    injectClient: false,
+                    defaultEntry: 'resources/js/theme.ts',
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme/');
+
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace" shorthand throws when no defaultEntry is configured for the namespace.
+     */
+    public function testNamespaceShorthandWithoutDefaultEntryThrows(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+            ],
+        );
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/namespace "@theme"/i');
+        $this->expectExceptionMessageMatches('/no defaultEntry is configured/i');
+
+        $resolver->render('@theme');
+    }
+
+    /**
+     * Verify a namespace with an empty assetBaseUrl throws a descriptive exception.
+     */
+    public function testNamespaceEmptyAssetBaseUrlThrowsException(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: ''),
+            ],
+        );
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/namespace "@theme"/i');
+        $this->expectExceptionMessageMatches('/empty assetBaseUrl/i');
+
+        $resolver->render('@theme/resources/js/theme.ts');
+    }
+
+    /**
+     * Verify @vite/client is marked as injected even when its tag is deduped by emitTag().
+     */
+    public function testClientInjectionTrackedEvenWhenTagIsDeduped(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            namespaces: [
+                'alias' => new ViteConfig(
+                    assetBaseUrl: '/build/',
+                    devServerUrl: 'http://localhost:5173',
+                    injectClient: true,
+                ),
+            ],
+        );
+
+        // Renders the client for the default namespace (and deduplicates it for "alias" since same URL).
+        $resolver->render('resources/js/app.ts');
+        // The "alias" namespace shares the same dev server URL; the client tag is deduped but should
+        // still be considered injected, so no duplicate attempt is made on subsequent renders.
+        $secondOutput = $resolver->render('@alias/resources/js/other.ts');
+
+        // The second render should NOT contain @vite/client again.
+        $this->assertStringNotContainsString('@vite/client', $secondOutput);
     }
 }

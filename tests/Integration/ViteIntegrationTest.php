@@ -5,7 +5,9 @@ namespace Sugar\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Sugar\Core\Engine;
+use Sugar\Core\Exception\TemplateRuntimeException;
 use Sugar\Core\Loader\StringTemplateLoader;
+use Sugar\Extension\Vite\ViteConfig;
 use Sugar\Extension\Vite\ViteExtension;
 
 /**
@@ -197,6 +199,245 @@ final class ViteIntegrationTest extends TestCase
 
         $this->assertStringContainsString('http://localhost:5173/@vite/client', $output);
         $this->assertStringContainsString('http://localhost:5173/resources/js/app.ts', $output);
+    }
+
+    // ----------------------------------------------------------------
+    // Namespace tests
+    // ----------------------------------------------------------------
+
+    /**
+     * Verify @namespace/path entries in dev mode route to the namespace-specific dev server.
+     */
+    public function testRendersNamespacedDevelopmentTagsUsingSeparateDevServer(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'ns-dev-page' => '<s-template s:vite="\'@theme/resources/js/theme.ts\'" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+                namespaces: [
+                    'theme' => new ViteConfig(
+                        assetBaseUrl: '/theme/build/',
+                        devServerUrl: 'http://localhost:5174',
+                    ),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-dev-page');
+
+        $this->assertStringContainsString('http://localhost:5174/@vite/client', $output);
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+        $this->assertStringNotContainsString('http://localhost:5173', $output);
+    }
+
+    /**
+     * Verify @namespace/path entries in dev mode fall back to root dev server when none configured.
+     */
+    public function testNamespacedDevModeUsesRootDevServerWhenNotOverridden(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'ns-dev-fallback-page' => '<s-template s:vite="\'@theme/resources/js/theme.ts\'" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+                namespaces: [
+                    'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-dev-fallback-page');
+
+        $this->assertStringContainsString('http://localhost:5173/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify @namespace/path entries in prod mode resolve from the namespace-specific manifest.
+     */
+    public function testRendersNamespacedProductionAssetsFromSeparateManifest(): void
+    {
+        $defaultManifest = $this->createManifestFile([
+            'resources/js/app.ts' => ['file' => 'assets/app-abc.js'],
+        ]);
+        $themeManifest = $this->createManifestFile([
+            'resources/js/theme.ts' => [
+                'file' => 'assets/theme-xyz.js',
+                'css' => ['assets/theme-xyz.css'],
+            ],
+        ]);
+        $this->manifestPath = $defaultManifest;
+
+        $loader = new StringTemplateLoader(templates: [
+            'ns-prod-page' => '<s-template s:vite="[\'resources/js/app.ts\', \'@theme/resources/js/theme.ts\']" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'prod',
+                manifestPath: $defaultManifest,
+                namespaces: [
+                    'theme' => new ViteConfig(
+                        assetBaseUrl: '/theme/build/',
+                        manifestPath: $themeManifest,
+                    ),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-prod-page');
+
+        $this->assertStringContainsString('/build/assets/app-abc.js', $output);
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.css', $output);
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.js', $output);
+
+        unlink($themeManifest);
+    }
+
+    /**
+     * Verify that default entries from the root config still work with namespace entries mixed in.
+     */
+    public function testDefaultEntryIsUnaffectedByNamespaceEntries(): void
+    {
+        $manifest = $this->createManifestFile([
+            'resources/js/app.ts' => ['file' => 'assets/app-abc.js'],
+        ]);
+        $this->manifestPath = $manifest;
+
+        $loader = new StringTemplateLoader(templates: [
+            'ns-default-entry-page' => '<s-template s:vite="true" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'prod',
+                manifestPath: $manifest,
+                defaultEntry: 'resources/js/app.ts',
+                namespaces: [
+                    'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-default-entry-page');
+
+        $this->assertStringContainsString('/build/assets/app-abc.js', $output);
+    }
+
+    /**
+     * Verify that @namespace/path with a namespace-scoped defaultEntry resolves correctly in prod.
+     */
+    public function testNamespacedDefaultEntryIsUsedWhenSpecIsTrue(): void
+    {
+        $themeManifest = $this->createManifestFile([
+            'resources/js/theme.ts' => ['file' => 'assets/theme-xyz.js'],
+        ]);
+
+        $loader = new StringTemplateLoader(templates: [
+            'ns-default-ns-entry-page' => '<s-template s:vite="true" /><s-template s:vite="\'@theme/resources/js/theme.ts\'" />',
+        ]);
+
+        $rootManifest = $this->createManifestFile([
+            'resources/js/app.ts' => ['file' => 'assets/app-abc.js'],
+        ]);
+        $this->manifestPath = $rootManifest;
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'prod',
+                manifestPath: $rootManifest,
+                defaultEntry: 'resources/js/app.ts',
+                namespaces: [
+                    'theme' => new ViteConfig(
+                        assetBaseUrl: '/theme/build/',
+                        manifestPath: $themeManifest,
+                    ),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-default-ns-entry-page');
+
+        $this->assertStringContainsString('/build/assets/app-abc.js', $output);
+        $this->assertStringContainsString('/theme/build/assets/theme-xyz.js', $output);
+
+        unlink($themeManifest);
+    }
+
+    /**
+     * Verify that an unregistered namespace throws a descriptive exception.
+     */
+    public function testUnregisteredNamespaceThrowsException(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'ns-unknown-page' => '<s-template s:vite="\'@unknown/resources/js/app.ts\'" />',
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'dev',
+                namespaces: [
+                    'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+                ],
+            ))
+            ->build();
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/@unknown/');
+        $this->expectExceptionMessageMatches('/@theme/');
+
+        $engine->render('ns-unknown-page');
+    }
+
+    /**
+     * Verify that namespaced entries in dev mode are each deduplicated independently.
+     */
+    public function testNamespacedEntriesAreDeduplicatedIndependently(): void
+    {
+        $loader = new StringTemplateLoader(templates: [
+            'ns-dedupe-page' => implode('', [
+                '<s-template s:vite="\'@theme/resources/js/theme.ts\'" />',
+                '<s-template s:vite="\'@theme/resources/js/theme.ts\'" />',
+            ]),
+        ]);
+
+        $engine = Engine::builder()
+            ->withTemplateLoader($loader)
+            ->withExtension(new ViteExtension(
+                assetBaseUrl: '/build/',
+                mode: 'dev',
+                devServerUrl: 'http://localhost:5173',
+                namespaces: [
+                    'theme' => new ViteConfig(
+                        assetBaseUrl: '/theme/build/',
+                        devServerUrl: 'http://localhost:5174',
+                    ),
+                ],
+            ))
+            ->build();
+
+        $output = $engine->render('ns-dedupe-page');
+
+        $this->assertSame(1, substr_count($output, 'http://localhost:5174/@vite/client'));
+        $this->assertSame(1, substr_count($output, 'resources/js/theme.ts'));
     }
 
     /**
