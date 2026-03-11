@@ -6,6 +6,7 @@ namespace Sugar\Core\Compiler;
 use PhpParser\Error;
 use PhpParser\Parser as PhpAstParser;
 use PhpParser\ParserFactory;
+use PhpToken;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
@@ -278,6 +279,12 @@ final class PhpSyntaxValidator
             return ['', 0];
         }
 
+        // Alternative syntax control structures (e.g. `if():` ... `endif;`) span multiple
+        // PHP blocks and cannot be validated as an isolated snippet.
+        if ($this->hasOpenAlternativeSyntax($normalizedCode)) {
+            return ['', 0];
+        }
+
         $lineOffset = 0;
         if (str_contains($normalizedCode, 'use')) {
             $normalizedNode = new RawPhpNode($normalizedCode, $node->line, $node->column);
@@ -299,6 +306,84 @@ final class PhpSyntaxValidator
         }
 
         return [$normalizedCode, $lineOffset];
+    }
+
+    /**
+     * Detect whether a raw PHP snippet contains unmatched alternative control structure syntax.
+     *
+     * PHP alternative syntax (e.g. `if (): ... endif;`) can span multiple separate PHP
+     * blocks inside a template. Validating such a fragment in isolation would always fail
+     * because the opener block lacks its matching `endXxx` counterpart (or vice-versa).
+     *
+     * The method tokenises the snippet with `PhpToken::tokenize()` and tracks two categories:
+     *  - Openers (`T_IF`, `T_FOR`, `T_FOREACH`, `T_WHILE`, `T_SWITCH`, `T_DECLARE`) followed
+     *    by `:` always increment the nesting depth.
+     *  - Continuations (`T_ELSE`, `T_ELSEIF`) and inner tokens (`T_CASE`, `T_DEFAULT`)
+     *    followed by `:` only increment depth when currently at depth 0 (orphaned snippets);
+     *    when depth > 0 they are continuations of a block already opened in this snippet and
+     *    do not affect the balance.
+     *  - Closers (`T_ENDIF`, `T_ENDFOR`, `T_ENDFOREACH`, `T_ENDWHILE`, `T_ENDSWITCH`,
+     *    `T_ENDDECLARE`) decrement the depth.
+     * A non-zero balance means the snippet is part of a multi-block construct and should not
+     * be validated in isolation.
+     *
+     * @param string $code Stripped PHP code (without open/close tags)
+     * @return bool True when the snippet has unbalanced alternative syntax
+     */
+    private function hasOpenAlternativeSyntax(string $code): bool
+    {
+        $tokens = PhpToken::tokenize('<?php ' . $code);
+        $depth = 0;
+        $expectColon = false;
+        $orphanColon = false;
+        $parenDepth = 0;
+
+        $openerTokens = [T_IF, T_FOR, T_FOREACH, T_WHILE, T_SWITCH, T_DECLARE];
+        $continuationTokens = [T_ELSE, T_ELSEIF, T_CASE, T_DEFAULT];
+        $endTokens = [T_ENDIF, T_ENDFOR, T_ENDFOREACH, T_ENDWHILE, T_ENDSWITCH, T_ENDDECLARE];
+
+        foreach ($tokens as $token) {
+            if ($token->isIgnorable()) {
+                continue;
+            }
+
+            if (in_array($token->id, $endTokens, true)) {
+                $depth--;
+                $expectColon = false;
+                $orphanColon = false;
+            } elseif (in_array($token->id, $openerTokens, true)) {
+                $expectColon = true;
+                $orphanColon = false;
+                $parenDepth = 0;
+            } elseif (in_array($token->id, $continuationTokens, true)) {
+                // When depth > 0 this is a continuation inside a block opened in this snippet;
+                // do not change depth so that the matching closer brings it back to zero.
+                // When depth === 0 it is an orphaned clause in a multi-block template.
+                if ($depth === 0) {
+                    $expectColon = true;
+                    $orphanColon = true;
+                }
+
+                $parenDepth = 0;
+            } elseif ($token->text === '(') {
+                $parenDepth++;
+            } elseif ($token->text === ')') {
+                $parenDepth--;
+            } elseif ($token->text === ':' && $parenDepth === 0 && $expectColon) {
+                if ($orphanColon) {
+                    return true;
+                }
+
+                $depth++;
+                $expectColon = false;
+                $orphanColon = false;
+            } elseif ($token->text === '{') {
+                $expectColon = false;
+                $orphanColon = false;
+            }
+        }
+
+        return $depth !== 0;
     }
 
     /**

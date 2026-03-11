@@ -320,4 +320,73 @@ SUGAR;
 
         $this->assertStringContainsString('some ?&gt; content', $output);
     }
+
+    public function testAlternativeSyntaxIfBlockCompilesAndRendersInDebugMode(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
+        );
+
+        $template = <<<'SUGAR'
+<?php if(true): ?>
+    <div>hello</div>
+<?php endif; ?>
+SUGAR;
+
+        // debug: true was previously triggering a false "Invalid PHP block" error
+        $compiled = $this->compiler->compile($template, 'alt-syntax.sugar.php', debug: true);
+        $output = $this->executeTemplate($compiled);
+
+        $this->assertStringContainsString('<div>hello</div>', $output);
+    }
+
+    public function testAlternativeSyntaxForeachBlockCompilesAndRendersInDebugMode(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
+        );
+
+        $template = <<<'SUGAR'
+<ul>
+<?php foreach ($items as $item): ?>
+    <li><?= $item ?></li>
+<?php endforeach; ?>
+</ul>
+SUGAR;
+
+        $compiled = $this->compiler->compile($template, 'alt-foreach.sugar.php', debug: true);
+        $output = $this->executeTemplate($compiled, ['items' => ['Apple', 'Banana']]);
+
+        $this->assertStringContainsString('<li>Apple</li>', $output);
+        $this->assertStringContainsString('<li>Banana</li>', $output);
+    }
+
+    public function testAlternativeSyntaxElseBlockCompilesAndRendersInDebugMode(): void
+    {
+        $this->setUpCompilerWithStringLoader(
+            templates: [],
+            config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
+        );
+
+        $template = <<<'SUGAR'
+<?php if($show): ?>
+    <span>visible</span>
+<?php else: ?>
+    <span>hidden</span>
+<?php endif; ?>
+SUGAR;
+
+        $compiled = $this->compiler->compile($template, 'alt-else.sugar.php', debug: true);
+
+        $outputVisible = $this->executeTemplate($compiled, ['show' => true]);
+        $this->assertStringContainsString('<span>visible</span>', $outputVisible);
+
+        $outputHidden = $this->executeTemplate($compiled, ['show' => false]);
+        $this->assertStringContainsString('<span>hidden</span>', $outputHidden);
+    }
 }
