@@ -93,6 +93,12 @@ Reference a namespace entry in templates using the `@name/` prefix:
 <s-template s:vite="'@theme/resources/js/theme.ts'" />
 ```
 
+When a namespace has a `defaultEntry` configured, you can use the bare `@name` shorthand to load it without specifying an explicit path:
+
+```sugar
+<s-template s:vite="'@theme'" />
+```
+
 Multiple entries from different namespaces can be combined in one directive:
 
 ```sugar
@@ -121,7 +127,7 @@ When `devServerUrl` is omitted from a `ViteConfig`, the namespace falls back to 
 - `manifestPath`: Absolute filesystem path to the Vite `manifest.json`.
 - `devServerUrl`: Dev server origin for this namespace. Falls back to the root `devServerUrl` when omitted.
 - `injectClient`: Whether to inject `@vite/client` for this namespace in development mode. Defaults to `true`.
-- `defaultEntry`: Default entry used when `s:vite` is boolean for this namespace.
+- `defaultEntry`: Default entry resolved when the namespace is referenced without an explicit path (e.g. `'@theme'` or `'@theme/'`). Throws at render time if the shorthand is used and `defaultEntry` is not configured.
 
 ## Production recommendation
 

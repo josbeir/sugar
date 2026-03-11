@@ -104,7 +104,8 @@ final class ViteAssetResolver
 
         $slashPos = strpos($entry, '/');
         if ($slashPos === false) {
-            return [null, $entry];
+            // "@namespace" with no slash — treat as namespace shorthand with empty path.
+            return [substr($entry, 1), ''];
         }
 
         return [substr($entry, 1, $slashPos - 1), substr($entry, $slashPos + 1)];
@@ -135,7 +136,16 @@ final class ViteAssetResolver
             ));
         }
 
-        return $this->namespaces[$namespace];
+        $config = $this->namespaces[$namespace];
+
+        if (trim($config->assetBaseUrl) === '') {
+            throw new TemplateRuntimeException(sprintf(
+                'Vite namespace "@%s" has an empty assetBaseUrl; a non-empty assetBaseUrl is required.',
+                $namespace,
+            ));
+        }
+
+        return $config;
     }
 
     /**
@@ -162,7 +172,22 @@ final class ViteAssetResolver
 
             if ($path !== '') {
                 $result[] = [$namespace, $path];
+                continue;
             }
+
+            // Empty path — resolve via the (namespace) config's configured defaultEntry.
+            $config = $this->resolveConfig($namespace);
+            if ($config->defaultEntry === null || trim($config->defaultEntry) === '') {
+                $nsLabel = $namespace === null
+                    ? 'default namespace'
+                    : sprintf('namespace "@%s"', $namespace);
+                throw new TemplateRuntimeException(sprintf(
+                    'Vite %s was requested with an empty entry path, but no defaultEntry is configured.',
+                    $nsLabel,
+                ));
+            }
+
+            $result[] = [$namespace, $config->defaultEntry];
         }
 
         return $result;
@@ -247,8 +272,9 @@ final class ViteAssetResolver
                 $deduped = $this->emitTag($tag);
                 if ($deduped !== null) {
                     $tags[] = $deduped;
-                    $this->injectedClients[$configKey] = true;
                 }
+
+                $this->injectedClients[$configKey] = true;
             }
 
             $entryUrl = $this->normalizeDevUrl($path, $devServerUrl);

@@ -720,9 +720,9 @@ final class ViteAssetResolverTest extends TestCase
     }
 
     /**
-     * Verify ViteConfig defaultEntry is used for the namespace when spec has no path.
+     * Verify the root defaultEntry is used when spec is boolean true.
      */
-    public function testNamespaceDefaultEntryIsUsedInDevMode(): void
+    public function testDefaultEntryIsUsedInDevMode(): void
     {
         $resolver = $this->makeResolver(
             mode: 'dev',
@@ -733,5 +733,117 @@ final class ViteAssetResolverTest extends TestCase
         $output = $resolver->render(true);
 
         $this->assertStringContainsString('resources/js/app.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace" shorthand (no trailing slash) resolves via the namespace defaultEntry.
+     */
+    public function testNamespaceShorthandUsesNamespaceDefaultEntry(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                    injectClient: false,
+                    defaultEntry: 'resources/js/theme.ts',
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme');
+
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace/" (empty path after slash) also resolves via the namespace defaultEntry.
+     */
+    public function testNamespaceEmptyPathUsesNamespaceDefaultEntry(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            injectClient: false,
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                    injectClient: false,
+                    defaultEntry: 'resources/js/theme.ts',
+                ),
+            ],
+        );
+
+        $output = $resolver->render('@theme/');
+
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
+    }
+
+    /**
+     * Verify "@namespace" shorthand throws when no defaultEntry is configured for the namespace.
+     */
+    public function testNamespaceShorthandWithoutDefaultEntryThrows(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: '/theme/build/'),
+            ],
+        );
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/namespace "@theme"/i');
+        $this->expectExceptionMessageMatches('/no defaultEntry is configured/i');
+
+        $resolver->render('@theme');
+    }
+
+    /**
+     * Verify a namespace with an empty assetBaseUrl throws a descriptive exception.
+     */
+    public function testNamespaceEmptyAssetBaseUrlThrowsException(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(assetBaseUrl: ''),
+            ],
+        );
+
+        $this->expectException(TemplateRuntimeException::class);
+        $this->expectExceptionMessageMatches('/namespace "@theme"/i');
+        $this->expectExceptionMessageMatches('/empty assetBaseUrl/i');
+
+        $resolver->render('@theme/resources/js/theme.ts');
+    }
+
+    /**
+     * Verify @vite/client is marked as injected even when its tag is deduped by emitTag().
+     */
+    public function testClientInjectionTrackedEvenWhenTagIsDeduped(): void
+    {
+        $resolver = $this->makeResolver(
+            mode: 'dev',
+            devServerUrl: 'http://localhost:5173',
+            injectClient: true,
+            namespaces: [
+                'alias' => new ViteConfig(
+                    assetBaseUrl: '/build/',
+                    devServerUrl: 'http://localhost:5173',
+                    injectClient: true,
+                ),
+            ],
+        );
+
+        // Renders the client for the default namespace (and deduplicates it for "alias" since same URL).
+        $resolver->render('resources/js/app.ts');
+        // The "alias" namespace shares the same dev server URL; the client tag is deduped but should
+        // still be considered injected, so no duplicate attempt is made on subsequent renders.
+        $secondOutput = $resolver->render('@alias/resources/js/other.ts');
+
+        // The second render should NOT contain @vite/client again.
+        $this->assertStringNotContainsString('@vite/client', $secondOutput);
     }
 }
