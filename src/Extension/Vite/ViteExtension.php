@@ -31,7 +31,7 @@ use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
  *             devServerUrl: 'http://localhost:5174',
  *         ),
  *     ],
- * )
+ * );
  * ```
  */
 final readonly class ViteExtension implements ExtensionInterface

@@ -187,7 +187,7 @@ final class ViteAssetResolver
                 ));
             }
 
-            $result[] = [$namespace, $config->defaultEntry];
+            $result[] = [$namespace, trim($config->defaultEntry)];
         }
 
         return $result;
@@ -202,7 +202,9 @@ final class ViteAssetResolver
     private function normalizeRawEntries(mixed $spec): array
     {
         if ($spec === null || $spec === true) {
-            return $this->default->defaultEntry !== null ? [$this->default->defaultEntry] : [];
+            $defaultEntry = $this->default->defaultEntry !== null ? trim($this->default->defaultEntry) : null;
+
+            return $defaultEntry !== null && $defaultEntry !== '' ? [$defaultEntry] : [];
         }
 
         if (is_string($spec)) {

@@ -27,7 +27,9 @@ final readonly class ViteConfig
      * @param string|null $manifestPath Absolute path to the Vite manifest file used in production mode
      * @param string|null $devServerUrl Vite dev server origin; when null the resolver falls back to the root config value
      * @param bool $injectClient Whether to inject `@vite/client` in development mode
-     * @param string|null $defaultEntry Default entry used when directive spec is boolean true or null
+     * @param string|null $defaultEntry Default entry path for this config. For the root/default config it is used when
+     *   the directive spec is boolean true or null. For namespace configs it is resolved when the namespace is referenced
+     *   without an explicit path (e.g. `'@theme'` or `'@theme/'`).
      */
     public function __construct(
         public string $assetBaseUrl,
