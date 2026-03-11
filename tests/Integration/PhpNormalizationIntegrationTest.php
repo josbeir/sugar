@@ -326,6 +326,7 @@ SUGAR;
         $this->setUpCompilerWithStringLoader(
             templates: [],
             config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
         );
 
         $template = <<<'SUGAR'
@@ -346,6 +347,7 @@ SUGAR;
         $this->setUpCompilerWithStringLoader(
             templates: [],
             config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
         );
 
         $template = <<<'SUGAR'
@@ -368,6 +370,7 @@ SUGAR;
         $this->setUpCompilerWithStringLoader(
             templates: [],
             config: new SugarConfig(),
+            phpSyntaxValidationEnabled: true,
         );
 
         $template = <<<'SUGAR'

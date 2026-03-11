@@ -107,6 +107,7 @@ trait CompilerTestTrait
         bool $withDefaultDirectives = true,
         bool $absolutePathsOnly = false,
         array $customPasses = [],
+        bool $phpSyntaxValidationEnabled = false,
     ): void {
         $loaderConfig = $config ?? new SugarConfig();
 
@@ -141,6 +142,7 @@ trait CompilerTestTrait
             templateLoader: $this->templateLoader,
             config: $config,
             customPasses: $customPasses,
+            phpSyntaxValidationEnabled: $phpSyntaxValidationEnabled,
         );
 
         // Registry property is initialized before pass wiring.

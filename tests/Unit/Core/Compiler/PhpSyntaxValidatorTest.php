@@ -662,7 +662,7 @@ SUGAR;
         $this->addToAssertionCount(1);
     }
 
-    public function testTemplateSegmentsAllowAlternativeSyntaxWhileAndElse(): void
+    public function testTemplateSegmentsAllowAlternativeSyntaxWhileBlock(): void
     {
         if (!$this->hasPhpParserSupport()) {
             $this->expectNotToPerformAssertions();
@@ -712,6 +712,107 @@ SUGAR;
         $this->expectExceptionMessage('Invalid PHP block');
 
         $validator->templateSegments($document, $context);
+    }
+
+    public function testTemplateSegmentsValidateBalancedIfElseEndifInSingleBlock(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // A complete if/else/endif in one block is balanced — validation must run, not be skipped.
+        // This verifies that else: inside an already-open block does not inflate the depth.
+        $document = new DocumentNode([
+            new RawPhpNode("if (\$x):\n    \$a = 1;\nelse:\n    \$a = 2;\nendif;", 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowOrphanedElseColon(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Standalone else: is an orphaned continuation block in a multi-block template
+        $document = new DocumentNode([
+            new RawPhpNode('else:', 3, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowOrphanedCaseBlock(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Standalone case label is an orphaned inner block in a multi-block switch
+        $document = new DocumentNode([
+            new RawPhpNode('case 1:', 2, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsValidateBalancedSwitchInSingleBlock(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // A complete switch/endswitch with case labels in one block is balanced
+        $document = new DocumentNode([
+            new RawPhpNode("switch (\$x):\ncase 1:\n    \$r = 'a';\n    break;\ndefault:\n    \$r = 'b';\nendswitch;", 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
     }
 
     /**

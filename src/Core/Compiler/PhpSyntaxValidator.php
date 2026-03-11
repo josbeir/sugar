@@ -315,10 +315,17 @@ final class PhpSyntaxValidator
      * blocks inside a template. Validating such a fragment in isolation would always fail
      * because the opener block lacks its matching `endXxx` counterpart (or vice-versa).
      *
-     * The method tokenises the snippet with `PhpToken::tokenize()` and counts alternative
-     * syntax openers (control structures followed by `:`) against closers (`T_ENDIF`,
-     * `T_ENDFOREACH`, `T_ENDFOR`, `T_ENDWHILE`, `T_ENDSWITCH`). A non-zero balance
-     * means the snippet is part of a multi-block construct.
+     * The method tokenises the snippet with `PhpToken::tokenize()` and tracks two categories:
+     *  - Openers (`T_IF`, `T_FOR`, `T_FOREACH`, `T_WHILE`, `T_SWITCH`, `T_DECLARE`) followed
+     *    by `:` always increment the nesting depth.
+     *  - Continuations (`T_ELSE`, `T_ELSEIF`) and inner tokens (`T_CASE`, `T_DEFAULT`)
+     *    followed by `:` only increment depth when currently at depth 0 (orphaned snippets);
+     *    when depth > 0 they are continuations of a block already opened in this snippet and
+     *    do not affect the balance.
+     *  - Closers (`T_ENDIF`, `T_ENDFOR`, `T_ENDFOREACH`, `T_ENDWHILE`, `T_ENDSWITCH`,
+     *    `T_ENDDECLARE`) decrement the depth.
+     * A non-zero balance means the snippet is part of a multi-block construct and should not
+     * be validated in isolation.
      *
      * @param string $code Stripped PHP code (without open/close tags)
      * @return bool True when the snippet has unbalanced alternative syntax
@@ -327,41 +334,52 @@ final class PhpSyntaxValidator
     {
         $tokens = PhpToken::tokenize('<?php ' . $code);
         $depth = 0;
-        $lastWasControlWithParen = false;
-        $lastWasElse = false;
+        $expectColon = false;
+        $orphanColon = false;
         $parenDepth = 0;
 
-        $controlTokens = [T_IF, T_FOR, T_FOREACH, T_WHILE, T_SWITCH, T_ELSEIF];
-        $endTokens = [T_ENDIF, T_ENDFOR, T_ENDFOREACH, T_ENDWHILE, T_ENDSWITCH];
+        $openerTokens = [T_IF, T_FOR, T_FOREACH, T_WHILE, T_SWITCH, T_DECLARE];
+        $continuationTokens = [T_ELSE, T_ELSEIF, T_CASE, T_DEFAULT];
+        $endTokens = [T_ENDIF, T_ENDFOR, T_ENDFOREACH, T_ENDWHILE, T_ENDSWITCH, T_ENDDECLARE];
 
         foreach ($tokens as $token) {
+            if ($token->isIgnorable()) {
+                continue;
+            }
+
             if (in_array($token->id, $endTokens, true)) {
                 $depth--;
-                $lastWasControlWithParen = false;
-                $lastWasElse = false;
-            } elseif (in_array($token->id, $controlTokens, true)) {
-                $lastWasControlWithParen = true;
-                $lastWasElse = false;
+                $expectColon = false;
+                $orphanColon = false;
+            } elseif (in_array($token->id, $openerTokens, true)) {
+                $expectColon = true;
+                $orphanColon = false;
                 $parenDepth = 0;
-            } elseif ($token->id === T_ELSE) {
-                $lastWasElse = true;
-                $lastWasControlWithParen = false;
+            } elseif (in_array($token->id, $continuationTokens, true)) {
+                // When depth > 0 this is a continuation inside a block opened in this snippet;
+                // do not change depth so that the matching closer brings it back to zero.
+                // When depth === 0 it is an orphaned clause in a multi-block template.
+                if ($depth === 0) {
+                    $expectColon = true;
+                    $orphanColon = true;
+                }
+
                 $parenDepth = 0;
             } elseif ($token->text === '(') {
                 $parenDepth++;
             } elseif ($token->text === ')') {
                 $parenDepth--;
-            } elseif ($token->text === ':') {
-                if ($lastWasControlWithParen && $parenDepth === 0) {
-                    $depth++;
-                    $lastWasControlWithParen = false;
-                } elseif ($lastWasElse) {
-                    $depth++;
-                    $lastWasElse = false;
+            } elseif ($token->text === ':' && $parenDepth === 0 && $expectColon) {
+                if ($orphanColon) {
+                    return true;
                 }
+
+                $depth++;
+                $expectColon = false;
+                $orphanColon = false;
             } elseif ($token->text === '{') {
-                $lastWasControlWithParen = false;
-                $lastWasElse = false;
+                $expectColon = false;
+                $orphanColon = false;
             }
         }
 
