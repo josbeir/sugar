@@ -14,6 +14,25 @@ use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
  *
  * This extension provides the `s:vite` directive and a runtime resolver service
  * that emits development or production asset tags.
+ *
+ * Named Vite namespaces can be registered to support multi-build setups. A namespace
+ * is referenced in templates using the `@name/` prefix, e.g. `s:vite="'@theme/app.ts'"`.
+ *
+ * Example with a secondary namespace:
+ *
+ * ```php
+ * new ViteExtension(
+ *     assetBaseUrl: '/build/',
+ *     manifestPath: ROOT . '/webroot/build/.vite/manifest.json',
+ *     namespaces: [
+ *         'theme' => new ViteConfig(
+ *             assetBaseUrl: '/theme/build/',
+ *             manifestPath: ROOT . '/plugins/Theme/webroot/build/.vite/manifest.json',
+ *             devServerUrl: 'http://localhost:5174',
+ *         ),
+ *     ],
+ * )
+ * ```
  */
 final readonly class ViteExtension implements ExtensionInterface
 {
@@ -24,6 +43,7 @@ final readonly class ViteExtension implements ExtensionInterface
      * @param string $devServerUrl Vite dev server origin (e.g. `http://localhost:5173`)
      * @param bool $injectClient Whether to inject `@vite/client` in development mode
      * @param string|null $defaultEntry Optional default entry used when `s:vite` is boolean
+     * @param array<string, \Sugar\Extension\Vite\ViteConfig> $namespaces Named namespace configurations keyed by namespace name
      */
     public function __construct(
         private string $assetBaseUrl,
@@ -32,6 +52,7 @@ final readonly class ViteExtension implements ExtensionInterface
         private string $devServerUrl = 'http://localhost:5173',
         private bool $injectClient = true,
         private ?string $defaultEntry = null,
+        private array $namespaces = [],
     ) {
     }
 
@@ -46,14 +67,19 @@ final readonly class ViteExtension implements ExtensionInterface
         $context->protectedRuntimeService(
             ViteAssetResolver::class,
             function (RuntimeContext $runtimeContext) use ($debug): ViteAssetResolver {
-                return new ViteAssetResolver(
-                    mode: $this->mode,
-                    debug: $debug,
-                    manifestPath: $this->manifestPath,
+                $default = new ViteConfig(
                     assetBaseUrl: $this->assetBaseUrl,
+                    manifestPath: $this->manifestPath,
                     devServerUrl: $this->devServerUrl,
                     injectClient: $this->injectClient,
                     defaultEntry: $this->defaultEntry,
+                );
+
+                return new ViteAssetResolver(
+                    mode: $this->mode,
+                    debug: $debug,
+                    default: $default,
+                    namespaces: $this->namespaces,
                 );
             },
         );

@@ -15,6 +15,7 @@ use Sugar\Core\Loader\StringTemplateLoader;
 use Sugar\Core\Parser\Parser;
 use Sugar\Extension\Vite\Directive\ViteDirective;
 use Sugar\Extension\Vite\Runtime\ViteAssetResolver;
+use Sugar\Extension\Vite\ViteConfig;
 use Sugar\Extension\Vite\ViteExtension;
 
 /**
@@ -64,6 +65,44 @@ final class ViteExtensionTest extends TestCase
 
         $resolver = $resolverFactory($runtimeContext);
         $this->assertInstanceOf(ViteAssetResolver::class, $resolver);
+    }
+
+    /**
+     * Verify namespace configs passed to ViteExtension result in a resolver with namespace support.
+     */
+    public function testNamespaceConfigsArePassedToResolver(): void
+    {
+        $context = $this->createRegistrationContext();
+        $extension = new ViteExtension(
+            assetBaseUrl: '/build/',
+            mode: 'dev',
+            namespaces: [
+                'theme' => new ViteConfig(
+                    assetBaseUrl: '/theme/build/',
+                    devServerUrl: 'http://localhost:5174',
+                ),
+            ],
+        );
+
+        $extension->register($context);
+
+        $services = $context->getRuntimeServices();
+        $this->assertArrayHasKey(ViteAssetResolver::class, $services);
+        $this->assertInstanceOf(Closure::class, $services[ViteAssetResolver::class]);
+
+        $resolverFactory = $services[ViteAssetResolver::class];
+
+        $runtimeContext = new RuntimeContext(
+            compiler: $this->createStub(CompilerInterface::class),
+            tracker: null,
+        );
+
+        $resolver = $resolverFactory($runtimeContext);
+        $this->assertInstanceOf(ViteAssetResolver::class, $resolver);
+
+        // Rendering a namespaced entry must use the namespace's dev server URL.
+        $output = $resolver->render('@theme/resources/js/theme.ts');
+        $this->assertStringContainsString('http://localhost:5174/resources/js/theme.ts', $output);
     }
 
     /**
