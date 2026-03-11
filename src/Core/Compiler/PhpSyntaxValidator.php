@@ -6,6 +6,7 @@ namespace Sugar\Core\Compiler;
 use PhpParser\Error;
 use PhpParser\Parser as PhpAstParser;
 use PhpParser\ParserFactory;
+use PhpToken;
 use Sugar\Core\Ast\ComponentNode;
 use Sugar\Core\Ast\DirectiveNode;
 use Sugar\Core\Ast\DocumentNode;
@@ -278,6 +279,12 @@ final class PhpSyntaxValidator
             return ['', 0];
         }
 
+        // Alternative syntax control structures (e.g. `if():` ... `endif;`) span multiple
+        // PHP blocks and cannot be validated as an isolated snippet.
+        if ($this->hasOpenAlternativeSyntax($normalizedCode)) {
+            return ['', 0];
+        }
+
         $lineOffset = 0;
         if (str_contains($normalizedCode, 'use')) {
             $normalizedNode = new RawPhpNode($normalizedCode, $node->line, $node->column);
@@ -299,6 +306,66 @@ final class PhpSyntaxValidator
         }
 
         return [$normalizedCode, $lineOffset];
+    }
+
+    /**
+     * Detect whether a raw PHP snippet contains unmatched alternative control structure syntax.
+     *
+     * PHP alternative syntax (e.g. `if (): ... endif;`) can span multiple separate PHP
+     * blocks inside a template. Validating such a fragment in isolation would always fail
+     * because the opener block lacks its matching `endXxx` counterpart (or vice-versa).
+     *
+     * The method tokenises the snippet with `PhpToken::tokenize()` and counts alternative
+     * syntax openers (control structures followed by `:`) against closers (`T_ENDIF`,
+     * `T_ENDFOREACH`, `T_ENDFOR`, `T_ENDWHILE`, `T_ENDSWITCH`). A non-zero balance
+     * means the snippet is part of a multi-block construct.
+     *
+     * @param string $code Stripped PHP code (without open/close tags)
+     * @return bool True when the snippet has unbalanced alternative syntax
+     */
+    private function hasOpenAlternativeSyntax(string $code): bool
+    {
+        $tokens = PhpToken::tokenize('<?php ' . $code);
+        $depth = 0;
+        $lastWasControlWithParen = false;
+        $lastWasElse = false;
+        $parenDepth = 0;
+
+        $controlTokens = [T_IF, T_FOR, T_FOREACH, T_WHILE, T_SWITCH, T_ELSEIF];
+        $endTokens = [T_ENDIF, T_ENDFOR, T_ENDFOREACH, T_ENDWHILE, T_ENDSWITCH];
+
+        foreach ($tokens as $token) {
+            if (in_array($token->id, $endTokens, true)) {
+                $depth--;
+                $lastWasControlWithParen = false;
+                $lastWasElse = false;
+            } elseif (in_array($token->id, $controlTokens, true)) {
+                $lastWasControlWithParen = true;
+                $lastWasElse = false;
+                $parenDepth = 0;
+            } elseif ($token->id === T_ELSE) {
+                $lastWasElse = true;
+                $lastWasControlWithParen = false;
+                $parenDepth = 0;
+            } elseif ($token->text === '(') {
+                $parenDepth++;
+            } elseif ($token->text === ')') {
+                $parenDepth--;
+            } elseif ($token->text === ':') {
+                if ($lastWasControlWithParen && $parenDepth === 0) {
+                    $depth++;
+                    $lastWasControlWithParen = false;
+                } elseif ($lastWasElse) {
+                    $depth++;
+                    $lastWasElse = false;
+                }
+            } elseif ($token->text === '{') {
+                $lastWasControlWithParen = false;
+                $lastWasElse = false;
+            }
+        }
+
+        return $depth !== 0;
     }
 
     /**

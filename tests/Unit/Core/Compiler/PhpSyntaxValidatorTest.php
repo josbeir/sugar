@@ -561,6 +561,159 @@ SUGAR;
         }
     }
 
+    public function testTemplateSegmentsAllowAlternativeSyntaxIfOpener(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Opener block: `if(true):` – has no matching endif in this snippet
+        $document = new DocumentNode([
+            new RawPhpNode('if(true):', 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowAlternativeSyntaxIfCloser(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Closer block: `endif;` – has no matching opener in this snippet
+        $document = new DocumentNode([
+            new RawPhpNode('endif;', 5, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowAlternativeSyntaxForeachBlocks(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new RawPhpNode('foreach ($items as $item):', 1, 1),
+            new RawPhpNode('endforeach;', 5, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowAlternativeSyntaxWithBodyInOpener(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Opener block that also contains body code before the close tag
+        $document = new DocumentNode([
+            new RawPhpNode("if (\$show):\n    \$label = 'hello';", 1, 1),
+            new RawPhpNode('endif;', 5, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsAllowAlternativeSyntaxWhileAndElse(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        $document = new DocumentNode([
+            new RawPhpNode('while ($i < 10):', 1, 1),
+            new RawPhpNode('endwhile;', 3, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+        $validator->templateSegments($document, $context);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testTemplateSegmentsStillValidateRegularPhpBlockErrors(): void
+    {
+        if (!$this->hasPhpParserSupport()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        $context = new CompilationContext(
+            templatePath: '@app/pages/home.sugar.php',
+            source: '',
+            debug: true,
+        );
+
+        // Regular (brace-based) but syntactically broken code must still be caught
+        $document = new DocumentNode([
+            new RawPhpNode('$x = ;', 1, 1),
+        ]);
+
+        $validator = new PhpSyntaxValidator();
+
+        $this->expectException(SyntaxException::class);
+        $this->expectExceptionMessage('Invalid PHP block');
+
+        $validator->templateSegments($document, $context);
+    }
+
     /**
      * @param \PhpParser\Parser|null $parser Parser instance to inject
      */
